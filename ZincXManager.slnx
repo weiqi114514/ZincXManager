@@ -1,3 +1,9 @@
 <Solution>
+  <Configurations>
+    <Platform Name="Any CPU" />
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
   <Project Path="ZincXManagerClient/ZincXManagerClient.csproj" />
+  <Project Path="ZincXManagerOServer/ZincXManagerOServer.vcxproj" Id="0bf670eb-7acd-4b86-93fe-ec98aa4c219c" />
 </Solution>
