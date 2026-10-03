@@ -17,6 +17,13 @@ ZXMC分为3个连接模式
 - SAOS（ServerAndOServer）模式：可连接服务端和官方服务端  
 > TIPS：当ZXMC处于SAOS模式并且连接到ZXMS时那么ZXMC将通过ZXMS中转与ZXMOS通信，否则直接与ZXMOS通信
    
+ZXMC分为4个权限模式  
+- Player模式：玩家模式，使用玩家需要的相关功能，如社区经济
+- HAdmin模式：高管模式，权限比较高的管理模式，可以控制MC服务端等高权限功能，同时也可使用低权限功能
+- LAdmin模式：低管模式，权限比较低的管理模式，可以进行一些消息的发布和玩家的申请处理等低权限功能
+- System模式：系统模式，具有最高的权限的管理模式，可直接控制系统相关功能，如报备后登录远程桌面的启用和设置，文件操作，重启软件等，不兼容低权限和高权限功能，
+   
+> TIPS：当ZXMC处于SAOS模式并且连接到ZXMS时那么ZXMC将通过ZXMS中转与ZXMOS通信，否则直接与ZXMOS通信
 > TIPS：此OS(OnlyServer)非彼OS(ZincXManagerOfficialServer)
 
 欢迎有意向合作/开发者加入我们 QQ群835964502
