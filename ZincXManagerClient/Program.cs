@@ -1,5 +1,6 @@
 ﻿using Avalonia;
 using System;
+using ZincXManagerClient.Class.Log;
 
 namespace ZincXManagerClient;
 
