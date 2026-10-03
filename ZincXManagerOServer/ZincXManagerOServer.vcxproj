@@ -139,11 +139,16 @@
     </Manifest>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="src\logging\logger.cpp" />
+    <ClCompile Include="src\logging\log_level.cpp" />
+    <ClCompile Include="src\main.cpp" />
     <ClCompile Include="ZFile.cpp" />
     <ClCompile Include="ZincXManagerOServer.cpp" />
     <ClCompile Include="znetwork.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\logging\logger.h" />
+    <ClInclude Include="src\logging\log_level.h" />
     <ClInclude Include="ZFile.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
