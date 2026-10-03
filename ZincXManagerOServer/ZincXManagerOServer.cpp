@@ -2,13 +2,16 @@
 //
 
 #include <iostream>
+#include "ZFile.cpp"
 
-int main()
-{
-    std::cout << "Hello World!\n";
-}
-
-// 运行程序: Ctrl + F5 或调试 >“开始执行(不调试)”菜单
+//namespace std
+//{
+    int main()
+    {
+        std::ZFile f;
+        std::cout << f.fileOperate("config.ini", "rNfc");
+    }
+//// 运行程序: Ctrl + F5 或调试 >“开始执行(不调试)”菜单
 // 调试程序: F5 或调试 >“开始调试”菜单
 
 // 入门使用技巧: 

@@ -139,7 +139,12 @@
     </Manifest>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="ZFile.cpp" />
     <ClCompile Include="ZincXManagerOServer.cpp" />
+    <ClCompile Include="znetwork.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="ZFile.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
