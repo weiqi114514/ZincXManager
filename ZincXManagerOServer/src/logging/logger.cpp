@@ -5,7 +5,7 @@
 
 namespace logging
 {
-    void log(LogLevel level, std::string_view message) override
+    void Logger::log(LogLevel level, std::string_view message)
     {
         auto now = std::chrono::system_clock::now();
         auto time = std::format("{:%Y-%m-%d %H:%M:%S}",now);

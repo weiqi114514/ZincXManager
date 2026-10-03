@@ -9,7 +9,7 @@ namespace logging
     {
         public:
         virtual ~ILogger() = default;
-        virtual void log(LogLevel level, std::string_view message)=0;
+        virtual void log(LogLevel level, std::string_view message) = 0;
     };
 
 
