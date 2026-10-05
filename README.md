@@ -1,6 +1,6 @@
 # ZincXManager
 > [!WARNING]
-开发状态：ZincXManager 目前处于极早期开发阶段，尚未具备运行能力|其实还没写（
+开发状态：ZincXManager 目前处于极早期开发阶段，ZXMOS能够进行最基础的功能运行并测试
 
 ZincXManager 锌X管理面板 简称ZXM   
 ZincXManager 是一款面向 Minecraft/社区 管理员、服主与玩家的一体化综合性使用C#开发(不包括ZXMM)的管理面板/软件。它不仅能够连接 MC 服务端进行管理与交互，还内置了丰富的社区功能，如白名单管理、账号绑定、经济系统等。
