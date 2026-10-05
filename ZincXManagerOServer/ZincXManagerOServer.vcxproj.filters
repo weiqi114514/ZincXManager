@@ -18,7 +18,10 @@
     <ClCompile Include="ZincXManagerOServer.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="znetwork.cpp">
+    <ClCompile Include="src\logging\log_level.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="src\logging\logger.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="ZFile.cpp">
@@ -27,6 +30,12 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ZFile.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="src\logging\logger.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="src\logging\log_level.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>

@@ -1,33 +1,23 @@
-#pragma once
-#include <iostream>
+﻿#pragma once
 #include <fstream>
+#include <string>
 
-namespace std
+namespace zFile
 {
-	class ZFile
-	{
-		ifstream  zFin;
-	public:
-        bool fileOperate(const std::string& fileName, const std::string& mode)//文件操作 如果文件存在则打开，不存在则创建并打开
-        {
-            if (mode == "rNfC")
-            {
-                // 先尝试以读写方式打开
-                zFin.open(fileName, std::ios::in | std::ios::out);
+    class ZFile
+    {
+        std::fstream zF;
+    public:
+        std::string currentFile;
 
-                if (!zFin.is_open())
-                {
-                    // 失败说明文件不存在，创建它
-                    zFin.clear();                       // 必须清状态位
-                    zFin.open(fileName, std::ios::out); // out 会创建文件
-                    zFin.close();
+        bool fileOperate(const std::string& fileName, const std::string& mode);
+        std::string readFileTxt();
+        std::string readFileBin();
+        std::string readDir();
+        bool writeFileTxt(std::string in, bool endl);
+        bool writeFileTxt(std::string in, bool endl, int line);
+        bool mapEdit(std::string key, std::string value);
+    };
 
-                    // 再以读写方式打开
-                    zFin.clear();
-                    zFin.open(fileName, std::ios::in | std::ios::out);
-                }
-            }
-            return zFin.is_open();
-        }
-	};
+    extern ZFile logF;   // 全局对象声明，定义在 ZFile.cpp
 }
