@@ -6,4 +6,5 @@
   </Configurations>
   <Project Path="ZincXManagerClient/ZincXManagerClient.csproj" />
   <Project Path="ZincXManagerOServer/ZincXManagerOServer.vcxproj" Id="0bf670eb-7acd-4b86-93fe-ec98aa4c219c" />
+  <Project Path="ZincXManagerServer/ZincXManagerServer.csproj" Id="49f098e6-a8c8-498a-b2ce-1044ea662874" />
 </Solution>

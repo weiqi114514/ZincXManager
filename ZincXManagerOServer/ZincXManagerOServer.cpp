@@ -11,7 +11,7 @@ static void InitializeLog()//初始化函数
     auto now = std::chrono::system_clock::now();
     auto sec = std::chrono::floor<std::chrono::seconds>(now);
 
-    std::string fileName = std::format("{:%Y-%m-%d_%H-%M-%S}.log", sec);
+    std::string fileName = std::format("ZXMS{:%Y-%m-%d_%H-%M-%S}.log", sec);
 
     if (!zFile::logF.fileOperate(fileName, "rwNFC"))
     {
