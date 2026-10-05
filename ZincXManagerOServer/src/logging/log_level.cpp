@@ -4,15 +4,15 @@
 
 namespace logging
 {
-    std::string_view getName(LogLevel level)
+    std::string_view getName(LogL level)
     {
         switch (level)
         {
-        case LogLevel::Fatal:return "Fatal";
-        case LogLevel::Error:return "Error";
-        case LogLevel::Warning:return "Warning";
-        case LogLevel::Info:return "Info";
-        case LogLevel::Debug:return "Debug";
+        case LogL::Fatal:return "Fatal";
+        case LogL::Error:return "Error";
+        case LogL::Warning:return "Warning";
+        case LogL::Info:return "Info";
+        case LogL::Debug:return "Debug";
         }
 
         return "Unknown";

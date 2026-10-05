@@ -4,14 +4,15 @@
 
 namespace logging
 {
-    enum class LogLevel : std::uint8_t
+    enum class LogL/*LogLevel*/ : uint8_t
     {
         Debug,
+        Trace,
         Info,
         Warning,
         Error,
         Fatal
     };
     
-    std::string_view getName(LogLevel level);
+    std::string_view getName(LogL level);
 }

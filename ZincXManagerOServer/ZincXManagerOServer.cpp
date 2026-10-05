@@ -1,23 +1,31 @@
-﻿// ZincXManagerOServer.cpp : 此文件包含 "main" 函数。程序执行将在此处开始并结束。
-//
+﻿#include <iostream>
+#include <format>
+#include <chrono>
+#include <string>
+#include "ZFile.h"
+#include "src/logging/logger.h"
+static void initializeLog()
+{
+    auto now = std::chrono::system_clock::now();
+    auto sec = std::chrono::floor<std::chrono::seconds>(now);
 
-#include <iostream>
-#include "ZFile.cpp"
+    // 文件名不能带 ':'，改成 '-'；模式字符串大小写要和 ZFile.cpp 里完全一致
+    std::string fileName = std::format("{:%Y-%m-%d_%H-%M-%S}.log", sec);
 
-//namespace std
-//{
-    int main()
+    if (!zFile::logF.fileOperate(fileName, "rwNfC"))
     {
-        std::ZFile f;
-        std::cout << f.fileOperate("config.ini", "rNfc");
+        std::cerr << "打开日志文件失败: " << fileName << "\n";
     }
-//// 运行程序: Ctrl + F5 或调试 >“开始执行(不调试)”菜单
-// 调试程序: F5 或调试 >“开始调试”菜单
+}
 
-// 入门使用技巧: 
-//   1. 使用解决方案资源管理器窗口添加/管理文件
-//   2. 使用团队资源管理器窗口连接到源代码管理
-//   3. 使用输出窗口查看生成输出和其他消息
-//   4. 使用错误列表窗口查看错误
-//   5. 转到“项目”>“添加新项”以创建新的代码文件，或转到“项目”>“添加现有项”以将现有代码文件添加到项目
-//   6. 将来，若要再次打开此项目，请转到“文件”>“打开”>“项目”并选择 .sln 文件
+int main()
+{
+    initializeLog();
+    //以下为测试代码
+    logging::log(logging::LogL::Info, "测试1");
+    logging::log(logging::LogL::Warning, "测试2");
+    logging::log(logging::LogL::Fatal, "测试3");
+    int a;
+    std::cin >> a;
+    return 0;
+}
