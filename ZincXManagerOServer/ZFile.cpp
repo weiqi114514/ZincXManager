@@ -31,7 +31,7 @@ namespace zFile
                 currentFile = fileName;
             if (zF.is_open())
             {
-                logging::log(LogL::Info, "[zFile]开启文件" + fileName);
+                logging::log(LogL::Info, "[zFile]开启或并创建文件" + fileName);
             }
             return zF.is_open();
         }
