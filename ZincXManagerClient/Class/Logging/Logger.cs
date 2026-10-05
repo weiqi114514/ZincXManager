@@ -1,4 +1,4 @@
-﻿namespace ZincXManagerClient.Logging;
+﻿namespace ZincXManagerClient.Class.Logging;
 
 using System;
 using System.IO;
