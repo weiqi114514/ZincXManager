@@ -5,7 +5,7 @@
 #include <iterator>
 #include <algorithm>
 #include <iostream>
-
+#include <sstream>
 using namespace logging;
 
 namespace zFile
@@ -14,7 +14,7 @@ namespace zFile
 
     bool ZFile::fileOperate(const std::string& fileName, const std::string& mode)
     {
-        if (mode == "rwNfC")//如果文件存在就打开，不存在则创建并开启
+        if (mode == "rwNFC")//如果文件存在就打开，不存在则创建并开启
         {
             if (zF.is_open()) zF.close();
             zF.clear();
@@ -29,6 +29,10 @@ namespace zFile
             }
             if (zF.is_open())
                 currentFile = fileName;
+            if (zF.is_open())
+            {
+                logging::log(LogL::Info, "[zFile]开启文件" + fileName);
+            }
             return zF.is_open();
         }
         else if (mode == "del")//删除文件操作
@@ -39,17 +43,6 @@ namespace zFile
             if (!ok)
                 logging::log(LogL::Error, "[zFile]del:删除文件失败，错误信息：" + ec.message());
             return ok;
-        }
-        else if (mode == "close")
-        {
-            if (!zF.is_open())
-            {
-                logging::log(LogL::Warning, "[zFile]close:关闭文件为无效操作，文件已经关闭");
-                return false;
-            }
-            zF.close();
-            currentFile.clear();
-            return true;
         }
         else if (mode == "replaceFile")//替换开启文件操作
         {
@@ -66,6 +59,7 @@ namespace zFile
             }
             if (zF.is_open())
                 currentFile = fileName;
+                logging::log(LogL::Info, "[zFile]开启文件" + fileName);
             return zF.is_open();
         }
         else
@@ -73,6 +67,19 @@ namespace zFile
             logging::log(LogL::Warning, "[zFile]未知操作模式：" + mode);
             return false;
         }
+    }
+
+    bool ZFile::closeFile()
+    {
+        if (!zF.is_open())
+        {
+            logging::log(LogL::Warning, "[zFile]close:关闭文件为无效操作，文件已经关闭");
+            return false;
+        }
+        zF.close();
+        currentFile.clear();
+        logging::log(LogL::Info, "[zFile]文件关闭");
+        return true;
     }
 
     std::string ZFile::readFileTxt()//读取txt文件
@@ -86,6 +93,58 @@ namespace zFile
         zF.seekg(0, std::ios::beg);
         return std::string((std::istreambuf_iterator<char>(zF)),
             std::istreambuf_iterator<char>());
+    }
+
+    std::map<std::string, std::string> ZFile::readFileMap()
+    {
+        std::map<std::string, std::string> result;
+
+        if (!zF.is_open())
+        {
+            logging::log(LogL::Error, "[zFile]readFileMap:文件未打开");
+            return result;
+        }
+
+        // 读到 EOF 后状态位会脏，先清
+        zF.clear();
+        zF.seekg(0, std::ios::beg);
+
+        std::string line;
+        while (std::getline(zF, line))
+        {
+            // 去掉行尾 \r（Windows 换行）
+            if (!line.empty() && line.back() == '\r')
+                line.pop_back();
+
+            // 跳过空行和注释（# 或 ; 开头）
+            if (line.empty()) continue;
+            if (line[0] == '#' || line[0] == ';') continue;
+
+            // 找第一个 '='
+            auto pos = line.find('=');
+            if (pos == std::string::npos) continue;   // 没有等号，跳过
+
+            // 切 key / value 并去首尾空格
+            std::string key = line.substr(0, pos);
+            std::string value = line.substr(pos + 1);
+
+            auto trim = [](std::string& s)
+                {
+                    const char* ws = " \t\r\n";
+                    auto b = s.find_first_not_of(ws);
+                    auto e = s.find_last_not_of(ws);
+                    if (b == std::string::npos) { s.clear(); return; }
+                    s = s.substr(b, e - b + 1);
+                };
+            trim(key);
+            trim(value);
+
+            if (!key.empty())
+                result[key] = value;
+        }
+
+        zF.clear();   // 读完清掉 eofbit，方便后续操作
+        return result;
     }
 
     std::string ZFile::readFileBin()//读取二进制文件
@@ -172,7 +231,7 @@ namespace zFile
         return static_cast<bool>(zF);
     }
 
-    bool ZFile::mapEdit(std::string key, std::string value)//键值追加/修改
+    bool ZFile::writeFileMap(std::string key, std::string value)//键值追加/修改
     {
         if (!zF.is_open())
         {
@@ -223,5 +282,17 @@ namespace zFile
         zF.close();
         zF.open(currentFile, std::ios::in | std::ios::out);
         return true;
+    }
+
+    std::string ZFile::mapGet(const std::string& key, const std::string& def)
+    {
+        auto m = readFileMap();
+        auto it = m.find(key);
+        return (it != m.end()) ? it->second : def;
+    }
+
+    ZFile::~ZFile() 
+    {
+        closeFile();
     }
 }
