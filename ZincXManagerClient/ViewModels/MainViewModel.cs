@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using Avalonia.Media;
@@ -12,17 +13,30 @@ namespace ZincXManagerClient.ViewModels;
 /// <summary>主界面视图模型:左侧导航、顶部模式、右侧消息。</summary>
 public partial class MainViewModel : ViewModelBase
 {
+    public MainViewModel()
+    {
+        NavItems.Add(new NavItem("经济", Icons.Economy) { IsSelected = true });
+        NavItems.Add(new NavItem("社区", Icons.Community));
+        NavItems.Add(new NavItem("组织", Icons.Organization));
+        NavItems.Add(new NavItem("好友", Icons.Friends, 5, 3));
+        NavItems.Add(new NavItem("设置", Icons.Settings));
+        NavItems.Add(new NavItem("管理", Icons.Manage, 5, 4));
+        NavItems.Add(new NavItem("小功能组", Icons.Widgets));
+    }
+
+    /// <summary>顶部连接/权限模式,如 Player - SAOS。</summary>
     public string ModeText { get; } = "Player - SAOS";
 
-    public string UserName { get; } = "用户114511414";
-
-    public string UserId { get; } = "ID：114514";
-
+    /// <summary>消息列表为空时显示的文案。</summary>
     public string EmptyMessage { get; } = "没有其他消息啦";
 
-    public ObservableCollection<NavItem> NavItems { get; } = new();
+    /// <summary>当前用户名,登录后由外部赋值。</summary>
+    [ObservableProperty]
+    public partial string UserName { get; set; } = "未登录";
 
-    public ObservableCollection<MessageItem> Messages { get; } = new();
+    /// <summary>当前用户 ID(含 "ID：" 前缀),登录后由外部赋值。</summary>
+    [ObservableProperty]
+    public partial string UserId { get; set; } = "ID：-";
 
     /// <summary>内容区提示(设计稿内容区留空,这里只在有操作时给一点反馈)。</summary>
     [ObservableProperty]
@@ -36,6 +50,42 @@ public partial class MainViewModel : ViewModelBase
     public partial IImage? BackgroundImage { get; set; }
 
     public bool HasBackgroundImage => BackgroundImage is not null;
+
+    /// <summary>左侧导航项。</summary>
+    public ObservableCollection<NavItem> NavItems { get; } = new();
+
+    /// <summary>右侧消息列表(内容由服务端下发,界面不写死)。</summary>
+    public ObservableCollection<MessageItem> Messages { get; } = new();
+
+    // ---------- 可变数据入口 ----------
+
+    /// <summary>设置当前用户(名称与 ID 都是可变的)。</summary>
+    public void SetUser(string userName, string userId)
+    {
+        UserName = string.IsNullOrWhiteSpace(userName) ? "未登录" : userName.Trim();
+        UserId = string.IsNullOrWhiteSpace(userId)
+            ? "ID：-"
+            : "ID：" + userId.Trim().Replace("ID：", "").Replace("ID:", "");
+    }
+
+    /// <summary>整体替换消息列表。</summary>
+    public void SetMessages(IEnumerable<MessageItem> messages)
+    {
+        Messages.Clear();
+        foreach (var message in messages)
+        {
+            Messages.Add(message);
+        }
+    }
+
+    /// <summary>追加一条消息。</summary>
+    public void AddMessage(MessageItem message) => Messages.Add(message);
+
+    /// <summary>清空消息。</summary>
+    public void ClearMessages() => Messages.Clear();
+
+    /// <summary>加载设计稿里的示例消息(仅界面预览用)。</summary>
+    public void LoadSampleMessages() => SetMessages(SampleMessages.All);
 
     /// <summary>设置窗口背景图;传空(null / 空串 / 文件不存在)则恢复默认底色。</summary>
     public void SetBackgroundImage(string? path)
@@ -60,54 +110,7 @@ public partial class MainViewModel : ViewModelBase
         }
     }
 
-    public MainViewModel()
-    {
-        NavItems.Add(new NavItem("经济", Icons.Economy) { IsSelected = true });
-        NavItems.Add(new NavItem("社区", Icons.Community));
-        NavItems.Add(new NavItem("组织", Icons.Organization));
-        NavItems.Add(new NavItem("好友", Icons.Friends, 5, 3));
-        NavItems.Add(new NavItem("设置", Icons.Settings));
-        NavItems.Add(new NavItem("管理", Icons.Manage, 5, 4));
-        NavItems.Add(new NavItem("小功能组", Icons.Widgets));
-
-        Messages.Add(new MessageItem
-        {
-            Kind = MessageKind.Update,
-            Title = "ZincXManager更新 | 1.0.0 > 1.0.1",
-            Body = "加入XXX功能\n修复了已知BUG",
-            Source = "源:ZXMOS",
-            PrimaryAction = "立刻下载并更新"
-        });
-
-        Messages.Add(new MessageItem
-        {
-            Kind = MessageKind.Choice,
-            Title = "是否添加猫娘",
-            Body = "猫娘猫娘猫娘猫娘猫娘猫娘猫娘猫娘猫娘猫娘猫娘猫娘",
-            Source = "源:ZXMS-锌能源",
-            PrimaryAction = "是",
-            SecondaryAction = "否"
-        });
-
-        Messages.Add(new MessageItem
-        {
-            Kind = MessageKind.Input,
-            Title = "Where are you from",
-            Body = "请填写你所在的省份",
-            Source = "源:ZXMS-锌能源",
-            PrimaryAction = "确认"
-        });
-
-        Messages.Add(new MessageItem
-        {
-            Kind = MessageKind.Select,
-            Title = "版本选择",
-            Body = "请选择你游玩的版本",
-            Source = "源:ZXMS-锌能源",
-            Options = new[] { "1.21.1", "1.21", "1.20.6", "1.20.1", "1.19.4" },
-            SelectedOption = "1.21.1"
-        });
-    }
+    // ---------- 交互 ----------
 
     /// <summary>切换左侧导航选中项。</summary>
     public void SelectNav(NavItem item)

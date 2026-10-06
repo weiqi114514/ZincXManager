@@ -7,33 +7,54 @@
         Title="ZincXManagerClient"
         Width="1100" Height="700"
         MinWidth="960" MinHeight="620"
-        Background="#D8E8F1"
+        Background="Transparent"
+        TransparencyLevelHint="AcrylicBlur,Blur,Transparent"
         FontFamily="Microsoft YaHei UI, Microsoft YaHei, Segoe UI"
         WindowDecorations="None"
         CanResize="True">
 
   <Window.Styles>
-    <!-- 左侧导航按钮 -->
+    <!-- 左侧导航:Win10 Fluent 风格 —— 选中整行变白,左侧强调色小条与白色整行连成一体 -->
     <Style Selector="Button.nav">
       <Setter Property="Background" Value="Transparent"/>
       <Setter Property="BorderThickness" Value="0"/>
-      <Setter Property="CornerRadius" Value="7"/>
-      <Setter Property="Padding" Value="12,7"/>
+      <Setter Property="CornerRadius" Value="0"/>
+      <Setter Property="Padding" Value="0"/>
       <Setter Property="HorizontalAlignment" Value="Stretch"/>
-      <Setter Property="HorizontalContentAlignment" Value="Left"/>
-      <Setter Property="Foreground" Value="#F4FBFF"/>
+      <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+      <Setter Property="Foreground" Value="#FFFFFF"/>
       <Setter Property="FontSize" Value="15"/>
       <Setter Property="Cursor" Value="Hand"/>
     </Style>
     <Style Selector="Button.nav /template/ ContentPresenter">
       <Setter Property="Background" Value="Transparent"/>
-      <Setter Property="CornerRadius" Value="7"/>
+      <Setter Property="CornerRadius" Value="0"/>
     </Style>
     <Style Selector="Button.nav:pointerover /template/ ContentPresenter">
-      <Setter Property="Background" Value="#2EFFFFFF"/>
+      <Setter Property="Background" Value="#B4CDDD"/>
     </Style>
     <Style Selector="Button.nav.selected /template/ ContentPresenter">
-      <Setter Property="Background" Value="#5CFFFFFF"/>
+      <Setter Property="Background" Value="#FFFFFF"/>
+    </Style>
+    <Style Selector="Button.nav Path">
+      <Setter Property="Fill" Value="#FFFFFF"/>
+    </Style>
+    <Style Selector="Button.nav.selected">
+      <Setter Property="Foreground" Value="#17303A"/>
+    </Style>
+    <Style Selector="Button.nav.selected Path">
+      <Setter Property="Fill" Value="#2662A7"/>
+    </Style>
+
+    <!-- 每行都有的左侧小条:平常是明显的深色轨,选中时高亮成强调色 -->
+    <Style Selector="Button.nav Rectangle.bar">
+      <Setter Property="Fill" Value="#4F7392"/>
+    </Style>
+    <Style Selector="Button.nav.selected Rectangle.bar">
+      <Setter Property="Fill" Value="#2662A7"/>
+    </Style>
+    <Style Selector="Button.nav:pointerover Rectangle.bar">
+      <Setter Property="Fill" Value="#E2EEF6"/>
     </Style>
 
     <!-- 标题栏按钮 -->
@@ -47,36 +68,41 @@
     </Style>
     <Style Selector="Button.chrome /template/ ContentPresenter">
       <Setter Property="Background" Value="Transparent"/>
+      <Setter Property="CornerRadius" Value="0"/>
     </Style>
     <Style Selector="Button.chrome:pointerover /template/ ContentPresenter">
-      <Setter Property="Background" Value="#33FFFFFF"/>
+      <Setter Property="Background" Value="#3A7CBF"/>
     </Style>
 
     <!-- 卡片里的链接式按钮 -->
     <Style Selector="Button.link">
       <Setter Property="Background" Value="Transparent"/>
       <Setter Property="BorderThickness" Value="0"/>
+      <Setter Property="CornerRadius" Value="0"/>
       <Setter Property="Foreground" Value="#2662A7"/>
       <Setter Property="FontSize" Value="12"/>
       <Setter Property="Padding" Value="4,2"/>
       <Setter Property="Cursor" Value="Hand"/>
     </Style>
     <Style Selector="Button.link:pointerover /template/ ContentPresenter">
-      <Setter Property="TextBlock.TextDecorations" Value="Underline"/>
+      <Setter Property="Background" Value="Transparent"/>
     </Style>
 
-    <!-- 是 / 否 小按钮 -->
+    <!-- 是 / 否 小按钮(Win10 Fluent 浅色按钮) -->
     <Style Selector="Button.mini">
-      <Setter Property="Background" Value="#E8FFFFFF"/>
-      <Setter Property="BorderBrush" Value="#66FFFFFF"/>
+      <Setter Property="Background" Value="#E9EDF2"/>
+      <Setter Property="BorderBrush" Value="#D6DEE6"/>
       <Setter Property="BorderThickness" Value="1"/>
-      <Setter Property="CornerRadius" Value="3"/>
-      <Setter Property="Foreground" Value="#3C5D5B"/>
+      <Setter Property="CornerRadius" Value="0"/>
+      <Setter Property="Foreground" Value="#2B3B44"/>
       <Setter Property="FontSize" Value="12"/>
       <Setter Property="Padding" Value="14,2"/>
       <Setter Property="MinWidth" Value="46"/>
       <Setter Property="HorizontalContentAlignment" Value="Center"/>
       <Setter Property="Cursor" Value="Hand"/>
+    </Style>
+    <Style Selector="Button.mini:pointerover /template/ ContentPresenter">
+      <Setter Property="Background" Value="#DCE3EA"/>
     </Style>
 
     <Style Selector="TextBlock.cardTitle">
@@ -97,30 +123,24 @@
   </Window.Styles>
 
   <Grid>
-    <!-- 默认底色:用户没设置背景图时显示 -->
-    <Border>
-      <Border.Background>
-        <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,100%">
-          <GradientStop Color="#E4F0F7" Offset="0"/>
-          <GradientStop Color="#CFE3EF" Offset="0.5"/>
-          <GradientStop Color="#B9D3E4" Offset="1"/>
-        </LinearGradientBrush>
-      </Border.Background>
-    </Border>
-
-    <!-- 用户设置的背景图(在设置里选,未设置时不显示) -->
-    <Image Source="{Binding BackgroundImage}" IsVisible="{Binding HasBackgroundImage}" Stretch="UniformToFill"/>
+    <!-- 不再画默认背景:窗口本身透明,未设置背景图时内容区直接透出(系统毛玻璃/桌面) -->
+    <!-- 用户设置的背景图(在设置里选择);加一层模糊,前面的栏半透明叠上去就是毛玻璃效果 -->
+    <Image Source="{Binding BackgroundImage}" IsVisible="{Binding HasBackgroundImage}"
+           Stretch="UniformToFill" Margin="-28">
+      <Image.Effect>
+        <BlurEffect Radius="26"/>
+      </Image.Effect>
+    </Image>
 
     <Grid ColumnDefinitions="236,*" RowDefinitions="44,*">
 
-      <!-- ================= 左侧栏 ================= -->
-      <Border Grid.Row="0" Grid.RowSpan="2" Grid.Column="0"
-              BorderBrush="#38FFFFFF" BorderThickness="0,0,1,0">
+      <!-- ================= 左侧栏(半透明毛玻璃,透出后面的模糊背景) ================= -->
+      <Border Grid.Row="0" Grid.RowSpan="2" Grid.Column="0">
         <Border.Background>
           <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
-            <GradientStop Color="#8FB9D2E4" Offset="0"/>
-            <GradientStop Color="#6BAACBDD" Offset="0.55"/>
-            <GradientStop Color="#7DB4D4E3" Offset="1"/>
+            <GradientStop Color="#A87FA6C4" Offset="0"/>
+            <GradientStop Color="#A07396B6" Offset="0.55"/>
+            <GradientStop Color="#A06788A6" Offset="1"/>
           </LinearGradientBrush>
         </Border.Background>
 
@@ -130,43 +150,47 @@
           <StackPanel Grid.Row="0" Margin="28,0,0,0" Spacing="7">
             <Viewbox Width="122" Height="30" HorizontalAlignment="Left">
               <Canvas Width="36" Height="9">
-                <Path Data="{x:Static models:Icons.LogoMark}" Fill="#315251"
+                <Path Data="{x:Static models:Icons.LogoMark}" Fill="#22403F"
                       Width="36" Height="7" Stretch="Fill" Canvas.Left="0" Canvas.Top="0"/>
-                <Path Data="{x:Static models:Icons.LogoSlash}" Fill="#89C0BF"
+                <Path Data="{x:Static models:Icons.LogoSlash}" Fill="#CDE6E5"
                       Width="8" Height="7" Stretch="Fill" Canvas.Left="10" Canvas.Top="0"/>
-                <Path Data="{x:Static models:Icons.LogoTriangle}" Fill="#A9CFCF"
+                <Path Data="{x:Static models:Icons.LogoTriangle}" Fill="#E8F5F4"
                       Width="10" Height="7" Stretch="Fill" Canvas.Left="25" Canvas.Top="2"/>
               </Canvas>
             </Viewbox>
-            <TextBlock Text="ZincXManagerClient" FontSize="13.5" Foreground="#2F504F" LetterSpacing="0.6"/>
+            <TextBlock Text="ZincXManagerClient" FontSize="13.5" Foreground="#1E3A39" LetterSpacing="0.6"/>
           </StackPanel>
 
-          <!-- 导航 -->
-          <ItemsControl Grid.Row="1" Margin="20,34,18,0" ItemsSource="{Binding NavItems}">
+          <!-- 导航:整行通到侧栏左边缘,每行左侧都带小条 -->
+          <ItemsControl Grid.Row="1" Margin="0,34,0,0" ItemsSource="{Binding NavItems}">
             <ItemsControl.ItemsPanel>
               <ItemsPanelTemplate>
-                <StackPanel Spacing="6"/>
+                <StackPanel Spacing="2"/>
               </ItemsPanelTemplate>
             </ItemsControl.ItemsPanel>
             <ItemsControl.ItemTemplate>
               <DataTemplate x:DataType="models:NavItem">
                 <Button Classes="nav" Classes.selected="{Binding IsSelected}" Click="OnNavItemClick">
-                  <StackPanel Orientation="Horizontal" Spacing="12">
-                    <Path Data="{Binding Icon}" Fill="#EDF7FF" Width="17" Height="17"
-                          Stretch="Uniform" VerticalAlignment="Center"/>
-                    <TextBlock Text="{Binding Label}" VerticalAlignment="Center"/>
-                  </StackPanel>
+                  <Grid ColumnDefinitions="3,*" MinHeight="40">
+                    <!-- 贴在界面左边缘的小条,每行都有;选中时由样式高亮 -->
+                    <Rectangle Grid.Column="0" Classes="bar"/>
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="12" Margin="28,9,14,9">
+                      <Path Data="{Binding Icon}" Width="17" Height="17"
+                            Stretch="Uniform" VerticalAlignment="Center"/>
+                      <TextBlock Text="{Binding Label}" VerticalAlignment="Center"/>
+                    </StackPanel>
+                  </Grid>
                 </Button>
               </DataTemplate>
             </ItemsControl.ItemTemplate>
           </ItemsControl>
 
-          <!-- 用户信息 -->
+          <!-- 用户信息(名称与 ID 由 SetUser 赋值) -->
           <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="14" Margin="32,0,0,0">
-            <Ellipse Width="46" Height="46" Fill="#F4FAFF"/>
+            <Ellipse Width="46" Height="46" Fill="#EDF5FA"/>
             <StackPanel VerticalAlignment="Center" Spacing="2">
               <TextBlock Text="{Binding UserName}" Foreground="White" FontSize="16" FontWeight="SemiBold"/>
-              <TextBlock Text="{Binding UserId}" Foreground="#DCEEF8" FontSize="12.5"/>
+              <TextBlock Text="{Binding UserId}" Foreground="#E4F1F9" FontSize="12.5"/>
             </StackPanel>
           </StackPanel>
         </Grid>
@@ -204,7 +228,7 @@
             <Rectangle Width="13" Height="1.6" Fill="White"/>
           </Button>
 
-          <Button Grid.Column="6" Classes="chrome" Width="54" Background="#FF0000" Click="OnCloseClick"
+          <Button Grid.Column="6" Classes="chrome" Width="54" Background="#E81123" Click="OnCloseClick"
                   HorizontalContentAlignment="Center" VerticalContentAlignment="Center">
             <Path Data="M0,0 L12,12 M12,0 L0,12" Stroke="White" StrokeThickness="1.7"/>
           </Button>
@@ -214,13 +238,13 @@
       <!-- ================= 内容区 + 消息面板 ================= -->
       <Grid Grid.Row="1" Grid.Column="1" ColumnDefinitions="*,312">
 
-        <!-- 内容区:设计稿此处留空,让底图透出 -->
-        <TextBlock Grid.Column="0" Text="{Binding StatusText}" Foreground="#5CFFFFFF" FontSize="13"
+        <!-- 内容区:设计稿此处留空,让背景透出 -->
+        <TextBlock Grid.Column="0" Text="{Binding StatusText}" Foreground="#8AA6B8" FontSize="13"
                    HorizontalAlignment="Center" VerticalAlignment="Center"/>
 
-        <!-- 消息面板 -->
-        <Border Grid.Column="1" Margin="0,8,10,10" CornerRadius="6"
-                Background="#5CFFFFFF" BorderBrush="#4DFFFFFF" BorderThickness="1">
+        <!-- 消息面板:半透明毛玻璃 -->
+        <Border Grid.Column="1" Margin="0,8,10,10"
+                Background="#B8EAF4F9" BorderBrush="#8FCBDFEA" BorderThickness="1">
           <Grid RowDefinitions="Auto,*" Margin="14,12,14,10">
             <StackPanel Grid.Row="0" Spacing="6">
               <TextBlock Text="消息" FontSize="17" FontWeight="SemiBold" Foreground="#1F3B3A"/>
@@ -232,12 +256,12 @@
                 <ItemsControl ItemsSource="{Binding Messages}">
                   <ItemsControl.ItemTemplate>
                     <DataTemplate x:DataType="models:MessageItem">
-                      <Border Background="#C2F8FDFB" BorderBrush="#73FFFFFF" BorderThickness="1"
-                              CornerRadius="5" Padding="12,10" Margin="0,0,0,11">
+                      <Border Background="#E8FFFFFF" BorderBrush="#99D5E5EE" BorderThickness="1"
+                              Padding="12,10" Margin="0,0,0,11">
                         <StackPanel Spacing="7">
                           <TextBlock Classes="cardTitle" Text="{Binding Title}"/>
                           <TextBlock Classes="cardBody" Text="{Binding Body}"/>
-                          <Rectangle Height="1" Fill="#4DFFFFFF"/>
+                          <Rectangle Height="1" Fill="#66E3EEF4"/>
 
                           <Grid ColumnDefinitions="*,Auto">
                             <TextBlock Grid.Column="0" Classes="source" Text="{Binding Source}" VerticalAlignment="Center"/>
@@ -255,14 +279,15 @@
 
                               <StackPanel Orientation="Horizontal" Spacing="6" IsVisible="{Binding IsInput}">
                                 <TextBox Text="{Binding InputText}" Width="120" FontSize="12"
-                                         Background="Transparent" BorderThickness="0,0,0,1"
-                                         BorderBrush="#8FB6D6E4" Padding="2,0" VerticalContentAlignment="Center"/>
+                                         Background="#D9FFFFFF" BorderThickness="0,0,0,1" CornerRadius="0"
+                                         BorderBrush="#A9C7D8" Padding="2,0" VerticalContentAlignment="Center"/>
                                 <Button Classes="link" Content="{Binding PrimaryAction}" Click="OnCardActionClick"/>
                               </StackPanel>
 
                               <ComboBox IsVisible="{Binding IsSelect}" ItemsSource="{Binding Options}"
                                         SelectedItem="{Binding SelectedOption}" FontSize="12"
-                                        MinWidth="86" Background="#33FFFFFF" BorderThickness="0" Padding="6,1"/>
+                                        MinWidth="86" Background="#D9FFFFFF" BorderThickness="1" CornerRadius="0"
+                                        BorderBrush="#99D5E5EE" Padding="6,1"/>
                             </StackPanel>
                           </Grid>
                         </StackPanel>
