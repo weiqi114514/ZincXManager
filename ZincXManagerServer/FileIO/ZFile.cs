@@ -245,7 +245,6 @@ public class ZFile : IDisposable
         return true;
     }
 
-    
     public bool WriteFileTxt(string txt, bool newline, int endline)// 写入文件，从输入行开始（对应 C++ 的 writeFileTxt(in, endl, line)）
     {
         if (_fs == null)
@@ -270,14 +269,14 @@ public class ZFile : IDisposable
         if (lines.Count > 0 && lines[^1] == "")
             lines.RemoveAt(lines.Count - 1);
 
-        // 3. 保留前 line-1 行
-        var keep = Math.Min(line - 1, lines.Count);
+        // 3. 保留前 endline-1 行
+        var keep = Math.Min(endline - 1, lines.Count);
         var outLines = new List<string>();
         for (int i = 0; i < keep; i++)
-            outLines.Add(lines[i]);
+            outLines.Add(lines[i]);            // ← 截图里缺这句
 
         // 4. 拼上新内容
-        outLines.Add(newline ? content + "\n" : content);
+        outLines.Add(newline ? txt + "\n" : txt);  // ← 截图里缺
 
         // 5. 覆盖写回
         var outStr = string.Join("\n", outLines) + "\n";
@@ -289,7 +288,7 @@ public class ZFile : IDisposable
         return true;
     }
 
-    
+
     public bool WriteFileMap(string key, string value)// 键值追加/修改（对应 C++ 的 writeFileMap / mapEdit）
     {
         if (_fs == null)
