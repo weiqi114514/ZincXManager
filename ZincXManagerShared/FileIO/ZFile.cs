@@ -449,6 +449,68 @@ public class ZFile : IDisposable
         return ok;
     }
 
+    public bool WriteFileMap(string key, int value)
+    {
+        var ok = false;
+        LogLevel level = LogLevel.Info;
+        string? message = null;
+
+        lock (_sync)
+        {
+            if (_fs == null)
+            {
+                level = LogLevel.Error;
+                message = "[zFile]writeFileMap:文件未打开";
+            }
+            else if (string.IsNullOrWhiteSpace(key))
+            {
+                level = LogLevel.Warning;
+                message = "[zFile]writeFileMap:key 不能为空";
+            }
+            else
+            {
+                try
+                {
+                    var all = ReadAllCore();
+                    var eol = DetectNewline(all);
+                    _eol = eol;
+                    var lines = SplitLines(all);
+
+                    var found = false;
+                    for (var i = 0; i < lines.Count; i++)
+                    {
+                        var line = lines[i];
+                        if (line.Length == 0 || line[0] == '#' || line[0] == ';') continue;
+
+                        var pos = line.IndexOf('=');
+                        if (pos < 0) continue;
+
+                        // 与 ReadFileMap 对齐:键两侧的空格会被忽略
+                        if (line[..pos].Trim() == key)
+                        {
+                            lines[i] = key + "=" + value;
+                            found = true;
+                            break;
+                        }
+                    }
+
+                    if (!found) lines.Add(key + "=" + value);
+
+                    WriteAllCore(lines, eol, ensureTrailingNewline: true);
+                    ok = true;
+                }
+                catch (Exception ex)
+                {
+                    level = LogLevel.Error;
+                    message = "[zFile]writeFileMap:写入失败 " + ex.Message;
+                }
+            }
+        }
+
+        if (message != null) Logger.Log(level, message);
+        return ok;
+    }
+
     // ---------- 取值 ----------
 
     /// <summary>读取一个键值,键不存在时返回 <paramref name="def"/>。</summary>
