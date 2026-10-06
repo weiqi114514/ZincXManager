@@ -39,9 +39,9 @@ public class ZFile : IDisposable
     /// <summary>
     /// 文件操作。
     /// <paramref name="mode"/>:
-    ///   rwNFC       —— 不存在则创建,存在则打开(读写)
-    ///   replaceFile —— 打开已有文件(不存在则创建),不截断内容
-    ///   del         —— 删除文件
+    ///   rwNFC       —— 打开或创建文件(读写);若当前已打开其它文件,会先关闭它;父目录不存在会自动创建
+    ///   replaceFile —— 切换到指定文件:关闭当前已打开的文件后打开目标文件(不存在则创建),不截断内容;父目录不存在会自动创建
+    ///   del         —— 删除文件(同时关闭当前文件并清空 CurrentFile)
     /// </summary>
     public bool FileOperate(string fileName, string mode)
     {
@@ -57,7 +57,7 @@ public class ZFile : IDisposable
                     ok = OpenCore(fileName, "[zFile]开启或创建文件", out level, out message);
                     break;
                 case "replaceFile":
-                    ok = OpenCore(fileName, "[zFile]开启文件", out level, out message);
+                    ok = OpenCore(fileName, "[zFile]切换打开文件", out level, out message);
                     break;
                 case "del":
                     ok = DeleteCore(fileName, out level, out message);
@@ -483,6 +483,11 @@ public class ZFile : IDisposable
 
         try
         {
+            // 父目录不存在时自动创建(支持带目录的路径打开)
+            var dir = Path.GetDirectoryName(fileName);
+            if (!string.IsNullOrEmpty(dir))
+                Directory.CreateDirectory(dir);
+
             if (!File.Exists(fileName))
                 using (File.Create(fileName)) { }
 
