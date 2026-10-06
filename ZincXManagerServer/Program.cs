@@ -1,7 +1,8 @@
-﻿using System;
-using System.Threading.Tasks;
-using ZincXManagerServer.FileIO;
-using ZincXManagerServer.Logging;
+using System;
+using System.Threading;
+using ZincXManagerShared.Command;
+using ZincXManagerShared.FileIO;
+using ZincXManagerShared.Logging;
 
 namespace ZincXManagerServer;
 
@@ -16,53 +17,24 @@ internal static class Program
     // 初始化函数
     static void InitializeLog()
     {
-        // 取当前时间，截断到秒
-        var fileName = $"{DateTime.Now:yyyy-MM-dd_HH-mm-ss}.log";
-
-        // 打开日志文件（和 C++ main 里 logF.fileOperate 一样）
-        if (!ZFile.logF.FileOperate(fileName, "rwNFC"))
+        // 日志文件名统一带端类型前缀(与 ZXMC / ZXMOS 一致)
+        if (!Logger.OpenDefaultLogFile("ZXMS", out var logFile))
         {
-            Console.Error.WriteLine("打开日志文件失败: " + fileName);
+            Console.Error.WriteLine("打开日志文件失败: " + logFile);
         }
     }
 
-    static async Task Main(string[] args)
+    static void Main(string[] args)
     {
+        Console.WriteLine(" _____   _           _  __ __  ___                                     _____    \r\n/__  /  (_)___  ____| |/ //  |/  /___ _____  ____ _____ ____  _____   / ___/    \r\n  / /  / / __ \\/ ___/   // /|_/ / __ `/ __ \\/ __ `/ __ `/ _ \\/ ___/   \\__ \\     \r\n / /__/ / / / / /__/   |/ /  / / /_/ / / / / /_/ / /_/ /  __/ /      ___/ /     \r\n/____/_/_/ /_/\\___/_/|_/_/  /_/\\__,_/_/ /_/\\__,_/\\__, /\\___/_/      /____/      \r\n                                                /____/                          ");
+        Console.WriteLine("欢迎使用ZincXManager子服务端");
         SetConsoleColor();      // 设置控制台输出颜色
-        InitializeLog();        // 初始化
+        InitializeLog();        // 初始化日志
+        // 启动命令线程（所有命令逻辑都在 CommandHandler 里）
+        var cmd = new CommandHandler();
+        cmd.Start();
 
-        // 以下为测试代码
-        using var fileo = new ZFile();
-
-        // 异步写日志（对应 C++ 的 std::async）
-        var t = Task.Run(() =>
-        {
-            Logger.Log(LogLevel.Info, "测试2");
-            Logger.Log(LogLevel.Warning, "测试3");
-            Logger.Log(LogLevel.Fatal, "测试4");
-        });
-
-        Logger.Log(LogLevel.Fatal, "测试1");
-
-        fileo.FileOperate("config.ini", "rwNFC");
-        fileo.WriteFileMap("name", "weiqi");
-        Console.WriteLine("测试读取MAP " + fileo.MapGet("name"));
-        fileo.CloseFile();
-
-        Logger.Log(LogLevel.Debug, "测试5");
-        fileo.FileOperate("exmple.txt", "rwNFC");
-        fileo.WriteFileTxt("测试1234ABCDacbd",true);
-        fileo.WriteFileTxt("测试54321weiqi", true);
-        var lines = fileo.ReadFileTxt();
-        foreach (var line in lines)
-            Console.WriteLine(line);
-        Console.WriteLine(fileo.TxtGet(2));
-        Console.ReadKey();
-        fileo.FileOperate("exmple.txt", "del");
-
-        await t;
-
-        Console.WriteLine("按任意键退出...");
-        Console.ReadKey();
+        // 主线程保持运行
+        Thread.Sleep(Timeout.Infinite);
     }
 }
