@@ -196,13 +196,6 @@ public class CommandHandler
         Register("log level", CmdLogLevel, "查看/切换日志等级门槛（低于此等级不输出）",
                  "log level [Debug|Trace|Info|Warning|Error|Fatal]");
 
-        // user 分支
-        Register("user add", CmdUserAdd, "添加用户",
-                 "user add <用户名>");
-        Register("user del", CmdUserDel, "删除用户",
-                 "user del <用户名>");
-        Register("user list", CmdUserList, "列出用户",
-                 "user list");
     }
 
     // ---------- 顶层命令 ----------
@@ -590,53 +583,5 @@ public class CommandHandler
             Logger.Log(LogLevel.Warning,
                 "无效等级，可选: Debug/Trace/Info/Warning/Error/Fatal");
         }
-    }
-
-    // ---------- 分支：user ----------
-
-    private static readonly List<string> _users = new();
-
-    private void CmdUserAdd(string[] args)
-    {
-        if (args.Length < 1)
-        {
-            Logger.Log(LogLevel.Warning, "用法: user add <用户名>");
-            return;
-        }
-        if (_users.Contains(args[0]))
-        {
-            Logger.Log(LogLevel.Warning, $"用户已存在: {args[0]}");
-            return;
-        }
-        _users.Add(args[0]);
-        Logger.Log(LogLevel.Info, $"已添加用户: {args[0]}");
-    }
-
-    private void CmdUserDel(string[] args)
-    {
-        if (args.Length < 1)
-        {
-            Logger.Log(LogLevel.Warning, "用法: user del <用户名>");
-            return;
-        }
-        if (_users.Remove(args[0]))
-            Logger.Log(LogLevel.Info, $"已删除用户: {args[0]}");
-        else
-            Logger.Log(LogLevel.Warning, $"用户不存在: {args[0]}");
-    }
-
-    private void CmdUserList(string[] args)
-    {
-        if (_users.Count == 0)
-        {
-            Logger.Log(LogLevel.Info, "(无用户)");
-            return;
-        }
-
-        var sb = new StringBuilder();
-        sb.AppendLine("用户列表:");
-        foreach (var u in _users)
-            sb.AppendLine("  " + u);
-        Logger.Log(LogLevel.Info, sb.ToString().TrimEnd('\r', '\n'));
     }
 }
