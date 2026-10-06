@@ -157,7 +157,8 @@ public class CommandHandler
                  "echo <文本>");
         Register("info", CmdInfo, "打印程序信息",
                  "info");
-
+        Register("infoPC", CmdInfoPC, "查看服务器状态",
+                 "infoPC");
         // file 分支：命令名 = ZFile 方法名小写，参数顺序 = 方法签名
         Register("file fileoperate", CmdFileFileOperate,
                  "打开/创建/删除/替换文件",
@@ -319,6 +320,58 @@ public class CommandHandler
         sb.AppendLine($"当前文件   : {(_file.IsOpen ? _file.CurrentFile : "(未打开)")}");
 
         Logger.Log(LogLevel.Info, sb.ToString().TrimEnd('\r', '\n'));
+    }
+
+    private void CmdInfoPC(string[] args)
+    {
+        var sb = new StringBuilder();
+        Logger.Log(LogLevel.Info,"正在启动检测程序");
+        Thread.Sleep(1000);
+        Logger.Log(LogLevel.Info, "检测系统...");
+        Thread.Sleep(450);
+        Logger.Log(LogLevel.Info, "检测显卡...");
+        Thread.Sleep(450);
+        Logger.Log(LogLevel.Info, "检测CPU...");
+        Thread.Sleep(450);
+        Logger.Log(LogLevel.Info, "检测内存...");
+        Thread.Sleep(450);
+        Logger.Log(LogLevel.Info, "检测主板...");
+        Thread.Sleep(450);
+        Logger.Log(LogLevel.Info, "检测电源...");
+        Thread.Sleep(450);
+        Logger.Log(LogLevel.Info, "检测USB设备...");
+        Thread.Sleep(450);
+        Logger.Log(LogLevel.Info, "检测插座...");
+        Thread.Sleep(450);
+        Logger.Log(LogLevel.Info, "检测电压...");
+        Thread.Sleep(450);
+        Logger.Log(LogLevel.Info, "初始化量子计算器");
+        Thread.Sleep(1000);
+        Logger.Log(LogLevel.Info, "正在启动GPT-v10.0 Astra UUUUUltra");
+        Thread.Sleep(2000);
+        Logger.Log(LogLevel.Info, "加载神经模型");
+        Thread.Sleep(1000);
+        Logger.Log(LogLevel.Info, "DeepSleep 1s");
+        Thread.Sleep(1000);
+        Logger.Log(LogLevel.Info, "DeepSleep 2s");
+        Thread.Sleep(1000);
+        Logger.Log(LogLevel.Info, "DeepSleep 3s");
+        Thread.Sleep(1000);
+        Logger.Log(LogLevel.Info, "DeepSleep 4s");
+        Thread.Sleep(1000);
+        Logger.Log(LogLevel.Info, "DeepSleep 5s");
+        Thread.Sleep(1000);
+        Logger.Log(LogLevel.Info, "DeepSleep 6s");
+        Thread.Sleep(1000);
+        Logger.Log(LogLevel.Info, "智能体总结中 1s");
+        Thread.Sleep(2000);
+        Logger.Log(LogLevel.Info, "智能体总结中 3s");
+        Thread.Sleep(2000);
+        Logger.Log(LogLevel.Info, "智能体计算中");
+        Thread.Sleep(2000);
+        Logger.Log(LogLevel.Info, "整合输出");
+        Thread.Sleep(3000);
+        Logger.Log(LogLevel.Info, "你的电脑是有电的！！！");
     }
 
     // ---------- file 命令：方法一一映射 ----------
