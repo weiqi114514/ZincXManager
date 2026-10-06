@@ -9,4 +9,4 @@ public enum LogLevel : byte
     Warning,    // 警告
     Error,      // 错误
     Fatal       // 致命
-}/
+}//
