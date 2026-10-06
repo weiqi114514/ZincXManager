@@ -28,7 +28,7 @@ ZincXManager(锌X管理面板)的变更记录。格式参考 [Keep a Changelog](
 
 **其它**
 
-- `Logger.OpenDefaultLogFile(前缀, out 文件名, 目录?)` 与 `Logger.DefaultLogFileName(前缀, 目录?)`:三个端统一的日志文件命名入口。
+- `Logger.OpenDefaultLogFile(前缀, out 文件名, 目录?)` 与 `Logger.DefaultLogFileName(前缀, 目录?)`:三个端统一的日志文件命名入口;目录可由 `Logger.LogDirectory`、环境变量 `ZXM_LOG_DIR` 或调用参数指定,默认写入程序目录下的 `logs/`(不存在自动创建)。
 - ZXMOS(官方服务端)补齐 C# 实现:移植 ZXMS 的日志、文件与命令能力,入口带官方服务端横幅与欢迎语。
 - `ZFile` 功能测试用例 140 项(直接链接共享类库源码、未打桩),覆盖打开/关闭/删除、文本/MAP/二进制读取、目录列举、三种写入、日志联动与日志器。测试工程位于本地会话工作区,尚未入库。
 
@@ -40,6 +40,9 @@ ZincXManager(锌X管理面板)的变更记录。格式参考 [Keep a Changelog](
 - **写文件保留原有换行风格**:按行写、写键值、追加写都会沿用文件原本的 CRLF / LF / CR,不再把 CRLF 文件写成混合换行;统一 UTF-8 无 BOM。
 - **`ZFile.ReadDir` 结果按名称排序**(原为文件系统返回顺序,不确定),子目录仍带 `/` 后缀、每项以 `\n` 结尾。
 - **日志文件名统一带端类型前缀**:`ZXMS…log` / `ZXMOS…log` / `ZXMC…log`(ZXMS 此前没有前缀,本次补齐)。
+- **日志目录可配置**:`Logger.LogDirectory`、环境变量 `ZXM_LOG_DIR` 或 `OpenDefaultLogFile(..., 目录)` 均可改;默认从「当前目录」改为「程序目录下的 `logs/`」,目录的自动创建统一由 `ZFile` 的 `rwNFC` 完成。
+- **`FileOperate` 的 `replaceFile` 语义明确为「切换打开的文件」**:关闭当前已打开的文件后打开目标文件(不存在则创建),日志文案相应改为 `[zFile]切换打开文件`。
+- **`rwNFC` / `replaceFile` 支持带目录路径**:父目录不存在时自动创建,再创建/打开目标文件。
 - **ZXMC 日志只写文件**:客户端关闭控制台输出(`Logger.EchoToConsole = false`),日志直接落文件;客户端原有的 `Class/Logging` 实现由共享类库取代。
 - ⚠ **`WriteFileTxt(txt, newline, line)` 的 `newline` 语义明确化**:现在只决定「新写入的这一行是否以换行结尾」,`false` 时不再额外补末尾换行,与追加写重载的 `endl` 含义保持一致。
 

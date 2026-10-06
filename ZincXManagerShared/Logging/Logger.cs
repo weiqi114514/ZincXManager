@@ -60,15 +60,33 @@ public static class Logger
     public static string GetName(LogLevel level) => level.GetName();
 
     /// <summary>
-    /// 按端类型前缀生成默认日志文件名,例如 <c>DefaultLogFileName("ZXMS")</c> → <c>ZXMS2026-10-06_14-10-50.log</c>。
+    /// 日志目录。为 null 时依次取:环境变量 <c>ZXM_LOG_DIR</c> → 可执行文件目录下的 <c>logs</c> 子目录。
+    /// 相对路径按可执行文件所在目录解析;目录的创建由 ZFile 打开日志文件时完成。
     /// </summary>
-    public static string DefaultLogFileName(string prefix, string? directory = null)
+    public static string? LogDirectory { get; set; }
+
+    /// <summary>
+    /// 解析日志目录路径(只解析、不创建,创建交给 ZFile)。
+    /// 优先级:参数 <paramref name="directory"/> &gt; <see cref="LogDirectory"/> &gt; 环境变量 <c>ZXM_LOG_DIR</c> &gt; 可执行文件目录下的 <c>logs</c>。
+    /// </summary>
+    public static string ResolveLogDirectory(string? directory = null)
     {
-        var name = $"{prefix}{DateTime.Now:yyyy-MM-dd_HH-mm-ss}.log";
-        return string.IsNullOrEmpty(directory) ? name : Path.Combine(directory, name);
+        var dir = directory;
+        if (string.IsNullOrWhiteSpace(dir)) dir = LogDirectory;
+        if (string.IsNullOrWhiteSpace(dir)) dir = Environment.GetEnvironmentVariable("ZXM_LOG_DIR");
+        if (string.IsNullOrWhiteSpace(dir)) dir = "logs";
+
+        return Path.IsPathRooted(dir) ? dir : Path.Combine(AppContext.BaseDirectory, dir);
     }
 
-    /// <summary>按端类型前缀打开全局日志文件(ZXMC / ZXMS / ZXMOS 三个端统一走这里)。</summary>
+    /// <summary>
+    /// 按端类型前缀生成日志文件名(已含目录),例如 <c>DefaultLogFileName("ZXMS")</c> →
+    /// <c>D:\ZXM\logs\ZXMS2026-10-06_14-10-50.log</c>。
+    /// </summary>
+    public static string DefaultLogFileName(string prefix, string? directory = null)
+        => Path.Combine(ResolveLogDirectory(directory), $"{prefix}{DateTime.Now:yyyy-MM-dd_HH-mm-ss}.log");
+
+    /// <summary>按端类型前缀打开全局日志文件;父目录不存在时由 ZFile 的 rwNFC 自动创建。</summary>
     public static bool OpenDefaultLogFile(string prefix, out string fileName, string? directory = null)
     {
         fileName = DefaultLogFileName(prefix, directory);
