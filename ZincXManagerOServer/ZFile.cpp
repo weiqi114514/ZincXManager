@@ -82,17 +82,33 @@ namespace zFile
         return true;
     }
 
-    std::string ZFile::readFileTxt()//读取txt文件
+   
+    std::vector<std::string> ZFile::readFileTxt() // 读取文本文件，按行拆好返回（对应原来的 readFileTxt）
     {
+        std::vector<std::string> lines;
+
         if (!zF.is_open())
         {
             logging::log(LogL::Error, "[zFile]readFileTxt:读取TXT文件为无效操作，文件未开启");
-            return "";
+            return lines;   // 空 vector
         }
+
+        // 读到 EOF 后状态位会脏，先清
         zF.clear();
         zF.seekg(0, std::ios::beg);
-        return std::string((std::istreambuf_iterator<char>(zF)),
-            std::istreambuf_iterator<char>());
+
+        std::string line;
+        while (std::getline(zF, line))
+        {
+            // 去掉行尾 \r（Windows 换行）
+            if (!line.empty() && line.back() == '\r')
+                line.pop_back();
+
+            lines.push_back(line);
+        }
+
+        zF.clear();   // 读完清掉 eofbit，方便后续操作
+        return lines;
     }
 
     std::map<std::string, std::string> ZFile::readFileMap()
@@ -169,11 +185,39 @@ namespace zFile
         return data;
     }
 
-    std::string ZFile::readDir()
+    
+// 目录项后缀 '/' 表示子目录，其余为文件
+    std::vector<std::string> ZFile::readDir(const std::string& dirPath)// 读取目录，返回所有条目名（对应原来的 readDir）
     {
-        // 原设计无参，无法确定目录。建议后续改为 readDir(const std::string& dirPath)
-        logging::log(LogL::Warning, "[zFile]readDir:未指定目录，请使用带参数的版本");
-        return "";
+        std::vector<std::string> result;
+        namespace fs = std::filesystem;
+
+        std::error_code ec;
+        if (!fs::exists(dirPath, ec) || !fs::is_directory(dirPath, ec))
+        {
+            logging::log(LogL::Error,
+                "[zFile]readDir:目录不存在或不是目录 " + dirPath + "  " + ec.message());
+            return result;
+        }
+
+        for (const auto& entry : fs::directory_iterator(dirPath, ec))
+        {
+            std::string name = entry.path().filename().string();
+
+            // 子目录加个斜杠区分
+            if (entry.is_directory(ec))
+                name += "/";
+
+            result.push_back(name);
+        }
+
+        if (ec)
+        {
+            logging::log(LogL::Warning,
+                "[zFile]readDir:遍历出错 " + ec.message());
+        }
+
+        return result;
     }
 
     bool ZFile::writeFileTxt(std::string in, bool endl)//追加写入，endl决定换行
@@ -289,6 +333,32 @@ namespace zFile
         auto m = readFileMap();
         auto it = m.find(key);
         return (it != m.end()) ? it->second : def;
+    }
+
+    std::string ZFile::txtGet(int linen)
+    {
+        if (!zF.is_open())
+        {
+            logging::log(LogL::Error, "[zFile]readLineN:文件未打开");
+            return "";
+        }
+        if (linen < 1) return "";
+
+        // 关键：读之前把读指针挪回开头，并清掉 EOF
+        zF.clear();
+        zF.seekg(0, std::ios::beg);
+
+        std::string line;
+        int cur = 0;
+        while (std::getline(zF, line))
+        {
+            // 去行尾 \r
+            if (!line.empty() && line.back() == '\r')
+                line.pop_back();
+
+            if (++cur == linen) return line;
+        }
+        return "";
     }
 
     ZFile::~ZFile() 

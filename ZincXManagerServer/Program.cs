@@ -7,22 +7,34 @@ namespace ZincXManagerServer;
 
 internal static class Program
 {
-    static void SetConsoleColor()               // ✅ 换个名字
+    // 设置控制台输出颜色函数
+    static void SetConsoleColor()
     {
-        Console.ForegroundColor = ConsoleColor.Green;
+        Console.BackgroundColor = ConsoleColor.Green;
     }
 
+    // 初始化函数
     static void InitializeLog()
     {
-        var fileName = $"ZXMS{DateTime.Now:yyyy-MM-dd_HH-mm-ss}.log";
-        Logger.Init(fileName);
+        // 取当前时间，截断到秒
+        var fileName = $"{DateTime.Now:yyyy-MM-dd_HH-mm-ss}.log";
+
+        // 打开日志文件（和 C++ main 里 logF.fileOperate 一样）
+        if (!ZFile.logF.FileOperate(fileName, "rwNFC"))
+        {
+            Console.Error.WriteLine("打开日志文件失败: " + fileName);
+        }
     }
 
     static async Task Main(string[] args)
     {
-        SetConsoleColor();
-        InitializeLog();
+        SetConsoleColor();      // 设置控制台输出颜色
+        InitializeLog();        // 初始化
 
+        // 以下为测试代码
+        using var fileo = new ZFile();
+
+        // 异步写日志（对应 C++ 的 std::async）
         var t = Task.Run(() =>
         {
             Logger.Log(LogLevel.Info, "测试2");
@@ -32,14 +44,16 @@ internal static class Program
 
         Logger.Log(LogLevel.Fatal, "测试1");
 
-        using var fileo = new ZFile();
         fileo.FileOperate("config.ini", "rwNFC");
         fileo.WriteFileMap("name", "weiqi");
         Console.WriteLine("测试读取MAP " + fileo.MapGet("name"));
         fileo.CloseFile();
 
         Logger.Log(LogLevel.Debug, "测试5");
-
+        fileo.FileOperate("exmple.txt", "rwNFC");
+        fileo.WriteFileTxt("测试1234ABCDacbd",false);
+        fileo.WriteFileTxt("测试54321weiqi", false);
+        fileo.ReadFileTxt();
         await t;
 
         Console.WriteLine("按任意键退出...");
