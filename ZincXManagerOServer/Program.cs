@@ -4,7 +4,7 @@ using ZincXManagerShared.Command;
 using ZincXManagerShared.FileIO;
 using ZincXManagerShared.Logging;
 
-namespace ZincXManagerServer;
+namespace ZincXManagerOServer;
 
 internal static class Program
 {
@@ -18,7 +18,7 @@ internal static class Program
     static void InitializeLog()
     {
         // 日志文件名统一带端类型前缀(与 ZXMC / ZXMOS 一致)
-        if (!Logger.OpenDefaultLogFile("ZXMS", out var logFile))
+        if (!Logger.OpenDefaultLogFile("ZXMOS", out var logFile))
         {
             Console.Error.WriteLine("打开日志文件失败: " + logFile);
         }
@@ -26,8 +26,8 @@ internal static class Program
 
     static void Main(string[] args)
     {
-        Console.WriteLine(" _____   _           _  __ __  ___                                     _____    \r\n/__  /  (_)___  ____| |/ //  |/  /___ _____  ____ _____ ____  _____   / ___/    \r\n  / /  / / __ \\/ ___/   // /|_/ / __ `/ __ \\/ __ `/ __ `/ _ \\/ ___/   \\__ \\     \r\n / /__/ / / / / /__/   |/ /  / / /_/ / / / / /_/ / /_/ /  __/ /      ___/ /     \r\n/____/_/_/ /_/\\___/_/|_/_/  /_/\\__,_/_/ /_/\\__,_/\\__, /\\___/_/      /____/      \r\n                                                /____/                          ");
-        Console.WriteLine("欢迎使用ZincXManager子服务端");
+        Console.WriteLine(" _____   _           _  __ __  ___                                   ____   _____\r\n/__  /  (_)___  ____| |/ //  |/  /___ _____  ____ _____ ____  _____ / __ \\ / ___/\r\n  / /  / / __ \\/ ___/   // /|_/ / __ `/ __ \\/ __ `/ __ `/ _ \\/ ___// / / / \\__ \\\r\n / /__/ / / / / /__/   |/ /  / / /_/ / / / / /_/ / /_/ /  __/ /   / /_/ / ___/ /\r\n/____/_/_/ /_/\\___/_/|_/_/  /_/\\__,_/_/ /_/\\__,_/\\__, /\\___/_/    \\____/ /____/");
+        Console.WriteLine("欢迎使用ZincXManager官方服务端");
         SetConsoleColor();      // 设置控制台输出颜色
         InitializeLog();        // 初始化日志
         // 启动命令线程（所有命令逻辑都在 CommandHandler 里）

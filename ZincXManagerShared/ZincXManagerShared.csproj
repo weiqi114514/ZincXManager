@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>ZincXManagerShared</RootNamespace>
+    <AssemblyName>ZincXManagerShared</AssemblyName>
+    <!-- 三个端(ZXMC/ZXMS/ZXMOS)共用,必须兼容 AOT 发布 -->
+    <IsAotCompatible>true</IsAotCompatible>
+  </PropertyGroup>
+
+</Project>

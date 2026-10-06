@@ -8,7 +8,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Folder Include="Class\" />
     <Folder Include="Models\" />
     <AvaloniaResource Include="Assets\**" />
   </ItemGroup>
@@ -23,5 +22,10 @@
       <PrivateAssets Condition="'$(Configuration)' != 'Debug'">All</PrivateAssets>
     </PackageReference>
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- 与 ZXMS / ZXMOS 共用同一套 Logging / FileIO(位于项目目录之外) -->
+    <ProjectReference Include="..\ZincXManagerShared\ZincXManagerShared.csproj" />
   </ItemGroup>
 </Project>
