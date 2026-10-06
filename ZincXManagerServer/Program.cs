@@ -10,7 +10,7 @@ internal static class Program
     // 设置控制台输出颜色函数
     static void SetConsoleColor()
     {
-        Console.BackgroundColor = ConsoleColor.Green;
+        Console.ForegroundColor = ConsoleColor.Green;
     }
 
     // 初始化函数
@@ -51,9 +51,15 @@ internal static class Program
 
         Logger.Log(LogLevel.Debug, "测试5");
         fileo.FileOperate("exmple.txt", "rwNFC");
-        fileo.WriteFileTxt("测试1234ABCDacbd",false);
-        fileo.WriteFileTxt("测试54321weiqi", false);
-        fileo.ReadFileTxt();
+        fileo.WriteFileTxt("测试1234ABCDacbd",true);
+        fileo.WriteFileTxt("测试54321weiqi", true);
+        var lines = fileo.ReadFileTxt();
+        foreach (var line in lines)
+            Console.WriteLine(line);
+        Console.WriteLine(fileo.TxtGet(2));
+        Console.ReadKey();
+        fileo.FileOperate("exmple.txt", "del");
+
         await t;
 
         Console.WriteLine("按任意键退出...");
