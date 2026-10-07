@@ -8,7 +8,6 @@ using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using ZincXManagerClient.Logging;
 using ZincXManagerClient.Models;
-using ZincXManagerShared.FileIO;
 using ZincXManagerShared.Logging;
 using ZincXManagerShared.Network;
 
@@ -33,16 +32,13 @@ namespace ZincXManagerClient.ViewModels;
 /// </summary>
 public partial class ConnectViewModel : ViewModelBase, IDisposable
 {
-    /// <summary>服务端身份声明(负载为 "ZXMS" / "ZXMOS")。</summary>
-    public const ushort ServerIdent = 200;
-
-    /// <summary>ZXMC 上线(发给服务端)。</summary>
-    public const ushort Conline = 300;
-
-    /// <summary>服务端收到(服务端回给 ZXMC)。</summary>
-    public const ushort CBack = 301;
+    // 协议常量统一放在共享库 Protocol 里(三端共用一份),这里只是别名,阅读方便
+    public const ushort ServerIdent = Protocol.ServerIdent;
+    public const ushort Conline = Protocol.Conline;
+    public const ushort CBack = Protocol.CBack;
 
     // ---------- 客户端自己的 config.ini 键名(与两个服务端同一套命名) ----------
+    private const string KeyMode = "mode";      // 连接方式(设置页里选)
     private const string KeyCzip = "czip";      // 子服务端(ZXMS)地址
     private const string KeyCzport = "czport";  // 子服务端端口
     private const string KeyOzip = "ozip";      // 官方服务端(ZXMOS)地址
@@ -59,6 +55,19 @@ public partial class ConnectViewModel : ViewModelBase, IDisposable
 
     /// <summary>身份校验没通过(已断开),用来忽略后续到达的 301。</summary>
     private bool _rejected;
+
+    /// <summary>每收到一个包都触发一次(登录 / 头像这类业务自己挑类型处理)。</summary>
+    public event Action<Packet>? PacketReceived;
+
+    /// <summary>收到账号类回复(601 / 603)时触发:参数是(消息类型, 负载文本)。</summary>
+    public event Action<ushort, string>? AccountReply;
+
+    /// <summary>收到服务端名称(201)时触发 —— 名称由服务端提供,客户端不用自己填。</summary>
+    public event Action<string>? ServerNameReceived;
+
+    /// <summary>服务端自报的名称(连接后才有)。</summary>
+    [ObservableProperty]
+    public partial string ServerName { get; set; } = "";
 
     /// <summary>连接模式:OS(仅子服务端)/ OOS(仅官方服务端)/ SAOS(两者)。</summary>
     [ObservableProperty]
@@ -115,36 +124,15 @@ public partial class ConnectViewModel : ViewModelBase, IDisposable
 
         Logger.Log(LogLevel.Info, "[ZXMC] 客户端启动");
 
-        // 读客户端自己的配置:子服务端 / 官方服务端各一组地址端口,缺了就写缺省值
-        var config = new ZFile();
-        if (!config.FileOperate("config.ini", "rwNFC"))
-        {
-            Logger.Log(LogLevel.Warning, "[ZXMC] 打开 config.ini 失败,使用缺省地址");
-        }
+        // 读客户端配置(与设置页共用 ClientConfig,缺键自动补缺省值)
+        _czip = ClientConfig.Get(KeyCzip, "127.0.0.1");
+        _czport = ClientConfig.Get(KeyCzport, "21000");
+        _ozip = ClientConfig.Get(KeyOzip, "127.0.0.1");
+        _ozport = ClientConfig.Get(KeyOzport, "20000");
 
-        _czip = EnsureValue(config, KeyCzip, "127.0.0.1");
-        _czport = EnsureValue(config, KeyCzport, "21000");
-        _ozip = EnsureValue(config, KeyOzip, "127.0.0.1");
-        _ozport = EnsureValue(config, KeyOzport, "20000");
-        config.Dispose();
-
-        // 按当前模式填好输入框(SAOS 默认先连子服务端)
-        Host = _czip;
-        Port = _czport;
-    }
-
-    /// <summary>配置项缺省补齐:没有这个键(或值为空)就写进缺省值并返回它。</summary>
-    private static string EnsureValue(ZFile file, string key, string defaultValue)
-    {
-        var value = file.MapGet(key).Trim();
-        if (value.Length > 0)
-        {
-            return value;
-        }
-
-        file.WriteFileMap(key, defaultValue);
-        Logger.Log(LogLevel.Info, $"[CONFIG]缺少 {key},写入缺省值 {defaultValue}");
-        return defaultValue;
+        // 连接方式沿用设置页里选的(缺省 SAOS),并按它填好地址端口
+        Mode = ClientConfig.Get(KeyMode, "SAOS");
+        ApplyModeTarget();
     }
 
     /// <summary>
@@ -171,6 +159,9 @@ public partial class ConnectViewModel : ViewModelBase, IDisposable
             Port = _czport;
             Logger.Log(LogLevel.Info, $"[ZXMC] 模式 SAOS → 先连子服务端 {Host}:{Port},由 ZXMS 转发官方服务端");
         }
+
+        // 连接方式与设置页共用同一个配置项(设置里选的"ZXMC模式"就是这里选的)
+        ClientConfig.Set(KeyMode, Mode);
     }
 
     /// <summary>切换模式时按模式填一次目标地址(仍可手动改)。</summary>
@@ -222,6 +213,8 @@ public partial class ConnectViewModel : ViewModelBase, IDisposable
             // 回调在网络线程,切回 UI 线程再改界面
             Dispatcher.UIThread.Post(() =>
             {
+                PacketReceived?.Invoke(packet);
+
                 var text = Encoding.UTF8.GetString(packet.Data);
 
                 switch (packet.Type)
@@ -230,6 +223,20 @@ public partial class ConnectViewModel : ViewModelBase, IDisposable
                     case ServerIdent:
                         Logger.Log(LogLevel.Info, $"[ZXMC] 收到服务端身份包:{text}");
                         CheckServerIdent(client, text.Trim(), ip, port);
+                        break;
+
+                    // 服务端名称(201):名称由服务端给 —— 存进 config,设置页显示的就是它
+                    case Protocol.ServerName:
+                        ServerName = text.Trim();
+                        ClientConfig.Set(Mode == "OOS" ? "ozname" : "czname", ServerName);
+                        Logger.Log(LogLevel.Info, $"[ZXMC] 服务端名称:{ServerName}");
+                        ServerNameReceived?.Invoke(ServerName);
+                        break;
+
+                    // 账号类回复:交给登录 / 注册那边处理
+                    case Protocol.AccountLoginAck:
+                    case Protocol.AccountRegisterAck:
+                        AccountReply?.Invoke(packet.Type, text);
                         break;
 
                     // 服务端确认上线(校验通过才算连上)
@@ -255,9 +262,10 @@ public partial class ConnectViewModel : ViewModelBase, IDisposable
             await client.ConnectAsync();
             _client = client;
 
-            // 报上自己是谁 + 上线
-            await client.WriteAsync(new Packet(1, Conline, Encoding.UTF8.GetBytes("ZXMC online")));
-            Logger.Log(LogLevel.Info, "[ZXMC] TCP 已连接,已发送上线包(300),等待服务端身份包(200)校验");
+            // 报上自己是谁 + 连接模式(服务端登记表要记模式),例如 "ZXMC:SAOS"
+            await client.WriteAsync(new Packet(1, Conline, Encoding.UTF8.GetBytes($"ZXMC:{Mode}")));
+            ClientLog.Online("ZXMC", Mode, $"{ip}:{port}");
+            Logger.Log(LogLevel.Info, $"[ZXMC] TCP 已连接,已发送上线包(300,模式 {Mode}),等待服务端身份包(200)校验");
         }
         catch (Exception ex)
         {
@@ -292,6 +300,51 @@ public partial class ConnectViewModel : ViewModelBase, IDisposable
         // 用闭包里的 client(连接可能还没赋给字段),直接断开
         _ = client.CloseAsync();
         _client = null;
+    }
+
+    /// <summary>等握手完成(最多等 ms 毫秒);被身份校验拒绝时直接返回 false。</summary>
+    public async Task<bool> WaitConnectedAsync(int ms = 2500)
+    {
+        for (var i = 0; i < ms / 50; i++)
+        {
+            if (IsConnected)
+            {
+                return true;
+            }
+
+            if (_rejected)
+            {
+                return false;
+            }
+
+            await Task.Delay(50);
+        }
+
+        return IsConnected;
+    }
+
+    /// <summary>往当前连接发一个字节负载的包(头像这类二进制业务用);没连上就返回 false。</summary>
+    public async Task<bool> SendAsync(ushort type, byte[] data, ulong id = 0)
+    {
+        if (_client is null)
+        {
+            return false;
+        }
+
+        await _client.SendAsync(type, data, id);
+        return true;
+    }
+
+    /// <summary>往当前连接发一个包(登录 / 注册这类业务用);没连上就返回 false。</summary>
+    public async Task<bool> SendAsync(ushort type, string text, ulong id = 0)
+    {
+        if (_client is null)
+        {
+            return false;
+        }
+
+        await _client.SendAsync(type, text, id);
+        return true;
     }
 
     /// <summary>断开连接。</summary>

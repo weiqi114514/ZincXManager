@@ -1,9 +1,50 @@
-﻿<Application xmlns="https://github.com/avaloniaui"
+<Application xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="ZincXManagerClient.App"
              xmlns:local="using:ZincXManagerClient"
-             RequestedThemeVariant="Default">
-             <!-- "Default" ThemeVariant follows system theme variant. "Dark" or "Light" are other available options. -->
+             RequestedThemeVariant="Light">
+
+    <!-- 固定浅色主题(免得系统深色时弹窗/勾选框变黑)+ 主题配色资源。
+         运行时由 ThemeManager 覆盖这些键,界面里用 {DynamicResource ThemeXxx} 就会跟着变 -->
+    <Application.Resources>
+        <SolidColorBrush x:Key="ThemePrimary" Color="#2662A7"/>
+        <SolidColorBrush x:Key="ThemePrimaryDark" Color="#1F5292"/>
+        <SolidColorBrush x:Key="ThemePrimaryHover" Color="#2F76C4"/>
+        <SolidColorBrush x:Key="ThemeSecondary" Color="#B9DEFF"/>
+        <SolidColorBrush x:Key="ThemeLight" Color="#E9F5FF"/>
+        <SolidColorBrush x:Key="ThemeMuted" Color="#8FCBDF"/>
+        <SolidColorBrush x:Key="ThemeWindow" Color="#F2F5F8"/>
+        <SolidColorBrush x:Key="ThemeGlass" Color="#B82662A7"/>
+        <SolidColorBrush x:Key="ThemeGlassLight" Color="#8CFFFFFF"/>
+        <SolidColorBrush x:Key="ThemePanel" Color="#B8FFFFFF"/>
+        <SolidColorBrush x:Key="ThemePage" Color="#8CFFFFFF"/>
+        <SolidColorBrush x:Key="ThemePanelBorder" Color="#598C9AA5"/>
+        <SolidColorBrush x:Key="ThemeOnRail" Color="#FFFFFF"/>
+        <SolidColorBrush x:Key="ThemeOnRailSoft" Color="#A6FFFFFF"/>
+        <SolidColorBrush x:Key="ThemeOnRailFaint" Color="#D9FFFFFF"/>
+        <Color x:Key="ThemePrimaryColor">#2662A7</Color>
+        <Color x:Key="ThemeSecondaryColor">#B9DEFF</Color>
+        <Color x:Key="ThemeMutedColor">#8FCBDF</Color>
+
+        <!-- 滚动条(键名来自 Fluent 的 ScrollBar 模板) -->
+        <SolidColorBrush x:Key="ScrollBarPanningThumbBackground" Color="#8FCBDF"/>
+        <SolidColorBrush x:Key="ScrollBarThumbFillPointerOver" Color="#2662A7"/>
+        <SolidColorBrush x:Key="ScrollBarThumbFillPressed" Color="#1F5292"/>
+        <SolidColorBrush x:Key="ScrollBarThumbFillDisabled" Color="#668FCBDF"/>
+        <SolidColorBrush x:Key="ScrollBarThumbBackgroundColor" Color="#2662A7"/>
+        <SolidColorBrush x:Key="ScrollBarTrackFill" Color="#408FCBDF"/>
+        <SolidColorBrush x:Key="ScrollBarTrackStroke" Color="#668FCBDF"/>
+        <SolidColorBrush x:Key="ScrollBarTrackFillPointerOver" Color="#598FCBDF"/>
+        <SolidColorBrush x:Key="ScrollBarTrackStrokePointerOver" Color="#808FCBDF"/>
+        <SolidColorBrush x:Key="ScrollBarBackground" Color="#00000000"/>
+        <SolidColorBrush x:Key="ScrollBarBackgroundPointerOver" Color="#268FCBDF"/>
+
+        <Color x:Key="SystemAccentColor">#2662A7</Color>
+        <Color x:Key="SystemAccentColorLight1">#2F76C4</Color>
+        <Color x:Key="SystemAccentColorDark1">#1F5292</Color>
+        <CornerRadius x:Key="ControlCornerRadius">0</CornerRadius>
+        <CornerRadius x:Key="OverlayCornerRadius">0</CornerRadius>
+    </Application.Resources>
 
     <Application.DataTemplates>
         <local:ViewLocator />
@@ -11,5 +52,20 @@
 
     <Application.Styles>
         <FluentTheme />
+
+        <!-- 滚动条:轨道与滑块都用主题色,不再用系统默认蓝灰 -->
+        <Style Selector="ScrollBar">
+            <Setter Property="Background" Value="Transparent"/>
+        </Style>
+        <Style Selector="ScrollBar /template/ Thumb">
+            <Setter Property="Background" Value="{DynamicResource ThemeMuted}"/>
+        </Style>
+        <Style Selector="ScrollBar /template/ Thumb:pointerover">
+            <Setter Property="Background" Value="{DynamicResource ThemePrimary}"/>
+        </Style>
+        <Style Selector="ScrollBar /template/ Thumb:pressed">
+            <Setter Property="Background" Value="{DynamicResource ThemePrimaryDark}"/>
+        </Style>
+
     </Application.Styles>
 </Application>

@@ -11,6 +11,7 @@ public partial class ConnectWindow : Window
     public ConnectWindow()
     {
         InitializeComponent();
+        ThemeManager.ApplyWindowMaterial(this);   // 半透明 / 亚克力:开窗时定一次
     }
 
     private ConnectViewModel? Vm => DataContext as ConnectViewModel;
@@ -32,7 +33,12 @@ public partial class ConnectWindow : Window
         if (Vm is not null)
         {
             Vm.Logs.CollectionChanged -= OnLogsChanged;
-            Vm.Dispose();
+
+            // 会话里持有的连接不释放,否则关掉连接窗口就断线了
+            if (!ReferenceEquals(ClientSession.Connect, Vm))
+            {
+                Vm.Dispose();
+            }
         }
 
         base.OnClosed(e);
@@ -87,8 +93,7 @@ public partial class ConnectWindow : Window
     /// <summary>连上之后进入主界面(原来的主界面,连接界面关闭)。</summary>
     private void OnOpenMainClick(object? sender, RoutedEventArgs e)
     {
-        var main = new MainWindow { DataContext = new MainViewModel() };
-        main.Show();
-        Close();
+        // 已有主界面就置顶它,没有才新建在连接界面这个位置,然后关掉自己
+        AppWindows.ShowMain(this);
     }
 }

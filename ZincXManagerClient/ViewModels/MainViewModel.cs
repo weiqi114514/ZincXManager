@@ -1,16 +1,21 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.IO;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
+using ZincXManagerShared.Account;
 using CommunityToolkit.Mvvm.ComponentModel;
 using ZincXManagerClient.Models;
 using ZincXManagerShared.Logging;
 
 namespace ZincXManagerClient.ViewModels;
 
-/// <summary>主界面视图模型:左侧导航、顶部模式、右侧消息。</summary>
+/// <summary>
+/// 主界面视图模型:左侧导航、顶部模式、右侧内容。
+/// 选中左侧"设置"时,右侧换成设置页(<see cref="Settings"/>),否则是内容区 + 消息面板。
+/// </summary>
 public partial class MainViewModel : ViewModelBase
 {
     public MainViewModel()
@@ -22,10 +27,52 @@ public partial class MainViewModel : ViewModelBase
         NavItems.Add(new NavItem("设置", Icons.Settings));
         NavItems.Add(new NavItem("管理", Icons.Manage, 5, 4));
         NavItems.Add(new NavItem("小功能组", Icons.Widgets));
+
+        // 设置页里改了权限等级 / 连接方式,标题栏那句要跟着变
+        Settings.PropertyChanged += OnSettingsChanged;
+
+        // 个性化里选的背景壁纸:启动时自动应用,之后一改就立刻生效
+        Settings.WallpaperChanged += OnWallpaperChanged;
+
+        var wallpaper = ClientConfig.GetOrEmpty("wallpaper");
+        if (wallpaper.Length > 0)
+        {
+            SetBackgroundImage(wallpaper);
+        }
+
+        // 登录过的账号:显示在左下角(带头像)
+        if (ClientSession.User.Length > 0)
+        {
+            SetUser(ClientSession.User, ClientConfig.GetOrEmpty("userid"));
+            RefreshAvatar();
+        }
+
+        // 设置页里换了头像 → 左下角跟着变
+        Settings.AvatarChanged += _ => RefreshAvatar();
+
+        // 截图 / 调试用:config 里写 startpage=设置、startsection=模式与数据源 就直接落在那一页
+        var startPage = ClientConfig.GetOrEmpty("startpage");
+        if (startPage.Length > 0)
+        {
+            CurrentPage = startPage;
+            var startSection = ClientConfig.GetOrEmpty("startsection");
+            Settings.ShowSection(startSection.Length > 0 ? startSection : "模式与数据源");
+        }
     }
 
-    /// <summary>顶部连接/权限模式,如 Player - SAOS。</summary>
-    public string ModeText { get; } = "Player - SAOS";
+    /// <summary>设置页视图模型。</summary>
+    public SettingsViewModel Settings { get; } = new();
+
+    /// <summary>当前一级导航(决定右侧显示哪个页面)。</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsSettings))]
+    public partial string CurrentPage { get; set; } = "经济";
+
+    /// <summary>是否正在显示设置页。</summary>
+    public bool IsSettings => CurrentPage == "设置";
+
+    /// <summary>顶部那句:权限等级 - 连接方式(如 Player - SAOS),两段都来自设置页。</summary>
+    public string ModeText => $"{Settings.Role} - {Settings.Mode}";
 
     /// <summary>消息列表为空时显示的文案。</summary>
     public string EmptyMessage { get; } = "没有其他消息啦";
@@ -43,13 +90,44 @@ public partial class MainViewModel : ViewModelBase
     public partial string StatusText { get; set; } = "";
 
     /// <summary>
-    /// 窗口背景图。默认不设置(显示界面自带的渐变底色),由用户在设置里选择图片后才有值。
+    /// 窗口背景图。默认不设置(显示界面自带的渐变底色),由用户在设置 → 个性化里选择图片后才有值。
     /// </summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasBackgroundImage))]
     public partial IImage? BackgroundImage { get; set; }
 
     public bool HasBackgroundImage => BackgroundImage is not null;
+
+    /// <summary>当前账号头像(左下角显示)。</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasAvatar))]
+    public partial IImage? Avatar { get; set; }
+
+    public bool HasAvatar => Avatar is not null;
+
+    /// <summary>从本地缓存读头像(登录后 / 换过头像后调)。</summary>
+    public void RefreshAvatar()
+    {
+        Avatar = ToImage(AvatarStore.Load(ClientSession.User));
+    }
+
+    private static IImage? ToImage(byte[] bytes)
+    {
+        if (bytes.Length == 0)
+        {
+            return null;
+        }
+
+        try
+        {
+            using var stream = new MemoryStream(bytes);
+            return new Bitmap(stream);
+        }
+        catch
+        {
+            return null;
+        }
+    }
 
     /// <summary>左侧导航项。</summary>
     public ObservableCollection<NavItem> NavItems { get; } = new();
@@ -112,7 +190,7 @@ public partial class MainViewModel : ViewModelBase
 
     // ---------- 交互 ----------
 
-    /// <summary>切换左侧导航选中项。</summary>
+    /// <summary>切换左侧导航选中项;选到"设置"时右侧换成设置页。</summary>
     public void SelectNav(NavItem item)
     {
         foreach (var nav in NavItems)
@@ -120,7 +198,15 @@ public partial class MainViewModel : ViewModelBase
             nav.IsSelected = ReferenceEquals(nav, item);
         }
 
+        CurrentPage = item.Label;
         StatusText = item.Label;
+
+        // 每次从主导航进设置页都落在"模式与数据源";背景壁纸只在"个性化"里,不会自己弹出来
+        if (item.Label == "设置")
+        {
+            Settings.ShowSection("模式与数据源");
+        }
+
         Logger.Log(LogLevel.Info, "[ZXMC] 切换页面:" + item.Label);
     }
 
@@ -129,5 +215,26 @@ public partial class MainViewModel : ViewModelBase
     {
         StatusText = action;
         Logger.Log(LogLevel.Info, "[ZXMC] 消息操作:" + action);
+    }
+
+    /// <summary>设置页里的权限等级 / 连接方式变了 → 通知标题栏刷新。</summary>
+    private void OnSettingsChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName is nameof(SettingsViewModel.Role) or nameof(SettingsViewModel.Mode))
+        {
+            OnPropertyChanged(nameof(ModeText));
+        }
+    }
+
+    /// <summary>个性化里换了壁纸(空串 = 恢复默认)→ 立刻应用到窗口。</summary>
+    private void OnWallpaperChanged(string path)
+    {
+        if (path.Length == 0)
+        {
+            BackgroundImage = null;
+            return;
+        }
+
+        SetBackgroundImage(path);
     }
 }

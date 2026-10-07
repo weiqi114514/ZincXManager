@@ -1,0 +1,327 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:ZincXManagerClient.ViewModels"
+             xmlns:models="using:ZincXManagerClient.Models"
+             x:Class="ZincXManagerClient.Views.SettingsView"
+             x:DataType="vm:SettingsViewModel"
+             FontFamily="Microsoft YaHei UI, Microsoft YaHei, Segoe UI">
+
+  <UserControl.Styles>
+    <!-- 配色色块按钮:方形,选中的描边加粗 -->
+    <Style Selector="Button.theme">
+      <Setter Property="Background" Value="Transparent"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource ThemeMuted}"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="CornerRadius" Value="0"/>
+      <Setter Property="Padding" Value="2"/>
+      <Setter Property="MinWidth" Value="0"/>
+      <Setter Property="MinHeight" Value="0"/>
+      <Setter Property="Cursor" Value="Hand"/>
+    </Style>
+    <Style Selector="Button.theme /template/ ContentPresenter">
+      <Setter Property="Background" Value="Transparent"/>
+      <Setter Property="CornerRadius" Value="0"/>
+      <Setter Property="Padding" Value="0"/>
+    </Style>
+    <Style Selector="Button.theme.selected">
+      <Setter Property="BorderBrush" Value="{DynamicResource ThemePrimary}"/>
+      <Setter Property="BorderThickness" Value="3"/>
+    </Style>
+    <!-- 二级导航:白字 + 选中项左侧强调条(与左侧主导航同一套风格) -->
+    <Style Selector="Button.subnav">
+      <Setter Property="Background" Value="Transparent"/>
+      <Setter Property="BorderThickness" Value="3,0,0,0"/>
+      <Setter Property="BorderBrush" Value="Transparent"/>
+      <Setter Property="CornerRadius" Value="0"/>
+      <Setter Property="Padding" Value="14,10"/>
+      <Setter Property="FontSize" Value="13.5"/>
+      <Setter Property="Foreground" Value="#1F3B3A"/>
+      <Setter Property="HorizontalAlignment" Value="Stretch"/>
+      <Setter Property="HorizontalContentAlignment" Value="Left"/>
+      <Setter Property="Cursor" Value="Hand"/>
+    </Style>
+    <Style Selector="Button.subnav /template/ ContentPresenter">
+      <Setter Property="Background" Value="Transparent"/>
+      <Setter Property="CornerRadius" Value="0"/>
+    </Style>
+    <Style Selector="Button.subnav:pointerover /template/ ContentPresenter">
+      <Setter Property="Background" Value="#47FFFFFF"/>
+    </Style>
+    <Style Selector="Button.subnav.selected">
+      <Setter Property="BorderBrush" Value="{DynamicResource ThemePrimary}"/>
+      <Setter Property="FontWeight" Value="SemiBold"/>
+    </Style>
+    <Style Selector="Button.subnav.selected /template/ ContentPresenter">
+      <Setter Property="Background" Value="#FFFFFF"/>
+    </Style>
+
+    <!-- 连接方式(= ZXMC 模式)按钮:直角,未选中浅蓝,选中更蓝 -->
+    <Style Selector="Button.mode">
+      <Setter Property="Background" Value="{DynamicResource ThemeLight}"/>
+      <Setter Property="Foreground" Value="#14202B"/>
+      <Setter Property="BorderThickness" Value="0"/>
+      <Setter Property="CornerRadius" Value="0"/>
+      <Setter Property="Width" Value="70"/>
+      <Setter Property="Padding" Value="0,5"/>
+      <Setter Property="FontSize" Value="13"/>
+      <Setter Property="HorizontalContentAlignment" Value="Center"/>
+      <Setter Property="Cursor" Value="Hand"/>
+    </Style>
+    <Style Selector="Button.mode /template/ ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource ThemeLight}"/>
+      <Setter Property="CornerRadius" Value="0"/>
+    </Style>
+    <Style Selector="Button.mode:pointerover /template/ ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource ThemeSecondary}"/>
+    </Style>
+    <Style Selector="Button.mode.selected /template/ ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource ThemeSecondary}"/>
+    </Style>
+    <Style Selector="Button.mode.selected">
+      <Setter Property="FontWeight" Value="SemiBold"/>
+    </Style>
+
+    <!-- 小按钮 -->
+    <Style Selector="Button.small">
+      <Setter Property="Background" Value="{DynamicResource ThemeLight}"/>
+      <Setter Property="Foreground" Value="#14202B"/>
+      <Setter Property="BorderThickness" Value="0"/>
+      <Setter Property="CornerRadius" Value="0"/>
+      <Setter Property="Padding" Value="16,5"/>
+      <Setter Property="FontSize" Value="12.5"/>
+      <Setter Property="Cursor" Value="Hand"/>
+    </Style>
+    <Style Selector="Button.small /template/ ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource ThemeLight}"/>
+      <Setter Property="CornerRadius" Value="0"/>
+    </Style>
+    <Style Selector="Button.small:pointerover /template/ ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource ThemeSecondary}"/>
+    </Style>
+
+    <Style Selector="TextBlock.title">
+      <Setter Property="FontSize" Value="16"/>
+      <Setter Property="FontWeight" Value="SemiBold"/>
+      <Setter Property="Foreground" Value="#1F3B3A"/>
+    </Style>
+    <!-- 面板是浅色磨砂,里面的字用深色,否则看不清 -->
+    <Style Selector="TextBlock.label">
+      <Setter Property="FontSize" Value="13.5"/>
+      <Setter Property="Foreground" Value="#1F3B3A"/>
+    </Style>
+    <Style Selector="TextBlock.value">
+      <Setter Property="FontSize" Value="13.5"/>
+      <Setter Property="Foreground" Value="#14202B"/>
+    </Style>
+    <Style Selector="TextBlock.tips">
+      <Setter Property="FontSize" Value="12"/>
+      <Setter Property="Foreground" Value="#5A7480"/>
+    </Style>
+    <Style Selector="TextBlock.panelTitle">
+      <Setter Property="FontSize" Value="15"/>
+      <Setter Property="FontWeight" Value="SemiBold"/>
+      <Setter Property="Foreground" Value="#1F3B3A"/>
+    </Style>
+  </UserControl.Styles>
+
+  <!-- 页面自带一层浅灰底:窗口是透明的,若只靠壁纸,浅色壁纸下白字和白面板会看不见 -->
+  <Grid ColumnDefinitions="214,*" Background="{DynamicResource ThemePage}">
+
+    <!-- ================= 左:设置二级导航 ================= -->
+    <Grid Grid.Column="0" ColumnDefinitions="*,2">
+      <StackPanel Grid.Column="0" Margin="14,16,10,0">
+        <StackPanel Spacing="6">
+          <TextBlock Text="设置" FontSize="22" FontWeight="SemiBold" Foreground="#1F3B3A"/>
+          <Rectangle Width="34" Height="2.5" Fill="{DynamicResource ThemePrimary}" HorizontalAlignment="Left"/>
+        </StackPanel>
+
+        <ItemsControl ItemsSource="{Binding SubNavItems}" Margin="0,18,0,0">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="models:SubNavItem">
+              <Button Classes="subnav" Classes.selected="{Binding IsSelected}" Click="OnSubNavClick">
+                <TextBlock Text="{Binding Label}"/>
+              </Button>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+
+        <!-- 分隔线 -->
+        <Rectangle Height="1" Fill="#59C6D5DF" Margin="16,10,16,8"/>
+
+        <ItemsControl ItemsSource="{Binding SubNavExtraItems}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="models:SubNavItem">
+              <Button Classes="subnav" Classes.selected="{Binding IsSelected}" Click="OnSubNavClick">
+                <TextBlock Text="{Binding Label}"/>
+              </Button>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </StackPanel>
+
+      <!-- 设计稿里二级导航右边那条细蓝线 -->
+      <Rectangle Grid.Column="1" Fill="#804FA3F7"/>
+    </Grid>
+
+    <!-- ================= 右:页面内容 ================= -->
+    <Grid Grid.Column="1" RowDefinitions="Auto,*" Margin="18,16,16,16">
+
+      <StackPanel Grid.Row="0" Spacing="7">
+        <TextBlock Classes="title" Text="{Binding CurrentSection}"/>
+        <Rectangle Width="34" Height="2.5" Fill="{DynamicResource ThemePrimary}" HorizontalAlignment="Left"/>
+      </StackPanel>
+
+      <!-- ========== 模式与数据源 ========== -->
+      <Border Grid.Row="1" Margin="0,12,0,0" Background="#CCFFFFFF"
+              BorderBrush="{DynamicResource ThemeMuted}" BorderThickness="1" IsVisible="{Binding IsModePage}">
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+          <StackPanel Margin="20,18,20,18" Spacing="16">
+
+            <!-- 权限等级不在这里改:登录时选(登录窗口 / OOBE 第四步),标题栏显示的就是登录账号的等级 -->
+            <Grid ColumnDefinitions="*,Auto">
+              <TextBlock Grid.Column="0" Classes="label" Text="数据源连接" VerticalAlignment="Center"/>
+              <Button Grid.Column="1" Classes="small" Content="启动数据源连接流程" Click="OnStartFlowClick"/>
+            </Grid>
+
+            <!-- OS / SAOS:客户端连的是子服务端,只显示这一组 -->
+            <StackPanel Spacing="16" IsVisible="{Binding ShowClientSource}">
+              <Grid ColumnDefinitions="190,*">
+                <TextBlock Grid.Column="0" Classes="label" Text="当前数据源"/>
+                <TextBlock Grid.Column="1" Classes="value" Text="{Binding DataSourceName}"/>
+              </Grid>
+              <Grid ColumnDefinitions="190,*">
+                <TextBlock Grid.Column="0" Classes="label" Text="数据源IP/域名"/>
+                <TextBlock Grid.Column="1" Classes="value" Text="{Binding DataSourceAddress}"/>
+              </Grid>
+            </StackPanel>
+
+            <!-- OOS:客户端直连官方服务端,只显示这一组 -->
+            <StackPanel Spacing="16" IsVisible="{Binding ShowOfficialSource}">
+              <Grid ColumnDefinitions="190,*">
+                <TextBlock Grid.Column="0" Classes="label" Text="当前官方数据源"/>
+                <TextBlock Grid.Column="1" Classes="value" Text="{Binding OfficialDataSourceName}"/>
+              </Grid>
+              <Grid ColumnDefinitions="190,*">
+                <TextBlock Grid.Column="0" Classes="label" Text="官方数据源IP/域名"/>
+                <TextBlock Grid.Column="1" Classes="value" Text="{Binding OfficialAddress}"/>
+              </Grid>
+            </StackPanel>
+          </StackPanel>
+        </ScrollViewer>
+      </Border>
+
+      <!-- ========== 个性化:背景壁纸在这里(不在"设置"首页) ========== -->
+      <Border Grid.Row="1" Margin="0,12,0,0" Background="#CCFFFFFF"
+              BorderBrush="{DynamicResource ThemeMuted}" BorderThickness="1" IsVisible="{Binding IsPersonalizePage}">
+        <StackPanel Margin="20,18,20,18" Spacing="16">
+
+          <Grid ColumnDefinitions="*,Auto">
+            <TextBlock Grid.Column="0" Classes="label" Text="背景壁纸" VerticalAlignment="Center"/>
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+              <Button Classes="small" Content="选择图片…" Focusable="False" Click="OnPickWallpaperClick"/>
+              <Button Classes="small" Content="恢复默认" Click="OnClearWallpaperClick"/>
+            </StackPanel>
+          </Grid>
+
+          <TextBlock Classes="tips" Text="{Binding WallpaperHint}" TextWrapping="Wrap"/>
+
+          <TextBlock Classes="tips" TextWrapping="Wrap"
+                     Text="支持 png / jpg / bmp;选完立即生效,并记进 config.ini,下次启动自动应用。"/>
+
+          <Rectangle Height="1" Fill="#66E3EEF4"/>
+
+          <Grid ColumnDefinitions="*,Auto">
+            <StackPanel Grid.Column="0" Spacing="4" VerticalAlignment="Center">
+              <TextBlock Classes="label" Text="毛玻璃(亚克力)"/>
+              <TextBlock Classes="tips" Text="{Binding GlassHint}" TextWrapping="Wrap"/>
+            </StackPanel>
+            <ToggleSwitch Grid.Column="1" IsChecked="{Binding GlassEnabled}" OnContent="开" OffContent="关"
+                          VerticalAlignment="Center"/>
+          </Grid>
+
+          <Rectangle Height="1" Fill="#66E3EEF4"/>
+
+          <TextBlock Classes="label" Text="配色(左半主要色,右上次要色,右下浅色)"/>
+
+          <ItemsControl ItemsSource="{Binding ThemeOptions}">
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate>
+                <WrapPanel/>
+              </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="models:ThemeOption">
+                <StackPanel Spacing="6" Margin="0,0,18,12">
+                  <Button Classes="theme" Classes.selected="{Binding IsSelected}"
+                          Tag="{Binding Name}" Click="OnThemeClick" Focusable="False">
+                    <Grid Width="40" Height="40" ColumnDefinitions="*,*">
+                      <Rectangle Grid.Column="0" Fill="{Binding PrimaryBrush}"/>
+                      <Grid Grid.Column="1" RowDefinitions="2*,*">
+                        <Rectangle Grid.Row="0" Fill="{Binding SecondaryBrush}"/>
+                        <Rectangle Grid.Row="1" Fill="{Binding LightBrush}"/>
+                      </Grid>
+                    </Grid>
+                  </Button>
+                  <TextBlock Classes="tips" Text="{Binding Name}" HorizontalAlignment="Center"/>
+                </StackPanel>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </StackPanel>
+      </Border>
+
+      <!-- ========== 账户与安全:头像 / 账号 / 登录选项 ========== -->
+      <Border Grid.Row="1" Margin="0,12,0,0" Background="#CCFFFFFF"
+              BorderBrush="{DynamicResource ThemeMuted}" BorderThickness="1" IsVisible="{Binding IsSecurityPage}">
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+          <StackPanel Margin="20,18,20,18" Spacing="16">
+
+            <StackPanel Orientation="Horizontal" Spacing="16">
+              <Border Width="84" Height="84" Background="#F2F7FA" BorderBrush="{DynamicResource ThemeMuted}" BorderThickness="1">
+                <Panel>
+                  <Ellipse Width="64" Height="64" Fill="{DynamicResource ThemeSecondary}" IsVisible="{Binding !HasAvatar}"/>
+                  <TextBlock Text="?" FontSize="28" FontWeight="SemiBold" Foreground="{DynamicResource ThemePrimary}"
+                             HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="{Binding !HasAvatar}"/>
+                  <Image Source="{Binding Avatar}" Stretch="UniformToFill"/>
+                </Panel>
+              </Border>
+
+              <StackPanel VerticalAlignment="Center" Spacing="8">
+                <TextBlock Classes="value" Text="{Binding AccountLine}"/>
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                  <Button Classes="small" Content="更换头像…" Focusable="False" Click="OnPickAvatarClick"/>
+                  <Button Classes="small" Content="删除头像" Click="OnClearAvatarClick"/>
+                </StackPanel>
+                <TextBlock Classes="tips" Text="头像存在服务端(avatars/账号.png),本地也缓存一份,登录界面会显示"/>
+              </StackPanel>
+            </StackPanel>
+
+            <Rectangle Height="1" Fill="#66E3EEF4"/>
+
+            <StackPanel Spacing="10">
+              <CheckBox Content="7 天内免登录(勾了且记住密码,启动时自动登录)" IsChecked="{Binding Remember}" FontSize="13"/>
+              <CheckBox Content="记住账号密码(本地只存密文)" IsChecked="{Binding SavePassword}" FontSize="13"/>
+            </StackPanel>
+
+            <Rectangle Height="1" Fill="#66E3EEF4"/>
+
+            <Grid ColumnDefinitions="*,Auto">
+              <TextBlock Grid.Column="0" Classes="tips" Text="退出后会清掉免登录记录并断开连接"
+                         VerticalAlignment="Center"/>
+              <Button Grid.Column="1" Classes="small" Content="退出登录" Click="OnLogoutClick"/>
+            </Grid>
+          </StackPanel>
+        </ScrollViewer>
+      </Border>
+
+      <!-- ========== 其它还没做的页面 ========== -->
+      <Border Grid.Row="1" Margin="0,12,0,0" Background="#CCFFFFFF"
+              BorderBrush="{DynamicResource ThemeMuted}" BorderThickness="1" IsVisible="{Binding IsOtherPage}">
+        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="8">
+          <TextBlock Classes="panelTitle" Text="{Binding CurrentSection}" HorizontalAlignment="Center"/>
+          <TextBlock Classes="tips" Text="这个页面还没做" HorizontalAlignment="Center"/>
+        </StackPanel>
+      </Border>
+    </Grid>
+  </Grid>
+</UserControl>

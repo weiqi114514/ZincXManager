@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading;
 using ZincXManagerShared.FileIO;
 using ZincXManagerShared.Logging;
+using ZincXManagerShared.Network;
 
 namespace ZincXManagerShared.Command;
 
