@@ -1,0 +1,206 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:ZincXManagerClient.ViewModels"
+        xmlns:models="using:ZincXManagerClient.Models"
+        x:Class="ZincXManagerClient.Views.ConnectWindow"
+        x:DataType="vm:ConnectViewModel"
+        Title="ZincXManagerClient · 连接"
+        Width="880" Height="580"
+        MinWidth="760" MinHeight="460"
+        Background="#EAF2F7"
+        FontFamily="Microsoft YaHei UI, Microsoft YaHei, Segoe UI"
+        WindowDecorations="None"
+        CanResize="True">
+
+  <Window.Styles>
+    <!-- 连接模式按钮:直角 + 选中白底 + 左侧强调色小条(与主界面导航一致) -->
+    <Style Selector="Button.mode">
+      <Setter Property="Background" Value="Transparent"/>
+      <Setter Property="BorderThickness" Value="3,0,0,0"/>
+      <Setter Property="BorderBrush" Value="Transparent"/>
+      <Setter Property="CornerRadius" Value="0"/>
+      <Setter Property="Padding" Value="12,9"/>
+      <Setter Property="FontSize" Value="13.5"/>
+      <Setter Property="Foreground" Value="#1F3B3A"/>
+      <Setter Property="HorizontalAlignment" Value="Stretch"/>
+      <Setter Property="HorizontalContentAlignment" Value="Left"/>
+      <Setter Property="Cursor" Value="Hand"/>
+    </Style>
+    <Style Selector="Button.mode /template/ ContentPresenter">
+      <Setter Property="Background" Value="Transparent"/>
+      <Setter Property="CornerRadius" Value="0"/>
+    </Style>
+    <Style Selector="Button.mode:pointerover /template/ ContentPresenter">
+      <Setter Property="Background" Value="#D6E7F1"/>
+    </Style>
+    <Style Selector="Button.mode.selected">
+      <Setter Property="Background" Value="#FFFFFF"/>
+      <Setter Property="BorderBrush" Value="#2662A7"/>
+      <Setter Property="FontWeight" Value="SemiBold"/>
+    </Style>
+    <Style Selector="Button.mode.selected /template/ ContentPresenter">
+      <Setter Property="Background" Value="#FFFFFF"/>
+    </Style>
+
+    <!-- 主按钮(蓝底)与次要按钮(浅底) -->
+    <Style Selector="Button.primary">
+      <Setter Property="Background" Value="#2662A7"/>
+      <Setter Property="Foreground" Value="White"/>
+      <Setter Property="BorderThickness" Value="0"/>
+      <Setter Property="CornerRadius" Value="0"/>
+      <Setter Property="Padding" Value="0,9"/>
+      <Setter Property="FontSize" Value="13.5"/>
+      <Setter Property="HorizontalAlignment" Value="Stretch"/>
+      <Setter Property="HorizontalContentAlignment" Value="Center"/>
+      <Setter Property="Cursor" Value="Hand"/>
+    </Style>
+    <Style Selector="Button.primary /template/ ContentPresenter">
+      <Setter Property="Background" Value="#2662A7"/>
+      <Setter Property="CornerRadius" Value="0"/>
+    </Style>
+    <Style Selector="Button.primary:pointerover /template/ ContentPresenter">
+      <Setter Property="Background" Value="#2F76C4"/>
+    </Style>
+
+    <Style Selector="Button.secondary">
+      <Setter Property="Background" Value="#DCEAF2"/>
+      <Setter Property="Foreground" Value="#1F3B3A"/>
+      <Setter Property="BorderThickness" Value="0"/>
+      <Setter Property="CornerRadius" Value="0"/>
+      <Setter Property="Padding" Value="0,9"/>
+      <Setter Property="FontSize" Value="13.5"/>
+      <Setter Property="HorizontalAlignment" Value="Stretch"/>
+      <Setter Property="HorizontalContentAlignment" Value="Center"/>
+      <Setter Property="Cursor" Value="Hand"/>
+    </Style>
+    <Style Selector="Button.secondary /template/ ContentPresenter">
+      <Setter Property="Background" Value="#DCEAF2"/>
+      <Setter Property="CornerRadius" Value="0"/>
+    </Style>
+    <Style Selector="Button.secondary:pointerover /template/ ContentPresenter">
+      <Setter Property="Background" Value="#CBDDE9"/>
+    </Style>
+
+    <Style Selector="TextBlock.label">
+      <Setter Property="FontSize" Value="12"/>
+      <Setter Property="Foreground" Value="#5A7A88"/>
+    </Style>
+    <Style Selector="TextBlock.section">
+      <Setter Property="FontSize" Value="14"/>
+      <Setter Property="FontWeight" Value="SemiBold"/>
+      <Setter Property="Foreground" Value="#1F3B3A"/>
+    </Style>
+    <Style Selector="TextBox.field">
+      <Setter Property="FontSize" Value="13.5"/>
+      <Setter Property="CornerRadius" Value="0"/>
+      <Setter Property="Background" Value="#FFFFFF"/>
+      <Setter Property="BorderBrush" Value="#C7DCE8"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="Padding" Value="8,6"/>
+    </Style>
+  </Window.Styles>
+
+  <Grid RowDefinitions="44,*">
+
+    <!-- ================= 标题栏 ================= -->
+    <Border Grid.Row="0" Background="#2662A7" PointerPressed="OnTitleBarPointerPressed">
+      <Grid ColumnDefinitions="Auto,*,Auto,Auto">
+        <Rectangle Grid.Column="0" Width="1.5" Height="16" Fill="#80FFFFFF" Margin="16,0,0,0" VerticalAlignment="Center"/>
+        <TextBlock Grid.Column="1" Text="ZincXManagerClient · 连接服务端" Foreground="White" FontSize="13"
+                   Margin="14,0,0,0" VerticalAlignment="Center"/>
+
+        <Button Grid.Column="2" Width="48" Background="Transparent" BorderThickness="0" CornerRadius="0"
+                Click="OnMinimizeClick" HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
+                Cursor="Hand">
+          <Rectangle Width="13" Height="1.6" Fill="White"/>
+        </Button>
+        <Button Grid.Column="3" Width="54" Background="#E81123" BorderThickness="0" CornerRadius="0"
+                Click="OnCloseClick" HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
+                Cursor="Hand">
+          <Path Data="M0,0 L12,12 M12,0 L0,12" Stroke="White" StrokeThickness="1.7"/>
+        </Button>
+      </Grid>
+    </Border>
+
+    <!-- ================= 主体 ================= -->
+    <Grid Grid.Row="1" ColumnDefinitions="320,*">
+
+      <!-- ===== 左侧:连接设置 ===== -->
+      <Border Grid.Column="0" Background="#F4FAFD" BorderBrush="#CBDFEA" BorderThickness="0,0,1,0">
+        <StackPanel Margin="18,16,18,16" Spacing="14">
+
+          <TextBlock Classes="section" Text="连接模式"/>
+
+          <StackPanel Spacing="4">
+            <Button Classes="mode" Classes.selected="{Binding IsOs}" Tag="OS" Click="OnModeClick"
+                    Content="OS · 仅子服务端(ZXMS)"/>
+            <Button Classes="mode" Classes.selected="{Binding IsOos}" Tag="OOS" Click="OnModeClick"
+                    Content="OOS · 仅官方服务端(ZXMOS)"/>
+            <Button Classes="mode" Classes.selected="{Binding IsSaos}" Tag="SAOS" Click="OnModeClick"
+                    Content="SAOS · 子服务端 + 官方服务端"/>
+          </StackPanel>
+
+          <!-- 当前模式具体连谁(读自 config.ini) -->
+          <TextBlock Classes="label" Text="{Binding ModeHint}" TextWrapping="Wrap"/>
+
+          <TextBlock Classes="section" Text="目标服务端"/>
+
+          <StackPanel Spacing="8">
+            <StackPanel Spacing="4">
+              <TextBlock Classes="label" Text="地址"/>
+              <TextBox Classes="field" Text="{Binding Host}" PlaceholderText="例如 127.0.0.1"/>
+            </StackPanel>
+            <StackPanel Spacing="4">
+              <TextBlock Classes="label" Text="端口"/>
+              <TextBox Classes="field" Text="{Binding Port}" PlaceholderText="例如 21000(ZXMS)/ 20000(ZXMOS)"/>
+            </StackPanel>
+            <TextBlock Classes="label" TextWrapping="Wrap"
+                       Text="OS 只能连子服务端,OOS 只能连官方服务端;连接时会按模式校验,不匹配直接拒绝。"/>
+          </StackPanel>
+
+          <StackPanel Spacing="8">
+            <Button Classes="primary" Content="连接" Click="OnConnectClick" IsEnabled="{Binding !IsBusy}"/>
+            <Button Classes="secondary" Content="断开" Click="OnDisconnectClick"/>
+          </StackPanel>
+
+          <!-- 状态 -->
+          <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,4,0,0">
+            <Ellipse Width="9" Height="9" Fill="{Binding StatusBrush}" VerticalAlignment="Center"/>
+            <TextBlock Text="{Binding State}" FontSize="13" Foreground="#1F3B3A" VerticalAlignment="Center"/>
+          </StackPanel>
+
+          <Button Classes="secondary" Content="进入主界面" Click="OnOpenMainClick"
+                  IsEnabled="{Binding IsConnected}"/>
+        </StackPanel>
+      </Border>
+
+      <!-- ===== 右侧:实时日志 ===== -->
+      <Grid Grid.Column="1" RowDefinitions="Auto,*">
+        <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Margin="14,14,14,8">
+          <StackPanel Grid.Column="0" Spacing="6">
+            <TextBlock Classes="section" Text="实时日志"/>
+            <Rectangle Width="30" Height="2.5" Fill="#2662A7" HorizontalAlignment="Left"/>
+          </StackPanel>
+          <Button Grid.Column="1" Content="清空" Click="OnClearLogClick" VerticalAlignment="Center"
+                  Background="Transparent" BorderThickness="0" CornerRadius="0" Foreground="#2662A7"
+                  FontSize="12" Padding="6,2" Cursor="Hand"/>
+        </Grid>
+
+        <Border Grid.Row="1" Margin="14,0,14,14" Background="#0F1A24" BorderBrush="#1E3244" BorderThickness="1">
+          <ScrollViewer x:Name="LogScroll" VerticalScrollBarVisibility="Auto" Padding="0,6">
+            <ItemsControl ItemsSource="{Binding Logs}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="models:LogEntry">
+                  <TextBlock Text="{Binding Display}"
+                             FontFamily="Consolas, Cascadia Mono, Menlo, monospace"
+                             FontSize="12" Foreground="#9FE8B8" TextWrapping="NoWrap"
+                             Margin="10,1,10,1"/>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </ScrollViewer>
+        </Border>
+      </Grid>
+    </Grid>
+  </Grid>
+</Window>

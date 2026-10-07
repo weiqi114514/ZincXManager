@@ -1,7 +1,7 @@
 using Avalonia;
 using System;
 using ZincXManagerShared.Logging;
-
+using ZincXManagerShared.Network;
 namespace ZincXManagerClient;
 
 sealed class Program

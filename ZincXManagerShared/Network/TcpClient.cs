@@ -83,6 +83,15 @@ public class TcpClient : IClient
     }
 
     /// <summary>
+    /// 是否处于已连接状态(已关闭或尚未连接都是 false)。
+    /// <para>用途:状态显示 / 命令里判断要不要重连。</para>
+    /// <para>注意:底层 <c>TcpClient.Connected</c> 反映的是"最近一次 I/O 时的状态",
+    /// 对端刚断开但本地还没读到任何数据时,可能仍返回 true —— 做界面状态展示够用,
+    /// 不要拿它当"业务上一定可达"的判据。</para>
+    /// </summary>
+    public bool IsConnected => _closed == 0 && _client.Connected;
+
+    /// <summary>
     /// 注册收包处理器。
     /// <para>作用:声明"收到包之后做什么";可注册多个,按注册顺序依次 await 执行。</para>
     /// <para>处理器与 socket 读取已解耦,里面做耗时操作不会卡住收包。</para>
