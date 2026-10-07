@@ -17,16 +17,10 @@ public partial class App : Application
     {
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
-            var viewModel = new MainViewModel();
-
-#if DEBUG
-            // 仅调试预览:加载设计稿里的示例消息;正式运行由服务端数据填充 Messages / 调用 SetUser
-            viewModel.LoadSampleMessages();
-#endif
-
-            desktop.MainWindow = new MainWindow
+            // 启动先进连接界面;连上之后可以点"进入主界面"打开主窗口
+            desktop.MainWindow = new ConnectWindow
             {
-                DataContext = viewModel,
+                DataContext = new ConnectViewModel(),
             };
         }
 

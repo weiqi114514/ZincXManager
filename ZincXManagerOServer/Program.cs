@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Net;
 using System.Text;
 using System.Threading;
@@ -15,9 +16,22 @@ internal static class Program
     // 默认监听端口(config.ini 里没写 port 时的兜底值)
     private const string DefaultPort = "25565";
 
-    // 与 ZXMS/ZXMC 约定的消息类型(先占位,后面按协议文档改)
-    private const ushort TypeHandshake = 100;      // 对方 → ZXMOS:我上线了
-    private const ushort TypeHandshakeAck = 101;   // ZXMOS → 对方:收到
+    // ---------- 与 ZXMS(子服务端)约定的消息类型 ----------
+    private const ushort SOnline = 100;   // ZXMS → ZXMOS:子服务端上线(握手)
+    private const ushort SBack = 101;     // ZXMOS → ZXMS:收到
+
+    // ---------- 与 ZXMC(客户端)约定的消息类型 ----------
+    private const ushort Conline = 300;   // ZXMC → ZXMOS:客户端上线(握手)
+    private const ushort CBack = 301;     // ZXMOS → ZXMC:收到
+
+    // ---------- 服务端身份声明 ----------
+    private const ushort ServerIdent = 200;   // 服务端 → 对方:我是谁(负载 "ZXMS" / "ZXMOS")
+
+    /// <summary>
+    /// 连接 id → 对端身份("ZXMS" / "ZXMC")。
+    /// 连接建立时还不知道对方是谁,靠握手包(100 / 300)认出来,断开时才能打对标签。
+    /// </summary>
+    private static readonly ConcurrentDictionary<Guid, string> PeerKinds = new();
 
     static void OpenLog()
     {
@@ -32,21 +46,14 @@ internal static class Program
     /// 配置检查:ini 里这个键没有"有效值"就在控制台问一次,问到合法值后写回 ini。
     /// 直接回车(空输入)或输入流已结束(管道/重定向)时用 fallback 兜底,不会死循环。
     /// </summary>
-    /// <param name="file">已打开的配置文件</param>
-    /// <param name="key">配置键名</param>
-    /// <param name="prompt">提示文案</param>
-    /// <param name="valid">判断输入是否合法</param>
-    /// <param name="fallback">拿不到合法输入时的缺省值</param>
     static string AskIfMissing(ZFile file, string key, string prompt, Func<string, bool> valid, string fallback)
     {
-        // ① 已经有合法值:直接用,不打扰用户
         var value = file.MapGet(key).Trim();
         if (valid(value))
         {
             return value;
         }
 
-        // ② 没有/不合法:循环问,直到拿到合法值(或用兜底值)
         while (true)
         {
             Logger.Log(LogLevel.Info, prompt);
@@ -59,12 +66,29 @@ internal static class Program
 
             if (valid(input))
             {
-                file.WriteFileMap(key, input);   // ③ 写回 config.ini,下次启动就不再问
+                file.WriteFileMap(key, input);
                 Logger.Log(LogLevel.Info, $"[CONFIG]{key} 已设置为 {input}");
                 return input;
             }
 
             Logger.Log(LogLevel.Warning, $"[CONFIG]{key} 输入不合法:{input}");
+        }
+    }
+
+    /// <summary>
+    /// 回复握手确认(收到 100 回 101、收到 300 回 301)。
+    /// 成功/失败都记日志 —— 否则服务端这边只有"上线",看不出确认包有没有发出去。
+    /// </summary>
+    static async Task ReplyHandshakeAsync(ServerboundPacket packet, ushort ackType, string ackName, string peer, string text)
+    {
+        try
+        {
+            await packet.WriteAsync(new Packet(packet.Id, ackType, Encoding.UTF8.GetBytes(text)));
+            Logger.Log(LogLevel.Info, $"[{peer}] 已回复握手确认({ackName}) → {packet.Connection.RemoteEndPoint},握手完成");
+        }
+        catch (Exception ex)
+        {
+            Logger.Log(LogLevel.Error, $"[{peer}] 回复握手确认失败: {ex.Message}");
         }
     }
 
@@ -80,31 +104,59 @@ internal static class Program
         var config = new ZFile();
         config.FileOperate("config.ini", "rwNFC");
 
-        // ================= 配置检查:没有 port 就问一次,问完写回 config.ini =================
+        // 配置检查:没有 port 就问一次,问完写回 config.ini
         var port = AskIfMissing(config, "port",
             "[CONFIG]输入本服务端监听端口(1-65535)",
             value => ushort.TryParse(value, out var n) && n > 0,
             fallback: DefaultPort);
 
-        // ================= 起服务端:ZXMS / ZXMC 都连这个端口 =================
+        // 起服务端:ZXMS / ZXMC 都连这个端口
         var server = new TcpServer(IPAddress.Any, ushort.Parse(port));
 
-        server.Connected += conn => Logger.Log(LogLevel.Info, $"[ZXMS] 接入 {conn.RemoteEndPoint}");
-        server.Disconnected += conn => Logger.Log(LogLevel.Info, $"[ZXMS] 断开 {conn.RemoteEndPoint}");
+        // 有人接进来:还不知道对方是 ZXMS 还是 ZXMC,先中立记录,再主动报上"我是 ZXMOS"
+        server.Connected += async conn =>
+        {
+            Logger.Log(LogLevel.Info, $"[网络] 连接接入 {conn.RemoteEndPoint}(等待握手识别身份)");
+
+            try
+            {
+                await conn.WriteAsync(new Packet(0, ServerIdent, Encoding.UTF8.GetBytes("ZXMOS")));
+                Logger.Log(LogLevel.Info, "[ZXMOS] 已发送身份包(200):ZXMOS");
+            }
+            catch (Exception ex)
+            {
+                Logger.Log(LogLevel.Warning, "[ZXMOS] 发送身份包失败: " + ex.Message);
+            }
+        };
+
+        server.Disconnected += conn =>
+        {
+            // 断开时用握手时记下的身份;没握过手的就是"未识别"
+            var kind = PeerKinds.TryRemove(conn.Id, out var k) ? k : "未识别";
+            Logger.Log(LogLevel.Info, $"[{kind}] 断开 {conn.RemoteEndPoint}");
+        };
 
         server.AddHandler(async packet =>
         {
             switch (packet.Type)
             {
-                // 收到上线握手 → 回一个确认包(沿用请求的 Id,方便对方配对)
-                case TypeHandshake:
-                    Logger.Log(LogLevel.Info, "[ZXMS] 握手: " + Encoding.UTF8.GetString(packet.Data));
-                    await packet.WriteAsync(new Packet(packet.Id, TypeHandshakeAck, Encoding.UTF8.GetBytes("ZXMOS ok")));
+                // ---- ZXMS(子服务端)上线 ----
+                case SOnline:
+                    PeerKinds[packet.Connection.Id] = "ZXMS";
+                    Logger.Log(LogLevel.Info, "[ZXMS] 上线(握手): " + Encoding.UTF8.GetString(packet.Data));
+                    await ReplyHandshakeAsync(packet, SBack, "101", "ZXMS", "ZXMOS ok");
+                    break;
+
+                // ---- ZXMC(客户端)上线 ----
+                case Conline:
+                    PeerKinds[packet.Connection.Id] = "ZXMC";
+                    Logger.Log(LogLevel.Info, "[ZXMC] 上线(握手): " + Encoding.UTF8.GetString(packet.Data));
+                    await ReplyHandshakeAsync(packet, CBack, "301", "ZXMC", "ZXMOS ok");
                     break;
 
                 // 其它类型先记日志,等协议定下来再补
                 default:
-                    Logger.Log(LogLevel.Warning, $"[ZXMS] 未处理的包 type={packet.Type} len={packet.Data.Length}");
+                    Logger.Log(LogLevel.Warning, $"[网络] 未处理的包 type={packet.Type} len={packet.Data.Length}");
                     break;
             }
         });

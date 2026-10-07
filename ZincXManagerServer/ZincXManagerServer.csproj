@@ -17,4 +17,8 @@
     <ProjectReference Include="..\ZincXManagerShared\ZincXManagerShared.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Command\" />
+  </ItemGroup>
+
 </Project>
