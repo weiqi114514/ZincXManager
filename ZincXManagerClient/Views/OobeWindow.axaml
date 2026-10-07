@@ -1,0 +1,342 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:ZincXManagerClient.ViewModels"
+        xmlns:models="using:ZincXManagerClient.Models"
+        x:Class="ZincXManagerClient.Views.OobeWindow"
+        x:DataType="vm:OobeViewModel"
+        Title="ZincXManagerClient · 首次使用"
+        Width="760" Height="560"
+        MinWidth="700" MinHeight="500"
+        Background="{DynamicResource ThemePage}"
+        TransparencyLevelHint="AcrylicBlur,Blur,Transparent"
+        FontFamily="Microsoft YaHei UI, Microsoft YaHei, Segoe UI"
+        WindowStartupLocation="Manual"
+        WindowDecorations="None"
+        CanResize="True">
+
+  <Window.Styles>
+    <Style Selector="Button.theme">
+      <Setter Property="Background" Value="Transparent"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource ThemeMuted}"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="CornerRadius" Value="0"/>
+      <Setter Property="Padding" Value="2"/>
+      <Setter Property="MinWidth" Value="0"/>
+      <Setter Property="MinHeight" Value="0"/>
+      <Setter Property="Cursor" Value="Hand"/>
+    </Style>
+    <Style Selector="Button.theme /template/ ContentPresenter">
+      <Setter Property="Background" Value="Transparent"/>
+      <Setter Property="CornerRadius" Value="0"/>
+      <Setter Property="Padding" Value="0"/>
+    </Style>
+    <Style Selector="Button.theme.selected">
+      <Setter Property="BorderBrush" Value="{DynamicResource ThemePrimary}"/>
+      <Setter Property="BorderThickness" Value="3"/>
+    </Style>
+    <!-- 标题栏按钮:背景画在按钮身上并撑满高度,不然上下会留白、点击区域也小 -->
+    <Style Selector="Button.chrome">
+      <Setter Property="Background" Value="Transparent"/>
+      <Setter Property="BorderThickness" Value="0"/>
+      <Setter Property="CornerRadius" Value="0"/>
+      <Setter Property="Padding" Value="0"/>
+      <Setter Property="Margin" Value="0"/>
+      <Setter Property="MinWidth" Value="0"/>
+      <Setter Property="MinHeight" Value="0"/>
+      <Setter Property="HorizontalAlignment" Value="Stretch"/>
+      <Setter Property="VerticalAlignment" Value="Stretch"/>
+      <Setter Property="HorizontalContentAlignment" Value="Center"/>
+      <Setter Property="VerticalContentAlignment" Value="Center"/>
+      <Setter Property="Cursor" Value="Hand"/>
+    </Style>
+    <Style Selector="Button.chrome /template/ ContentPresenter">
+      <Setter Property="Background" Value="Transparent"/>
+      <Setter Property="BorderThickness" Value="0"/>
+      <Setter Property="CornerRadius" Value="0"/>
+      <Setter Property="Padding" Value="0"/>
+      <Setter Property="Margin" Value="0"/>
+    </Style>
+    <Style Selector="Button.chrome:pointerover /template/ ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource ThemePrimaryHover}"/>
+    </Style>
+    <Style Selector="Button.close">
+      <Setter Property="Background" Value="#E81123"/>
+    </Style>
+    <Style Selector="Button.close /template/ ContentPresenter">
+      <Setter Property="Background" Value="#E81123"/>
+    </Style>
+    <Style Selector="Button.close:pointerover /template/ ContentPresenter">
+      <Setter Property="Background" Value="#F1707A"/>
+    </Style>
+    <!-- 模式选择:连在一起的段选控件(外框由 Border 提供,段与段之间不留缝) -->
+    <Style Selector="Button.step">
+      <Setter Property="Background" Value="Transparent"/>
+      <Setter Property="Foreground" Value="#14202B"/>
+      <Setter Property="BorderThickness" Value="0"/>
+      <Setter Property="CornerRadius" Value="0"/>
+      <Setter Property="Width" Value="130"/>
+      <Setter Property="Padding" Value="0,9"/>
+      <Setter Property="FontSize" Value="13"/>
+      <Setter Property="HorizontalContentAlignment" Value="Center"/>
+      <Setter Property="VerticalContentAlignment" Value="Center"/>
+      <Setter Property="MinHeight" Value="0"/>
+      <Setter Property="Cursor" Value="Hand"/>
+    </Style>
+    <Style Selector="Button.step /template/ ContentPresenter">
+      <Setter Property="Background" Value="Transparent"/>
+      <Setter Property="CornerRadius" Value="0"/>
+      <Setter Property="Padding" Value="0"/>
+    </Style>
+    <Style Selector="Button.step:pointerover /template/ ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource ThemeSecondary}"/>
+    </Style>
+    <Style Selector="Button.step.selected /template/ ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource ThemeSecondary}"/>
+    </Style>
+    <Style Selector="Button.step.selected">
+      <Setter Property="FontWeight" Value="SemiBold"/>
+    </Style>
+
+    <Style Selector="Button.primary">
+      <Setter Property="Background" Value="{DynamicResource ThemePrimary}"/>
+      <Setter Property="Foreground" Value="White"/>
+      <Setter Property="BorderThickness" Value="0"/>
+      <Setter Property="CornerRadius" Value="0"/>
+      <Setter Property="Padding" Value="22,8"/>
+      <Setter Property="FontSize" Value="13.5"/>
+      <Setter Property="Cursor" Value="Hand"/>
+    </Style>
+    <Style Selector="Button.primary /template/ ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource ThemePrimary}"/>
+      <Setter Property="CornerRadius" Value="0"/>
+    </Style>
+    <Style Selector="Button.primary:pointerover /template/ ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource ThemePrimaryHover}"/>
+    </Style>
+
+    <Style Selector="Button.secondary">
+      <Setter Property="Background" Value="{DynamicResource ThemeLight}"/>
+      <Setter Property="Foreground" Value="#1F3B3A"/>
+      <Setter Property="BorderThickness" Value="0"/>
+      <Setter Property="CornerRadius" Value="0"/>
+      <Setter Property="Padding" Value="18,8"/>
+      <Setter Property="FontSize" Value="13.5"/>
+      <Setter Property="Cursor" Value="Hand"/>
+    </Style>
+    <Style Selector="Button.secondary /template/ ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource ThemeLight}"/>
+      <Setter Property="CornerRadius" Value="0"/>
+    </Style>
+    <Style Selector="Button.secondary:pointerover /template/ ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource ThemeSecondary}"/>
+    </Style>
+
+    <Style Selector="TextBlock.h1">
+      <Setter Property="FontSize" Value="26"/>
+      <Setter Property="FontWeight" Value="SemiBold"/>
+      <Setter Property="Foreground" Value="#1F3B3A"/>
+    </Style>
+    <Style Selector="TextBlock.h2">
+      <Setter Property="FontSize" Value="18"/>
+      <Setter Property="FontWeight" Value="SemiBold"/>
+      <Setter Property="Foreground" Value="#1F3B3A"/>
+    </Style>
+    <Style Selector="TextBlock.label">
+      <Setter Property="FontSize" Value="13"/>
+      <Setter Property="Foreground" Value="#5A7A88"/>
+    </Style>
+    <Style Selector="TextBlock.body">
+      <Setter Property="FontSize" Value="13.5"/>
+      <Setter Property="Foreground" Value="#1F3B3A"/>
+    </Style>
+    <Style Selector="TextBox.field">
+      <Setter Property="FontSize" Value="13.5"/>
+      <Setter Property="CornerRadius" Value="0"/>
+      <Setter Property="Background" Value="#FFFFFF"/>
+      <Setter Property="BorderBrush" Value="#C7DCE8"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="Padding" Value="8,6"/>
+    </Style>
+  </Window.Styles>
+
+  <Grid RowDefinitions="44,*,64">
+
+    <!-- 标题栏 -->
+    <Border Grid.Row="0" Background="{DynamicResource ThemePrimary}" PointerPressed="OnTitleBarPointerPressed">
+      <Grid ColumnDefinitions="Auto,*,Auto,Auto">
+        <Rectangle Grid.Column="0" Width="1.5" Height="16" Fill="#80FFFFFF" Margin="16,0,0,0" VerticalAlignment="Center"/>
+        <TextBlock Grid.Column="1" Text="ZincXManagerClient · 首次使用引导" Foreground="White" FontSize="13"
+                   Margin="14,0,0,0" VerticalAlignment="Center"/>
+                <Button Grid.Column="2" Classes="chrome" Width="48" Click="OnMinimizeClick">
+          <Rectangle Width="13" Height="1.6" Fill="White"/>
+        </Button>
+                <Button Grid.Column="3" Classes="chrome close" Width="54" Click="OnCloseClick">
+          <Path Data="M0,0 L12,12 M12,0 L0,12" Stroke="White" StrokeThickness="1.7"/>
+        </Button>
+      </Grid>
+    </Border>
+
+    <!-- 内容 -->
+    <Grid Grid.Row="1" Margin="28,22,28,0" RowDefinitions="Auto,*">
+
+      <!-- 进度 -->
+      <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="10">
+        <TextBlock Classes="label" Text="{Binding StepText}" VerticalAlignment="Center"/>
+        <Rectangle Width="120" Height="3" Fill="#C7DCE8" VerticalAlignment="Center"/>
+        <TextBlock Classes="label" Text="欢迎 → 个性化 → 数据源与连接方式 → 登录 / 注册" VerticalAlignment="Center"/>
+      </StackPanel>
+
+      <!-- 第 1 步:欢迎 -->
+      <StackPanel Grid.Row="1" Spacing="16" VerticalAlignment="Center" IsVisible="{Binding IsWelcome}">
+        <TextBlock Classes="h1" Text="欢迎使用 ZincXManager"/>
+        <TextBlock Classes="body" TextWrapping="Wrap"
+                   Text="ZincXManager 是一套 Minecraft 服务器管理工具:客户端(ZXMC)、子服务端(ZXMS)、官方服务端(ZXMOS)三端配合。"/>
+        <TextBlock Classes="body" TextWrapping="Wrap"
+                   Text="接下来四步:① 个性化 ② 选数据源和连接方式 ③ 登录或注册 ④ 进入主界面。任意一步都可以返回上一步重来。"/>
+      </StackPanel>
+
+      <!-- 第 2 步:个性化 -->
+      <StackPanel Grid.Row="1" Spacing="14" VerticalAlignment="Center" IsVisible="{Binding IsPersonalize}">
+        <TextBlock Classes="h2" Text="个性化"/>
+        <TextBlock Classes="label" Text="背景壁纸(窗口是毛玻璃,壁纸会透出来)"/>
+        <StackPanel Orientation="Horizontal" Spacing="10">
+          <Button Classes="secondary" Content="选择图片…" Focusable="False" Click="OnPickWallpaperClick"/>
+          <Button Classes="secondary" Content="恢复默认" Click="OnClearWallpaperClick"/>
+        </StackPanel>
+        <TextBlock Classes="body" Text="{Binding WallpaperHint}" TextWrapping="Wrap"/>
+
+        <Grid ColumnDefinitions="*,Auto">
+          <StackPanel Grid.Column="0" Spacing="4" VerticalAlignment="Center">
+            <TextBlock Classes="label" Text="毛玻璃(亚克力)"/>
+            <TextBlock Classes="body" Text="{Binding GlassHint}" TextWrapping="Wrap"/>
+          </StackPanel>
+          <ToggleSwitch Grid.Column="1" IsChecked="{Binding GlassEnabled}" OnContent="开" OffContent="关"
+                        VerticalAlignment="Center"/>
+        </Grid>
+        <TextBlock Classes="label" Text="支持 png / jpg / bmp;以后可以在 设置 → 个性化 里随时更换。"/>
+
+        <TextBlock Classes="label" Text="配色(左半主要色,右上次要色,右下浅色)"/>
+
+        <ItemsControl ItemsSource="{Binding ThemeOptions}">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+              <WrapPanel/>
+            </ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="models:ThemeOption">
+              <StackPanel Spacing="6" Margin="0,0,18,12">
+                <Button Classes="theme" Classes.selected="{Binding IsSelected}"
+                        Tag="{Binding Name}" Click="OnThemeClick" Focusable="False">
+                  <Grid Width="40" Height="40" ColumnDefinitions="*,*">
+                    <Rectangle Grid.Column="0" Fill="{Binding PrimaryBrush}"/>
+                    <Grid Grid.Column="1" RowDefinitions="2*,*">
+                      <Rectangle Grid.Row="0" Fill="{Binding SecondaryBrush}"/>
+                      <Rectangle Grid.Row="1" Fill="{Binding LightBrush}"/>
+                    </Grid>
+                  </Grid>
+                </Button>
+                <TextBlock Classes="label" Text="{Binding Name}" HorizontalAlignment="Center"/>
+              </StackPanel>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </StackPanel>
+
+      <!-- 第 3 步:数据源与连接方式 -->
+      <StackPanel Grid.Row="1" Spacing="14" IsVisible="{Binding IsDataSource}">
+        <TextBlock Classes="h2" Text="选择数据源与连接方式"/>
+
+        <TextBlock Classes="label" Text="连接方式(ZXMC 模式,决定先连谁)"/>
+        <Border BorderBrush="{DynamicResource ThemeMuted}" BorderThickness="1" Background="{DynamicResource ThemeLight}"
+                HorizontalAlignment="Left">
+          <StackPanel Orientation="Horizontal">
+            <Button Classes="step" Classes.selected="{Binding IsSaos}" Tag="SAOS" Content="SAOS" Click="OnModeClick"/>
+            <Button Classes="step" Classes.selected="{Binding IsOs}" Tag="OS" Content="OS" Click="OnModeClick"/>
+            <Button Classes="step" Classes.selected="{Binding IsOos}" Tag="OOS" Content="OOS" Click="OnModeClick"/>
+          </StackPanel>
+        </Border>
+        <TextBlock Classes="label" TextWrapping="Wrap"
+                   Text="SAOS = 子服务端 + 官方服务端(先连子服务端,由它转发);OS = 只连子服务端;OOS = 只连官方服务端。"/>
+        <TextBlock Classes="label" TextWrapping="Wrap"
+                   Text="SAOS / OS 下客户端只连子服务端,官方服务端地址由 ZXMS 自己配置,所以这里不用填。"/>
+
+        <!-- OS / SAOS:客户端只连子服务端,填这一组就够 -->
+        <Grid ColumnDefinitions="Auto,160,Auto,160" Margin="0,6,0,0" IsVisible="{Binding ShowClientSource}">
+          <TextBlock Grid.Column="0" Classes="label" Text="子服务端地址" VerticalAlignment="Center" Margin="0,0,8,0"/>
+          <TextBox Grid.Column="1" Classes="field" Text="{Binding CzIp}" Margin="0,0,18,0"/>
+          <TextBlock Grid.Column="2" Classes="label" Text="端口" VerticalAlignment="Center" Margin="0,0,8,0"/>
+          <TextBox Grid.Column="3" Classes="field" Text="{Binding CzPort}"/>
+        </Grid>
+
+        <!-- 子服务端名称:连接后由服务端下发,这里不用填 -->
+        <TextBlock Classes="body" IsVisible="{Binding ShowClientSource}" TextWrapping="Wrap"
+                   Text="子服务端名称:连接后由服务端提供(不用填,设置 → 模式与数据源 里能看到)"/>
+
+        <!-- OOS:客户端直连官方服务端,才需要填这一组 -->
+        <Grid ColumnDefinitions="Auto,160,Auto,160" Margin="0,6,0,0" IsVisible="{Binding ShowOfficialSource}">
+          <TextBlock Grid.Column="0" Classes="label" Text="官方服务端地址" VerticalAlignment="Center" Margin="0,0,8,0"/>
+          <TextBox Grid.Column="1" Classes="field" Text="{Binding OzIp}" Margin="0,0,18,0"/>
+          <TextBlock Grid.Column="2" Classes="label" Text="端口" VerticalAlignment="Center" Margin="0,0,8,0"/>
+          <TextBox Grid.Column="3" Classes="field" Text="{Binding OzPort}"/>
+        </Grid>
+
+        <!-- 官方服务端名称:同样由服务端下发 -->
+        <TextBlock Classes="body" IsVisible="{Binding ShowOfficialSource}" TextWrapping="Wrap"
+                   Text="官方服务端名称:连接后由服务端提供(不用填)"/>
+      </StackPanel>
+
+      <!-- 第 4 步:登录 / 注册 -->
+      <StackPanel Grid.Row="1" Spacing="12" IsVisible="{Binding IsAccount}">
+        <TextBlock Classes="h2" Text="登录或注册"/>
+        <TextBlock Classes="label" TextWrapping="Wrap"
+                   Text="玩家账号自助注册只能得到 Player;管理账号由服务端用 user reg 创建,这里只登录。"/>
+
+        <Grid ColumnDefinitions="Auto,220,Auto,150" RowDefinitions="Auto,Auto">
+          <TextBlock Grid.Row="0" Grid.Column="0" Classes="label" Text="账号" VerticalAlignment="Center" Margin="0,0,8,10"/>
+          <TextBox Grid.Row="0" Grid.Column="1" Classes="field" Text="{Binding UserName}" Margin="0,0,18,10"/>
+          <TextBlock Grid.Row="0" Grid.Column="2" Classes="label" Text="密码" VerticalAlignment="Center" Margin="0,0,8,10"/>
+          <TextBox Grid.Row="0" Grid.Column="3" Classes="field" Text="{Binding Password}" PasswordChar="•" Margin="0,0,0,10"/>
+
+          <TextBlock Grid.Row="1" Grid.Column="0" Classes="label" Text="权限等级" VerticalAlignment="Center" Margin="0,0,8,0"/>
+          <ComboBox Grid.Row="1" Grid.Column="1" ItemsSource="{Binding Levels}" SelectedItem="{Binding Level}"
+                    FontSize="13" CornerRadius="0" Padding="6,3" HorizontalAlignment="Left" Width="150"/>
+
+          <!-- 管理账号:勾上就只登录(管理账号只能在服务端 user reg 创建) -->
+          <CheckBox Grid.Row="1" Grid.Column="2" Grid.ColumnSpan="2" Content="登录管理账号"
+                    IsChecked="{Binding IsAdminAccount}" FontSize="13" Margin="0,0,0,0"/>
+        </Grid>
+
+        <!-- SAOS 下要选"哪一端的管理账号" -->
+        <StackPanel Spacing="6" IsVisible="{Binding AdminSideVisible}">
+          <TextBlock Classes="label" Text="哪一端的管理账号"/>
+          <!-- 下拉项是 ComboBoxItem,不能直接和字符串双向绑定,所以绑索引(0=ZXMS,1=ZXMOS) -->
+          <ComboBox SelectedIndex="{Binding AdminSideIndex}" FontSize="13" CornerRadius="0" Padding="6,3"
+                    HorizontalAlignment="Left" Width="220">
+            <ComboBoxItem Content="ZXMS(子服务端)"/>
+            <ComboBoxItem Content="ZXMOS(官方服务端)"/>
+          </ComboBox>
+        </StackPanel>
+
+        <TextBlock Classes="label" Text="{Binding LevelHint}" TextWrapping="Wrap"/>
+
+        <StackPanel Orientation="Horizontal" Spacing="10">
+          <Button Classes="primary" Content="登录" Click="OnLoginClick" IsEnabled="{Binding !IsBusy}"/>
+          <Button Classes="secondary" Content="注册" Click="OnRegisterClick"
+                  IsVisible="{Binding CanRegister}" IsEnabled="{Binding !IsBusy}"/>
+        </StackPanel>
+
+        <TextBlock Classes="body" Text="{Binding Message}" TextWrapping="Wrap"/>
+      </StackPanel>
+    </Grid>
+
+    <!-- 底部按钮 -->
+    <Grid Grid.Row="2" ColumnDefinitions="*,Auto,Auto" Margin="28,0,28,18">
+      <TextBlock Grid.Column="0" Classes="label" VerticalAlignment="Center"
+                 Text="完成后会写进 config.ini,下次启动直接进主界面"/>
+      <Button Grid.Column="1" Classes="secondary" Content="上一步" Click="OnBackClick"
+              IsEnabled="{Binding CanGoBack}" Margin="0,0,10,0"/>
+      <Button Grid.Column="2" Classes="primary" Content="{Binding NextText}" Click="OnNextClick"/>
+    </Grid>
+  </Grid>
+</Window>

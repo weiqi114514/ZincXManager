@@ -1,0 +1,148 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="ZincXManagerClient.Views.AvatarCropWindow"
+        Title="ZincXManagerClient · 设置头像"
+        Width="520" Height="620"
+        MinWidth="480" MinHeight="560"
+        Background="{DynamicResource ThemeWindow}"
+        FontFamily="Microsoft YaHei UI, Microsoft YaHei, Segoe UI"
+        WindowDecorations="None"
+        CanResize="False">
+
+  <Window.Styles>
+    <Style Selector="Button.chrome">
+      <Setter Property="Background" Value="Transparent"/>
+      <Setter Property="BorderThickness" Value="0"/>
+      <Setter Property="CornerRadius" Value="0"/>
+      <Setter Property="Padding" Value="0"/>
+      <Setter Property="MinWidth" Value="0"/>
+      <Setter Property="MinHeight" Value="0"/>
+      <Setter Property="HorizontalAlignment" Value="Stretch"/>
+      <Setter Property="VerticalAlignment" Value="Stretch"/>
+      <Setter Property="HorizontalContentAlignment" Value="Center"/>
+      <Setter Property="VerticalContentAlignment" Value="Center"/>
+      <Setter Property="Cursor" Value="Hand"/>
+    </Style>
+    <Style Selector="Button.chrome /template/ ContentPresenter">
+      <Setter Property="Background" Value="Transparent"/>
+      <Setter Property="BorderThickness" Value="0"/>
+      <Setter Property="CornerRadius" Value="0"/>
+      <Setter Property="Padding" Value="0"/>
+      <Setter Property="Margin" Value="0"/>
+    </Style>
+    <Style Selector="Button.chrome:pointerover /template/ ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource ThemePrimaryHover}"/>
+    </Style>
+    <Style Selector="Button.close">
+      <Setter Property="Background" Value="#E81123"/>
+    </Style>
+    <Style Selector="Button.close /template/ ContentPresenter">
+      <Setter Property="Background" Value="#E81123"/>
+    </Style>
+    <Style Selector="Button.close:pointerover /template/ ContentPresenter">
+      <Setter Property="Background" Value="#F1707A"/>
+    </Style>
+    <Style Selector="Button.primary">
+      <Setter Property="Background" Value="{DynamicResource ThemePrimary}"/>
+      <Setter Property="Foreground" Value="White"/>
+      <Setter Property="BorderThickness" Value="0"/>
+      <Setter Property="CornerRadius" Value="0"/>
+      <Setter Property="Padding" Value="26,9"/>
+      <Setter Property="FontSize" Value="13.5"/>
+      <Setter Property="Cursor" Value="Hand"/>
+    </Style>
+    <Style Selector="Button.primary /template/ ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource ThemePrimary}"/>
+      <Setter Property="CornerRadius" Value="0"/>
+    </Style>
+    <Style Selector="Button.primary:pointerover /template/ ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource ThemePrimaryHover}"/>
+    </Style>
+    <Style Selector="Button.secondary">
+      <Setter Property="Background" Value="{DynamicResource ThemeLight}"/>
+      <Setter Property="Foreground" Value="#14202B"/>
+      <Setter Property="BorderThickness" Value="0"/>
+      <Setter Property="CornerRadius" Value="0"/>
+      <Setter Property="Padding" Value="22,9"/>
+      <Setter Property="FontSize" Value="13.5"/>
+      <Setter Property="Cursor" Value="Hand"/>
+    </Style>
+    <Style Selector="Button.secondary /template/ ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource ThemeLight}"/>
+      <Setter Property="CornerRadius" Value="0"/>
+    </Style>
+    <Style Selector="TextBlock.label">
+      <Setter Property="FontSize" Value="12.5"/>
+      <Setter Property="Foreground" Value="#5A7A88"/>
+    </Style>
+  </Window.Styles>
+
+  <Grid RowDefinitions="44,*,64">
+
+    <!-- 标题栏 -->
+    <Border Grid.Row="0" Background="{DynamicResource ThemePrimary}" PointerPressed="OnTitleBarPointerPressed">
+      <Grid ColumnDefinitions="Auto,*,Auto,Auto">
+        <Rectangle Grid.Column="0" Width="1.5" Height="16" Fill="#80FFFFFF" Margin="16,0,0,0" VerticalAlignment="Center"/>
+        <TextBlock Grid.Column="1" Text="ZincXManagerClient · 设置头像" Foreground="White" FontSize="13"
+                   Margin="14,0,0,0" VerticalAlignment="Center"/>
+        <Button Grid.Column="2" Classes="chrome" Width="48" Click="OnMinimizeClick">
+          <Rectangle Width="13" Height="1.6" Fill="White"/>
+        </Button>
+        <Button Grid.Column="3" Classes="chrome close" Width="54" Click="OnCloseClick">
+          <Path Data="M0,0 L12,12 M12,0 L0,12" Stroke="White" StrokeThickness="1.7"/>
+        </Button>
+      </Grid>
+    </Border>
+
+    <Grid Grid.Row="1" RowDefinitions="Auto,*,Auto" Margin="26,16,26,0" RowSpacing="10">
+
+      <TextBlock Grid.Row="0" Classes="label" TextWrapping="Wrap"
+                 Text="拖动图片调整位置,滚轮或下面的滑块缩放;方框里就是最终头像。"/>
+
+      <!-- 预览区:400x400 暗底 + 可拖动图片 + 固定方形选框(框外压暗) -->
+      <Border Grid.Row="1" Width="400" Height="400" Background="#20262B" ClipToBounds="True"
+              HorizontalAlignment="Center" VerticalAlignment="Top">
+        <Canvas x:Name="Stage" Width="400" Height="400"
+                PointerPressed="OnStagePointerPressed"
+                PointerMoved="OnStagePointerMoved"
+                PointerReleased="OnStagePointerReleased"
+                PointerWheelChanged="OnStageWheel">
+
+          <!-- 图片:靠 RenderTransform 缩放 / 平移 -->
+          <Image x:Name="Photo" Width="400" Height="400" Stretch="Uniform">
+            <Image.RenderTransform>
+              <TransformGroup>
+                <ScaleTransform ScaleX="1" ScaleY="1"/>
+                <TranslateTransform X="0" Y="0"/>
+              </TransformGroup>
+            </Image.RenderTransform>
+          </Image>
+
+          <!-- 框外压暗(四块) -->
+          <Rectangle Canvas.Left="0" Canvas.Top="0" Width="400" Height="70" Fill="#B0000000"/>
+          <Rectangle Canvas.Left="0" Canvas.Top="330" Width="400" Height="70" Fill="#B0000000"/>
+          <Rectangle Canvas.Left="0" Canvas.Top="70" Width="70" Height="260" Fill="#B0000000"/>
+          <Rectangle Canvas.Left="330" Canvas.Top="70" Width="70" Height="260" Fill="#B0000000"/>
+
+          <!-- 选框 -->
+          <Rectangle Canvas.Left="70" Canvas.Top="70" Width="260" Height="260"
+                     Stroke="#FFFFFF" StrokeThickness="1.5"/>
+        </Canvas>
+      </Border>
+
+      <!-- 缩放 -->
+      <Grid Grid.Row="2" ColumnDefinitions="Auto,*" ColumnSpacing="10">
+        <TextBlock Grid.Column="0" Classes="label" Text="缩放" VerticalAlignment="Center"/>
+        <Slider Grid.Column="1" x:Name="ZoomSlider" Minimum="1" Maximum="3" Value="1"
+                TickFrequency="0.01" IsSnapToTickEnabled="False" ValueChanged="OnZoomChanged"/>
+      </Grid>
+    </Grid>
+
+    <!-- 底部按钮 -->
+    <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="10"
+                HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,26,0">
+      <Button Classes="secondary" Content="取消" Click="OnCancelClick"/>
+      <Button Classes="primary" Content="确定" Click="OnOkClick"/>
+    </StackPanel>
+  </Grid>
+</Window>
