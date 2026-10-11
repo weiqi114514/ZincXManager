@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>下载客户端 · ZincXManager</title>
+<meta name="description" content="下载 ZincXManager 客户端(ZXMC):Windows 安装包(MSI)或免安装压缩包。默认连接官方服务端 zxm.zincms.top:25000。">
+<link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+
+<header class="site-header" id="header">
+  <div class="wrap header-inner">
+    <a class="brand" href="index.html" aria-label="ZincXManager 首页">
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 48 48" width="30" height="30" role="img">
+          <rect x="2" y="2" width="44" height="44" rx="12" fill="#16a34a"/>
+          <path d="M12 16h24L16 32h20" fill="none" stroke="#eafff2" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </span>
+      <span class="brand-text">ZincXManager<em>ZXM</em></span>
+    </a>
+    <button class="nav-toggle" id="navToggle" aria-expanded="false" aria-controls="siteNav" aria-label="打开导航">
+      <span></span><span></span><span></span>
+    </button>
+    <nav class="site-nav" id="siteNav">
+      <a href="index.html#features">功能</a>
+      <a href="index.html#arch">架构</a>
+      <a href="index.html#modes">模式</a>
+      <a href="download.html">下载</a>
+      <a href="zxms.html">子服教程</a>
+      <a href="help.html">帮助文档</a>
+      <a href="changelog.html">更新日志</a>
+      <a href="index.html#about">关于</a>
+      <a class="btn btn-ghost" href="https://github.com/weiqi114514/ZincXManager" target="_blank" rel="noopener">GitHub</a>
+    </nav>
+  </div>
+</header>
+
+<main id="top">
+  <section class="section">
+    <div class="wrap">
+      <header class="section-head">
+        <h2>下载客户端(ZXMC)</h2>
+        <p>当前版本 <strong>0.1.0</strong> · 更新于 2026-10-11 · 支持 64 位 Windows 10 / 11</p>
+      </header>
+
+      <div class="grid grid-2">
+        <article class="card">
+          <h3>安装包(推荐)</h3>
+          <p class="muted">双击安装,自动创建开始菜单与桌面快捷方式;卸载在「应用和功能」里</p>
+          <ul class="facts">
+            <li><span>文件名</span><span>ZincXManagerClient-0.1.0-x64.msi</span></li>
+            <li><span>大小</span><span>12.6 MB</span></li>
+            <li><span>SHA256</span><code class="sha">d5b3a7ba1db2576c62bbf210478638ce18cc5f88f948b6d337f1fa07f47e2c07</code></li>
+          </ul>
+          <p><a class="btn btn-primary" href="/downloads/ZincXManagerClient-0.1.0-x64.msi">下载 ZincXManagerClient-0.1.0-x64.msi</a></p>
+        </article>
+        <article class="card">
+          <h3>免安装压缩包</h3>
+          <p class="muted">解压到任意文件夹,双击 ZincXManagerClient.exe 即可;换机只需整体拷走</p>
+          <ul class="facts">
+            <li><span>文件名</span><span>ZincXManagerClient-0.1.0-win-x64-portable.zip</span></li>
+            <li><span>大小</span><span>15.9 MB</span></li>
+            <li><span>SHA256</span><code class="sha">46509f351eb2fb8019e87aee82884c1598d708113748bb5581b2fc72edb542ca</code></li>
+          </ul>
+          <p><a class="btn btn-primary" href="/downloads/ZincXManagerClient-0.1.0-win-x64-portable.zip">下载 ZincXManagerClient-0.1.0-win-x64-portable.zip</a></p>
+        </article>
+      </div>
+
+      <p class="warn">
+        ⚠ 只从本页下载。第三方站点转载的安装包可能被改过,无法保证安全。
+      </p>
+    </div>
+  </section>
+
+  <section class="section section-alt">
+    <div class="wrap">
+      <header class="section-head">
+        <h2>开发状态:现在能用到什么程度</h2>
+        <p><b>极早期开发阶段(alpha)</b>。核心链路已经能跑通并且有自动化测试兜着,但界面与功能仍在快速变动,
+          <b>不建议用在正式的生产服务器上</b>;接口与数据格式也可能改,升级后偶尔需要重新登录一次。</p>
+      </header>
+
+      <div class="grid grid-2">
+        <article class="card">
+          <h3>✅ 已经能用</h3>
+          <ul class="facts">
+            <li><span>账号</span><span>注册 / 登录 / 退出,权限等级(Player / LAdmin / HAdmin / System)</span></li>
+            <li><span>连接</span><span>连官方服务端(默认)或自建子服务端(SAOS 模式)</span></li>
+            <li><span>消息</span><span>公告、定向推送、五种卡片(文本 / 更新 / 选择 / 填空 / 下拉),卡片按钮点了会回报服务端</span></li>
+            <li><span>消息存档</span><span>本地按来源分档保留、过期自动清理、可单条删除、重开后还在</span></li>
+            <li><span>界面</span><span>使用向导、设置页各分区、毛玻璃 / 半透明两档、左上角提示条</span></li>
+            <li><span>社区功能</span><span>经济、商店、蓝图画布、好友与组织等分区的基础版本</span></li>
+            <li><span>子服务端</span><span>自建 ZXMS:自动接入官方端、账号与封禁(账号 / IP / 机器码连坐)、公告与推送、控制台命令</span></li>
+          </ul>
+        </article>
+        <article class="card warn-card">
+          <h3>⚠ 还不能用 / 正在做</h3>
+          <ul class="facts">
+            <li><span>模组端 ZXMM</span><span>协议还没定,尚未实现(打算做,不是砍掉)</span></li>
+            <li><span>官方验证第二层</span><span>已做到"验对端是不是官方";在线令牌与吊销还没做</span></li>
+            <li><span>界面细节</span><span>部分分区只有基础功能,排版与交互仍在调整</span></li>
+            <li><span>平台</span><span>目前只提供 64 位 Windows 客户端(单文件 AOT);没有移动端</span></li>
+            <li><span>稳定性</span><span>没有做长期运行压测;遇到问题请进群反馈(QQ 群 835964502)</span></li>
+          </ul>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="wrap">
+      <header class="section-head">
+        <h2>子服务端 ZXMS(可自建)</h2>
+        <p>只有"自己开一台子服、给玩家做中转"的人需要它;普通玩家只下上面的客户端就够。</p>
+      </header>
+      <div class="grid grid-2">
+        <article class="card">
+          <h3>子服务端 ZXMS(自建用)</h3>
+          <p class="muted">想自己开一台子服才需要;解压后改 config.ini,连着官方服务端用 —— 详见「子服教程」</p>
+          <ul class="facts">
+            <li><span>文件名</span><span>ZincXManagerServer-0.1.0-win-x64.zip</span></li>
+            <li><span>大小</span><span>1.5 MB</span></li>
+            <li><span>SHA256</span><code class="sha">8521ac396d7079a6f6db268af52cb67ffb58ddf36d8001ca1dc4e9336f359377</code></li>
+          </ul>
+          <p><a class="btn btn-primary" href="/downloads/ZincXManagerServer-0.1.0-win-x64.zip">下载 ZincXManagerServer-0.1.0-win-x64.zip</a></p>
+        </article>
+        <article class="card">
+          <h3>怎么用</h3>
+          <ol class="steps">
+            <li>解压到任意目录(别放需要管理员权限的地方)</li>
+            <li>改 <code>config.ini</code>:<code>name</code> 填服名,<code>ozip/ozport</code> 填官方服务端</li>
+            <li>双击运行,看到 <code>账号认证通过</code> 即成功</li>
+            <li>玩家用客户端以 <b>SAOS</b> 模式连你的 <code>IP:czport</code></li>
+          </ol>
+          <p><a class="btn btn-primary" href="zxms.html">看完整部署教程</a></p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="section section-alt">
+    <div class="wrap">
+      <header class="section-head">
+        <h2>安装之后</h2>
+      </header>
+      <div class="grid grid-3">
+        <article class="card step">
+          <span class="step-no">1</span>
+          <h3>启动向导</h3>
+          <p>首次运行会走一遍使用向导:选连接方式 → 确认官方服务端地址 → 注册或登录账号。</p>
+        </article>
+        <article class="card step">
+          <span class="step-no">2</span>
+          <h3>官方服务端地址</h3>
+          <p>默认就是 <code>zxm.zincms.top:25000</code>,不用手填。
+            想连别的服务端,要在设置里显式勾「自定义 IP:端口」并读完风险提示。</p>
+        </article>
+        <article class="card step">
+          <span class="step-no">3</span>
+          <h3>数据与更新</h3>
+          <p>配置、消息与日志都在程序同目录;更新直接装新版本安装包即可,账号与本地消息不会丢。</p>
+        </article>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap footer-inner">
+    <div class="footer-brand">
+      <strong>ZincXManager</strong>
+      <span>锌X管理面板 · ZXM</span>
+    </div>
+    <nav class="footer-links">
+      <a href="index.html#features">功能</a>
+      <a href="index.html#arch">架构</a>
+      <a href="index.html#modes">模式</a>
+      <a href="download.html">下载</a>
+      <a href="zxms.html">子服教程</a>
+      <a href="help.html">帮助文档</a>
+      <a href="changelog.html">更新日志</a>
+      <a href="https://github.com/weiqi114514/ZincXManager" target="_blank" rel="noopener">GitHub</a>
+    </nav>
+    <p class="copyright">© <span id="year">2026</span> ZincXManager · zxm.zincms.top</p>
+  </div>
+</footer>
+
+<script src="assets/js/main.js" defer></script>
+</body>
+</html>

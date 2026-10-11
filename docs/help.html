@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>帮助文档 · ZincXManager</title>
+<meta name="description" content="ZincXManager 文档(按分类拆成 5 篇):认识与安装、客户端使用手册、子服务端部署手册、技术文档(架构与协议)、技术文档(构建测试运维)。每条控制台命令都带示例。">
+<link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="assets/css/style.css">
+<meta http-equiv="refresh" content="6;url=https://docs.qq.com/aio/DZXRUa1phVnZoa25o">
+</head>
+<body>
+
+<header class="site-header" id="header">
+  <div class="wrap header-inner">
+    <a class="brand" href="index.html" aria-label="ZincXManager 首页">
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 48 48" width="30" height="30" role="img">
+          <rect x="2" y="2" width="44" height="44" rx="12" fill="#16a34a"/>
+          <path d="M12 16h24L16 32h20" fill="none" stroke="#eafff2" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </span>
+      <span class="brand-text">ZincXManager<em>ZXM</em></span>
+    </a>
+    <button class="nav-toggle" id="navToggle" aria-expanded="false" aria-controls="siteNav" aria-label="打开导航">
+      <span></span><span></span><span></span>
+    </button>
+    <nav class="site-nav" id="siteNav">
+      <a href="index.html#features">功能</a>
+      <a href="index.html#arch">架构</a>
+      <a href="index.html#modes">模式</a>
+      <a href="download.html">下载</a>
+      <a href="zxms.html">子服教程</a>
+      <a href="help.html">帮助文档</a>
+      <a href="changelog.html">更新日志</a>
+      <a class="btn btn-ghost" href="https://github.com/weiqi114514/ZincXManager" target="_blank" rel="noopener">GitHub</a>
+    </nav>
+  </div>
+</header>
+
+<main id="top">
+  <section class="section">
+    <div class="wrap">
+      <header class="section-head">
+        <h2>帮助文档</h2>
+        <p>完整文档放在<b>腾讯文档</b>里持续更新:<b>同一篇智能文档</b>里用<b>分页</b>拆成 5 个分类页
+          (使用 3 页 + 技术 2 页),左侧页面树里逐页打开,<b>所有人可查看、不用登录</b>。</p>
+      </header>
+
+      <article class="card cta-card">
+        <h3>正在打开发文档合集…</h3>
+        <p class="muted">如果浏览器没有自动跳转,点下面的按钮(合集页里可逐篇打开):</p>
+        <p>
+          <a class="btn btn-primary btn-lg" id="docLink" href="https://docs.qq.com/aio/DZXRUa1phVnZoa25o" target="_blank" rel="noopener">
+            打开《ZincXManager 文档(分页版)》
+          </a>
+        </p>
+        <p class="muted"><span id="left">6</span> 秒后自动打开 ·
+          <a href="#" id="stay">留在此页看分类</a></p>
+        <p class="muted">链接:<code>https://docs.qq.com/aio/DZXRUa1phVnZoa25o</code></p>
+      </article>
+
+      <div class="grid grid-2" style="margin-top:22px">
+        <article class="card">
+          <h3>使用篇(给玩家与服主)</h3>
+          <ul class="facts">
+            <li><span>① 认识与安装</span><span>这是什么、三端关系、装客户端、首次向导、三种连接方式与四种权限等级 ·
+              <a href="https://docs.qq.com/aio/DZXRUa1phVnZoa25o" target="_blank" rel="noopener">打开</a></span></li>
+            <li><span>② 客户端使用手册</span><span>界面分区、消息面板与五种卡片、存档保留规则、提示条、设置页、连接设置(含自定义地址的风险说明)、客户端常见问题 ·
+              <a href="https://docs.qq.com/aio/DZXRUa1phVnZoa25o" target="_blank" rel="noopener">打开</a></span></li>
+            <li><span>③ 子服务端部署手册</span><span>拿包、<code>config.ini</code> 逐项、首次启动自动注册、让玩家连上、<b>控制台命令逐条带示例</b>、子服常见问题、备份 ·
+              <a href="https://docs.qq.com/aio/DZXRUa1phVnZoa25o" target="_blank" rel="noopener">打开</a></span></li>
+          </ul>
+        </article>
+        <article class="card">
+          <h3>技术篇(给开发者与运维)</h3>
+          <ul class="facts">
+            <li><span>④ 架构与协议</span><span>架构总览与数据流、通信协议与全类型编号表、消息卡片负载、身份与账号(机器码/服务端码/密码哈希)、数据文件与配置键 ·
+              <a href="https://docs.qq.com/aio/DZXRUa1phVnZoa25o" target="_blank" rel="noopener">打开</a></span></li>
+            <li><span>⑤ 构建测试运维</span><span>构建与 AOT 发布、测试入口与 21 个套件、官方验证机制(两层 + 许可证格式 + 签发工具)、部署与运维、已知限制、开发约定 ·
+              <a href="https://docs.qq.com/aio/DZXRUa1phVnZoa25o" target="_blank" rel="noopener">打开</a></span></li>
+          </ul>
+          <p class="muted">文档源文件随源码仓库走:<code>docs/</code>(仓库根目录)。</p>
+        </article>
+      </div>
+
+      <article class="card" style="margin-top:22px">
+        <h3>常用入口</h3>
+        <ul class="facts">
+          <li><span>下载</span><span><a href="download.html">客户端安装包 / 子服务端</a></span></li>
+          <li><span>子服教程</span><span><a href="zxms.html">ZXMS 部署(网页版)</a></span></li>
+          <li><span>更新日志</span><span><a href="changelog.html">版本记录</a></span></li>
+          <li><span>源码</span><span><a href="https://github.com/weiqi114514/ZincXManager" target="_blank" rel="noopener">GitHub(GPL-2.0)</a></span></li>
+        </ul>
+      </article>
+    </div>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap footer-inner">
+    <div class="footer-brand">
+      <span class="brand-text">ZincXManager<em>ZXM</em></span>
+      <p class="muted">极早期开发阶段 · 文档随版本更新</p>
+    </div>
+    <nav class="footer-nav">
+      <a href="index.html">首页</a>
+      <a href="download.html">下载</a>
+      <a href="zxms.html">子服教程</a>
+      <a href="help.html">帮助文档</a>
+      <a href="changelog.html">更新日志</a>
+      <a href="https://github.com/weiqi114514/ZincXManager" target="_blank" rel="noopener">GitHub</a>
+    </nav>
+    <p class="copyright">© <span id="year">2026</span> ZincXManager · zxm.zincms.top</p>
+  </div>
+</footer>
+
+<script>
+  (function () {
+    var stay = false;
+    var left = 6;
+    var el = document.getElementById('left');
+    var timer = setInterval(function () {
+      if (stay) { clearInterval(timer); return; }
+      left -= 1;
+      if (el) el.textContent = left > 0 ? left : 0;
+      if (left <= 0) {
+        clearInterval(timer);
+        location.href = 'https://docs.qq.com/aio/DZXRUa1phVnZoa25o';
+      }
+    }, 1000);
+    var s = document.getElementById('stay');
+    if (s) {
+      s.addEventListener('click', function (e) {
+        e.preventDefault();
+        stay = true;
+        clearInterval(timer);
+        var c = document.querySelector('.cta-card h3');
+        if (c) c.textContent = '已留在本页';
+        if (el) el.textContent = '—';
+      });
+    }
+  })();
+</script>
+<script src="assets/js/main.js" defer></script>
+</body>
+</html>
