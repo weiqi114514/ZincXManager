@@ -13,6 +13,12 @@
     <Optimize>False</Optimize>
   </PropertyGroup>
 
+  <!-- 官方发行版:dotnet publish -p:OfficialBuild=true
+       定义了 OFFICIAL_BUILD 之后,官方验证验不过就断开与那个服务端的连接(开发/测试构建只警告) -->
+  <PropertyGroup Condition="'$(OfficialBuild)' == 'true'">
+    <DefineConstants>$(DefineConstants);OFFICIAL_BUILD</DefineConstants>
+  </PropertyGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\ZincXManagerShared\ZincXManagerShared.csproj" />
   </ItemGroup>

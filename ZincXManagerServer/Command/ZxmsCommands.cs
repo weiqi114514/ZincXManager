@@ -2,7 +2,6 @@ using System;
 using System.Threading.Tasks;
 using ZincXManagerShared.Account;
 using System.Linq;
-using ZincXManagerShared.Account;
 using ZincXManagerShared.Command;
 using ZincXManagerShared.Logging;
 using ZincXManagerShared.Network;
@@ -30,6 +29,22 @@ namespace ZincXManagerServer.Command;
 /// cmd.Start();
 /// </code>
 /// </summary>
+/// <summary>本端身份(命令层只通过它读/写这几个值,不直接碰 config)。</summary>
+public sealed class ZxmsIdentity
+{
+    /// <summary>本端显示名(config 的 name,会下发给客户端)。</summary>
+    public required Func<string> Name { get; init; }
+
+    /// <summary>接入官方服务端用的账号名(config 的 osuser)。</summary>
+    public required Func<string> User { get; init; }
+
+    /// <summary>本实例的服务端码(32 位十六进制)。</summary>
+    public required Func<string> ServerCode { get; init; }
+
+    /// <summary>改显示名(写 config)。</summary>
+    public required Action<string> SetName { get; init; }
+}
+
 public static class ZxmsCommands
 {
     /// <summary>本端服务端账号名(用户账号不能和它重名);由挂载时注入。</summary>
@@ -40,14 +55,21 @@ public static class ZxmsCommands
         Func<TcpClient?> osProvider,
         Func<string> osTargetProvider,
         Func<string> osNameProvider,
+        ZxmsIdentity identity,
         Func<int> clientCountProvider,
         Func<ClientRegistry?> registryProvider,
         Func<AccountStore> accountProvider,
         Func<Task> osReconnect,
+        Func<string, string, Task<string>> osRename,
+        Func<int, int> setMsgDays,
+        Func<CardInput, int> localNotice,
+        Func<string, CardInput, int> localPush,
         Func<BanStore> banProvider,
-        Func<string> serverAccountNameProvider,
-        Action<string, string> serverAccountRegister)
+        Func<string> serverAccountNameProvider)
     {
+        // 记住本端的服务端账号名:用户账号不能和它重名(和 config 里的 osuser 同步)
+        _serverAccountName = serverAccountNameProvider();
+
         cmd.Register("net status", _ => CmdNetStatus(osProvider(), osTargetProvider(), osNameProvider(), clientCountProvider()),
             "查看 ZXMOS 连接与客户端接入情况",
             "net status");
@@ -89,13 +111,41 @@ public static class ZxmsCommands
         RegisterBanCommands(cmd, accountProvider, banProvider);
 
         // ---- 本端的服务端账号(用于接入官方服务端;和用户账号是两个东西) ----
+        cmd.Register("info", _ => CmdInfo(identity, osProvider(), osTargetProvider()),
+            "查看本端身份:名称 / 账号 / 服务端码 / 机器码 / 连接状态",
+            "info");
+
+        cmd.Register("name", args => CmdName(identity, args),
+            "改本端显示名(会下发给客户端):name <新名称>",
+            "name 锌能源子服");
+
+        cmd.Register("osuser", args => CmdOsUser(identity, osProvider(), osRename, args),
+            "改本端在官方服务端的账号名与密码(需已连上官方服务端;名字写成一样的就只改密码)",
+            "osuser <新名> <新密码>");
+
+        cmd.Register("msgdays", args =>
+        {
+            if (args.Length < 1 || !int.TryParse(args[0].Trim(), out var days))
+            {
+                Logger.Log(LogLevel.Warning, "[消息] 用法:msgdays <天数 1-365>(下发给客户端,决定它们本地留多久)");
+                return;
+            }
+
+            var sent = setMsgDays(days);
+            Logger.Log(LogLevel.Info, $"[消息] 本服消息保留天数已设为 {Math.Clamp(days, 1, 365)} 天,已通知 {sent} 个在线客户端");
+        }, "设置本服消息保留天数(下发给客户端):msgdays <天数>", "msgdays 14");
+
+        cmd.Register("notice", args => CmdNotice(localNotice, args),
+            "给本服所有客户端发公告:notice <标题>|<正文>[|种类|主动作|次动作|选项];种类 = text / update / choice / input / select",
+            "notice 是否同意|新协议要点见附件|choice|是|否");
+
+        cmd.Register("push", args => CmdPush(localPush, args),
+            "给本服某个玩家定向推送(只发本服):push <账号> <标题>|<正文>[|种类|主动作|次动作|选项]",
+            "push 猫娘 版本选择|请选一个版本|select|||1.21.1,1.21,1.20.6");
+
         cmd.Register("srv show", _ => CmdSrvShow(serverAccountNameProvider()),
             "查看本端接入官方服务端用的账号名",
             "srv show");
-
-        cmd.Register("srv reg", args => CmdSrvReg(serverAccountRegister, args),
-            "在本端注册/修改服务端账号(名称 密码):会写进 config.ini,并立刻向官方服务端注册",
-            "srv reg ZXMS-1 123456");
     }
 
     /// <summary>ban add &lt;user|ip|machine&gt; &lt;值&gt; [perm|30d|12h] [原因]</summary>
@@ -166,19 +216,8 @@ public static class ZxmsCommands
     private static void CmdSrvShow(string name)
         => Logger.Log(LogLevel.Info, name.Length > 0
             ? $"[服务端账号] 本端接入官方服务端用的账号:{name}"
-            : "[服务端账号] 还没注册;用 srv reg <名称> <密码> 在本端注册(连上官方服务端时会自动同步过去)");
+            : "[服务端账号] 还没注册;连上官方服务端时会自动注册,之后可以用 osuser <新名> <新密码> 改名或改密码");
 
-    /// <summary>srv reg &lt;名称&gt; &lt;密码&gt;</summary>
-    private static void CmdSrvReg(Action<string, string> register, string[] args)
-    {
-        if (args.Length < 2)
-        {
-            Logger.Log(LogLevel.Warning, "[服务端账号] 用法:srv reg <名称> <密码>");
-            return;
-        }
-
-        register(args[0], args[1]);
-    }
 
     /// <summary>ban del &lt;类型&gt; &lt;值&gt; / ban list / ban add / ban user</summary>
     private static void RegisterBanCommands(CommandHandler cmd, Func<AccountStore> accountProvider, Func<BanStore> banProvider)
@@ -360,5 +399,127 @@ public static class ZxmsCommands
         {
             Logger.Log(LogLevel.Error, "[网络] 重连出错: " + ex.Message);
         }
+    }
+    /// <summary>notice &lt;标题&gt;|&lt;正文&gt;[|种类|主动作|次动作|选项]:给本服所有客户端发公告。</summary>
+    private static void CmdNotice(Func<CardInput, int> notice, string[] args)
+    {
+        if (!TryReadCard(args, NoticeUsage, out var card))
+        {
+            return;
+        }
+
+        var sent = notice(card);
+        Logger.Log(LogLevel.Info, sent > 0
+            ? $"[消息] 公告({card.Kind})已发出,本服 {sent} 个客户端收到"
+            : $"[消息] 公告({card.Kind})已发出,但本服现在没有客户端在线");
+    }
+
+    /// <summary>push &lt;账号&gt; &lt;标题&gt;|&lt;正文&gt;[|种类|…]:只投本服。</summary>
+    private static void CmdPush(Func<string, CardInput, int> push, string[] args)
+    {
+        if (args.Length < 2)
+        {
+            Logger.Log(LogLevel.Warning, "[消息] 用法:" + PushUsage);
+            return;
+        }
+
+        var target = args[0].Trim();
+        if (!TryReadCard(args[1..], PushUsage, out var card))
+        {
+            return;
+        }
+
+        var sent = push(target, card);
+        Logger.Log(LogLevel.Info, sent > 0
+            ? $"[消息] 已推给 {target}({card.Kind} 卡片),本服 {sent} 个客户端收到"
+            : $"[消息] {target} 不在本服在线,已忽略");
+    }
+
+    /// <summary>公告卡片的写法(帮助与报错都用它)。</summary>
+    private const string NoticeUsage = "notice <标题>|<正文>[|种类|主动作|次动作|选项]";
+
+    /// <summary>定向推送的写法。</summary>
+    private const string PushUsage = "push <账号> <标题>|<正文>[|种类|主动作|次动作|选项]";
+
+    /// <summary>把命令参数读成一张卡片(格式/长度/按钮文案都在共享库里校验)。</summary>
+    private static bool TryReadCard(string[] args, string usage, out CardInput card)
+    {
+        card = new CardInput();
+
+        if (args.Length < 1)
+        {
+            Logger.Log(LogLevel.Warning, "[消息] 用法:" + usage);
+            return false;
+        }
+
+        if (!MessageCard.TryReadCard(string.Join(' ', args), out card, out var error))
+        {
+            Logger.Log(LogLevel.Warning, $"[消息] {error};用法:{usage}");
+            return false;
+        }
+
+        return true;
+    }
+
+    /// <summary>osuser &lt;新名&gt; &lt;新密码&gt;:改本端在官方服务端的账号名(密码一起改)。</summary>
+    private static void CmdOsUser(ZxmsIdentity identity, TcpClient? os, Func<string, string, Task<string>> rename, string[] args)
+    {
+        if (args.Length < 2)
+        {
+            Logger.Log(LogLevel.Warning, "[身份] 用法:osuser <新名> <新密码>");
+            return;
+        }
+
+        var oldName = identity.User();
+        if (oldName.Length == 0)
+        {
+            Logger.Log(LogLevel.Warning, "[身份] 本端还没有服务端账号:先 net reconnect 连上官方服务端,会自动注册");
+            return;
+        }
+
+        if (os is null || !os.IsConnected)
+        {
+            Logger.Log(LogLevel.Warning, "[身份] 官方服务端未连接,改不了账号(先 net reconnect)");
+            return;
+        }
+
+        var newName = args[0];
+
+        // 命令线程就在这里等回执:改名一次一问,最长 5 秒
+        var reply = rename(newName, args[1]).GetAwaiter().GetResult();
+
+        if (reply.StartsWith("ok|"))
+        {
+            Logger.Log(LogLevel.Info, $"[身份] 服务端账号已改名:{oldName} → {newName}(密码已更新)");
+            return;
+        }
+
+        Logger.Log(LogLevel.Warning, "[身份] 改名失败:" + (reply.StartsWith("err|") ? reply[4..] : reply));
+    }
+
+    /// <summary>name &lt;新名称&gt;:改本端显示名(重连后下发给客户端)。</summary>
+    private static void CmdName(ZxmsIdentity identity, string[] args)
+    {
+        var name = string.Join(' ', args).Trim();
+        if (name.Length == 0)
+        {
+            Logger.Log(LogLevel.Warning, "[身份] 用法:name <新名称>");
+            return;
+        }
+
+        identity.SetName(name);
+        Logger.Log(LogLevel.Info, $"[身份] 本端名称已改为 {name}(新接入的客户端会收到新名称)");
+    }
+
+    /// <summary>info:本端身份一览(名称 / 账号 / 服务端码 / 机器码 / 连接状态)。</summary>
+    private static void CmdInfo(ZxmsIdentity identity, TcpClient? os, string target)
+    {
+        var state = os is null ? "未连接" : os.IsConnected ? "已连接" : "已断开(可 net reconnect)";
+        Logger.Log(LogLevel.Info,
+            $"[身份] 名称       {identity.Name()}\n" +
+            $"[身份] 账号       {identity.User()}\n" +
+            $"[身份] 服务端码   {identity.ServerCode()}\n" +
+            $"[身份] 机器码     {ZincXManagerShared.Account.MachineCode.Value}\n" +
+            $"[身份] 官方服务端 {target} ({state})");
     }
 }

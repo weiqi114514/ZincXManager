@@ -5,6 +5,15 @@
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <!-- 客户端交付形态就是 NativeAOT 单文件:直接 build/publish 即按 AOT 走,不必再手加 -p:PublishAot=true。
+         (libSkiaSharp / av_libglesv2 / libHarfBuzzSharp 三个原生 dll 折不进去,交付时与主程序同目录) -->
+    <PublishAot>true</PublishAot>
+  </PropertyGroup>
+
+  <!-- 官方发行版:dotnet publish -p:OfficialBuild=true
+       定义了 OFFICIAL_BUILD 之后,客户端默认不连非官方服务端(config.ini 里 allowunverified=1 可放行) -->
+  <PropertyGroup Condition="'$(OfficialBuild)' == 'true'">
+    <DefineConstants>$(DefineConstants);OFFICIAL_BUILD</DefineConstants>
   </PropertyGroup>
 
   <ItemGroup>
@@ -17,10 +26,8 @@
     <PackageReference Include="Avalonia.Desktop" Version="12.1.2" />
     <PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.2" />
     <PackageReference Include="Avalonia.Fonts.Inter" Version="12.1.2" />
-    <PackageReference Include="AvaloniaUI.DiagnosticsSupport" Version="2.2.3">
-      <IncludeAssets Condition="'$(Configuration)' != 'Debug'">None</IncludeAssets>
-      <PrivateAssets Condition="'$(Configuration)' != 'Debug'">All</PrivateAssets>
-    </PackageReference>
+    <!-- 开发期诊断面板:只在 Debug 引用(Release / AOT 交付包里不带它) -->
+    <PackageReference Include="AvaloniaUI.DiagnosticsSupport" Version="2.2.3" Condition="'$(Configuration)' == 'Debug'" />
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
   </ItemGroup>
 

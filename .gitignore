@@ -361,3 +361,13 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+# ===== ZincXManager 运行时数据(客户端/服务端跑起来才生成,不该进仓库)=====
+config.ini
+osusers.json
+zxms.json
+users.json
+bans.json
+messages.json
+clients.log
+blacklist/
+pubilsh/

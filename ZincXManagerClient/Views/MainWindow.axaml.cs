@@ -1,4 +1,5 @@
 using System;
+using System.Text;
 using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Input;
@@ -7,6 +8,7 @@ using Avalonia.Media;
 using ZincXManagerClient.Models;
 using ZincXManagerClient.ViewModels;
 using ZincXManagerShared.Logging;
+using ZincXManagerShared.Network;
 
 namespace ZincXManagerClient.Views;
 
@@ -23,7 +25,138 @@ public partial class MainWindow : Window
         Opened += (_, _) => ApplyMaterial(ThemeManager.GlassEnabled);
         ThemeManager.GlassChanged += ApplyMaterial;
         Closed += (_, _) => ThemeManager.GlassChanged -= ApplyMaterial;
+
+        // 服务端下发的消息(公告 500 / 定向推送 501)接到右侧消息面板
+        Opened += (_, _) => AttachSession();
+        Closed += (_, _) => DetachSession();
+
+        // 调试 / 自动化(和 skipauth / startpage 一个路子):config 里 testaction=customaddress
+        // 就直接走一遍"改用第三方官方服务端"的流程,用来测 5 秒阅读确认
+        Opened += async (_, _) =>
+        {
+            if (ClientConfig.GetOrEmpty("testaction") != "customaddress")
+            {
+                return;
+            }
+
+            await Task.Delay(800);
+            Logger.Log(LogLevel.Info, "[ZXMC] testaction=customaddress:准备打开第三方官方服务端风险说明");
+            await SettingsPage.OpenCustomAddressFlowAsync();
+        };
     }
+
+    /// <summary>挂上当前会话的收包事件(连接视图模型已经在 UI 线程回调,这里直接改界面)。</summary>
+    private void AttachSession()
+    {
+        if (ClientSession.Connect is { } connect)
+        {
+            connect.PacketReceived += OnServerPacket;
+            connect.OfficialChecked += OnOfficialChecked;
+        }
+
+        // 窗口开起来再要一次历史消息(504 补发):这一刻收包事件才挂上,不然补发的包没人接。
+        // 已经在登录成功时要过一次的,这里再要一次也不要紧 —— 客户端按「来源+消息号」去重,不会多出一条。
+        if (Vm is { } vm)
+        {
+            _ = vm.RequestMessageHistoryAsync();
+        }
+    }
+
+    /// <summary>窗口关掉就退订,免得连接还活着却一直往已销毁的界面写。</summary>
+    private void DetachSession()
+    {
+        if (ClientSession.Connect is { } connect)
+        {
+            connect.PacketReceived -= OnServerPacket;
+            connect.OfficialChecked -= OnOfficialChecked;
+        }
+    }
+
+    /// <summary>
+    /// 官方验证第二层的结果:通过就轻描淡写提一句;不是官方服务端就明确警告(官方构建会直接断开)。
+    /// </summary>
+    private void OnOfficialChecked(bool ok, string detail)
+    {
+        if (Vm is not { } vm)
+        {
+            return;
+        }
+
+        if (ok)
+        {
+            vm.ShowToast($"已确认对方是官方服务端:{detail}", ToastKind.Success);
+            return;
+        }
+
+        vm.ShowToast("注意:对方不是官方服务端", ToastKind.Warning, 6000);
+        Logger.Log(LogLevel.Warning, "[ZXMC] 官方验证提示:" + detail);
+    }
+
+    /// <summary>
+    /// 服务端消息:公告(500)直接显示;定向推送(501)先核对目标账号是不是自己
+    /// (服务端已经按账号过滤过,这里只是多一层保险);
+    /// 补发(504 / 506)进同一条显示路径,只是要按「来源 + 消息号」去重。
+    /// </summary>
+    private void OnServerPacket(Packet packet)
+    {
+        if (Vm is not { } vm)
+        {
+            return;
+        }
+
+        var text = Encoding.UTF8.GetString(packet.Data);
+
+        switch (packet.Type)
+        {
+            case Protocol.Notice:
+                vm.ReceiveCard(text);
+                Logger.Log(LogLevel.Info, "[ZXMC] 收到公告:" + MessageCard.Summary(text));
+                break;
+
+            // 补发的一条历史消息(504):本地已经有的会自己跳过
+            case Protocol.MessageHistory:
+                Logger.Log(LogLevel.Info, vm.AddHistoryCard(text)
+                    ? "[ZXMC] 补齐一条历史消息:" + MessageCard.Summary(text)
+                    : "[ZXMC] 这条历史消息本地已经有了,跳过");
+                break;
+
+            // 补发结束(506):负载是服务端一共发了多少条
+            case Protocol.MessageHistoryDone:
+                vm.OnHistoryDone(text);
+                break;
+
+            // 卡片动作的回执(503):把服务端的话显示在状态栏
+            case Protocol.CardActionAck:
+                vm.ShowCardReply(text);
+                break;
+
+            // 服务端配置(202):目前是子服务端的消息保留天数
+            case Protocol.ServerConfig:
+                vm.ApplyServerConfig(text);
+                break;
+
+            case Protocol.Push:
+                if (!MessageCard.TryParsePush(text, out var target, out var cardText))
+                {
+                    Logger.Log(LogLevel.Warning, "[ZXMC] 定向推送的负载格式不对,已忽略");
+                    break;
+                }
+
+                // "@all" = 全体推送:不做账号核对;别的目标要不是自己就丢掉(服务端已经过滤过,这里多一层保险)
+                if (target.Length > 0 && !target.Equals("@all", StringComparison.OrdinalIgnoreCase) &&
+                    !string.Equals(target, ClientSession.User, StringComparison.OrdinalIgnoreCase))
+                {
+                    Logger.Log(LogLevel.Info, $"[ZXMC] 定向推送的目标是 {target},不是当前账号,已忽略");
+                    break;
+                }
+
+                vm.ReceiveCard(cardText);
+                Logger.Log(LogLevel.Info, "[ZXMC] 收到定向推送:" + MessageCard.Summary(cardText));
+                break;
+        }
+    }
+
+
 
 
     /// <summary>
@@ -42,6 +175,40 @@ public partial class MainWindow : Window
     }
 
     private MainViewModel? Vm => DataContext as MainViewModel;
+
+    /// <summary>
+    /// 一条提示条刚摆上来:下一帧加上 in 类,让它从左上角外面"滑进来";到点再摘掉 in 类滑回去,
+    /// 动画放完才把这条从列表里去掉。
+    /// </summary>
+    private async void OnToastLoaded(object? sender, RoutedEventArgs e)
+    {
+        if (sender is not Border toast)
+        {
+            return;
+        }
+
+        try
+        {
+            await Task.Delay(20);
+            toast.Classes.Add("in");      // 触发 RenderTransform 过渡:-400px → 0
+
+            if (toast.DataContext is not ToastItem item)
+            {
+                return;
+            }
+
+            await Task.Delay(item.Milliseconds);
+            toast.Classes.Remove("in");   // 滑回左上角
+
+            await Task.Delay(300);
+            Vm?.RemoveToast(item);
+        }
+        catch (Exception ex)
+        {
+            // 窗口关掉 / 控件已销毁:提示条跟着窗口一起没了,不当错误
+            Logger.Log(LogLevel.Info, "[ZXMC] 提示条收起时打扰了一下:" + ex.Message);
+        }
+    }
 
     /// <summary>标题栏拖动窗口;双击在最大化 / 还原之间切换。</summary>
     private void OnTitleBarPointerPressed(object? sender, PointerPressedEventArgs e)
@@ -69,11 +236,25 @@ public partial class MainWindow : Window
         Vm?.SelectNav(item);
     }
 
+    /// <summary>删掉这条消息(界面上的「删除」,同时从本地存档里去掉)。</summary>
+    private void OnDeleteMessageClick(object? sender, RoutedEventArgs e)
+    {
+        if (sender is Button { DataContext: MessageItem item } && Vm is { } vm)
+        {
+            vm.DeleteMessage(item);
+        }
+    }
+
+    /// <summary>
+    /// 卡片上的按钮:把"点了哪个按钮 + 卡片里填 / 选的内容"上报给服务端。
+    /// 选择卡片带的是下拉框里选的项,填空卡片带的是输入框里的字。
+    /// </summary>
     private void OnCardActionClick(object? sender, RoutedEventArgs e)
     {
-        if (sender is Button { Content: string action })
+        if (sender is Button { Content: string action, DataContext: MessageItem item } && Vm is { } vm)
         {
-            Vm?.InvokeAction(action);
+            var input = item.Kind == MessageKind.Select ? item.SelectedOption : item.InputText;
+            _ = vm.SendCardActionAsync(item, action, input);
         }
     }
 

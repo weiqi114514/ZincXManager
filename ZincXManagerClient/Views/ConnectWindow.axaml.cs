@@ -12,6 +12,15 @@ public partial class ConnectWindow : Window
     {
         InitializeComponent();
         ThemeManager.ApplyWindowMaterial(this);   // 半透明 / 亚克力:开窗时定一次
+
+        // 连不上 / 模式不匹配:弹窗告诉用户
+        DataContextChanged += (_, _) =>
+        {
+            if (DataContext is ConnectViewModel vm)
+            {
+                vm.ErrorRaised += (title, text) => _ = MessageDialog.InfoAsync(this, title, text, hint: "检查数据源地址与连接方式");
+            }
+        };
     }
 
     private ConnectViewModel? Vm => DataContext as ConnectViewModel;

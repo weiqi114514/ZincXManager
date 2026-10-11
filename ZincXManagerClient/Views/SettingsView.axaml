@@ -201,10 +201,29 @@
                 <TextBlock Grid.Column="0" Classes="label" Text="当前官方数据源"/>
                 <TextBlock Grid.Column="1" Classes="value" Text="{Binding OfficialDataSourceName}"/>
               </Grid>
+
+              <!-- 官方地址:默认用代码里写死的那个;要改必须勾"自定义"并读完 5 秒警告 -->
               <Grid ColumnDefinitions="190,*">
-                <TextBlock Grid.Column="0" Classes="label" Text="官方数据源IP/域名"/>
-                <TextBlock Grid.Column="1" Classes="value" Text="{Binding OfficialAddress}"/>
+                <TextBlock Grid.Column="0" Classes="label" Text="官方数据源IP/域名" VerticalAlignment="Top" Margin="0,4,0,0"/>
+                <StackPanel Grid.Column="1" Spacing="7">
+                  <RadioButton GroupName="ozsource" Content="官方服务端(默认)"
+                               IsChecked="{Binding !UseCustomAddress, Mode=OneWay}" Click="OnOfficialAddressClick"/>
+                  <TextBlock Classes="value" Text="{Binding OfficialAddress}" Margin="24,0,0,0"/>
+
+                  <RadioButton GroupName="ozsource" Content="自定义 IP:端口"
+                               IsChecked="{Binding UseCustomAddress, Mode=OneWay}" Click="OnCustomAddressClick"/>
+                  <TextBlock Classes="value" Text="官方服务端 ≠ 子服务端:这里只改「直连哪台官方服」;连别人搭的官方服有风险,改之前请先读完弹窗里的说明"
+                             Margin="24,0,0,0" Foreground="#B25555"/>
+                </StackPanel>
               </Grid>
+            </StackPanel>
+
+            <Rectangle Height="1" Fill="#66E3EEF4"/>
+
+            <!-- 弹窗形态落地:填空(改地址)+ 选择(连接方式) -->
+            <StackPanel Orientation="Horizontal" Spacing="10">
+              <Button Classes="small" Content="改数据源地址…" Click="OnEditAddressClick"/>
+              <Button Classes="small" Content="切换连接方式…" Click="OnSelectModeClick"/>
             </StackPanel>
           </StackPanel>
         </ScrollViewer>
@@ -226,7 +245,7 @@
           <TextBlock Classes="tips" Text="{Binding WallpaperHint}" TextWrapping="Wrap"/>
 
           <TextBlock Classes="tips" TextWrapping="Wrap"
-                     Text="支持 png / jpg / bmp;选完立即生效,并记进 config.ini,下次启动自动应用。"/>
+                     Text="支持 png / jpg / bmp"/>
 
           <Rectangle Height="1" Fill="#66E3EEF4"/>
 
@@ -239,9 +258,18 @@
                           VerticalAlignment="Center"/>
           </Grid>
 
+          <Grid ColumnDefinitions="*,260">
+            <StackPanel Grid.Column="0" Spacing="4" VerticalAlignment="Center">
+              <TextBlock Classes="label" Text="侧边栏不透明度"/>
+              <TextBlock Classes="tips" Text="{Binding OpacityHint}" TextWrapping="Wrap"/>
+            </StackPanel>
+            <Slider Grid.Column="1" Minimum="50" Maximum="100" TickFrequency="5" IsSnapToTickEnabled="True"
+                    Value="{Binding OpacityPercent}" VerticalAlignment="Center"/>
+          </Grid>
+
           <Rectangle Height="1" Fill="#66E3EEF4"/>
 
-          <TextBlock Classes="label" Text="配色(左半主要色,右上次要色,右下浅色)"/>
+          <TextBlock Classes="label" Text="配色"/>
 
           <ItemsControl ItemsSource="{Binding ThemeOptions}">
             <ItemsControl.ItemsPanel>
@@ -292,26 +320,50 @@
                   <Button Classes="small" Content="更换头像…" Focusable="False" Click="OnPickAvatarClick"/>
                   <Button Classes="small" Content="删除头像" Click="OnClearAvatarClick"/>
                 </StackPanel>
-                <TextBlock Classes="tips" Text="头像存在服务端(avatars/账号.png),本地也缓存一份,登录界面会显示"/>
+                <TextBlock Classes="tips" Text=""/>
               </StackPanel>
             </StackPanel>
 
             <Rectangle Height="1" Fill="#66E3EEF4"/>
 
             <StackPanel Spacing="10">
-              <CheckBox Content="7 天内免登录(勾了且记住密码,启动时自动登录)" IsChecked="{Binding Remember}" FontSize="13"/>
-              <CheckBox Content="记住账号密码(本地只存密文)" IsChecked="{Binding SavePassword}" FontSize="13"/>
+              <CheckBox Content="7 天内免登录" IsChecked="{Binding Remember}" FontSize="13"/>
+              <CheckBox Content="记住账号密码" IsChecked="{Binding SavePassword}" FontSize="13"/>
             </StackPanel>
 
             <Rectangle Height="1" Fill="#66E3EEF4"/>
 
+            <!-- 弹窗形态落地:双按钮确认(清除本地登录记录) -->
             <Grid ColumnDefinitions="*,Auto">
-              <TextBlock Grid.Column="0" Classes="tips" Text="退出后会清掉免登录记录并断开连接"
+              <TextBlock Grid.Column="0" Classes="tips" Text="清掉本机记住的账号密码"
+                         VerticalAlignment="Center"/>
+              <Button Grid.Column="1" Classes="small" Content="清除本地登录记录…" Click="OnClearRecordClick"/>
+            </Grid>
+
+            <Rectangle Height="1" Fill="#66E3EEF4"/>
+
+            <Grid ColumnDefinitions="*,Auto">
+              <TextBlock Grid.Column="0" Classes="tips" Text="退出登录并清除免登录记录"
                          VerticalAlignment="Center"/>
               <Button Grid.Column="1" Classes="small" Content="退出登录" Click="OnLogoutClick"/>
             </Grid>
           </StackPanel>
         </ScrollViewer>
+      </Border>
+
+      <!-- ========== 高级:本地消息保留 ========== -->
+      <Border Grid.Row="1" Margin="0,12,0,0" Background="#CCFFFFFF"
+              BorderBrush="{DynamicResource ThemeMuted}" BorderThickness="1" IsVisible="{Binding IsAdvancedPage}">
+        <StackPanel Spacing="14" Margin="16">
+          <TextBlock Classes="panelTitle" Text="消息保留"/>
+
+          <StackPanel Spacing="6">
+            <TextBlock Classes="label" Text="本地消息保留天数(1-3650)"/>
+            <TextBox Text="{Binding MessageDays}" Width="120" HorizontalAlignment="Left"/>
+            <TextBlock Classes="tips" TextWrapping="Wrap" MaxWidth="520" HorizontalAlignment="Left"
+                       Text="客户端本地产的消息按这个天数保留,默认 60 天。官方服务端(ZXMOS)下发的消息固定最多保留 20 天;子服务端(ZXMS)下发的消息按子服务端自己的设置保留(默认 7 天)。过期消息在开客户端时自动清理,也可以在消息卡片上手动删除。"/>
+          </StackPanel>
+        </StackPanel>
       </Border>
 
       <!-- ========== 其它还没做的页面 ========== -->

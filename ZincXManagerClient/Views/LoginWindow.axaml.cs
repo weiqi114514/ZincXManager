@@ -11,6 +11,15 @@ public partial class LoginWindow : Window
     {
         InitializeComponent();
         ThemeManager.ApplyWindowMaterial(this);   // 半透明 / 亚克力:开窗时定一次
+
+        // 出错(被封禁 / 连不上服务器)弹窗告诉用户,不再只写一行状态文字
+        DataContextChanged += (_, _) =>
+        {
+            if (DataContext is LoginViewModel vm)
+            {
+                vm.ErrorRaised += (title, text) => _ = MessageDialog.InfoAsync(this, title, text, hint: "");
+            }
+        };
     }
 
     private LoginViewModel? Vm => DataContext as LoginViewModel;

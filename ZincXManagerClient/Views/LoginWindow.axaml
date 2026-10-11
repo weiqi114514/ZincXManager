@@ -1,12 +1,13 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:ZincXManagerClient.ViewModels"
+        xmlns:models="using:ZincXManagerClient.Models"
         x:Class="ZincXManagerClient.Views.LoginWindow"
         x:DataType="vm:LoginViewModel"
         Title="ZincXManagerClient · 登录"
-        Width="440" Height="560"
-        MinWidth="420" MinHeight="520"
-        Background="{DynamicResource ThemePage}"
+        Width="780" Height="470"
+        MinWidth="740" MinHeight="430"
+        Background="{DynamicResource ThemeWindowVeil}"
         TransparencyLevelHint="AcrylicBlur,Blur,Transparent"
         FontFamily="Microsoft YaHei UI, Microsoft YaHei, Segoe UI"
         WindowStartupLocation="Manual"
@@ -48,6 +49,7 @@
     <Style Selector="Button.close:pointerover /template/ ContentPresenter">
       <Setter Property="Background" Value="#F1707A"/>
     </Style>
+
     <Style Selector="Button.primary">
       <Setter Property="Background" Value="{DynamicResource ThemePrimary}"/>
       <Setter Property="Foreground" Value="White"/>
@@ -55,7 +57,6 @@
       <Setter Property="CornerRadius" Value="0"/>
       <Setter Property="Padding" Value="0,9"/>
       <Setter Property="FontSize" Value="13.5"/>
-      <Setter Property="HorizontalAlignment" Value="Stretch"/>
       <Setter Property="HorizontalContentAlignment" Value="Center"/>
       <Setter Property="Cursor" Value="Hand"/>
     </Style>
@@ -74,7 +75,6 @@
       <Setter Property="CornerRadius" Value="0"/>
       <Setter Property="Padding" Value="0,9"/>
       <Setter Property="FontSize" Value="13.5"/>
-      <Setter Property="HorizontalAlignment" Value="Stretch"/>
       <Setter Property="HorizontalContentAlignment" Value="Center"/>
       <Setter Property="Cursor" Value="Hand"/>
     </Style>
@@ -87,13 +87,23 @@
     </Style>
 
     <Style Selector="TextBlock.title">
-      <Setter Property="FontSize" Value="20"/>
+      <Setter Property="FontSize" Value="19"/>
       <Setter Property="FontWeight" Value="SemiBold"/>
       <Setter Property="Foreground" Value="#1F3B3A"/>
     </Style>
     <Style Selector="TextBlock.label">
       <Setter Property="FontSize" Value="12.5"/>
       <Setter Property="Foreground" Value="#5A7A88"/>
+    </Style>
+    <Style Selector="TextBlock.rail">
+      <Setter Property="FontSize" Value="12.5"/>
+      <Setter Property="Foreground" Value="{DynamicResource ThemeOnRailSoft}"/>
+      <Setter Property="TextWrapping" Value="Wrap"/>
+    </Style>
+    <Style Selector="TextBlock.railFaint">
+      <Setter Property="FontSize" Value="11.5"/>
+      <Setter Property="Foreground" Value="{DynamicResource ThemeOnRailFaint}"/>
+      <Setter Property="TextWrapping" Value="Wrap"/>
     </Style>
     <Style Selector="TextBox.field">
       <Setter Property="FontSize" Value="13.5"/>
@@ -102,6 +112,12 @@
       <Setter Property="BorderBrush" Value="#C7DCE8"/>
       <Setter Property="BorderThickness" Value="1"/>
       <Setter Property="Padding" Value="8,6"/>
+    </Style>
+    <Style Selector="ComboBox.field">
+      <Setter Property="FontSize" Value="13"/>
+      <Setter Property="CornerRadius" Value="0"/>
+      <Setter Property="Padding" Value="6,3"/>
+      <Setter Property="HorizontalAlignment" Value="Stretch"/>
     </Style>
   </Window.Styles>
 
@@ -113,86 +129,112 @@
         <Rectangle Grid.Column="0" Width="1.5" Height="16" Fill="#80FFFFFF" Margin="16,0,0,0" VerticalAlignment="Center"/>
         <TextBlock Grid.Column="1" Text="ZincXManagerClient · 登录" Foreground="White" FontSize="13"
                    Margin="14,0,0,0" VerticalAlignment="Center"/>
-                <Button Grid.Column="2" Classes="chrome" Width="48" Click="OnMinimizeClick">
+        <Button Grid.Column="2" Classes="chrome" Width="48" Click="OnMinimizeClick">
           <Rectangle Width="13" Height="1.6" Fill="White"/>
         </Button>
-                <Button Grid.Column="3" Classes="chrome close" Width="54" Click="OnCloseClick">
+        <Button Grid.Column="3" Classes="chrome close" Width="54" Click="OnCloseClick">
           <Path Data="M0,0 L12,12 M12,0 L0,12" Stroke="White" StrokeThickness="1.7"/>
         </Button>
       </Grid>
     </Border>
 
-    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
-      <StackPanel Margin="28,22,28,22" Spacing="16">
+    <!-- 横版主体:左边品牌栏(毛玻璃),右边表单 -->
+    <Grid Grid.Row="1" ColumnDefinitions="236,*">
 
-        <!-- 头像 + 标题 -->
-        <StackPanel Orientation="Horizontal" Spacing="16">
-          <Border Width="76" Height="76" Background="#CCFFFFFF" BorderBrush="{DynamicResource ThemeMuted}" BorderThickness="1">
-            <Panel>
-              <Ellipse Width="60" Height="60" Fill="{DynamicResource ThemeSecondary}" IsVisible="{Binding !HasAvatar}"/>
-              <TextBlock Text="?" FontSize="26" FontWeight="SemiBold" Foreground="{DynamicResource ThemePrimary}"
-                         HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="{Binding !HasAvatar}"/>
-              <Image Source="{Binding Avatar}" Stretch="UniformToFill"/>
-            </Panel>
-          </Border>
+      <Border Grid.Column="0" Background="{DynamicResource ThemeGlass}">
+        <Grid RowDefinitions="Auto,*,Auto" Margin="24,20,24,18">
 
-          <StackPanel VerticalAlignment="Center" Spacing="6">
-            <TextBlock Classes="title" Text="登录 ZincXManager"/>
-            <TextBlock Classes="label" Text="{Binding AvatarHint}" TextWrapping="Wrap" MaxWidth="240"/>
+          <StackPanel Grid.Row="0" Spacing="8">
+            <Viewbox Width="118" Height="29" HorizontalAlignment="Left">
+              <Canvas Width="36" Height="9">
+                <Path Data="{x:Static models:Icons.LogoMark}" Fill="{DynamicResource ThemeOnRail}"
+                      Width="36" Height="7" Stretch="Fill" Canvas.Left="0" Canvas.Top="0"/>
+                <Path Data="{x:Static models:Icons.LogoSlash}" Fill="{DynamicResource ThemeOnRailSoft}"
+                      Width="8" Height="7" Stretch="Fill" Canvas.Left="10" Canvas.Top="0"/>
+              </Canvas>
+            </Viewbox>
+            <TextBlock Text="ZincXManagerClient" FontSize="13.5" Foreground="{DynamicResource ThemeOnRail}" LetterSpacing="0.6"/>
+            <TextBlock Classes="rail" Text="锌X 管理面板 · 客户端"/>
           </StackPanel>
+
+          <StackPanel Grid.Row="1" VerticalAlignment="Center" Spacing="10">
+            <TextBlock Classes="rail" Text=""/>
+            <TextBlock Classes="rail" Text=""/>
+          </StackPanel>
+
+          <TextBlock Grid.Row="2" Classes="railFaint"
+                     Text="忘记密码请联系服务端管理员"/>
+        </Grid>
+      </Border>
+
+      <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto">
+        <StackPanel Margin="26,18,26,18" Spacing="13">
+
+          <!-- 头像 + 标题 -->
+          <StackPanel Orientation="Horizontal" Spacing="14">
+            <Border Width="62" Height="62" Background="#CCFFFFFF" BorderBrush="{DynamicResource ThemeMuted}" BorderThickness="1">
+              <Panel>
+                <Ellipse Width="50" Height="50" Fill="{DynamicResource ThemeSecondary}" IsVisible="{Binding !HasAvatar}"/>
+                <TextBlock Text="?" FontSize="22" FontWeight="SemiBold" Foreground="{DynamicResource ThemePrimary}"
+                           HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="{Binding !HasAvatar}"/>
+                <Image Source="{Binding Avatar}" Stretch="UniformToFill"/>
+              </Panel>
+            </Border>
+            <StackPanel VerticalAlignment="Center" Spacing="4">
+              <TextBlock Classes="title" Text="登录 / 注册 ZincXManager"/>
+              <TextBlock Classes="label" Text="{Binding AvatarHint}" TextWrapping="Wrap" MaxWidth="360"/>
+            </StackPanel>
+          </StackPanel>
+
+          <!-- 账号 / 密码(并排,省高度) -->
+          <Grid ColumnDefinitions="*,*">
+            <StackPanel Grid.Column="0" Spacing="6" Margin="0,0,8,0">
+              <TextBlock Classes="label" Text="账号"/>
+              <TextBox Classes="field" Text="{Binding UserName}"/>
+            </StackPanel>
+            <StackPanel Grid.Column="1" Spacing="6" Margin="8,0,0,0">
+              <TextBlock Classes="label" Text="密码"/>
+              <TextBox Classes="field" Text="{Binding Password}" PasswordChar="•"/>
+            </StackPanel>
+          </Grid>
+
+          <!-- 管理账号 + 哪一端 + 权限等级 -->
+          <Grid ColumnDefinitions="*,*">
+            <StackPanel Grid.Column="0" Spacing="6" Margin="0,0,8,0">
+              <CheckBox Content="登录管理账号" IsChecked="{Binding IsAdminAccount}" FontSize="13" Foreground="#1F3B3A"/>
+              <StackPanel Spacing="6" IsVisible="{Binding AdminSideVisible}">
+                <TextBlock Classes="label" Text="哪一端的管理账号"/>
+                <!-- 下拉项是 ComboBoxItem,不能直接和字符串双向绑定,所以绑索引(0=ZXMS,1=ZXMOS) -->
+                <ComboBox Classes="field" SelectedIndex="{Binding AdminSideIndex}">
+                  <ComboBoxItem Content="ZXMS(子服务端)"/>
+                  <ComboBoxItem Content="ZXMOS(官方服务端)"/>
+                </ComboBox>
+              </StackPanel>
+            </StackPanel>
+            <StackPanel Grid.Column="1" Spacing="6" Margin="8,0,0,0">
+              <TextBlock Classes="label" Text="权限等级(账号必须具有该等级)"/>
+              <ComboBox Classes="field" ItemsSource="{Binding Levels}" SelectedItem="{Binding Level}"/>
+              <TextBlock Classes="label" Text="{Binding LevelHint}" TextWrapping="Wrap"/>
+            </StackPanel>
+          </Grid>
+
+          <!-- 两个选项并排 -->
+          <StackPanel Orientation="Horizontal" Spacing="20">
+            <CheckBox Content="7 天内免登录" IsChecked="{Binding Remember}" FontSize="13" Foreground="#1F3B3A"/>
+            <CheckBox Content="记住账号密码" IsChecked="{Binding SavePassword}" FontSize="13" Foreground="#1F3B3A"/>
+          </StackPanel>
+
+          <!-- 按钮并排:都一屏看得见 -->
+          <StackPanel Orientation="Horizontal" Spacing="10">
+            <Button Classes="primary" Content="登录" Width="160" Click="OnLoginClick" IsEnabled="{Binding !IsBusy}"/>
+            <!-- 管理账号不给注册:只能在 ZXMS / ZXMOS 端上用 user reg 创建 -->
+            <Button Classes="secondary" Content="注册(只能是 Player)" Width="190" Click="OnRegisterClick"
+                    IsVisible="{Binding CanRegister}" IsEnabled="{Binding !IsBusy}"/>
+          </StackPanel>
+
+          <TextBlock Classes="label" Text="{Binding Message}" TextWrapping="Wrap"/>
         </StackPanel>
-
-        <!-- 账号 / 密码 -->
-        <StackPanel Spacing="6">
-          <TextBlock Classes="label" Text="账号"/>
-          <TextBox Classes="field" Text="{Binding UserName}"/>
-        </StackPanel>
-
-        <StackPanel Spacing="6">
-          <TextBlock Classes="label" Text="密码"/>
-          <TextBox Classes="field" Text="{Binding Password}" PasswordChar="•"/>
-        </StackPanel>
-
-        <!-- 管理账号:管理账号只能在服务端 user reg 创建,客户端只登录 -->
-        <CheckBox Content="登录管理账号" IsChecked="{Binding IsAdminAccount}" FontSize="13" Foreground="#1F3B3A"/>
-
-        <!-- SAOS 下才要选"哪一端的管理账号"(ZXMS / ZXMOS 管的东西不一样) -->
-        <StackPanel Spacing="6" IsVisible="{Binding AdminSideVisible}">
-          <TextBlock Classes="label" Text="哪一端的管理账号"/>
-          <!-- 下拉项是 ComboBoxItem,不能直接和字符串双向绑定,所以绑索引(0=ZXMS,1=ZXMOS) -->
-          <ComboBox SelectedIndex="{Binding AdminSideIndex}" FontSize="13" CornerRadius="0" Padding="6,3"
-                    HorizontalAlignment="Stretch">
-            <ComboBoxItem Content="ZXMS(子服务端)"/>
-            <ComboBoxItem Content="ZXMOS(官方服务端)"/>
-          </ComboBox>
-        </StackPanel>
-
-        <StackPanel Spacing="6">
-          <TextBlock Classes="label" Text="权限等级(账号必须具有该等级)"/>
-          <ComboBox ItemsSource="{Binding Levels}" SelectedItem="{Binding Level}"
-                    FontSize="13" CornerRadius="0" Padding="6,3" HorizontalAlignment="Stretch"/>
-          <TextBlock Classes="label" Text="{Binding LevelHint}" TextWrapping="Wrap"/>
-        </StackPanel>
-
-        <!-- 两个选项 -->
-        <StackPanel Spacing="8" Margin="0,4,0,0">
-          <CheckBox Content="7 天内免登录" IsChecked="{Binding Remember}" FontSize="13" Foreground="#1F3B3A"/>
-          <CheckBox Content="记住账号密码(本地存密文)" IsChecked="{Binding SavePassword}" FontSize="13" Foreground="#1F3B3A"/>
-        </StackPanel>
-
-        <!-- 按钮 -->
-        <StackPanel Spacing="8" Margin="0,4,0,0">
-          <Button Classes="primary" Content="登录" Click="OnLoginClick" IsEnabled="{Binding !IsBusy}"/>
-          <!-- 管理账号不给注册:只能在 ZXMS / ZXMOS 端上用 user reg 创建 -->
-          <Button Classes="secondary" Content="注册(只能是 Player)" Click="OnRegisterClick"
-                  IsVisible="{Binding CanRegister}" IsEnabled="{Binding !IsBusy}"/>
-        </StackPanel>
-
-        <TextBlock Classes="label" Text="{Binding Message}" TextWrapping="Wrap"/>
-
-        <TextBlock Classes="label" TextWrapping="Wrap"
-                   Text="忘记密码?玩家账号找官方服管理员,管理账号找对应服务端管理员,用 user rep 改密码。"/>
-      </StackPanel>
-    </ScrollViewer>
+      </ScrollViewer>
+    </Grid>
   </Grid>
 </Window>

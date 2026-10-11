@@ -10,6 +10,7 @@ using ZincXManagerClient.Logging;
 using ZincXManagerClient.Models;
 using ZincXManagerShared.Logging;
 using ZincXManagerShared.Network;
+using ZincXManagerShared.Verify;
 
 // 与 BCL 的 TcpClient 同名,起个别名
 using TcpClient = ZincXManagerShared.Network.TcpClient;
@@ -64,6 +65,9 @@ public partial class ConnectViewModel : ViewModelBase, IDisposable
 
     /// <summary>收到服务端名称(201)时触发 —— 名称由服务端提供,客户端不用自己填。</summary>
     public event Action<string>? ServerNameReceived;
+
+    /// <summary>需要弹窗提示的错误(标题, 内容):连不上、模式不匹配。</summary>
+    public event Action<string, string>? ErrorRaised;
 
     /// <summary>服务端自报的名称(连接后才有)。</summary>
     [ObservableProperty]
@@ -127,8 +131,8 @@ public partial class ConnectViewModel : ViewModelBase, IDisposable
         // 读客户端配置(与设置页共用 ClientConfig,缺键自动补缺省值)
         _czip = ClientConfig.Get(KeyCzip, "127.0.0.1");
         _czport = ClientConfig.Get(KeyCzport, "21000");
-        _ozip = ClientConfig.Get(KeyOzip, "127.0.0.1");
-        _ozport = ClientConfig.Get(KeyOzport, "20000");
+        _ozip = ClientConfig.Get(KeyOzip, OfficialServer.Host);
+        _ozport = ClientConfig.Get(KeyOzport, OfficialServer.PortText);
 
         // 连接方式沿用设置页里选的(缺省 SAOS),并按它填好地址端口
         Mode = ClientConfig.Get(KeyMode, "SAOS");
@@ -239,6 +243,11 @@ public partial class ConnectViewModel : ViewModelBase, IDisposable
                         AccountReply?.Invoke(packet.Type, text);
                         break;
 
+                    // 官方验证第二层:对方的证明(521)
+                    case Protocol.OfficialProof:
+                        _officialWait?.TrySetResult(text);
+                        break;
+
                     // 服务端确认上线(校验通过才算连上)
                     case CBack:
                         Logger.Log(LogLevel.Info, $"[ZXMC] 收到上线确认:{text}");
@@ -271,6 +280,7 @@ public partial class ConnectViewModel : ViewModelBase, IDisposable
         {
             Logger.Log(LogLevel.Error, "[ZXMC] 连接失败: " + ex.Message);
             SetState("连接失败", "#D64545");
+            ErrorRaised?.Invoke("无法连接服务器", $"{ip}:{port}\n{ex.Message}");
             await client.CloseAsync();
         }
         finally
@@ -286,6 +296,7 @@ public partial class ConnectViewModel : ViewModelBase, IDisposable
     {
         if (role == ExpectRole)
         {
+            _serverRole = role;
             Logger.Log(LogLevel.Info, $"[ZXMC] 身份校验通过:{role} 符合模式 {Mode}");
             SetState($"已连上 {role} {ip}:{port},等待确认", "#F0A020");
             return;
@@ -296,6 +307,7 @@ public partial class ConnectViewModel : ViewModelBase, IDisposable
         Logger.Log(LogLevel.Error,
             $"[ZXMC] 身份校验不通过:模式 {Mode} 要求 {ExpectRole},但 {ip}:{port} 自报是 {role} —— 已断开");
         SetState("模式与目标不匹配,已断开", "#D64545");
+        ErrorRaised?.Invoke("连接被拒绝", $"模式 {Mode} 要求 {ExpectRole},但 {ip}:{port} 自报是 {role}。");
 
         // 用闭包里的 client(连接可能还没赋给字段),直接断开
         _ = client.CloseAsync();
@@ -345,6 +357,100 @@ public partial class ConnectViewModel : ViewModelBase, IDisposable
 
         await _client.SendAsync(type, text, id);
         return true;
+    }
+
+    /// <summary>
+    /// 向服务端要一次历史消息补发(505):服务端会把保留期内还没收到的消息逐条(504)回过来,
+    /// 最后回一条 506 收尾。登录成功后调用;补发的包和实时消息走同一个 <see cref="PacketReceived"/> 事件。
+    /// 没连上就什么都不发。
+    /// </summary>
+    public async Task RequestHistoryAsync()
+    {
+        if (_client is null || !IsConnected)
+        {
+            Logger.Log(LogLevel.Info, "[ZXMC] 还没有连上服务端,这次不请求历史消息");
+            return;
+        }
+
+        Logger.Log(LogLevel.Info, "[ZXMC] 向服务端要一次历史消息(505)");
+
+        try
+        {
+            await _client.SendAsync(Protocol.MessageHistoryReq, "client");
+        }
+        catch (Exception ex)
+        {
+            Logger.Log(LogLevel.Warning, "[ZXMC] 请求历史消息失败: " + ex.Message);
+        }
+    }
+
+    // ---------- 官方验证第二层(520 / 521) ----------
+
+    /// <summary>对方自报的端类型(200 包里来的):只有官方服务端才需要出示官方证明。</summary>
+    private string _serverRole = "";
+
+    /// <summary>等对方证明的等待者。</summary>
+    private TaskCompletionSource<string>? _officialWait;
+
+    /// <summary>官方验证的结果(界面拿它提示):ok + 一句话。</summary>
+    public event Action<bool, string>? OfficialChecked;
+
+    /// <summary>
+    /// 官方验证第二层:对方是官方服务端(ZXMOS)时,登录成功后要一张官方证明并校验。
+    /// 子服务端不等同于官方服(子服是自己部署的),所以直连子服时不验。
+    /// 官方构建的客户端默认**不连**非官方服务端(要连得在 config.ini 里写 <c>allowunverified=1</c>)。
+    /// </summary>
+    public async Task VerifyOfficialAsync()
+    {
+        if (_client is null || !IsConnected || _serverRole != "ZXMOS")
+        {
+            return;
+        }
+
+        var nonce = OfficialHandshake.NewNonce();
+        var waiter = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
+        _officialWait = waiter;
+
+        try
+        {
+            await _client.WriteAsync(new Packet(0, Protocol.OfficialChallenge, Encoding.UTF8.GetBytes(nonce)));
+            Logger.Log(LogLevel.Info, $"[ZXMC] 已向官方服务端要官方证明(nonce {nonce[..8]}…)");
+        }
+        catch (Exception ex)
+        {
+            _officialWait = null;
+            OfficialChecked?.Invoke(false, "请求官方证明失败:" + ex.Message);
+            return;
+        }
+
+        var finished = await Task.WhenAny(waiter.Task, Task.Delay(5000));
+        _officialWait = null;
+        var payload = finished == waiter.Task ? waiter.Task.Result : "";
+
+        var verdict = payload.Length > 0
+            ? OfficialHandshake.Verify(payload, nonce)
+            : new OfficialVerdict { Ok = false, Code = "timeout", Detail = "对方没有回应官方证明请求(超时)" };
+
+        if (verdict.Ok)
+        {
+            Logger.Log(LogLevel.Info, $"[ZXMC] 官方验证通过:{verdict.Name}(序列号 {verdict.Serial})");
+            OfficialChecked?.Invoke(true, verdict.Name);
+            return;
+        }
+
+        Logger.Log(LogLevel.Warning, $"[ZXMC] 对方不是官方服务端({verdict.Code}):{verdict.Detail}");
+        OfficialChecked?.Invoke(false, verdict.Detail);
+
+#if OFFICIAL_BUILD
+        if (ClientConfig.GetOrEmpty("allowunverified") != "1")
+        {
+            Logger.Log(LogLevel.Error,
+                "[ZXMC] 官方发行的客户端只连官方服务端 —— 断开(确实要连自建服务端,就在 config.ini 里写 allowunverified=1)");
+            await DisconnectAsync();
+        }
+#else
+        Logger.Log(LogLevel.Warning, "[ZXMC] 开发构建:只提示,不主动断开(官方发行版会断开)");
+#endif
     }
 
     /// <summary>断开连接。</summary>

@@ -1,0 +1,65 @@
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+  <!--
+    ZincXManager 客户端(ZXMC)安装包定义 —— 供 _build-installer.ps1 调用:
+      wix build installer\zxmc.wxs -o out\...msi -d Version=... -d StageDir=... -d IconPath=...
+
+    装法:全机器(Program Files),所有人可用;安装/卸载需要管理员。
+    不改任何注册表业务项,只在 HKLM\Software\ZincXManager 下留一个标记当快捷方式的 KeyPath。
+  -->
+  <Package Name="ZincXManager 客户端"
+           Manufacturer="ZincXManager"
+           Version="$(var.Version)"
+           UpgradeCode="8F3A41D2-5A7E-4E31-9C1B-6E2B7A0C5D91"
+           Scope="perMachine"
+           Language="2052"
+           Codepage="936">
+
+    <SummaryInformation Description="ZincXManager 客户端(ZXMC)" Manufacturer="ZincXManager" />
+    <MajorUpgrade DowngradeErrorMessage="已经安装了更新版本的 ZincXManager 客户端,请先卸载它。" />
+    <MediaTemplate EmbedCab="yes" />
+
+    <Icon Id="ZxmIcon" SourceFile="$(var.IconPath)" />
+    <Property Id="ARPPRODUCTICON" Value="ZxmIcon" />
+    <Property Id="ARPHELPLINK" Value="https://zxm.zincms.top" />
+
+    <Launch Condition="Installed OR VersionNT64" Message="ZincXManager 客户端需要 64 位 Windows。" />
+
+    <StandardDirectory Id="ProgramFiles64Folder">
+      <Directory Id="INSTALLFOLDER" Name="ZincXManager">
+        <Component Id="ClientFiles" Guid="B1D7C4E2-91A6-4F58-8E3D-2C7A5B9F0E43">
+          <File Id="ZxmcExe" Source="$(var.StageDir)\ZincXManagerClient.exe" KeyPath="yes" />
+          <File Id="SkiaDll" Source="$(var.StageDir)\libSkiaSharp.dll" />
+          <File Id="GlesDll" Source="$(var.StageDir)\av_libglesv2.dll" />
+          <File Id="HarfBuzzDll" Source="$(var.StageDir)\libHarfBuzzSharp.dll" />
+          <File Id="ReadmeTxt" Source="$(var.StageDir)\说明.txt" />
+        </Component>
+
+        <!-- 快捷方式单独一个组件:KeyPath 用 HKLM 下的标记键,不用"广告式"快捷方式(更稳) -->
+        <Component Id="Shortcuts" Guid="4C6E9A18-7D25-4B0F-A3E8-51C2D7B64F80">
+          <Shortcut Id="StartMenuShortcut"
+                    Directory="ProgramMenuFolder"
+                    Name="ZincXManager 客户端"
+                    Description="ZincXManager 客户端(ZXMC)"
+                    Target="[INSTALLFOLDER]ZincXManagerClient.exe"
+                    WorkingDirectory="INSTALLFOLDER" />
+          <Shortcut Id="DesktopShortcut"
+                    Directory="DesktopFolder"
+                    Name="ZincXManager 客户端"
+                    Description="ZincXManager 客户端(ZXMC)"
+                    Target="[INSTALLFOLDER]ZincXManagerClient.exe"
+                    WorkingDirectory="INSTALLFOLDER" />
+          <RegistryValue Root="HKLM" Key="Software\ZincXManager\ZXMC" Name="Installed"
+                         Type="integer" Value="1" KeyPath="yes" />
+        </Component>
+      </Directory>
+    </StandardDirectory>
+
+    <StandardDirectory Id="ProgramMenuFolder" />
+    <StandardDirectory Id="DesktopFolder" />
+
+    <Feature Id="Main" Title="ZincXManager 客户端" Level="1">
+      <ComponentRef Id="ClientFiles" />
+      <ComponentRef Id="Shortcuts" />
+    </Feature>
+  </Package>
+</Wix>

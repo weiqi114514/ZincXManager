@@ -14,6 +14,15 @@ public partial class OobeWindow : Window
     {
         InitializeComponent();
         ThemeManager.ApplyWindowMaterial(this);   // 半透明 / 亚克力:开窗时定一次
+
+        // 出错(被封禁 / 连不上服务器)弹窗告诉用户
+        DataContextChanged += (_, _) =>
+        {
+            if (DataContext is OobeViewModel vm)
+            {
+                vm.ErrorRaised += (title, text) => _ = MessageDialog.InfoAsync(this, title, text, hint: "");
+            }
+        };
     }
 
     private OobeViewModel? Vm => DataContext as OobeViewModel;

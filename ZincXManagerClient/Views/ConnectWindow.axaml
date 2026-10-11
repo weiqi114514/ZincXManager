@@ -5,9 +5,9 @@
         x:Class="ZincXManagerClient.Views.ConnectWindow"
         x:DataType="vm:ConnectViewModel"
         Title="ZincXManagerClient · 连接"
-        Width="880" Height="660"
-        MinWidth="760" MinHeight="560"
-        Background="{DynamicResource ThemePage}"
+        Width="940" Height="560"
+        MinWidth="880" MinHeight="500"
+        Background="{DynamicResource ThemeWindowVeil}"
         TransparencyLevelHint="AcrylicBlur,Blur,Transparent"
         FontFamily="Microsoft YaHei UI, Microsoft YaHei, Segoe UI"
         WindowStartupLocation="Manual"
@@ -155,7 +155,7 @@
     </Border>
 
     <!-- ================= 主体 ================= -->
-    <Grid Grid.Row="1" ColumnDefinitions="320,*">
+    <Grid Grid.Row="1" ColumnDefinitions="360,*">
 
       <!-- ===== 左侧:连接设置 ===== -->
       <Border Grid.Column="0" Background="#F4FAFD" BorderBrush="#CBDFEA" BorderThickness="0,0,1,0">
@@ -180,24 +180,29 @@
           <TextBlock Classes="section" Text="目标服务端"/>
 
           <StackPanel Spacing="8">
-            <StackPanel Spacing="4">
-              <TextBlock Classes="label" Text="地址"/>
-              <TextBox Classes="field" Text="{Binding Host}" PlaceholderText="例如 127.0.0.1"/>
-            </StackPanel>
-            <StackPanel Spacing="4">
-              <TextBlock Classes="label" Text="端口"/>
-              <TextBox Classes="field" Text="{Binding Port}" PlaceholderText="例如 21000(ZXMS)/ 20000(ZXMOS)"/>
-            </StackPanel>
-            <TextBlock Classes="label" TextWrapping="Wrap" Text="连接时按模式校验目标,不匹配直接拒绝。"/>
+            <!-- 地址与端口并排:横版窗口里一行摆得下,不用上下堆 -->
+            <Grid ColumnDefinitions="*,100">
+              <StackPanel Grid.Column="0" Spacing="4">
+                <TextBlock Classes="label" Text="地址"/>
+                <TextBox Classes="field" Text="{Binding Host}" PlaceholderText="例如 127.0.0.1"/>
+              </StackPanel>
+              <StackPanel Grid.Column="1" Spacing="4" Margin="8,0,0,0">
+                <TextBlock Classes="label" Text="端口"/>
+                <TextBox Classes="field" Text="{Binding Port}" PlaceholderText="例如 21000"/>
+              </StackPanel>
+            </Grid>
+            <TextBlock Classes="label" TextWrapping="Wrap"
+                       Text="端口:ZXMS 一般是 21000,ZXMOS 一般是 20000。连接时按模式校验目标,不匹配直接拒绝。"/>
           </StackPanel>
 
-          <StackPanel Spacing="8">
-            <Button Classes="primary" Content="连接" Click="OnConnectClick" IsEnabled="{Binding !IsBusy}"/>
-            <Button Classes="secondary" Content="断开" Click="OnDisconnectClick"/>
-            <!-- 连上之后点这里进主界面(放在显眼位置,不用往下翻) -->
-            <Button Classes="primary" Content="进入主界面" Click="OnOpenMainClick"
+          <!-- 三个按钮横排:连上之后"进入主界面"就在眼前,不用往下翻 -->
+          <Grid ColumnDefinitions="*,*,*">
+            <Button Grid.Column="0" Classes="primary" Content="连接" Click="OnConnectClick"
+                    IsEnabled="{Binding !IsBusy}"/>
+            <Button Grid.Column="1" Classes="secondary" Content="断开" Click="OnDisconnectClick" Margin="8,0"/>
+            <Button Grid.Column="2" Classes="primary" Content="进入主界面" Click="OnOpenMainClick"
                     IsEnabled="{Binding IsConnected}"/>
-          </StackPanel>
+          </Grid>
 
           <!-- 状态 -->
           <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,4,0,0">

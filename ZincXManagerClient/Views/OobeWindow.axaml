@@ -7,7 +7,7 @@
         Title="ZincXManagerClient · 首次使用"
         Width="760" Height="560"
         MinWidth="700" MinHeight="500"
-        Background="{DynamicResource ThemePage}"
+        Background="{DynamicResource ThemeWindowVeil}"
         TransparencyLevelHint="AcrylicBlur,Blur,Transparent"
         FontFamily="Microsoft YaHei UI, Microsoft YaHei, Segoe UI"
         WindowStartupLocation="Manual"
@@ -190,15 +190,15 @@
       <StackPanel Grid.Row="1" Spacing="16" VerticalAlignment="Center" IsVisible="{Binding IsWelcome}">
         <TextBlock Classes="h1" Text="欢迎使用 ZincXManager"/>
         <TextBlock Classes="body" TextWrapping="Wrap"
-                   Text="ZincXManager 是一套 Minecraft 服务器管理工具:客户端(ZXMC)、子服务端(ZXMS)、官方服务端(ZXMOS)三端配合。"/>
+                   Text="ZincXManager 是一套 Minecraft 服务器管理工具。"/>
         <TextBlock Classes="body" TextWrapping="Wrap"
-                   Text="接下来四步:① 个性化 ② 选数据源和连接方式 ③ 登录或注册 ④ 进入主界面。任意一步都可以返回上一步重来。"/>
+                   Text="四步完成首次设置,随时可以返回上一步。"/>
       </StackPanel>
 
       <!-- 第 2 步:个性化 -->
       <StackPanel Grid.Row="1" Spacing="14" VerticalAlignment="Center" IsVisible="{Binding IsPersonalize}">
         <TextBlock Classes="h2" Text="个性化"/>
-        <TextBlock Classes="label" Text="背景壁纸(窗口是毛玻璃,壁纸会透出来)"/>
+        <TextBlock Classes="label" Text="背景壁纸"/>
         <StackPanel Orientation="Horizontal" Spacing="10">
           <Button Classes="secondary" Content="选择图片…" Focusable="False" Click="OnPickWallpaperClick"/>
           <Button Classes="secondary" Content="恢复默认" Click="OnClearWallpaperClick"/>
@@ -213,9 +213,18 @@
           <ToggleSwitch Grid.Column="1" IsChecked="{Binding GlassEnabled}" OnContent="开" OffContent="关"
                         VerticalAlignment="Center"/>
         </Grid>
-        <TextBlock Classes="label" Text="支持 png / jpg / bmp;以后可以在 设置 → 个性化 里随时更换。"/>
 
-        <TextBlock Classes="label" Text="配色(左半主要色,右上次要色,右下浅色)"/>
+        <Grid ColumnDefinitions="*,240">
+          <StackPanel Grid.Column="0" Spacing="4" VerticalAlignment="Center">
+            <TextBlock Classes="label" Text="侧边栏不透明度"/>
+            <TextBlock Classes="body" Text="{Binding OpacityHint}" TextWrapping="Wrap"/>
+          </StackPanel>
+          <Slider Grid.Column="1" Minimum="50" Maximum="100" TickFrequency="5" IsSnapToTickEnabled="True"
+                  Value="{Binding OpacityPercent}" VerticalAlignment="Center"/>
+        </Grid>
+        <TextBlock Classes="label" Text="支持 png / jpg / bmp"/>
+
+        <TextBlock Classes="label" Text="配色"/>
 
         <ItemsControl ItemsSource="{Binding ThemeOptions}">
           <ItemsControl.ItemsPanel>
@@ -257,9 +266,9 @@
           </StackPanel>
         </Border>
         <TextBlock Classes="label" TextWrapping="Wrap"
-                   Text="SAOS = 子服务端 + 官方服务端(先连子服务端,由它转发);OS = 只连子服务端;OOS = 只连官方服务端。"/>
+                   Text="SAOS = 子服务端 + 官方服务端;OS = 只连子服务端;OOS = 只连官方服务端。"/>
         <TextBlock Classes="label" TextWrapping="Wrap"
-                   Text="SAOS / OS 下客户端只连子服务端,官方服务端地址由 ZXMS 自己配置,所以这里不用填。"/>
+                   Text="SAOS / OS 只连子服务端。"/>
 
         <!-- OS / SAOS:客户端只连子服务端,填这一组就够 -->
         <Grid ColumnDefinitions="Auto,160,Auto,160" Margin="0,6,0,0" IsVisible="{Binding ShowClientSource}">
@@ -271,7 +280,7 @@
 
         <!-- 子服务端名称:连接后由服务端下发,这里不用填 -->
         <TextBlock Classes="body" IsVisible="{Binding ShowClientSource}" TextWrapping="Wrap"
-                   Text="子服务端名称:连接后由服务端提供(不用填,设置 → 模式与数据源 里能看到)"/>
+                   Text="名称由服务端提供"/>
 
         <!-- OOS:客户端直连官方服务端,才需要填这一组 -->
         <Grid ColumnDefinitions="Auto,160,Auto,160" Margin="0,6,0,0" IsVisible="{Binding ShowOfficialSource}">
@@ -283,14 +292,14 @@
 
         <!-- 官方服务端名称:同样由服务端下发 -->
         <TextBlock Classes="body" IsVisible="{Binding ShowOfficialSource}" TextWrapping="Wrap"
-                   Text="官方服务端名称:连接后由服务端提供(不用填)"/>
+                   Text="名称由服务端提供"/>
       </StackPanel>
 
       <!-- 第 4 步:登录 / 注册 -->
       <StackPanel Grid.Row="1" Spacing="12" IsVisible="{Binding IsAccount}">
         <TextBlock Classes="h2" Text="登录或注册"/>
         <TextBlock Classes="label" TextWrapping="Wrap"
-                   Text="玩家账号自助注册只能得到 Player;管理账号由服务端用 user reg 创建,这里只登录。"/>
+                   Text="管理账号由服务端创建,这里只登录。"/>
 
         <Grid ColumnDefinitions="Auto,220,Auto,150" RowDefinitions="Auto,Auto">
           <TextBlock Grid.Row="0" Grid.Column="0" Classes="label" Text="账号" VerticalAlignment="Center" Margin="0,0,8,10"/>

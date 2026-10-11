@@ -25,6 +25,9 @@ internal static class ThemeManager
     /// <summary>当前是否开启毛玻璃(亚克力)。</summary>
     public static bool GlassEnabled { get; private set; } = true;
 
+    /// <summary>半透明档的表面不透明度(%):个性化里的滑杆,默认 85(太透会看不清内容)。</summary>
+    public static int SurfaceAlpha { get; private set; } = 85;
+
     /// <summary>毛玻璃开关变化时通知界面(主窗口据此调壁纸模糊半径与窗口材质)。</summary>
     public static event Action<bool>? GlassChanged;
 
@@ -42,6 +45,12 @@ internal static class ThemeManager
         window.TransparencyLevelHint = GlassEnabled
             ? [WindowTransparencyLevel.AcrylicBlur, WindowTransparencyLevel.Blur, WindowTransparencyLevel.Transparent]
             : [WindowTransparencyLevel.Transparent];
+
+        // 记一行:出问题时能直接从日志看出这一档向系统要的是什么材质
+        // (半透明档 = 省性能档:只申请 Transparent,不要任何模糊)
+        Logger.Log(LogLevel.Info, GlassEnabled
+            ? $"[ZXMC] 窗口材质:{window.GetType().Name} → AcrylicBlur(毛玻璃档)"
+            : $"[ZXMC] 窗口材质:{window.GetType().Name} → Transparent(半透明档,不申请模糊)");
     }
 
     /// <summary>启动时按配置应用一次(配色 + 毛玻璃开关)。</summary>
@@ -51,6 +60,9 @@ internal static class ThemeManager
 
         // 没配过就是开;config 里 glass=0 表示关
         ApplyGlass(ClientConfig.GetOrEmpty("glass") != "0", save: false);
+
+        // 半透明档的不透明度(config 里 alpha=85;没配过或非法都退回 85)
+        ApplyAlpha(int.TryParse(ClientConfig.GetOrEmpty("alpha"), out var alpha) ? alpha : 85, save: false);
     }
 
     /// <summary>
@@ -140,10 +152,30 @@ internal static class ThemeManager
         Logger.Log(LogLevel.Info, $"[ZXMC] 配色已切换为 {theme.Name}");
     }
 
+    /// <summary>半透明档的表面不透明度(50-100,默认 85):个性化滑杆调它。</summary>
+    public static void ApplyAlpha(int percent, bool save = true)
+    {
+        SurfaceAlpha = Math.Clamp(percent, 50, 100);
+
+        if (save)
+        {
+            ClientConfig.Set("alpha", SurfaceAlpha.ToString());
+        }
+
+        ApplySurface();
+        Logger.Log(LogLevel.Info, $"[ZXMC] 半透明档不透明度已设为 {SurfaceAlpha}%");
+    }
+
     /// <summary>
-    /// 刷"带透明度的表面"资源:透明度跟着毛玻璃开关走 ——
-    /// 亚克力(开)= Fluent 的 80% 着色;半透明(关)= 60%。
-    /// 换配色时也要再调一次,所以这里读 <see cref="Current"/>。
+    /// 刷"带透明度的表面"资源 —— 两种档位的区别就在这里:
+    ///
+    /// <para><b>毛玻璃(亚克力)开</b>:按设计稿,<b>内容区不铺白底</b>,让窗口的亚克力模糊透出来
+    /// (壁纸 / 桌面是糊的);卡片留 80% 白保证字看得清;侧边栏仍是主题色 80%。</para>
+    ///
+    /// <para><b>半透明(关)</b>:<b>只有侧边栏半透明</b>(不透明度 = 个性化滑杆),其它表面一律不透明,
+    /// 免得内容被背景干扰。</para>
+    ///
+    /// <para>换配色时也要再调一次,所以这里读 <see cref="Current"/>。</para>
     /// </summary>
     private static void ApplySurface()
     {
@@ -154,14 +186,24 @@ internal static class ThemeManager
         }
 
         var theme = Current;
-        var rail = GlassEnabled ? (byte)0xCC : (byte)0x8C;   // 侧栏:主题色 80% / 55%
-        var panel = GlassEnabled ? "CC" : "99";              // 面板:白 80% / 60%
-        var card = GlassEnabled ? "B3" : "66";               // 卡片 / 页底:白 70% / 40%
+        var glass = GlassEnabled;
 
-        resources["ThemeGlass"] = Solid(Alpha(theme.Primary, rail));
-        resources["ThemeGlassLight"] = Solid("#" + card + "FFFFFF");
-        resources["ThemePanel"] = Solid("#" + panel + "FFFFFF");
-        resources["ThemePage"] = Solid("#" + card + "FFFFFF");
+        var percent = Math.Clamp(SurfaceAlpha, 50, 100);
+        var railByte = (byte)(percent * 255 / 100);
+        var rail = glass ? (byte)0xCC : railByte;                        // 侧栏:亚克力档 80%,半透明档听滑杆
+        var veil = railByte.ToString("X2");
+
+        resources["ThemeGlass"] = Solid(Alpha(theme.Primary, rail));     // 侧边栏:主题色 + 不透明度
+
+        // 毛玻璃档:**不是全透** —— 内容区 / 消息面板各留一层白(全透会显得"没颜色"),卡片再白一点压在最上面;
+        // 半透明档:全部不透明,只有侧栏透
+        resources["ThemeGlassLight"] = Solid(glass ? "#E6FFFFFF" : "#FFFFFFFF");   // 消息卡片:90% 白
+        resources["ThemePanel"] = Solid(glass ? "#8CFFFFFF" : "#FFFFFFFF");        // 面板 / 内容区:约 55% 白
+        resources["ThemePage"] = Solid(glass ? "#8CFFFFFF" : "#FFFFFFFF");         // 设置页底:同上
+        resources["ThemeContentVeil"] = Solid(glass ? "#66E9EFF3" : "#99E9EFF3");  // 内容区那层磨砂:再压一层白
+
+        // 入口窗口(登录 / OOBE / 连接 / 弹窗)没有侧栏,保留"透过窗口看桌面"
+        resources["ThemeWindowVeil"] = Solid("#" + veil + "FFFFFF");
     }
 
     private static IBrush Solid(string argbHex) => new SolidColorBrush(Color.Parse(argbHex));

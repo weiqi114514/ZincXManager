@@ -44,6 +44,25 @@ public partial class LoginViewModel : ViewModelBase
     /// <summary>是否已登录成功。</summary>
     public bool IsLoggedIn { get; private set; }
 
+    /// <summary>需要弹窗提示的错误(标题, 内容)—— 封号、连不上服务器这类都要让用户看见。</summary>
+    public event Action<string, string>? ErrorRaised;
+
+    /// <summary>失败:写状态栏 + 弹窗。</summary>
+    private void Fail(string title, string message)
+    {
+        Message = message;
+        ErrorRaised?.Invoke(title, message);
+    }
+
+    /// <summary>去掉服务端回执里的 "err|" 前缀。</summary>
+    private static string Clean(string text)
+    {
+        var body = text.StartsWith("err|") ? text[4..] : text;
+
+        // 回执里常带 "失败:" 前缀,和弹窗标题重复,去掉
+        return body.StartsWith("失败:") ? body[3..] : body;
+    }
+
     // ---------- 头像 ----------
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasAvatar), nameof(AvatarHint))]
@@ -142,7 +161,7 @@ public partial class LoginViewModel : ViewModelBase
         var user = UserName.Trim();
         if (user.Length < 2 || Password.Length < 4)
         {
-            Message = "账号至少 2 个字符,密码至少 4 个字符";
+            Fail("输入不完整", "账号至少 2 个字符,密码至少 4 个字符");
             return Task.FromResult(false);
         }
 
@@ -156,7 +175,7 @@ public partial class LoginViewModel : ViewModelBase
         var user = UserName.Trim();
         if (user.Length < 2 || Password.Length < 4)
         {
-            Message = "账号至少 2 个字符,密码至少 4 个字符";
+            Fail("输入不完整", "账号至少 2 个字符,密码至少 4 个字符");
             return Task.FromResult(false);
         }
 
@@ -189,7 +208,7 @@ public partial class LoginViewModel : ViewModelBase
 
             if (!await _connect.WaitConnectedAsync())
             {
-                Message = "连接失败:" + _connect.State;
+                Fail("无法连接服务器", $"连不上 {_connect.Host}:{_connect.Port},请检查数据源地址与端口后重试。");
                 IsBusy = false;
                 return false;
             }
@@ -206,7 +225,7 @@ public partial class LoginViewModel : ViewModelBase
 
         if (!await _connect.SendAsync(type, payload))
         {
-            Message = "发送失败:连接不可用";
+            Fail("发送失败", "连接不可用(数据源已断开)");
             IsBusy = false;
             return false;
         }
@@ -214,7 +233,7 @@ public partial class LoginViewModel : ViewModelBase
         var finished = await Task.WhenAny(_reply.Task, Task.Delay(4000));
         if (finished != _reply.Task)
         {
-            Message = "服务端没有回应";
+            Fail("服务端没有回应", "请求超时(4 秒),请检查数据源地址或稍后重试");
             IsBusy = false;
             return false;
         }
@@ -225,6 +244,8 @@ public partial class LoginViewModel : ViewModelBase
 
         if (!ok)
         {
+            // 被封禁 / 密码错误 / 账号不存在:都弹窗告诉用户
+            Fail(register ? "注册失败" : "登录失败", Clean(text));
             return false;
         }
 
@@ -257,6 +278,12 @@ public partial class LoginViewModel : ViewModelBase
             ClientConfig.Set("user", ClientSession.User);
             ClientConfig.Set("userid", ClientSession.UserId);
             ClientConfig.Set("level", ClientSession.Level);
+
+            // 登录成功:顺手把服务端保留期内还没收到的消息补齐(505 → 逐条 504 → 506 收尾)
+            _ = _connect.RequestHistoryAsync();
+
+            // 直连官方服务端时,再要一张"你确实是官方服务端"的证明(520 / 521)
+            _ = _connect.VerifyOfficialAsync();
         }
 
         _reply?.TrySetResult((ok, message));

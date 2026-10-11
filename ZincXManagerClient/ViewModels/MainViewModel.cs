@@ -1,14 +1,17 @@
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
+using System.Linq;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using ZincXManagerShared.Account;
 using CommunityToolkit.Mvvm.ComponentModel;
 using ZincXManagerClient.Models;
 using ZincXManagerShared.Logging;
+using ZincXManagerShared.Network;
 
 namespace ZincXManagerClient.ViewModels;
 
@@ -49,6 +52,21 @@ public partial class MainViewModel : ViewModelBase
 
         // 设置页里换了头像 → 左下角跟着变
         Settings.AvatarChanged += _ => RefreshAvatar();
+
+        // 消息列表空/非空要切换那句"没有其他消息啦"
+        Messages.CollectionChanged += (_, _) => OnPropertyChanged(nameof(HasMessages));
+
+        // 本地消息保留天数(高级设置里改)+ 读上次存下来的消息
+        LocalMessageDays = int.TryParse(ClientConfig.GetOrEmpty("msgdays"), out var keepDays)
+            ? Math.Clamp(keepDays, 1, 3650)
+            : MessageStore.DefaultLocalKeepDays;
+        Settings.MessageDaysChanged += days =>
+        {
+            LocalMessageDays = days;
+            PruneMessages();
+            SaveMessages();
+        };
+        LoadMessages();
 
         // 截图 / 调试用:config 里写 startpage=设置、startsection=模式与数据源 就直接落在那一页
         var startPage = ClientConfig.GetOrEmpty("startpage");
@@ -135,6 +153,277 @@ public partial class MainViewModel : ViewModelBase
     /// <summary>右侧消息列表(内容由服务端下发,界面不写死)。</summary>
     public ObservableCollection<MessageItem> Messages { get; } = new();
 
+    /// <summary>左上角滑出来的提示条(一次说一件事,几秒后自己收回去)。</summary>
+    public ObservableCollection<ToastItem> Toasts { get; } = new();
+
+    /// <summary>同时最多留几条提示(多了挤掉最老的,别把界面糊住)。</summary>
+    private const int MaxToasts = 4;
+
+    /// <summary>
+    /// 弹一条提示条:从左上角滑出来,<paramref name="ms"/> 毫秒后自己收回去。
+    /// 界面那边负责动画(加 in 类滑进来、去掉 in 类滑回去)。
+    /// </summary>
+    public ToastItem ShowToast(string text, ToastKind kind = ToastKind.Info, int ms = 3600)
+    {
+        var toast = new ToastItem { Text = text, Kind = kind, Milliseconds = ms };
+        Toasts.Add(toast);
+
+        while (Toasts.Count > MaxToasts)
+        {
+            Toasts.RemoveAt(0);
+        }
+
+        Logger.Log(LogLevel.Info, $"[ZXMC] 提示条:{text}");
+        return toast;
+    }
+
+    /// <summary>收掉一条提示(动画放完由界面调用)。</summary>
+    public void RemoveToast(ToastItem toast) => Toasts.Remove(toast);
+
+    /// <summary>消息面板里有没有消息(空的时候才显示"没有其他消息啦")。</summary>
+    public bool HasMessages => Messages.Count > 0;
+
+    /// <summary>子服务端给的消息保留天数(202 配置包下发,默认 7)。</summary>
+    public int ZxmsMessageDays { get; private set; } = MessageStore.DefaultZxmsKeepDays;
+
+    /// <summary>本地消息保留天数(高级设置里改,默认 60)。</summary>
+    public int LocalMessageDays { get; private set; } = MessageStore.DefaultLocalKeepDays;
+
+    /// <summary>下一条消息的编号。</summary>
+    private int _nextMessageId = 1;
+
+    /// <summary>读本地存档:过期的先清掉,然后新的在上面。</summary>
+    private void LoadMessages()
+    {
+        Messages.Clear();
+
+        foreach (var item in MessageStore.Load())
+        {
+            Messages.Add(item);
+            _nextMessageId = Math.Max(_nextMessageId, item.Id + 1);
+        }
+
+        // 存档里是"老的在前"(写入顺序),显示要"新的在最上面"
+        var ordered = new List<MessageItem>(Messages);
+        ordered.Sort((a, b) => b.ReceivedAt.CompareTo(a.ReceivedAt));
+        Messages.Clear();
+        foreach (var item in ordered)
+        {
+            Messages.Add(item);
+        }
+
+        PruneMessages();
+    }
+
+    /// <summary>按各来源的保留期清掉过期消息;有变化就存一次。返回清掉几条。</summary>
+    private int PruneMessages()
+    {
+        var now = DateTime.Now;
+        var removed = 0;
+
+        for (var i = Messages.Count - 1; i >= 0; i--)
+        {
+            var item = Messages[i];
+            var keep = MessageStore.KeepDaysOf(item.SourceTag, ZxmsMessageDays, LocalMessageDays);
+            if ((now - item.ReceivedAt).TotalDays > keep)
+            {
+                Messages.RemoveAt(i);
+                removed++;
+            }
+        }
+
+        if (removed > 0)
+        {
+            Logger.Log(LogLevel.Info, $"[ZXMC] 本地消息清理掉 {removed} 条(超过保留期)");
+            SaveMessages();     // 立刻写回,别让文件里还留着界面上已经看不到的过期消息
+        }
+
+        return removed;
+    }
+
+    /// <summary>存一次本地消息。</summary>
+    private void SaveMessages() => MessageStore.Save(Messages);
+
+    /// <summary>删掉一条消息(界面上的「删除」)。</summary>
+    public void DeleteMessage(MessageItem item)
+    {
+        if (Messages.Remove(item))
+        {
+            SaveMessages();
+            Logger.Log(LogLevel.Info, $"[ZXMC] 已删除消息:{item.Title}");
+            StatusText = "已删除一条消息";
+            ShowToast("已删除这条消息");
+        }
+    }
+
+    /// <summary>
+    /// 应用服务端配置(202):按行 <c>键=值</c>。目前认 <c>msgdays</c>(子服务端的消息保留天数)。
+    /// </summary>
+    public void ApplyServerConfig(string payload)
+    {
+        foreach (var line in payload.Split('\n', StringSplitOptions.RemoveEmptyEntries))
+        {
+            var parts = line.Split('=', 2);
+            if (parts.Length != 2)
+            {
+                continue;
+            }
+
+            var key = parts[0].Trim().ToLowerInvariant();
+            var value = parts[1].Trim();
+
+            if (key == "msgdays" && int.TryParse(value, out var days))
+            {
+                ZxmsMessageDays = Math.Clamp(days, 1, 365);
+                Logger.Log(LogLevel.Info, $"[ZXMC] 子服务端消息保留 {ZxmsMessageDays} 天");
+                PruneMessages();
+                SaveMessages();
+            }
+        }
+    }
+
+    /// <summary>
+    /// 把服务端下发的消息卡片(公告 500 / 定向推送 501 / 补发 504)加进消息面板。参数是卡片原文(7 段,
+    /// 第 8 段可选 = 消息号),解析不出来只记一条警告 ——
+    /// 原文也会存进 <see cref="MessageItem.RawCard"/>,回动作时原样带给服务端。
+    ///
+    /// <para>来源一共三种形态:<c>ZXMOS-&lt;官方服务端名称&gt;</c> / <c>ZXMS-&lt;服务端名称&gt;</c> /
+    /// <c>ZXMC</c>(客户端本地产生的消息,服务端没带来源时按这个算)。</para>
+    ///
+    /// <para>带消息号的卡片按「来源 + 消息号」去重:本地已经有的直接跳过(补发时重复收不会多出一条)。
+    /// 返回"是不是新加了一条"。</para>
+    /// </summary>
+    public bool AddCard(string rawCard, string fallbackSource = "ZXMC")
+    {
+        if (!MessageCard.TryParse(rawCard, out var card))
+        {
+            Logger.Log(LogLevel.Warning, "[ZXMC] 收到格式不对的卡片,已忽略:" + rawCard);
+            return false;
+        }
+
+        var sourceTag = card.Source.Length > 0 ? card.Source : fallbackSource;
+
+        // 服务端补发去重:同一个来源的同一条消息号只留一条
+        if (card.Id > 0 && Messages.Any(m => m.ServerId == card.Id &&
+                                             string.Equals(m.SourceTag, sourceTag, StringComparison.OrdinalIgnoreCase)))
+        {
+            Logger.Log(LogLevel.Info, $"[ZXMC] 这条消息本地已经有了({sourceTag} 消息号 {card.Id}),跳过");
+            return false;
+        }
+
+        var options = card.Options.Count > 0 ? card.Options : Array.Empty<string>();
+
+        var item = new MessageItem
+        {
+            Id = _nextMessageId++,
+            ServerId = card.Id,
+            ReceivedAt = DateTime.Now,
+            SourceTag = sourceTag,
+            KeepDays = MessageStore.KeepDaysOf(sourceTag, ZxmsMessageDays, LocalMessageDays),
+            RawCard = rawCard,
+            Kind = card.Kind switch
+            {
+                MessageCard.Choice => MessageKind.Choice,
+                MessageCard.Input => MessageKind.Input,
+                MessageCard.Select => MessageKind.Select,
+                MessageCard.Update => MessageKind.Update,
+                _ => MessageKind.Text,
+            },
+            Title = card.Title,
+            Body = card.Body,
+            Source = "源:" + sourceTag,
+            PrimaryAction = card.Primary,
+            SecondaryAction = card.Secondary,
+            Options = options,
+            SelectedOption = options.Count > 0 ? options[0] : "",
+        };
+
+        // 新的放最上面(消息从顶上开始)
+        Messages.Insert(0, item);
+        PruneMessages();
+        SaveMessages();
+        return true;
+    }
+
+    /// <summary>
+    /// 实时收到一条服务端消息(公告 500 / 定向推送 501):进消息面板,顺带弹一条提示条。
+    /// 补发(504)不走这里 —— 补十条就弹十条太吵。
+    /// </summary>
+    public bool ReceiveCard(string rawCard)
+    {
+        if (!AddCard(rawCard))
+        {
+            return false;
+        }
+
+        if (MessageCard.TryParse(rawCard, out var card))
+        {
+            ShowToast("收到新消息:" + card.Title);
+        }
+
+        return true;
+    }
+
+    // ---------- 补发(504 / 505 / 506) ----------
+    /// <summary>本轮补发里真正新收到的条数(506 收尾时用来报提示)。</summary>
+    private int _historyReceived;
+
+    /// <summary>这次开窗已经报过一次"历史消息"的提示条了(两次请求别弹两条差不多的)。</summary>
+    private bool _historyAnnounced;
+
+    /// <summary>
+    /// 登录成功后向服务端要一次补发(505 = MessageHistoryReq):服务端会把保留期内、我还没收到的
+    /// 消息**逐条**(504)回过来,最后回一条 506 收尾。
+    /// 没连上就什么都不做(不假装发过)。
+    /// </summary>
+    public async Task RequestMessageHistoryAsync()
+    {
+        var connect = ClientSession.Connect;
+        if (connect is null || !connect.IsConnected)
+        {
+            Logger.Log(LogLevel.Info, "[ZXMC] 还没有连上服务端,这次不请求历史消息");
+            return;
+        }
+
+        _historyReceived = 0;
+        await connect.RequestHistoryAsync();
+    }
+
+    /// <summary>服务端补发的一条历史消息(504):和实时消息走同一条路,只是要按「来源+消息号」去重。</summary>
+    public bool AddHistoryCard(string rawCard)
+    {
+        if (!AddCard(rawCard))
+        {
+            return false;
+        }
+
+        _historyReceived++;
+        return true;
+    }
+
+    /// <summary>服务端补发结束(506,负载 = 服务端发了多少条)。</summary>
+    public void OnHistoryDone(string payload)
+    {
+        var text = payload.Trim();
+        Logger.Log(LogLevel.Info, $"[ZXMC] 服务端补发结束:{text} 条,其中新收到 {_historyReceived} 条");
+
+        if (_historyReceived > 0)
+        {
+            StatusText = $"已补齐 {_historyReceived} 条历史消息";
+            ShowToast($"已加载 {_historyReceived} 条历史消息", ToastKind.Success);
+            _historyReceived = 0;
+            _historyAnnounced = true;
+            return;
+        }
+
+        // 服务端发了几条、但本地都有(补收过一次 / 之前就收过):给一条轻提示,不重复显示消息
+        if (!_historyAnnounced && int.TryParse(text, out var total) && total > 0)
+        {
+            _historyAnnounced = true;
+            ShowToast("消息已是最新,没有新的要收");
+        }
+    }
+
     // ---------- 可变数据入口 ----------
 
     /// <summary>设置当前用户(名称与 ID 都是可变的)。</summary>
@@ -210,11 +499,43 @@ public partial class MainViewModel : ViewModelBase
         Logger.Log(LogLevel.Info, "[ZXMC] 切换页面:" + item.Label);
     }
 
-    /// <summary>消息卡片上的按钮动作。</summary>
-    public void InvokeAction(string action)
+    /// <summary>
+    /// 把卡片上的动作上报给服务端(202 = CardAction,负载 动作|输入|原卡片)。
+    /// 没连上服务端就只提示一下,不假装发成功。
+    /// </summary>
+    public async Task SendCardActionAsync(MessageItem item, string action, string input)
     {
-        StatusText = action;
-        Logger.Log(LogLevel.Info, "[ZXMC] 消息操作:" + action);
+        var payload = MessageCard.BuildAction(action, input, item.RawCard);
+        var connect = ClientSession.Connect;
+
+        if (connect is null || !connect.IsConnected)
+        {
+            StatusText = "还没连上服务端,这次选择没有发出去";
+            Logger.Log(LogLevel.Warning, $"[ZXMC] 未连接服务端,卡片动作发不出去:{action}");
+            return;
+        }
+
+        StatusText = $"已回复:{action}";
+        Logger.Log(LogLevel.Info,
+            $"[ZXMC] 回复卡片「{item.Title}」:{action}{(input.Length > 0 ? ":" + input : "")}");
+
+        await connect.SendAsync(Protocol.CardAction, payload);
+    }
+
+    /// <summary>服务端对卡片动作的回执(503):ok|提示 / err|原因。</summary>
+    public void ShowCardReply(string text)
+    {
+        var ok = text.StartsWith("ok|");
+        var message = ok ? text[3..].Trim() : "失败:" + (text.StartsWith("err|") ? text[4..].Trim() : text.Trim());
+
+        if (message.Length == 0)
+        {
+            message = ok ? "服务端已收到你的选择" : "服务端没有接受这次选择";
+        }
+
+        StatusText = message;
+        Logger.Log(ok ? LogLevel.Info : LogLevel.Warning, "[ZXMC] 卡片动作回执:" + message);
+        ShowToast(message, ok ? ToastKind.Success : ToastKind.Warning);
     }
 
     /// <summary>设置页里的权限等级 / 连接方式变了 → 通知标题栏刷新。</summary>

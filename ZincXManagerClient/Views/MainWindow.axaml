@@ -139,6 +139,63 @@
       <Setter Property="FontSize" Value="11"/>
       <Setter Property="Foreground" Value="#7C99A6"/>
     </Style>
+
+    <!-- ===== 提示条(toast):跟着卡片走 —— 直角、卡片底色、左边一条强调色 + 一句话 + 一行小字 ===== -->
+    <Style Selector="Border.toast">
+      <Setter Property="Background" Value="#F2FFFFFF"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource ThemePanelBorder}"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="CornerRadius" Value="0"/>
+      <Setter Property="ClipToBounds" Value="True"/>
+      <Setter Property="Opacity" Value="0"/>
+      <Setter Property="RenderTransform" Value="translateX(-400px)"/>
+      <Setter Property="BoxShadow" Value="0 2 9 0 #29000000"/>
+      <Setter Property="Transitions">
+        <Transitions>
+          <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.26"/>
+          <DoubleTransition Property="Opacity" Duration="0:0:0.26"/>
+        </Transitions>
+      </Setter>
+    </Style>
+    <Style Selector="Border.toast.in">
+      <Setter Property="Opacity" Value="1"/>
+      <Setter Property="RenderTransform" Value="translateX(0px)"/>
+    </Style>
+    <!-- 左边那条 + 图标:默认主题色,按口气换颜色 -->
+    <Style Selector="Border.toast Rectangle.toastBar">
+      <Setter Property="Fill" Value="{DynamicResource ThemePrimary}"/>
+    </Style>
+    <Style Selector="Border.toast Path.toastIcon">
+      <Setter Property="Fill" Value="{DynamicResource ThemePrimary}"/>
+    </Style>
+    <Style Selector="Border.toast.toastOk Rectangle.toastBar">
+      <Setter Property="Fill" Value="#22A05A"/>
+    </Style>
+    <Style Selector="Border.toast.toastOk Path.toastIcon">
+      <Setter Property="Fill" Value="#22A05A"/>
+    </Style>
+    <Style Selector="Border.toast.toastWarn Rectangle.toastBar">
+      <Setter Property="Fill" Value="#F0A020"/>
+    </Style>
+    <Style Selector="Border.toast.toastWarn Path.toastIcon">
+      <Setter Property="Fill" Value="#F0A020"/>
+    </Style>
+    <Style Selector="Border.toast.toastErr Rectangle.toastBar">
+      <Setter Property="Fill" Value="#D64545"/>
+    </Style>
+    <Style Selector="Border.toast.toastErr Path.toastIcon">
+      <Setter Property="Fill" Value="#D64545"/>
+    </Style>
+    <!-- 一句话:和卡片标题一个色;下面那行小字和卡片的"来源 时间"一个样式 -->
+    <Style Selector="TextBlock.toastText">
+      <Setter Property="FontSize" Value="13"/>
+      <Setter Property="Foreground" Value="#1F3B3A"/>
+      <Setter Property="TextWrapping" Value="Wrap"/>
+    </Style>
+    <Style Selector="TextBlock.toastFoot">
+      <Setter Property="FontSize" Value="11"/>
+      <Setter Property="Foreground" Value="#7C99A6"/>
+    </Style>
   </Window.Styles>
 
   <Grid>
@@ -257,14 +314,14 @@
       </Border>
 
       <!-- ================= 右侧:设置页 或 内容区+消息面板 ================= -->
-      <Grid Grid.Row="1" Grid.Column="1">
+      <Grid Grid.Row="1" Grid.Column="1" Background="{DynamicResource ThemePanel}">
 
         <!-- 非设置页时铺一层浅色磨砂底:窗口透明,只靠壁纸的话浅色壁纸下会显得空 -->
-        <Rectangle Fill="#99E9EFF3" IsVisible="{Binding !IsSettings}"/>
+        <Rectangle Fill="{DynamicResource ThemeContentVeil}" IsVisible="{Binding !IsSettings}"/>
 
         <!-- 设置页(左侧导航选"设置"时显示);套一层 Grid,避免 IsVisible 被新 DataContext 解析 -->
         <Grid IsVisible="{Binding IsSettings}">
-          <views:SettingsView DataContext="{Binding Settings}"/>
+          <views:SettingsView x:Name="SettingsPage" DataContext="{Binding Settings}"/>
         </Grid>
 
         <!-- 内容区 + 消息面板 -->
@@ -291,12 +348,21 @@
                       <Border Background="{DynamicResource ThemeGlassLight}" BorderBrush="{DynamicResource ThemePanelBorder}" BorderThickness="1"
                               Padding="12,10" Margin="0,0,0,11">
                         <StackPanel Spacing="7">
-                          <TextBlock Classes="cardTitle" Text="{Binding Title}"/>
+                          <!-- 标题 + 时间 + 右上角删除(时间放在删除键左侧;删掉的同时从本地存档里去掉) -->
+                          <Grid ColumnDefinitions="*,Auto,Auto">
+                            <TextBlock Grid.Column="0" Classes="cardTitle" Text="{Binding Title}"/>
+                            <TextBlock Grid.Column="1" Classes="source" Text="{Binding TimeText}"
+                                       VerticalAlignment="Center" Opacity="0.75" Margin="8,0,0,0"/>
+                            <Button Grid.Column="2" Classes="link" Content="删除" Click="OnDeleteMessageClick"
+                                    Foreground="#B25555" VerticalAlignment="Center" Margin="10,0,0,0"/>
+                          </Grid>
                           <TextBlock Classes="cardBody" Text="{Binding Body}"/>
                           <Rectangle Height="1" Fill="#66E3EEF4"/>
 
                           <Grid ColumnDefinitions="*,Auto">
-                            <TextBlock Grid.Column="0" Classes="source" Text="{Binding Source}" VerticalAlignment="Center"/>
+                            <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="7" VerticalAlignment="Center">
+                              <TextBlock Classes="source" Text="{Binding Source}" VerticalAlignment="Center"/>
+                            </StackPanel>
 
                             <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8"
                                         HorizontalAlignment="Right" VerticalAlignment="Center">
@@ -316,10 +382,15 @@
                                 <Button Classes="link" Content="{Binding PrimaryAction}" Click="OnCardActionClick"/>
                               </StackPanel>
 
-                              <ComboBox IsVisible="{Binding IsSelect}" ItemsSource="{Binding Options}"
-                                        SelectedItem="{Binding SelectedOption}" FontSize="12"
-                                        MinWidth="86" Background="#D9FFFFFF" BorderThickness="1" CornerRadius="0"
-                                        BorderBrush="#99D5E5EE" Padding="6,1"/>
+                              <!-- 下拉框 + 确认:选完点确认才上报(免得滚轮滚过就改掉选择) -->
+                              <StackPanel Orientation="Horizontal" Spacing="6" IsVisible="{Binding IsSelect}">
+                                <ComboBox ItemsSource="{Binding Options}" SelectedItem="{Binding SelectedOption}"
+                                          FontSize="12" MinWidth="86" Background="#D9FFFFFF" BorderThickness="1"
+                                          CornerRadius="0" BorderBrush="#99D5E5EE" Padding="6,1"/>
+                                <Button Classes="link" Content="确认" Click="OnCardActionClick"/>
+                              </StackPanel>
+
+
                             </StackPanel>
                           </Grid>
                         </StackPanel>
@@ -329,7 +400,8 @@
                 </ItemsControl>
 
                 <TextBlock Text="{Binding EmptyMessage}" Foreground="#6E8F92" FontSize="12.5"
-                           HorizontalAlignment="Center" Margin="0,14,0,6"/>
+                           HorizontalAlignment="Center" Margin="0,14,0,6"
+                           IsVisible="{Binding !HasMessages}"/>
               </StackPanel>
             </ScrollViewer>
           </Grid>
@@ -337,5 +409,33 @@
         </Grid>
       </Grid>
     </Grid>
+
+    <!-- ================= 提示条(最上层):从左上角滑出来,几秒后自己收回去 ================= -->
+    <ItemsControl ItemsSource="{Binding Toasts}" Width="330" Margin="16,58,0,0"
+                  HorizontalAlignment="Left" VerticalAlignment="Top" IsHitTestVisible="False">
+      <ItemsControl.ItemsPanel>
+        <ItemsPanelTemplate>
+          <StackPanel Spacing="8"/>
+        </ItemsPanelTemplate>
+      </ItemsControl.ItemsPanel>
+      <ItemsControl.ItemTemplate>
+        <DataTemplate x:DataType="models:ToastItem">
+          <Border Classes="toast" Classes.toastOk="{Binding IsSuccess}" Classes.toastWarn="{Binding IsWarning}"
+                  Classes.toastErr="{Binding IsError}" Loaded="OnToastLoaded">
+            <Grid ColumnDefinitions="4,*">
+              <Rectangle Grid.Column="0" Classes="toastBar"/>
+              <StackPanel Grid.Column="1" Margin="11,9,13,9" Spacing="4">
+                <StackPanel Orientation="Horizontal" Spacing="7">
+                  <Path Classes="toastIcon" Data="{x:Static models:Icons.Help}" Width="14" Height="14"
+                        Stretch="Uniform" VerticalAlignment="Center"/>
+                  <TextBlock Classes="toastText" Text="{Binding Text}" VerticalAlignment="Center"/>
+                </StackPanel>
+                <TextBlock Classes="toastFoot" Text="{Binding FootText}"/>
+              </StackPanel>
+            </Grid>
+          </Border>
+        </DataTemplate>
+      </ItemsControl.ItemTemplate>
+    </ItemsControl>
   </Grid>
 </Window>

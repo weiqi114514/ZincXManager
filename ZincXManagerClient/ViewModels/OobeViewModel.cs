@@ -53,6 +53,16 @@ public partial class OobeViewModel : ViewModelBase
         ? "已选择:" + WallpaperPath
         : "先用默认底色(以后可在 设置 → 个性化 里换)";
 
+    /// <summary>侧边栏不透明度(%):个性化滑杆,50-100,默认 85(只有侧边栏是透明的)。</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(OpacityHint))]
+    public partial double OpacityPercent { get; set; } = 85;
+
+    /// <summary>滑杆说明(跟着数值变)。</summary>
+    public string OpacityHint => $"{(int)OpacityPercent}%";
+
+    partial void OnOpacityPercentChanged(double value) => ThemeManager.ApplyAlpha((int)Math.Round(value));
+
     /// <summary>毛玻璃(亚克力)开关:开 = 背景模糊 + Fluent 亚克力着色;关 = 纯半透明。</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(GlassHint))]
@@ -60,8 +70,8 @@ public partial class OobeViewModel : ViewModelBase
 
     /// <summary>毛玻璃开关的说明(跟着状态变)。</summary>
     public string GlassHint => GlassEnabled
-        ? "亚克力:背景按 Fluent 亚克力模糊(半径 30),表面着色 80%"
-        : "半透明:背景不模糊,表面着色 60%";
+        ? "亚克力"
+        : "半透明";
 
     partial void OnGlassEnabledChanged(bool value) => ThemeManager.ApplyGlass(value);
 
@@ -93,8 +103,8 @@ public partial class OobeViewModel : ViewModelBase
 
     [ObservableProperty] public partial string CzIp { get; set; } = "127.0.0.1";
     [ObservableProperty] public partial string CzPort { get; set; } = "21000";
-    [ObservableProperty] public partial string OzIp { get; set; } = "127.0.0.1";
-    [ObservableProperty] public partial string OzPort { get; set; } = "20000";
+    [ObservableProperty] public partial string OzIp { get; set; } = OfficialServer.Host;
+    [ObservableProperty] public partial string OzPort { get; set; } = OfficialServer.PortText;
 
     /// <summary>子服务端名称(设置页里 IP 旁边显示的就是它)。</summary>
     [ObservableProperty] public partial string CzName { get; set; } = "Zinc Energy Server 锌能源服务器";
@@ -139,8 +149,8 @@ public partial class OobeViewModel : ViewModelBase
 
     /// <summary>提示语。</summary>
     public string LevelHint => IsAdminAccount
-        ? "管理账号只能在服务端用 user reg 创建,这里只登录"
-        : "玩家账号:优先在官方服务端注册 / 登录";
+        ? "管理账号由服务端创建"
+        : "玩家账号";
 
     // 等级必须等 ItemsSource 的通知走完再复位:直接改的话,ComboBox 会先把"不在旧列表里"的值清成空
     partial void OnIsAdminAccountChanged(bool value) => ResetLevelDeferred();
@@ -161,6 +171,25 @@ public partial class OobeViewModel : ViewModelBase
     }
 
     [ObservableProperty] public partial string Message { get; set; } = "";
+
+    /// <summary>需要弹窗提示的错误(标题, 内容)。</summary>
+    public event Action<string, string>? ErrorRaised;
+
+    /// <summary>失败:写状态栏 + 弹窗。</summary>
+    private void Fail(string title, string message)
+    {
+        Message = message;
+        ErrorRaised?.Invoke(title, message);
+    }
+
+    /// <summary>去掉服务端回执里的 "err|" 前缀。</summary>
+    private static string Clean(string text)
+    {
+        var body = text.StartsWith("err|") ? text[4..] : text;
+
+        // 回执里常带 "失败:" 前缀,和弹窗标题重复,去掉
+        return body.StartsWith("失败:") ? body[3..] : body;
+    }
     [ObservableProperty] public partial bool IsBusy { get; set; }
     [ObservableProperty] public partial bool IsLoggedIn { get; set; }
 
@@ -172,12 +201,13 @@ public partial class OobeViewModel : ViewModelBase
         Mode = Text("mode", "SAOS");
         CzIp = Text("czip", "127.0.0.1");
         CzPort = Text("czport", "21000");
-        OzIp = Text("ozip", "127.0.0.1");
+        OzIp = Text("ozip", OfficialServer.Host);
         CzName = Text("czname", CzName);
         OzName = Text("ozname", OzName);
-        OzPort = Text("ozport", "20000");
+        OzPort = Text("ozport", OfficialServer.PortText);
         WallpaperPath = ClientConfig.GetOrEmpty("wallpaper");
         GlassEnabled = ThemeManager.GlassEnabled;
+        OpacityPercent = ThemeManager.SurfaceAlpha;
 
         // 截图 / 调试用:配置里写 oobestep=2 就直接从第 3 步开始
         if (int.TryParse(ClientConfig.GetOrEmpty("oobestep"), out var step) && step >= 0 && step < StepCount)
@@ -216,7 +246,7 @@ public partial class OobeViewModel : ViewModelBase
 
         if (UserName.Trim().Length < 2 || Password.Length < 4)
         {
-            Message = "账号至少 2 个字符,密码至少 4 个字符";
+            Fail("输入不完整", "账号至少 2 个字符,密码至少 4 个字符");
             return false;
         }
 
@@ -236,7 +266,7 @@ public partial class OobeViewModel : ViewModelBase
 
             if (!await _connect.WaitConnectedAsync())
             {
-                Message = "连接失败:" + _connect.State;
+                Fail("无法连接服务器", $"连不上 {_connect.Host}:{_connect.Port},请检查数据源地址与端口后重试。");
                 IsBusy = false;
                 return false;
             }
@@ -254,7 +284,7 @@ public partial class OobeViewModel : ViewModelBase
 
         if (!await _connect.SendAsync(type, payload))
         {
-            Message = "发送失败:连接不可用";
+            Fail("发送失败", "连接不可用(数据源已断开)");
             IsBusy = false;
             return false;
         }
@@ -265,13 +295,20 @@ public partial class OobeViewModel : ViewModelBase
 
         if (finished != _reply.Task)
         {
-            Message = "服务端没有回应";
+            Fail("服务端没有回应", "请求超时(4 秒),请检查数据源地址或稍后重试");
             return false;
         }
 
         var (ok, text) = _reply.Task.Result;
         Message = text;
         IsLoggedIn = ok;
+
+        if (!ok)
+        {
+            // 被封禁 / 密码错误 / 账号不存在:都弹窗告诉用户
+            Fail(register ? "注册失败" : "登录失败", Clean(text));
+        }
+
         return ok;
     }
 
@@ -292,6 +329,12 @@ public partial class OobeViewModel : ViewModelBase
             ClientConfig.Set("user", ClientSession.User);
             ClientConfig.Set("userid", ClientSession.UserId);
             ClientConfig.Set("level", ClientSession.Level);
+
+            // 登录成功:顺手把服务端保留期内还没收到的消息补齐(505 → 逐条 504 → 506 收尾)
+            _ = _connect.RequestHistoryAsync();
+
+            // 直连官方服务端时,再要一张"你确实是官方服务端"的证明(520 / 521)
+            _ = _connect.VerifyOfficialAsync();
         }
 
         _reply?.TrySetResult((ok, message));

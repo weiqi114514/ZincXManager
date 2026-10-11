@@ -68,6 +68,16 @@ public partial class SettingsViewModel : ViewModelBase
     [NotifyPropertyChangedFor(nameof(WallpaperHint))]
     public partial string WallpaperPath { get; set; } = "";
 
+    /// <summary>半透明档的表面不透明度(%):个性化滑杆,50-100,默认 85。</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(OpacityHint))]
+    public partial double OpacityPercent { get; set; } = 85;
+
+    /// <summary>滑杆说明(跟着数值变)。</summary>
+    public string OpacityHint => $"{(int)OpacityPercent}%";
+
+    partial void OnOpacityPercentChanged(double value) => ThemeManager.ApplyAlpha((int)Math.Round(value));
+
     /// <summary>毛玻璃(亚克力)开关:开 = 背景模糊 + Fluent 亚克力着色;关 = 纯半透明。</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(GlassHint))]
@@ -75,10 +85,97 @@ public partial class SettingsViewModel : ViewModelBase
 
     /// <summary>毛玻璃开关的说明(跟着状态变)。</summary>
     public string GlassHint => GlassEnabled
-        ? "亚克力:背景按 Fluent 亚克力模糊(半径 30),表面着色 80%"
-        : "半透明:背景不模糊,表面着色 60%";
+        ? "亚克力"
+        : "半透明";
 
     partial void OnGlassEnabledChanged(bool value) => ThemeManager.ApplyGlass(value);
+
+    /// <summary>
+    /// 官方服务端地址是不是"自定义"的。<c>false</c> = 用代码里写死的官方默认地址
+    /// (<see cref="OfficialServer"/>,界面上的「官方服务端(默认)」那项)。
+    /// </summary>
+    [ObservableProperty]
+    public partial bool UseCustomAddress { get; set; }
+
+    /// <summary>把官方地址改回"官方默认"(点了那个单选框就调它)。</summary>
+    public void UseOfficialAddress()
+    {
+        ClientConfig.Set(KeyOzip, OfficialServer.Host);
+        ClientConfig.Set(KeyOzport, OfficialServer.PortText);
+        UseCustomAddress = false;
+
+        // 强制通知一次:取消"自定义"时这个值可能本来就是 false(属性没变 → 不发通知),
+        // 而单选框已经被用户点成选中了 —— 不推一次的话界面会停在"自定义",和地址自相矛盾
+        OnPropertyChanged(nameof(UseCustomAddress));
+
+        RefreshDataSources();
+        Logger.Log(LogLevel.Info, $"[ZXMC] 官方服务端地址已恢复为官方默认 {OfficialServer.Display}");
+    }
+
+    /// <summary>当前数据源地址(填空弹窗的初始值):OOS 用官方那一组,其余用子服务端那一组。</summary>
+    public string CurrentAddress => Mode == "OOS"
+        ? $"{ClientConfig.Get(KeyOzip, OfficialServer.Host)}:{ClientConfig.Get(KeyOzport, OfficialServer.PortText)}"
+        : $"{ClientConfig.Get(KeyCzip, "127.0.0.1")}:{ClientConfig.Get(KeyCzport, "21000")}";
+
+    /// <summary>改当前数据源的地址与端口(填空弹窗用);格式不对返回原因,成功返回 null。</summary>
+    public string? SetAddress(string ipPort)
+    {
+        var text = ipPort.Trim();
+
+        // 只允许一个冒号:不然 "1.2.3.4:5:6" 这种会被当成合法地址
+        var colons = 0;
+        foreach (var ch in text)
+        {
+            if (ch == ':')
+            {
+                colons++;
+            }
+        }
+
+        if (colons != 1)
+        {
+            return "格式应为 IP:端口(只能有一个冒号),例如 127.0.0.1:21000";
+        }
+
+        var colon = text.LastIndexOf(':');
+        if (colon <= 0 || colon == text.Length - 1)
+        {
+            return "格式应为 IP:端口,例如 127.0.0.1:21000";
+        }
+
+        var ip = text[..colon].Trim();
+        var port = text[(colon + 1)..].Trim();
+        if (!ushort.TryParse(port, out var number) || number == 0)
+        {
+            return "端口不合法(1-65535)";
+        }
+
+        // 按当前连接方式决定改哪一组:OOS 改官方数据源,OS / SAOS 改子服务端
+        if (Mode == "OOS")
+        {
+            ClientConfig.Set(KeyOzip, ip);
+            ClientConfig.Set(KeyOzport, port);
+            UseCustomAddress = !OfficialServer.IsOfficial(ip, port);
+        }
+        else
+        {
+            ClientConfig.Set(KeyCzip, ip);
+            ClientConfig.Set(KeyCzport, port);
+        }
+
+        RefreshDataSources();
+        Logger.Log(LogLevel.Info, $"[ZXMC] 数据源地址已改为 {ip}:{port}(模式 {Mode})");
+        return null;
+    }
+
+    /// <summary>清除本机保存的登录记录(免登录 / 记住的密文)。</summary>
+    public void ClearLoginRecord()
+    {
+        LoginRecord.Clear();
+        Remember = false;
+        SavePassword = false;
+        Logger.Log(LogLevel.Info, "[ZXMC] 已清除本地登录记录");
+    }
 
     /// <summary>可选配色(个性化里点色块切换)。</summary>
     public ThemeOption[] ThemeOptions => Themes.All;
@@ -88,13 +185,36 @@ public partial class SettingsViewModel : ViewModelBase
 
     /// <summary>内容区当前显示的页面。</summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsModePage), nameof(IsPersonalizePage), nameof(IsSecurityPage), nameof(IsOtherPage))]
+    [NotifyPropertyChangedFor(nameof(IsModePage), nameof(IsPersonalizePage), nameof(IsSecurityPage), nameof(IsAdvancedPage), nameof(IsOtherPage))]
     public partial string CurrentSection { get; set; } = "模式与数据源";
 
     public bool IsModePage => CurrentSection == "模式与数据源";
     public bool IsPersonalizePage => CurrentSection == "个性化";
     public bool IsSecurityPage => CurrentSection == "账户与安全";
-    public bool IsOtherPage => !IsModePage && !IsPersonalizePage && !IsSecurityPage;
+
+    /// <summary>是否在"高级"页(本地消息保留天数在这里)。</summary>
+    public bool IsAdvancedPage => CurrentSection == "高级";
+
+    /// <summary>本地消息保留天数(高级设置;默认 60,范围 1-3650)。</summary>
+    [ObservableProperty]
+    public partial string MessageDays { get; set; } = "60";
+
+    /// <summary>保留天数改了(主界面据此重算并清理)。</summary>
+    public event Action<int>? MessageDaysChanged;
+
+    partial void OnMessageDaysChanged(string value)
+    {
+        // 输入过程中不合法就先不管,等输完
+        if (!int.TryParse((value ?? "").Trim(), out var days))
+        {
+            return;
+        }
+
+        days = Math.Clamp(days, 1, 3650);
+        ClientConfig.Set("msgdays", days.ToString());
+        MessageDaysChanged?.Invoke(days);
+    }
+    public bool IsOtherPage => !IsModePage && !IsPersonalizePage && !IsSecurityPage && !IsAdvancedPage;
 
     // ---------- 账户与安全 ----------
     /// <summary>当前账号的头像。</summary>
@@ -245,6 +365,7 @@ public partial class SettingsViewModel : ViewModelBase
     public SettingsViewModel()
     {
         // 读上次的选择(没有就写缺省值)
+        MessageDays = ClientConfig.Get("msgdays", "60");
         Mode = ClientConfig.Get(KeyMode, "SAOS");
 
         // 权限等级优先用登录账号的等级(账号系统),没有就退回设置里的 role
@@ -252,6 +373,7 @@ public partial class SettingsViewModel : ViewModelBase
         Role = accountLevel.Length > 0 ? accountLevel : ClientConfig.Get(KeyRole, "Player");
         WallpaperPath = ClientConfig.GetOrEmpty(KeyWallpaper);
         GlassEnabled = ThemeManager.GlassEnabled;
+        OpacityPercent = ThemeManager.SurfaceAlpha;
         RefreshDataSources();
 
         foreach (var label in new[] { "个性化", "模式与数据源", "账户与安全", "下载", "高级", "关于" })
@@ -270,11 +392,16 @@ public partial class SettingsViewModel : ViewModelBase
     {
         var czip = ClientConfig.Get(KeyCzip, "127.0.0.1");
         var czport = ClientConfig.Get(KeyCzport, "21000");
-        var ozip = ClientConfig.Get(KeyOzip, "127.0.0.1");
-        var ozport = ClientConfig.Get(KeyOzport, "20000");
+        var ozip = ClientConfig.Get(KeyOzip, OfficialServer.Host);
+        var ozport = ClientConfig.Get(KeyOzport, OfficialServer.PortText);
+
+        // 官方地址是不是被改成"自定义"了(留空或正好是官方默认都算默认)
+        UseCustomAddress = !OfficialServer.IsOfficial(ClientConfig.GetOrEmpty(KeyOzip), ClientConfig.GetOrEmpty(KeyOzport));
 
         DataSourceAddress = $"{czip}:{czport} | zincms.top";
-        OfficialAddress = $"{ozip}:{ozport} | zxm.zincms.top";
+        OfficialAddress = UseCustomAddress
+            ? $"{ozip}:{ozport}(自定义)"
+            : $"{ozip}:{ozport}(官方默认)";
 
         // 名称由服务端在连接时下发(201),存在 czname / ozname;没连过就先显示提示
         DataSourceName = "未连接(名称由服务端提供)";

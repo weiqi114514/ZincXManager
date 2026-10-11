@@ -21,7 +21,7 @@ public partial class AvatarCropWindow : Window
     private const double StageSize = 400;
 
     /// <summary>选框边长(居中,框外压暗)。</summary>
-    private const double FrameSize = 260;
+    private const double CropFrameSize = 260;
 
     /// <summary>输出头像边长。</summary>
     private const int OutputSize = 256;
@@ -146,13 +146,13 @@ public partial class AvatarCropWindow : Window
         }
 
         var scale = _fitScale * _zoom;
-        var frameLeft = (StageSize - FrameSize) / 2;
+        var frameLeft = (StageSize - CropFrameSize) / 2;
 
         // 图片内容(缩放后)在预览区里的左上角
         var contentLeft = StageSize / 2 + _offsetX - _source.PixelSize.Width * scale / 2;
         var contentTop = StageSize / 2 + _offsetY - _source.PixelSize.Height * scale / 2;
 
-        var side = Math.Min(FrameSize / scale, Math.Min(_source.PixelSize.Width, _source.PixelSize.Height));
+        var side = Math.Min(CropFrameSize / scale, Math.Min(_source.PixelSize.Width, _source.PixelSize.Height));
         var sx = Math.Clamp((frameLeft - contentLeft) / scale, 0, Math.Max(0, _source.PixelSize.Width - side));
         var sy = Math.Clamp((frameLeft - contentTop) / scale, 0, Math.Max(0, _source.PixelSize.Height - side));
 
@@ -165,7 +165,7 @@ public partial class AvatarCropWindow : Window
             }
 
             using var stream = new MemoryStream();
-            target.Save(stream);
+            target.Save(stream, new PngBitmapEncoderOptions());
 
             Logger.Log(LogLevel.Info, $"[ZXMC] 已裁剪头像 {OutputSize}x{OutputSize}(源区域 {sx:F0},{sy:F0},{side:F0})");
             Close(stream.ToArray());

@@ -32,6 +32,9 @@ public sealed class Account
     /// <summary>最后一次登录的机器码(同上)。</summary>
     public string Machine { get; set; } = "";
 
+    /// <summary>本实例的服务端码(ZXMS 用;32 位十六进制,一台机器可跑多个实例,靠它区分)。</summary>
+    public string ServerCode { get; set; } = "";
+
     /// <summary>这个用户账号是经哪个 ZXMS 注册的(黑名单移交账号时要用;直连官方注册的为空)。</summary>
     public string Owner { get; set; } = "";
 }
@@ -260,6 +263,77 @@ public sealed class AccountStore
         return true;
     }
 
+    /// <summary>
+    /// 改账号名(顺带改密码;ZXMS 的 osuser 命令与 ZXMOS 的改名协议都走这里)。
+    /// 账号名是 init-only,所以按新名字新建一条再替换:等级 / ID / IP / 两码 / 归属全部照搬。
+    /// 新名字与本表或"别的账号表"重名时拒绝。
+    /// </summary>
+    public bool Rename(string key, string newName, string newHash, out Account? account, out string error)
+    {
+        account = null;
+        newName = newName.Trim();
+
+        var old = FindByKey(key);
+        if (old is null)
+        {
+            error = "账号不存在";
+            return false;
+        }
+
+        if (newName.Length < 2)
+        {
+            error = "账号名至少 2 个字符";
+            return false;
+        }
+
+        if (!PasswordHash.IsHash(newHash))
+        {
+            error = "密码密文不合法(应为 SHA-256 十六进制)";
+            return false;
+        }
+
+        lock (_sync)
+        {
+            // 只改大小写也算同一条记录,不用查重
+            if (!string.Equals(old.Name, newName, StringComparison.OrdinalIgnoreCase))
+            {
+                if (_map.ContainsKey(newName))
+                {
+                    error = "账号已存在";
+                    return false;
+                }
+
+                if (_alsoTaken is not null && _alsoTaken(newName))
+                {
+                    error = "账号名已被占用(不能和其它类型的账号重名)";
+                    return false;
+                }
+            }
+
+            var renamed = new Account
+            {
+                Name = newName,
+                Password = newHash,
+                Level = old.Level,
+                Id = old.Id,
+                Ip = old.Ip,
+                LastIp = old.LastIp,
+                Machine = old.Machine,
+                ServerCode = old.ServerCode,
+                Owner = old.Owner,
+            };
+
+            _map.Remove(old.Name);
+            _map[renamed.Name] = renamed;
+            Save();
+            account = renamed;
+        }
+
+        Logger.Log(LogLevel.Info, $"[账号] {old.Name} 已改名为 {account.Name}");
+        error = "";
+        return true;
+    }
+
     /// <summary>改权限等级(控制台 user rel)。</summary>
     public bool SetLevel(string key, string newLevel, out string error)
     {
@@ -316,6 +390,22 @@ public sealed class AccountStore
         lock (_sync)
         {
             account.Owner = owner;
+            Save();
+        }
+    }
+
+    /// <summary>记下这个账号所属实例的服务端码(ZXMOS 用;认实例、封禁连坐)。</summary>
+    public void SetServerCode(string name, string code)
+    {
+        var account = Find(name);
+        if (account is null || code.Length == 0)
+        {
+            return;
+        }
+
+        lock (_sync)
+        {
+            account.ServerCode = code;
             Save();
         }
     }
@@ -400,6 +490,7 @@ public sealed class AccountStore
                     Ip = item.TryGetProperty("ip", out var ip) ? ip.GetString() ?? "" : "",
                     LastIp = item.TryGetProperty("lastIp", out var lip) ? lip.GetString() ?? "" : "",
                     Machine = item.TryGetProperty("machine", out var m) ? m.GetString() ?? "" : "",
+                    ServerCode = item.TryGetProperty("serverCode", out var sc) ? sc.GetString() ?? "" : "",
                     Owner = item.TryGetProperty("owner", out var o) ? o.GetString() ?? "" : "",
                 };
 
@@ -452,6 +543,7 @@ public sealed class AccountStore
                     LastIp = fields.Length > 4 ? fields[4].Trim() : "",
                     Machine = fields.Length > 5 ? fields[5].Trim() : "",
                     Owner = fields.Length > 6 ? fields[6].Trim() : "",
+                    ServerCode = fields.Length > 7 ? fields[7].Trim() : "",
                 };
 
                 _map[account.Name] = account;
@@ -486,6 +578,7 @@ public sealed class AccountStore
                     .Append(",\"ip\":\"").Append(Escape(a.Ip))
                     .Append("\",\"lastIp\":\"").Append(Escape(a.LastIp))
                     .Append("\",\"machine\":\"").Append(Escape(a.Machine))
+                    .Append("\",\"serverCode\":\"").Append(Escape(a.ServerCode))
                     .Append("\",\"owner\":\"").Append(Escape(a.Owner))
                     .Append("\"}").Append(index == list.Length - 1 ? "\n" : ",\n");
             }
