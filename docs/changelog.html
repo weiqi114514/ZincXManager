@@ -20,12 +20,7 @@
 <header class="site-header" id="header">
   <div class="wrap header-inner">
     <a class="brand" href="index.html" aria-label="ZincXManager 首页">
-      <span class="brand-mark" aria-hidden="true">
-        <svg viewBox="0 0 48 48" width="30" height="30" role="img">
-          <rect x="2" y="2" width="44" height="44" rx="12" fill="#16a34a"/>
-          <path d="M12 16h24L16 32h20" fill="none" stroke="#eafff2" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-      </span>
+      <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 36 9" width="104" height="26" role="img"><path d="M10.788,0.7l-9.788,0v0.6h8.134l-8.378,7h10.992l6.2,-6.864l6.983,7.004l6.079,-6.981l5.762,6.736l0.456,-0.39l-6.214,-7.264l-6.113,7.019l-6.975,-6.996l-6.445,7.136h-9.072z" fill="currentColor"/><path d="M4.045,4.058l-3.242,-2.833l0.395,-0.452l3.242,2.833zM8.794,8.218c-0.782,-0.736 -1.934,-1.769 -3.456,-3.101l0.395,-0.452c1.528,1.336 2.685,2.375 3.472,3.116z" fill="currentColor" opacity="0.62"/></svg></span>
       <span class="brand-text">ZincXManager<em>ZXM</em></span>
     </a>
     <button class="nav-toggle" id="navToggle" aria-expanded="false" aria-controls="siteNav" aria-label="打开导航">
@@ -77,10 +72,41 @@
           <li>③(注册机器码)与 ⑦(身份与两码)里还在匹配旧文案。改后 ③ <strong>13/13</strong>、⑦ <strong>24/24</strong>。</li>
           <li><strong>全量测试输出中文乱码</strong>:runner 用管道抓子进程输出时按控制台代码页解码,而子进程(.NET/pwsh)写的是 UTF-8;</li>
           <li>现在统一 <code>[Console]::OutputEncoding = UTF-8</code>。</li>
+          <li><strong>地址只认 IP、不认域名</strong>(覆盖面比想象的大):ZXMS 初始化时 <code>ozip</code> 用 <code>IPAddress.TryParse</code> 校验,</li>
+          <li>而官方服务端对外就是域名 <code>zxm.zincms.top</code> —— 等于把最常见的情况挡在门外;</li>
+          <li>客户端的连接校验同样是 <code>IPAddress.TryParse</code>,<strong>发行版客户端因此根本连不上默认的官方域名</strong>。</li>
+          <li>现在三端统一走新增的 <code>ZincXManagerShared/Network/HostText.IsHost</code>(IP 或合法域名都行),</li>
+          <li>共享 <code>TcpClient</code> 增加"主机名"构造,连接时才做 DNS,并<strong>依次尝试多个解析结果</strong></li>
+          <li>(localhost 常先给出 <code>::1</code>,而服务端只监听 IPv4 —— 不会因此判死);</li>
+          <li>设置页与弹窗文案改为"IP 或域名"。覆盖:<code>_ver-msgstore.ps1</code> 改用 <code>czip=localhost</code> 常驻跑这条路。</li>
         </ul>
       </section>
         <h4>变更(续 8)</h4>
         <ul>
+          <li><strong>软件里显示的官网改到 GitHub 镜像,旧站保留</strong>:客户端「帮助」按钮现在打开</li>
+          <li>&lt;https://weiqi114514.github.io/ZincXManager/help.html&gt;;ZXMS / ZXMOS 控制台欢迎横幅两条都列</li>
+          <li>(新站 + 旧站 &lt;http://zxm.zincms.top:10/&gt;)。README 里旧站链接也恢复成带 :10 的写法</li>
+          <li>(之前我误当成笔误删掉了,抱歉)。</li>
+          <li><strong>完整文档 + 官网帮助页</strong>:新增官网 <code>help.html</code>(全站导航有入口),正文做成官网静态页(已弃用腾讯文档版):</li>
+          <li>&lt;https://weiqi114514.github.io/ZincXManager/guide/&gt; —— 分<strong>使用篇</strong>(客户端与子服务端全流程、</li>
+          <li>控制台命令逐条带示例与正常输出、常见问题)与<strong>技术篇</strong>(架构总览、协议类型编号表、身份与账号、</li>
+          <li>数据文件、构建发布、测试入口、官方验证机制、部署运维、已知限制)。源文件随仓库走:</li>
+          <li><code>docs/ZXM-使用文档.md</code>、<code>docs/ZXM-技术文档.md</code>。README 也补了文档入口(顺手修掉 5 处</li>
+          <li><code>zxm.zincms.top:10</code> 的错误链接)。</li>
+          <li><strong>默认端口统一成 25000</strong>:官方服务端(ZXMOS)监听端口的兜底值、子服(ZXMS)的 <code>ozport</code> 默认值,</li>
+          <li>都从 <code>25565</code> 改成 <code>25000</code> —— 和客户端内置的官方地址 <code>zxm.zincms.top:25000</code> 对齐。</li>
+          <li>实测:config.ini 不写 <code>port</code> 直接回车 → 写回 <code>port=25000</code>,日志 <code>监听 0.0.0.0:25000</code>。</li>
+          <li>地址/域名部分不变(客户端默认仍是 <code>zxm.zincms.top</code>;ZXMOS 仍然绑 <code>0.0.0.0</code>)。</li>
+          <li><strong>官方验证不再有编译开关</strong>:去掉 <code>-p:OfficialBuild</code> / <code>OFFICIAL_BUILD</code> 条件编译 ——</li>
+          <li>三端<strong>所有构建一律强制</strong>官方验证:ZXMOS 没有合法 <code>official.lic</code> 直接退出(退出码 2)、端口都不开,</li>
+          <li>每条连接还要再验一次;ZXMS / ZXMC 连到非官方服务端会<strong>断开</strong>。</li>
+          <li>也就是说"自己编一个不验的版本"这条路没有了(谁都能编,那就等于没验证)。</li>
+          <li>运行期只剩三个明确的口子,而且都会大声记日志:</li>
+          <li>子服运维:<code>officialcheck=0</code>(config.ini)</li>
+          <li>客户端用户:<code>allowunverified=1</code>(config.ini)</li>
+          <li><strong>只给自动化测试</strong>:环境变量 <code>ZXM_ALLOW_UNOFFICIAL=1</code>(由 <code>_run-all.ps1</code> 给所有套件设上;正式部署千万别设)</li>
+          <li>顺带:三个 csproj 里的条件块、<code>_publish-aot.ps1</code> 的 <code>-Official</code> 开关、官方服务端部署包里的</li>
+          <li>"正式版 / 测试版"两份,全部去掉 —— 现在只有一种构建。</li>
           <li><strong>彻底停用 <code>zxm-shot</code></strong>(按窗口标题截图的自制测试小工具):所有脚本里的调用改为空操作、编译产物删除;</li>
           <li>GUI 核验改用 DSH 电脑操控插件(<code>computer</code> / <code>computer_batch</code> / <code>ui_elements</code>)。</li>
           <li>GUI 类套件不再依赖截图文件:窗口存在性改用 Win32 枚举窗口标题断言,AOT 冒烟的两项也改成"窗口标题起来了"。</li>
