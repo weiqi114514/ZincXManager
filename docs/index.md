@@ -10,7 +10,7 @@
   ④ [技术文档 · 架构与协议](04-技术-架构与协议.md) ·
   ⑤ [技术文档 · 构建测试运维](05-技术-构建测试运维.md)
 - 全文单篇:[使用文档](ZXM-使用文档.md) · [技术文档](ZXM-技术文档.md)
-- 在线版(分页,持续更新):<https://docs.qq.com/aio/DZXRUa1phVnZoa25o>
+- 网页版(就是本目录生成的 guide 页,与官网同步):<https://weiqi114514.github.io/ZincXManager/guide/>
 - 正式官网:<http://zxm.zincms.top/>
 
 > 这里的 HTML 是从 `zxm-website/` 同步过来的镜像;改站点请改源目录再同步。
