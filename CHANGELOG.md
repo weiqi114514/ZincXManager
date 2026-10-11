@@ -1,8 +1,25 @@
 # 更新日志
 
 ZincXManager(锌X管理面板)的变更记录。格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
-版本号尚未启用,本次改动记在「未发布」下,发布时再归档为版本号。
+版本号与 GitHub Release 标签对应(如 `v0.1.1`);未发布的改动记在「未发布」下,发布时归档为版本号。
 
+## [0.1.1] - 2026-10-11
+
+> **本版本主题**:**品牌图标统一** —— 三端 exe 内嵌图标、客户端窗口/任务栏图标、MSI 安装包图标、
+> 官网 favicon 全部换用同一套新版设计(矢量源 `assets/zxm.svg` / `assets/zxm.ico`)。
+> 同时归档了下方「未发布」批次的服务端消息**存档 / 补发**与提示条等改动。
+
+### 新增
+- 新增 `assets/zxm.ico|png|svg`:全平台统一图标(16/32/48/64/128/256 六档)
+
+### 变更
+- **三端 exe 图标**:`ZincXManagerClient` / `ZincXManagerServer` / `ZincXManagerOServer` 均接入 `<ApplicationIcon>`
+- **客户端窗口图标**:`MainWindow` / `LoginWindow` 设 `Icon="/Assets/zxm.ico"`(窗口、任务栏、Alt+Tab 一致)
+- **安装包图标**:WiX 用同一份 `zxm.ico`(应用和功能里显示新图标)
+- **官网 favicon** 同源换成新版
+- **官网**:帮助页改为跳转「文档目录」;文档拆成 6 个分类页;下载页新增 GitHub Releases 下载源;与腾讯文档版彻底脱钩
+- **文档**:交流群更正为 `1129776132`;新增「有意加入开发:QQ 群 `835964502`」
+- 版本号统一到 `0.1.1`(脚本默认值、文档、下载页)
 ## [未发布] - 2026-10-11
 
 > **本批次主题**:服务端消息**存档 / 补发**(`504` / `505` / `506`)+ 两种新定向形态(`@server:` / `@clients:`)

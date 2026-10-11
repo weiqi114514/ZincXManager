@@ -1,6 +1,6 @@
 # ZincXManager 技术文档
 
-> 版本 0.1.0 · 仓库 <https://github.com/weiqi114514/ZincXManager> · 协议 GPL-2.0
+> 版本 0.1.1 · 仓库 <https://github.com/weiqi114514/ZincXManager> · 协议 GPL-2.0
 > 本文面向开发者与运维:架构、协议、数据格式、构建、测试、官方验证与部署。
 
 ---

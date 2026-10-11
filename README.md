@@ -65,7 +65,7 @@ dotnet publish ZincXManagerClient -c Release -r win-x64
 ```powershell
 dotnet tool install --global wix --version 5.*
 wix build installer\zxmc.wxs -o out\ZincXManagerClient-x64.msi `
-    -d Version=0.1.0 -d StageDir=<暂存目录> -d IconPath=<zxm.ico> -arch x64
+    -d Version=0.1.1 -d StageDir=<暂存目录> -d IconPath=<zxm.ico> -arch x64
 ```
 
 ## 项目结构

@@ -23,8 +23,7 @@
     <!-- 注:不要在这里设 ARPINSTALLLOCATION —— MSI 不会展开 Property 表里的 [xxx] 引用,
          用户会在「应用和功能」的位置栏看到字面量 "[ProgramFiles64Folder]ZincXManager"。
          留空是常见做法,想找目录用开始菜单快捷方式右键"打开文件位置"。 -->
-    <Property Id="ARPHELPLINK" Value="https://zxm.zincms.top" />
-    <Property Id="ARPHELPLINK" Value="https://zxm.zincms.top" />
+    <Property Id="ARPHELPLINK" Value="https://weiqi114514.github.io/ZincXManager/help.html" />
 
     <Launch Condition="Installed OR VersionNT64" Message="ZincXManager 客户端需要 64 位 Windows。" />
 
