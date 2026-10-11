@@ -258,9 +258,9 @@ public partial class MainWindow : Window
         }
     }
 
-    /// <summary>帮助:打开官网帮助页。</summary>
+    /// <summary>帮助:打开在线帮助页(GitHub Pages 镜像;旧站 http://zxm.zincms.top:10/help.html 仍然可用)。</summary>
     private async void OnHelpClick(object? sender, RoutedEventArgs e)
-        => await OpenUrlAsync("http://zxm.zincms.top:10/help.html", "帮助");
+        => await OpenUrlAsync("https://weiqi114514.github.io/ZincXManager/help.html", "帮助");
 
     /// <summary>反馈:打开 GitHub 仓库的 issues。</summary>
     private async void OnFeedbackClick(object? sender, RoutedEventArgs e)

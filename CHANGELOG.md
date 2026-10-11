@@ -43,6 +43,11 @@ ZincXManager(锌X管理面板)的变更记录。格式参考 [Keep a Changelog](
 
 ### 变更(续 8)
 
+- **软件里显示的官网改到 GitHub 镜像,旧站保留**:客户端「帮助」按钮现在打开
+  <https://weiqi114514.github.io/ZincXManager/help.html>;ZXMS / ZXMOS 控制台欢迎横幅两条都列
+  (新站 + 旧站 <http://zxm.zincms.top:10/>)。README 里旧站链接也恢复成带 :10 的写法
+  (之前我误当成笔误删掉了,抱歉)。
+
 - **完整文档 + 官网帮助页**:新增官网 `help.html`(全站导航有入口),正文放在腾讯文档并设为"所有人可查看":
   <https://docs.qq.com/aio/DZXRUa1phVnZoa25o> —— 分**使用篇**(客户端与子服务端全流程、
   控制台命令逐条带示例与正常输出、常见问题)与**技术篇**(架构总览、协议类型编号表、身份与账号、
