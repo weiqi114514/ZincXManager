@@ -10,12 +10,6 @@
     <PublishAot>true</PublishAot>
   </PropertyGroup>
 
-  <!-- 官方发行版:dotnet publish -p:OfficialBuild=true
-       定义了 OFFICIAL_BUILD 之后,客户端默认不连非官方服务端(config.ini 里 allowunverified=1 可放行) -->
-  <PropertyGroup Condition="'$(OfficialBuild)' == 'true'">
-    <DefineConstants>$(DefineConstants);OFFICIAL_BUILD</DefineConstants>
-  </PropertyGroup>
-
   <ItemGroup>
     <Folder Include="Models\" />
     <AvaloniaResource Include="Assets\**" />

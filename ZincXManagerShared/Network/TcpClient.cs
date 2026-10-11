@@ -18,9 +18,12 @@ namespace ZincXManagerShared.Network;
 /// </summary>
 public class TcpClient : IClient
 {
-    private readonly IPAddress _ipAddress;
+    private readonly IPAddress? _ipAddress;
+    private readonly string? _host;
     private readonly ushort _port;
-    private readonly SocketClient _client = new();
+
+    // 域名解析出多个地址时要换一个重试,所以不能是 readonly
+    private SocketClient _client = new();
 
     /// <summary>连接成功后的网络流;未连接时是 null。</summary>
     private NetworkStream? _stream;
@@ -42,9 +45,23 @@ public class TcpClient : IClient
     /// <summary>是否仍处于已连接状态(连上了、接收循环还在跑、还没关闭);命令和界面显示用。</summary>
     public bool IsConnected => _stream is not null && _closed == 0 && !_disconnected;
 
+    /// <summary>连的是谁(日志/报错用)。</summary>
+    public string Target => _ipAddress?.ToString() ?? _host ?? "?";
+
+    /// <summary>按 IP 连(老写法)。</summary>
     public TcpClient(IPAddress ipAddress, ushort port)
     {
         _ipAddress = ipAddress;
+        _port = port;
+        _dispatcher = new PacketDispatcher<Packet>(_cts.Token);
+    }
+
+    /// <summary>
+    /// 按主机名(域名)连 —— 真正连的时候才做 DNS 解析,所以 config 里写域名是可以的。
+    /// </summary>
+    public TcpClient(string host, ushort port)
+    {
+        _host = HostText.Normalize(host);
         _port = port;
         _dispatcher = new PacketDispatcher<Packet>(_cts.Token);
     }
@@ -61,11 +78,47 @@ public class TcpClient : IClient
             throw new ObjectDisposedException(nameof(TcpClient));
         }
 
-        await _client.ConnectAsync(_ipAddress, _port);
+        if (_ipAddress is not null)
+        {
+            await _client.ConnectAsync(_ipAddress, _port);
+        }
+        else
+        {
+            // 域名:交给系统 DNS。解析出来可能有多个地址(常见 IPv6 + IPv4),
+            // 一个连不上就试下一个 —— 别因为 IPv6 那条路不通就把整个连接判死。
+            var addresses = await Dns.GetHostAddressesAsync(_host!);
+            if (addresses.Length == 0)
+            {
+                throw new SocketException((int)SocketError.HostNotFound);
+            }
+
+            Exception? lastError = null;
+            foreach (var address in addresses)
+            {
+                try
+                {
+                    await _client.ConnectAsync(address, _port);
+                    lastError = null;
+                    break;
+                }
+                catch (Exception ex)
+                {
+                    lastError = ex;
+                    _client.Dispose();
+                    _client = new SocketClient();
+                }
+            }
+
+            if (lastError is not null)
+            {
+                throw lastError;
+            }
+        }
+
         _stream = _client.GetStream();
         _receiveTask = ReceiveLoopAsync();
 
-        Logger.Log(LogLevel.Info, $"[Network] 已连接服务端 {_ipAddress}:{_port}");
+        Logger.Log(LogLevel.Info, $"[Network] 已连接服务端 {Target}:{_port}");
     }
 
     /// <summary>接收循环:解析完整包并交给处理器队列;各种断开都只记日志,不往外抛。</summary>

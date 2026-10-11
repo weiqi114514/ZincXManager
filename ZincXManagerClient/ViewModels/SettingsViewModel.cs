@@ -134,17 +134,22 @@ public partial class SettingsViewModel : ViewModelBase
 
         if (colons != 1)
         {
-            return "格式应为 IP:端口(只能有一个冒号),例如 127.0.0.1:21000";
+            return "格式应为 IP 或域名:端口(只能有一个冒号),例如 zxm.zincms.top:25000";
         }
 
         var colon = text.LastIndexOf(':');
         if (colon <= 0 || colon == text.Length - 1)
         {
-            return "格式应为 IP:端口,例如 127.0.0.1:21000";
+            return "格式应为 IP 或域名:端口,例如 zxm.zincms.top:25000";
         }
 
         var ip = text[..colon].Trim();
         var port = text[(colon + 1)..].Trim();
+        if (!HostText.IsHost(ip))
+        {
+            return "地址部分不合法(要 IP 或域名),例如 zxm.zincms.top 或 127.0.0.1";
+        }
+
         if (!ushort.TryParse(port, out var number) || number == 0)
         {
             return "端口不合法(1-65535)";

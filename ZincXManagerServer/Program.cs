@@ -614,8 +614,10 @@ internal static class Program
     }
 
     /// <summary>
-    /// 官方验证第二层:要证明 + 校验。<b>官方发行的 ZXMS 只连官方服务端</b>(验不过就断开);
-    /// 开发构建只记警告照常干活(测试脚本要用);运维也能用 config.ini 的 <c>officialcheck=0</c> 明确放行。
+    /// 官方验证第二层:要证明 + 校验。<b>ZXMS 只连官方服务端</b>(验不过就断开)。
+    /// 运行期放行口只有两个:运维用 config.ini 的 <c>officialcheck=0</c>;
+    /// 自动化测试用环境变量 <c>ZXM_ALLOW_UNOFFICIAL=1</c>(见 <see cref="OfficialGuard.DevBypass"/>)。
+    /// 编译期已经没有"不验的构建"了。
     /// </summary>
     private static async Task CheckOfficialAsync(TcpClient client, ZFile config)
     {
@@ -637,13 +639,15 @@ internal static class Program
             return;
         }
 
-#if OFFICIAL_BUILD
-        Logger.Log(LogLevel.Error, "[官方验证] 官方发行的子服务端只连官方服务端 —— 断开这条连接");
+        if (OfficialGuard.DevBypass)
+        {
+            Logger.Log(LogLevel.Warning, "[官方验证] 环境变量 ZXM_ALLOW_UNOFFICIAL=1(测试/联调专用),只警告不断开");
+            return;
+        }
+
+        Logger.Log(LogLevel.Error, "[官方验证] 子服务端只连官方服务端 —— 断开这条连接");
         await client.CloseAsync();
         _os = null;
-#else
-        Logger.Log(LogLevel.Warning, "[官方验证] 开发构建:只警告,继续连接(官方发行版会断开)");
-#endif
     }
 
     /// <summary>发一个 nonce 等对方的证明(521,超时 5 秒)。</summary>
@@ -947,9 +951,10 @@ internal static class Program
         }
 
         // 官方服务端(ZXMOS)的地址 / 端口:没有或不合法就问
+        // 地址允许写域名(官方端对外就是 zxm.zincms.top),不限于 IP
         var ozip = AskIfMissing(config, KeyOzip,
-            "[CONFIG]输入官方服务端地址ozip(例如 127.0.0.1)",
-            value => IPAddress.TryParse(value, out _),
+            "[CONFIG]输入官方服务端地址ozip(IP 或域名,例如 zxm.zincms.top)",
+            value => HostText.IsHost(value),
             fallback: "127.0.0.1");
 
         var ozport = AskIfMissing(config, KeyOzport,
@@ -957,10 +962,10 @@ internal static class Program
             value => ushort.TryParse(value, out var n) && n > 0,
             fallback: DefaultOsPort);
 
-        var osIp = IPAddress.Parse(ozip);
         var osPort = ushort.Parse(ozport);
 
-        var client = new TcpClient(osIp, osPort);
+        // 传主机名进去:是 IP 就直接连,是域名就连的时候做 DNS(见 TcpClient)
+        var client = new TcpClient(ozip, osPort);
 
         client.AddHandler(async packet =>
 
@@ -1194,7 +1199,7 @@ internal static class Program
             await client.ConnectAsync();
             _os = client;
             await client.WriteAsync(new Packet(1, SOnline, Encoding.UTF8.GetBytes("ZXMS online")));
-            Logger.Log(LogLevel.Info, $"[ZXMOS] 已连接 {osIp}:{osPort}");
+            Logger.Log(LogLevel.Info, $"[ZXMOS] 已连接 {ozip}:{osPort}");
 
             // 接入 ZXMOS 必须有 ZXMS 账号:登录(没有则注册)
             await LoginOServerAsync(client, config);

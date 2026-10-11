@@ -192,9 +192,9 @@ public partial class ConnectViewModel : ViewModelBase, IDisposable
         var host = Host.Trim();
         var portText = Port.Trim();
 
-        if (!IPAddress.TryParse(host, out var ip))
+        if (!HostText.IsHost(host))
         {
-            Logger.Log(LogLevel.Warning, "[ZXMC] 地址不合法:" + host);
+            Logger.Log(LogLevel.Warning, "[ZXMC] 地址不合法(要 IP 或域名):" + host);
             return;
         }
 
@@ -207,10 +207,11 @@ public partial class ConnectViewModel : ViewModelBase, IDisposable
         _rejected = false;
         IsBusy = true;
         SetState("连接中…", "#F0A020");
-        Logger.Log(LogLevel.Info, $"[ZXMC] 模式 {Mode}(要求 {ExpectRole}),连接 {ip}:{port}");
+        Logger.Log(LogLevel.Info, $"[ZXMC] 模式 {Mode}(要求 {ExpectRole}),连接 {host}:{port}");
         AddLogOnly($"本轮要求对方身份:{ExpectRole}");
 
-        var client = new TcpClient(ip, port);
+        // 主机名直接传进去:是域名就连的时候做 DNS(官方端对外就是域名)
+        var client = new TcpClient(host, port);
 
         client.AddHandler(packet =>
         {
@@ -226,7 +227,7 @@ public partial class ConnectViewModel : ViewModelBase, IDisposable
                     // 服务端自报身份 → 按模式校验
                     case ServerIdent:
                         Logger.Log(LogLevel.Info, $"[ZXMC] 收到服务端身份包:{text}");
-                        CheckServerIdent(client, text.Trim(), ip, port);
+                        CheckServerIdent(client, text.Trim(), host, port);
                         break;
 
                     // 服务端名称(201):名称由服务端给 —— 存进 config,设置页显示的就是它
@@ -254,7 +255,7 @@ public partial class ConnectViewModel : ViewModelBase, IDisposable
                         if (!_rejected)
                         {
                             IsConnected = true;
-                            SetState($"已连接 {ExpectRole} {ip}:{port}", "#22A05A");
+                            SetState($"已连接 {ExpectRole} {host}:{port}", "#22A05A");
                         }
                         break;
 
@@ -273,14 +274,14 @@ public partial class ConnectViewModel : ViewModelBase, IDisposable
 
             // 报上自己是谁 + 连接模式(服务端登记表要记模式),例如 "ZXMC:SAOS"
             await client.WriteAsync(new Packet(1, Conline, Encoding.UTF8.GetBytes($"ZXMC:{Mode}")));
-            ClientLog.Online("ZXMC", Mode, $"{ip}:{port}");
+            ClientLog.Online("ZXMC", Mode, $"{host}:{port}");
             Logger.Log(LogLevel.Info, $"[ZXMC] TCP 已连接,已发送上线包(300,模式 {Mode}),等待服务端身份包(200)校验");
         }
         catch (Exception ex)
         {
             Logger.Log(LogLevel.Error, "[ZXMC] 连接失败: " + ex.Message);
             SetState("连接失败", "#D64545");
-            ErrorRaised?.Invoke("无法连接服务器", $"{ip}:{port}\n{ex.Message}");
+            ErrorRaised?.Invoke("无法连接服务器", $"{host}:{port}\n{ex.Message}");
             await client.CloseAsync();
         }
         finally
@@ -292,22 +293,22 @@ public partial class ConnectViewModel : ViewModelBase, IDisposable
     /// <summary>
     /// 身份校验:服务端自报的端类型必须与模式要求一致,否则立刻断开。
     /// </summary>
-    private void CheckServerIdent(TcpClient client, string role, IPAddress ip, ushort port)
+    private void CheckServerIdent(TcpClient client, string role, string host, ushort port)
     {
         if (role == ExpectRole)
         {
             _serverRole = role;
             Logger.Log(LogLevel.Info, $"[ZXMC] 身份校验通过:{role} 符合模式 {Mode}");
-            SetState($"已连上 {role} {ip}:{port},等待确认", "#F0A020");
+            SetState($"已连上 {role} {host}:{port},等待确认", "#F0A020");
             return;
         }
 
         _rejected = true;
         IsConnected = false;
         Logger.Log(LogLevel.Error,
-            $"[ZXMC] 身份校验不通过:模式 {Mode} 要求 {ExpectRole},但 {ip}:{port} 自报是 {role} —— 已断开");
+            $"[ZXMC] 身份校验不通过:模式 {Mode} 要求 {ExpectRole},但 {host}:{port} 自报是 {role} —— 已断开");
         SetState("模式与目标不匹配,已断开", "#D64545");
-        ErrorRaised?.Invoke("连接被拒绝", $"模式 {Mode} 要求 {ExpectRole},但 {ip}:{port} 自报是 {role}。");
+        ErrorRaised?.Invoke("连接被拒绝", $"模式 {Mode} 要求 {ExpectRole},但 {host}:{port} 自报是 {role}。");
 
         // 用闭包里的 client(连接可能还没赋给字段),直接断开
         _ = client.CloseAsync();
@@ -441,16 +442,21 @@ public partial class ConnectViewModel : ViewModelBase, IDisposable
         Logger.Log(LogLevel.Warning, $"[ZXMC] 对方不是官方服务端({verdict.Code}):{verdict.Detail}");
         OfficialChecked?.Invoke(false, verdict.Detail);
 
-#if OFFICIAL_BUILD
-        if (ClientConfig.GetOrEmpty("allowunverified") != "1")
+        if (ClientConfig.GetOrEmpty("allowunverified") == "1")
         {
-            Logger.Log(LogLevel.Error,
-                "[ZXMC] 官方发行的客户端只连官方服务端 —— 断开(确实要连自建服务端,就在 config.ini 里写 allowunverified=1)");
-            await DisconnectAsync();
+            Logger.Log(LogLevel.Warning, "[ZXMC] config 里写了 allowunverified=1,放行(继续用这个服务端)");
+            return;
         }
-#else
-        Logger.Log(LogLevel.Warning, "[ZXMC] 开发构建:只提示,不主动断开(官方发行版会断开)");
-#endif
+
+        if (OfficialGuard.DevBypass)
+        {
+            Logger.Log(LogLevel.Warning, "[ZXMC] 环境变量 ZXM_ALLOW_UNOFFICIAL=1(测试/联调专用),只提示不主动断开");
+            return;
+        }
+
+        Logger.Log(LogLevel.Error,
+            "[ZXMC] 客户端只连官方服务端 —— 断开(确实要连自建服务端,就在 config.ini 里写 allowunverified=1)");
+        await DisconnectAsync();
     }
 
     /// <summary>断开连接。</summary>

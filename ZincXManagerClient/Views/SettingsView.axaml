@@ -210,7 +210,7 @@
                                IsChecked="{Binding !UseCustomAddress, Mode=OneWay}" Click="OnOfficialAddressClick"/>
                   <TextBlock Classes="value" Text="{Binding OfficialAddress}" Margin="24,0,0,0"/>
 
-                  <RadioButton GroupName="ozsource" Content="自定义 IP:端口"
+                  <RadioButton GroupName="ozsource" Content="自定义 IP/域名:端口"
                                IsChecked="{Binding UseCustomAddress, Mode=OneWay}" Click="OnCustomAddressClick"/>
                   <TextBlock Classes="value" Text="官方服务端 ≠ 子服务端:这里只改「直连哪台官方服」;连别人搭的官方服有风险,改之前请先读完弹窗里的说明"
                              Margin="24,0,0,0" Foreground="#B25555"/>

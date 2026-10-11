@@ -28,7 +28,16 @@ public static class OfficialGuard
     /// </summary>
     public static byte[] Pepper => _last.Ok ? _last.Pepper : RandomPepper();
 
-    /// <summary>启动闸:不通过就写日志并退出进程(退出码 2)。</summary>
+    /// <summary>
+    /// 唯一的运行期放行口:环境变量 <c>ZXM_ALLOW_UNOFFICIAL=1</c>。
+    ///
+    /// <para><b>编译期不再有 OFFICIAL_BUILD 开关</b> —— 所有构建都强制官方验证,不存在"编一个不验的版本"这条路。
+    /// 这个口子只给自动化测试与本地联调用(CI/测试脚本会自己设它),放行时一律大声记警告,便于在日志里查。</para>
+    /// </summary>
+    public static bool DevBypass =>
+        Environment.GetEnvironmentVariable("ZXM_ALLOW_UNOFFICIAL") == "1";
+
+    /// <summary>启动闸:不通过就写日志并退出进程(退出码 2);只有开发放行口能跳过。</summary>
     public static void RequireOfficial(string? directory = null)
     {
         var verdict = OfficialLicense.Check(directory);
@@ -38,7 +47,15 @@ public static class OfficialGuard
         {
             // 管理员自己要看清楚为什么,所以这里照实打;对外(协议/日志给玩家看的部分)一律只说"未通过"
             Logger.Log(LogLevel.Fatal, $"[官方验证] 未通过({verdict.Code}):{verdict.Detail}");
-            Logger.Log(LogLevel.Fatal, "[官方验证] 本程序是官方发行版,没有合法的 official.lic 不提供服务");
+
+            if (DevBypass)
+            {
+                Logger.Log(LogLevel.Warning,
+                    "[官方验证] 环境变量 ZXM_ALLOW_UNOFFICIAL=1(测试/联调专用),本次放行 —— 正式部署不要设它");
+                return;
+            }
+
+            Logger.Log(LogLevel.Fatal, "[官方验证] 没有合法的 official.lic 不提供服务");
             Environment.Exit(2);
             return;
         }
@@ -55,6 +72,12 @@ public static class OfficialGuard
 
         if (!verdict.Ok)
         {
+            if (DevBypass)
+            {
+                Logger.Log(LogLevel.Warning, $"[官方验证] 这条连接本该被拒({verdict.Code}),但开发放行口开着,放过");
+                return true;
+            }
+
             Logger.Log(LogLevel.Error, $"[官方验证] 这条连接被拒({verdict.Code})");
             return false;
         }

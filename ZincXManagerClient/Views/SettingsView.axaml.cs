@@ -125,7 +125,7 @@ public partial class SettingsView : UserControl
 
         if (Vm.SetAddress(value) is { } error)
         {
-            await MessageDialog.InfoAsync(owner, "地址不合法", error, hint: "例:127.0.0.1:25000");
+            await MessageDialog.InfoAsync(owner, "地址不合法", error, hint: "例:zxm.zincms.top:25000 或 127.0.0.1:25000");
             return;
         }
 
@@ -159,7 +159,7 @@ public partial class SettingsView : UserControl
 
         if (Vm.SetAddress(value) is { } error)
         {
-            await MessageDialog.InfoAsync(owner, "地址不合法", error, hint: "例:127.0.0.1:21000");
+            await MessageDialog.InfoAsync(owner, "地址不合法", error, hint: "例:yourserver.com:21000 或 127.0.0.1:21000");
             return;
         }
 
