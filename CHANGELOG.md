@@ -43,6 +43,10 @@ ZincXManager(锌X管理面板)的变更记录。格式参考 [Keep a Changelog](
 
 ### 变更(续 8)
 
+- **默认端口统一成 25000**:官方服务端(ZXMOS)监听端口的兜底值、子服(ZXMS)的 `ozport` 默认值,
+  都从 `25565` 改成 `25000` —— 和客户端内置的官方地址 `zxm.zincms.top:25000` 对齐。
+  实测:config.ini 不写 `port` 直接回车 → 写回 `port=25000`,日志 `监听 0.0.0.0:25000`。
+  地址/域名部分不变(客户端默认仍是 `zxm.zincms.top`;ZXMOS 仍然绑 `0.0.0.0`)。
 - **官方验证不再有编译开关**:去掉 `-p:OfficialBuild` / `OFFICIAL_BUILD` 条件编译 ——
   三端**所有构建一律强制**官方验证:ZXMOS 没有合法 `official.lic` 直接退出(退出码 2)、端口都不开,
   每条连接还要再验一次;ZXMS / ZXMC 连到非官方服务端会**断开**。

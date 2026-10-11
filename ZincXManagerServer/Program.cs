@@ -53,7 +53,8 @@ internal static class Program
     private const string KeyOzip = "ozip";
     private const string KeyOzport = "ozport";
     private const string KeyCzport = "czport";
-    private const string DefaultOsPort = "25565";
+    // 官方服务端默认端口:25000(客户端默认也是 zxm.zincms.top:25000)
+    private const string DefaultOsPort = "25000";
     private const string DefaultCzPort = "25566";
 
     // 协议常量统一放在共享库 Protocol 里(三端共用一份),这里只是别名,阅读方便
