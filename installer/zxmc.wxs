@@ -20,6 +20,10 @@
 
     <Icon Id="ZxmIcon" SourceFile="$(var.IconPath)" />
     <Property Id="ARPPRODUCTICON" Value="ZxmIcon" />
+    <!-- 注:不要在这里设 ARPINSTALLLOCATION —— MSI 不会展开 Property 表里的 [xxx] 引用,
+         用户会在「应用和功能」的位置栏看到字面量 "[ProgramFiles64Folder]ZincXManager"。
+         留空是常见做法,想找目录用开始菜单快捷方式右键"打开文件位置"。 -->
+    <Property Id="ARPHELPLINK" Value="https://zxm.zincms.top" />
     <Property Id="ARPHELPLINK" Value="https://zxm.zincms.top" />
 
     <Launch Condition="Installed OR VersionNT64" Message="ZincXManager 客户端需要 64 位 Windows。" />
@@ -50,6 +54,9 @@
                     WorkingDirectory="INSTALLFOLDER" />
           <RegistryValue Root="HKLM" Key="Software\ZincXManager\ZXMC" Name="Installed"
                          Type="integer" Value="1" KeyPath="yes" />
+          <!-- 「应用和功能」里的图标:靠 ARPPRODUCTICON 有时不落地,这里直接写死 DisplayIcon 更稳 -->
+          <RegistryValue Root="HKLM" Key="Software\Microsoft\Windows\CurrentVersion\Uninstall\[ProductCode]"
+                         Name="DisplayIcon" Type="string" Value="[INSTALLFOLDER]ZincXManagerClient.exe,0" />
         </Component>
       </Directory>
     </StandardDirectory>

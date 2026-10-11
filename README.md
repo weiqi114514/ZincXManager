@@ -1,29 +1,119 @@
-# ZincXManager
+# ZincXManager(锌X管理面板 · ZXM)
+
 > [!WARNING]
-开发状态：ZincXManager 目前处于极早期开发阶段，ZXMOS能够进行最基础的功能运行并测试
+> **开发状态:极早期(alpha)** —— 核心链路已经能跑通、也有自动化测试兜着,但界面与数据格式仍会变动,
+> **不建议用在正式的生产服务器上**;升级后偶尔需要重新登录一次。
 
-ZincXManager 锌X管理面板 简称ZXM   
-ZincXManager 是一款面向 Minecraft/社区 管理员、服主与玩家的一体化，综合性，主要使用C#开发的管理面板/软件。它不仅能够连接 MC 服务端进行管理与交互，还内置了丰富的社区功能，如白名单管理、账号绑定、经济系统等。
-采用分布式架构：客户端(ZXMC)，子服务端(ZXMS)和官方服务端(ZXMOS)  
-- 客户端(ZXMC)提供用户操作界面和与子服务端(ZXMS)或官方服务端(ZXMOS)通信的媒介，是桌面程序 | 一般运行在个人PC上  
-- 子服务端(ZXMS)负责大部分的数据操作和计算，如商店，蓝图库 | 一般和MC服务端运行在一个网络下或一个服务器上 
-- 官方服务端(ZXMOS)负责提供官方社区，官方蓝图库等功能 | 仅由ZXM官方运行，运行在ZXM官方的服务器上 
-- 模组端(ZXMM)与ZXMS通信，负责执行ZXMS传来的指令，如寄予玩家物品，查看玩家背包等 | 运行在MC服务端上  
-  > TIPS：通信均为网络通信
-   
-ZXMC分为3个连接模式  
-- OS（OnlyServer）模式：仅连接子服务端  
-- OOS（OnlyOServer）模式：仅连接官方服务端  
-- SAOS（ServerAndOServer）模式：可连接子服务端和官方服务端  
-> TIPS：当ZXMC处于SAOS模式并且连接到ZXMS时那么ZXMC将通过ZXMS中转与ZXMOS通信，否则直接与ZXMOS通信
-   
-ZXMC分为4个权限模式  
-- Player模式：玩家模式，使用玩家需要的相关功能，如社区经济
-- HAdmin模式：高管模式，权限比较高的管理模式，可以控制MC服务端等高权限功能，同时也可使用低权限功能
-- LAdmin模式：低管模式，权限比较低的管理模式，可以进行一些消息的发布和玩家的申请处理等低权限功能
-- System模式：系统模式，具有最高的权限的管理模式，可直接控制系统相关功能，如报备后登录远程桌面的启用和设置，文件操作，重启软件等，不兼容低权限和高权限功能，
-   
-> TIPS：当ZXMC处于SAOS模式并且连接到ZXMS时那么ZXMC将通过ZXMS中转与ZXMOS通信，否则直接与ZXMOS通信
-> TIPS：此OS(OnlyServer)非彼OS(ZincXManagerOfficialServer)
+面向 **Minecraft 服主与社区管理员** 的一体化管理面板:客户端连上服务端以后,既能管 MC 服务端,
+也能做社区运营 —— 账号与权限、白名单、经济与商店、蓝图库、公告与消息推送等等。主要用 C# 写,采用分布式架构。
 
-欢迎有意向合作/开发者加入我们 QQ群835964502
+**官网**:<http://zxm.zincms.top/> · **官方服务端**:`zxm.zincms.top:25000` · **交流群**:QQ `835964502` · **开源协议**:GPL-2.0
+
+---
+
+## 现在能用到什么程度
+
+**✅ 已经能用**
+
+- 账号:注册 / 登录 / 退出,四种权限等级(Player / LAdmin / HAdmin / System)
+- 连接:连官方服务端(默认)或自建子服务端(SAOS 模式)
+- 消息:公告、定向推送、五种卡片(文本 / 更新 / 选择 / 填空 / 下拉);卡片按钮点了会回报服务端
+- 消息存档:本地按来源分档保留、过期自动清理、可单条删除、重开客户端还在
+- 界面:首次使用向导、设置页各分区、毛玻璃 / 半透明两档、左上角提示条
+- 社区功能:经济、商店、蓝图画布、好友与组织等分区的基础版本
+- 自建 ZXMS:自动接入官方服务端、账号与封禁(账号 / IP / 机器码连坐)、公告与推送、控制台命令
+
+**⚠ 还不能用 / 正在做**
+
+- 模组端 ZXMM:协议还没定,尚未实现(打算做,不是砍掉)
+- 官方验证目前只做到"验对端是不是官方",在线令牌与吊销还没做
+- 只提供 64 位 Windows 客户端(单文件 AOT),没有移动端
+- 没做长期运行压测;遇到问题请进群反馈
+
+> 客户端的数据(配置 / 消息 / 日志 / 头像)都生成在 exe 同目录,不写注册表业务项。
+
+## 下载与部署
+
+| 你要装的东西 | 从哪拿 |
+| --- | --- |
+| 客户端 ZXMC | 官网[下载页](http://zxm.zincms.top/download.html):安装包(MSI,全机器安装)或免安装 ZIP |
+| 子服务端 ZXMS(自建才需要) | 官网下载页 → 子服务端压缩包;部署步骤见官网[子服教程](http://zxm.zincms.top/zxms.html) |
+| 官方服务端 ZXMOS | 由官方运行,**不需要你自建**;客户端默认连 `zxm.zincms.top:25000` |
+
+## 从源码构建
+
+前置:.NET SDK 10(GUI 目前只在 Windows 上验证过)。
+
+```powershell
+git clone https://github.com/weiqi114514/ZincXManager.git
+cd ZincXManager
+dotnet build ZincXManager.slnx              # 编译全部
+dotnet run --project ZincXManagerClient     # 开发态起客户端
+```
+
+单文件 AOT 发布(客户端):
+
+```powershell
+dotnet publish ZincXManagerClient -c Release -r win-x64
+```
+
+> 注意:客户端发布产物必须让 `ZincXManagerClient.exe` 与 `libSkiaSharp.dll`、`av_libglesv2.dll`、
+> `libHarfBuzzSharp.dll` 待在同一个目录里,少一个起不来。
+
+打 MSI(WiX v5):
+
+```powershell
+dotnet tool install --global wix --version 5.*
+wix build installer\zxmc.wxs -o out\ZincXManagerClient-x64.msi `
+    -d Version=0.1.0 -d StageDir=<暂存目录> -d IconPath=<zxm.ico> -arch x64
+```
+
+## 项目结构
+
+| 目录 | 说明 |
+| --- | --- |
+| `ZincXManagerClient` | 客户端 **ZXMC**:Avalonia 桌面界面(登录 / OOBE 向导 / 主界面 / 设置) |
+| `ZincXManagerServer` | 子服务端 **ZXMS**:本服账号、封禁、消息、蓝图,负责与客户端和官方端通信 |
+| `ZincXManagerOServer` | 官方服务端 **ZXMOS**(带控制台) |
+| `ZincXManagerOServerNO` | 官方服务端(裁剪版) |
+| `ZincXManagerShared` | 三端共用:协议、账号与权限、命令分发、日志、官方验证 |
+| `ZincXManagerLicTool` | 官方许可证签发工具(仅官方使用) |
+| `installer/` | 客户端 MSI 定义(WiX)与打包说明 |
+
+## 四端架构与运行模式
+
+- **客户端 ZXMC** —— 用户操作的桌面程序,一般跑在个人 PC 上
+- **子服务端 ZXMS** —— 承担本服的数据与计算(账号、封禁、商店、蓝图、消息),一般和 MC 服务端在同一个网络里
+- **官方服务端 ZXMOS** —— 官方社区与官方蓝图库,**仅由 ZXM 官方运行**
+- **模组端 ZXMM** —— 与 ZXMS 通信、在 MC 服务端里执行指令(如发放物品、查看背包),*尚未实现*
+
+通信全部走网络。ZXMC 有三种连接模式:
+
+- **OS**(OnlyServer):只连子服务端
+- **OOS**(OnlyOServer):只连官方服务端
+- **SAOS**(ServerAndOServer):同时连子服务端与官方服务端
+  > 处于 SAOS 且已连上 ZXMS 时,ZXMC 经由 ZXMS 中转与 ZXMOS 通信;否则直连 ZXMOS。
+
+ZXMC 有四种权限模式:Player(玩家)/ LAdmin(低管)/ HAdmin(高管)/ System(系统,最高权限,不兼容低/高管功能)。
+
+> TIPS:此 OS(OnlyServer)非彼 OS(ZincXManagerOfficialServer)。
+> TIPS:**官方服务端 ≠ 子服务端** —— 一个是官方提供、所有人共用的社区端,一个是各服自己部署的子端。
+
+## 官方验证(防止别人冒名官方服务端)
+
+- **第一层**:ZXMS / ZXMC 内置官方公钥,启动时自校验发行产物是否被改过
+- **第二层**:接入后走 `520` / `521` 对端验证,确认对面确实是官方 ZXMOS
+- 官方发行版验证不过会直接断开;开发构建只记警告
+  (运维开关:子服 `officialcheck=0`,客户端 `allowunverified=1`)
+
+## 相关链接
+
+- 官网:<http://zxm.zincms.top/>
+- 更新日志:[CHANGELOG.md](CHANGELOG.md)
+- 子服务端部署教程:<http://zxm.zincms.top/zxms.html>
+- 交流群:QQ `835964502`
+
+## 许可证
+
+[GPL-2.0](LICENSE)。ZXM 是自由软件:你可以自由使用、修改与再分发,
+但衍生作品必须同样以 GPL 授权,并保留版权声明。
