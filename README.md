@@ -7,7 +7,7 @@
 面向 **Minecraft 服主与社区管理员** 的一体化管理面板:客户端连上服务端以后,既能管 MC 服务端,
 也能做社区运营 —— 账号与权限、白名单、经济与商店、蓝图库、公告与消息推送等等。主要用 C# 写,采用分布式架构。
 
-**官网**:<http://zxm.zincms.top> · **GitHub Pages 镜像**:<https://weiqi114514.github.io/ZincXManager/> · **官方服务端**:`zxm.zincms.top:25000` · **文档**:[分类文档(5 篇)](https://weiqi114514.github.io/ZincXManager/guide/) · 官网[帮助页](http://zxm.zincms.top:10/help.html) · **交流群**:QQ `835964502` · **开源协议**:GPL-2.0
+**官网**:<http://zxm.zincms.top:10> · **GitHub Pages 镜像**:<https://weiqi114514.github.io/ZincXManager/> · **官方服务端**:`zxm.zincms.top:25000` · **文档**:[分类文档(5 篇)](https://weiqi114514.github.io/ZincXManager/guide/) · 官网[帮助页](http://zxm.zincms.top:10/help.html) · **交流群**:QQ `835964502` · **开源协议**:GPL-2.0
 
 ---
 
@@ -36,7 +36,7 @@
 
 | 你要装的东西 | 从哪拿 |
 | --- | --- |
-| 客户端 ZXMC | 官网[下载页](http://zxm.zincms.top:10/download.html):安装包(MSI,全机器安装)或免安装 ZIP |
+| 客户端 ZXMC | 官网[下载页](http://zxm.zincms.top:10/download.html):安装包(MSI,全机器安装)或免安装 ZIP;也可从 [GitHub Releases](https://github.com/weiqi114514/ZincXManager/releases) 下(同一批文件,哈希一致) |
 | 子服务端 ZXMS(自建才需要) | 官网下载页 → 子服务端压缩包;部署步骤见官网[子服教程](http://zxm.zincms.top:10/zxms.html) |
 | 官方服务端 ZXMOS | 由官方运行,**不需要你自建**;客户端默认连 `zxm.zincms.top:25000` |
 
