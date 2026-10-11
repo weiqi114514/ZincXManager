@@ -7,7 +7,7 @@
 面向 **Minecraft 服主与社区管理员** 的一体化管理面板:客户端连上服务端以后,既能管 MC 服务端,
 也能做社区运营 —— 账号与权限、白名单、经济与商店、蓝图库、公告与消息推送等等。主要用 C# 写,采用分布式架构。
 
-**官网**:<http://zxm.zincms.top> · **官方服务端**:`zxm.zincms.top:25000` · **文档**:[使用与技术文档(腾讯文档)](https://docs.qq.com/aio/DZXRUa1phVnZoa25o) · 官网[帮助页](http://zxm.zincms.top/help.html) · **交流群**:QQ `835964502` · **开源协议**:GPL-2.0
+**官网**:<http://zxm.zincms.top> · **GitHub Pages 镜像**:<https://weiqi114514.github.io/ZincXManager/> · **官方服务端**:`zxm.zincms.top:25000` · **文档**:[使用与技术文档(腾讯文档)](https://docs.qq.com/aio/DZXRUa1phVnZoa25o) · 官网[帮助页](http://zxm.zincms.top/help.html) · **交流群**:QQ `835964502` · **开源协议**:GPL-2.0
 
 ---
 
