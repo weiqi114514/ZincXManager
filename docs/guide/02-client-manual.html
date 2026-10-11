@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>② 客户端使用手册 · ZincXManager 文档</title>
+<meta name="description" content="界面分区、消息面板与五种卡片、存档规则、提示条、设置页、连接设置、常见问题">
+<link rel="icon" href="../assets/img/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="../assets/css/style.css">
+<style>
+.doc-body h1 { font-size: 28px; margin: 6px 0 14px; }
+.doc-body h2 { font-size: 22px; margin: 26px 0 10px; border-left: 4px solid var(--accent); padding-left: 10px; }
+.doc-body h3 { font-size: 18px; margin: 20px 0 8px; }
+.doc-body h4 { font-size: 16px; margin: 16px 0 6px; }
+.doc-body p, .doc-body li { line-height: 1.85; }
+.doc-body code { background: rgba(22,163,74,.10); padding: 1px 5px; border-radius: 5px; font-size: 13.5px; }
+.doc-body pre { background: #0f1b16; color: #d7f5e3; padding: 14px 16px; border-radius: 10px; overflow: auto; }
+.doc-body pre code { background: none; color: inherit; padding: 0; }
+.doc-body table { border-collapse: collapse; width: 100%; margin: 12px 0; font-size: 14px; }
+.doc-body th, .doc-body td { border: 1px solid rgba(127,127,127,.32); padding: 7px 10px; text-align: left; vertical-align: top; }
+.doc-body th { background: rgba(22,163,74,.10); }
+.doc-body blockquote { margin: 12px 0; padding: 10px 14px; border-left: 4px solid rgba(127,127,127,.4); background: rgba(127,127,127,.07); border-radius: 0 8px 8px 0; }
+.doc-body hr { border: none; border-top: 1px solid rgba(127,127,127,.25); margin: 22px 0; }
+.doc-nav { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 18px; }
+.doc-nav a { font-size: 13.5px; padding: 5px 10px; border-radius: 999px; background: rgba(22,163,74,.12); }
+.doc-nav a.cur { background: var(--accent); color: #04220f; font-weight: 600; }
+</style>
+</head>
+<body>
+
+<header class="site-header" id="header">
+  <div class="wrap header-inner">
+    <a class="brand" href="../index.html" aria-label="ZincXManager 首页">
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 48 48" width="30" height="30" role="img">
+          <rect x="2" y="2" width="44" height="44" rx="12" fill="#16a34a"/>
+          <path d="M12 16h24L16 32h20" fill="none" stroke="#eafff2" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </span>
+      <span class="brand-text">ZincXManager<em>ZXM</em></span>
+    </a>
+    <button class="nav-toggle" id="navToggle" aria-expanded="false" aria-controls="siteNav" aria-label="打开导航">
+      <span></span><span></span><span></span>
+    </button>
+    <nav class="site-nav" id="siteNav">
+      <a href="../index.html#features">功能</a>
+      <a href="../index.html#arch">架构</a>
+      <a href="../index.html#modes">模式</a>
+      <a href="../download.html">下载</a>
+      <a href="../zxms.html">子服教程</a>
+      <a href="index.html">文档</a>
+      <a href="../help.html">帮助文档</a>
+      <a href="../changelog.html">更新日志</a>
+      <a class="btn btn-ghost" href="https://github.com/weiqi114514/ZincXManager" target="_blank" rel="noopener">GitHub</a>
+    </nav>
+  </div>
+</header>
+
+<main id="top">
+  <section class="section">
+    <div class="wrap">
+      <nav class="doc-nav">
+        <a href="01-getting-started.html">① 认识与安装</a>
+        <a href="02-client-manual.html" class="cur">② 客户端使用手册</a>
+        <a href="03-zxms-deploy.html">③ 子服务端部署手册</a>
+        <a href="04-tech-architecture.html">④ 技术文档 · 架构与协议</a>
+        <a href="05-tech-build-test-ops.html">⑤ 技术文档 · 构建测试运维</a>
+        <a href="index.html">目录</a>
+      </nav>
+      <article class="doc-body">
+<h2>ZXM ② 客户端使用手册</h2>
+<blockquote>分类导航:① 认识与安装 · ② 客户端使用手册 · ③ 子服务端部署手册 · ④ 技术文档 · 架构与协议 · ⑤ 技术文档 · 构建测试运维</blockquote>
+<blockquote>官网 <a href="http://zxm.zincms.top/" target="_blank" rel="noopener">http://zxm.zincms.top/</a> · 帮助页 <a href="http://zxm.zincms.top/help.html" target="_blank" rel="noopener">http://zxm.zincms.top/help.html</a> · 交流群 QQ <code>835964502</code></blockquote>
+<hr>
+<h3>四、客户端界面</h3>
+<p>左侧竖排是<strong>分区</strong>:经济 / 社区 / 组织 / 好友 / 设置 / 管理 / 小功能组。</p>
+<h4>4.1 消息面板(右侧)</h4>
+<ul>
+<li><strong>公告</strong>:服务端下发的消息,可能带按钮(见下方"五种卡片");</li>
+<li><strong>定向推送</strong>:只发给你的私信;</li>
+<li><strong>五种卡片形态</strong>:</li>
+</ul>
+<table><thead><tr><th>卡片</th><th>长什么样</th><th>点了会怎样</th></tr></thead><tbody>
+<tr><td>text</td><td>标题 + 正文</td><td>只能看</td></tr>
+<tr><td>update</td><td>底部一个链接按钮</td><td>点按钮会把"你点了它"回报给服务端</td></tr>
+<tr><td>choice</td><td>两个按钮(是 / 否)</td><td>同上,回报你选了哪个</td></tr>
+<tr><td>input</td><td>一个输入框 + 确认</td><td>把你输入的内容一起回报</td></tr>
+<tr><td>select</td><td>下拉框 + 确认</td><td>回报你选的项</td></tr>
+</tbody></table>
+<ul>
+<li>每张卡片右上角有<strong>删除</strong>(只删本地存档,不影响服务端);标题右侧是这条消息的<strong>时间</strong>;</li>
+<li>卡片底部显示<strong>来源</strong>:<code>ZXMS-&lt;子服名&gt;</code>(子服下发的)、官方端下发的、或 <code>ZXMC</code>(你本地产生的)。</li>
+</ul>
+<h4>4.2 消息存档与保留规则</h4>
+<p>消息会存在本地,重开客户端还在。清理规则:</p>
+<ul>
+<li>客户端本地产的消息:按<strong>客户端</strong>设置的天数保留(默认 60 天,设置 → 模式与数据源 里可改);</li>
+<li>官方服务端下发的消息:固定最多 <strong>20 天</strong>;</li>
+<li>子服务端下发的消息:按<strong>子服务端自己</strong>的设置保留(子服默认 7 天)。</li>
+</ul>
+<p>过期消息在打开客户端时自动清理。</p>
+<h4>4.3 提示条(toast)</h4>
+<p>左上角滑出的小条(约 3.6 秒后滑回),用来告诉你:补发完成「已加载 N 条历史消息」、收到新消息、卡片动作回执(服务端的 ok / err 原话)、删除消息等。最多同时留 4 条,颜色代表口气:普通 / 成功 / 提醒 / 失败。</p>
+<h4>4.4 设置页各部分</h4>
+<table><thead><tr><th>分区</th><th>内容</th></tr></thead><tbody>
+<tr><td>个性化</td><td>壁纸、毛玻璃 / 半透明两档、透明度、头像</td></tr>
+<tr><td>模式与数据源</td><td>连接方式(OS/OOS/SAOS)、数据源地址、客户端消息保留天数</td></tr>
+<tr><td>账户与安全</td><td>改密码、删除本地头像缓存、登录记录(免登录)</td></tr>
+<tr><td>下载 / 高级 / 管理 / 小功能组</td><td>各功能入口(随版本补全)</td></tr>
+<tr><td>QQ / ZXM 绑定、连接服务器配置</td><td>绑定与连接相关设置</td></tr>
+</tbody></table>
+<hr>
+<h3>五、连接设置(重点)</h3>
+<h4>5.1 连官方服务端(默认)</h4>
+<p>不用填:客户端默认就是 <code>zxm.zincms.top:25000</code>。设置 → 模式与数据源 里能看到「官方服务端(默认)」被选中,后面括号里是「(官方默认)」。</p>
+<h4>5.2 连自己开的子服务端</h4>
+<ol>
+<li>设置 → 模式与数据源 → 连接方式选 <strong>SAOS</strong>(或 OS);</li>
+<li>「数据源IP/域名」填你的子服地址:<code>&lt;域名或IP&gt;:&lt;czport&gt;</code>,例如 <code>mc.example.com:21000</code> 或 <code>192.168.1.10:21000</code>;</li>
+<li>回主界面重新连接;登录后玩家就会登记在你的子服下。</li>
+</ol>
+<blockquote>地址填<strong>域名</strong>也可以(客户端连的时候自己做 DNS 解析)。</blockquote>
+<h4>5.3 自定义官方服务端地址(有风险,会拦你一下)</h4>
+<p>勾「自定义 IP/域名:端口」并读完风险说明(主按钮<strong>读满 5 秒</strong>才可点)后才能改。说明里写的就是实情:</p>
+<ul>
+<li>第三方官方服务端可能<strong>窃取你的个人信息</strong>(如密码);</li>
+<li>第三方服务端<strong>可能被修改</strong>,无法保证隐私安全;</li>
+<li>可能<strong>无法正常使用</strong> ZXM 专有的跨子服务端功能和其他社区功能;</li>
+<li><strong>官方服务端和子服务端不是一个东西</strong>,别弄混。</li>
+</ul>
+<p>点「算了,保持官方」会自动回到官方默认地址。</p>
+<hr>
+<h3>七、客户端常见问题(FAQ)</h3>
+<p><strong>连不上/一直转圈?</strong></p>
+<ol>
+<li>地址端口对不对(官方端默认 <code>zxm.zincms.top:25000</code>,自建子服填 <code>你的地址:czport</code>);2. 服务端在不在线;3. 服务器防火墙/安全组有没有放行端口;4. 换网络试试(有些网络屏蔽非标准端口)。</li>
+</ol>
+<p><strong>提示「对方不是官方服务端」?</strong></p>
+<p>说明你连的这台不是官方端(自建服务端就会这样),客户端不会主动断开,但功能可能受限。确实要连自建端,在客户端 <code>config.ini</code> 写 <code>allowunverified=1</code>。</p>
+<p><strong>消息过一阵不见了?</strong></p>
+<p>过期自动清理,规则见 4.2。重要消息请自行留存。</p>
+<p><strong>提示"未知发布者"/杀毒软件报毒?</strong></p>
+<p>用的是开发签名证书,点「仍要运行」即可;文件都是从官网下载页拿的就不会有问题。</p>
+<p><strong>毛玻璃不生效?</strong></p>
+<p>需要 Windows 10/11 且系统设置里开启了"透明效果";也可以切成"半透明"档。</p>
+<p><strong>忘记密码?</strong></p>
+<p>子服:请管理员用 <code>user rep &lt;名称&gt; &lt;新密码&gt;</code> 重置。官方账号:在客户端登录页重新注册或联系官方。</p>
+<p><strong>数据存在哪?</strong></p>
+<p>都在客户端 exe 同目录:<code>config.ini</code>(配置)、<code>messages.json</code>(消息存档)、<code>logs\</code>(日志)。换机器把整个目录拷走即可。</p>
+<hr>
+<h3>八、反馈与更新</h3>
+<ul>
+<li>官网:<a href="http://zxm.zincms.top/" target="_blank" rel="noopener">http://zxm.zincms.top/</a></li>
+<li>更新日志:<a href="http://zxm.zincms.top/changelog.html" target="_blank" rel="noopener">http://zxm.zincms.top/changelog.html</a></li>
+<li>子服务端部署教程(网页版):<a href="http://zxm.zincms.top/zxms.html" target="_blank" rel="noopener">http://zxm.zincms.top/zxms.html</a></li>
+<li>交流群:QQ <code>835964502</code></li>
+</ul>
+<blockquote>开发状态:<strong>极早期(alpha)</strong>。核心链路已经能跑通,但界面与数据格式仍会变动,不建议用在正式生产服务器上;遇到问题欢迎进群反馈。</blockquote>
+      </article>
+      <p class="muted" style="margin-top:26px">文档源文件在仓库 <code>docs/</code>;在线版(分页,持续更新):
+        <a href="https://docs.qq.com/aio/DZXRUa1phVnZoa25o" target="_blank" rel="noopener">腾讯文档</a> ·
+        反馈:QQ <code>835964502</code></p>
+    </div>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap footer-inner">
+    <div class="footer-brand">
+      <span class="brand-text">ZincXManager<em>ZXM</em></span>
+      <p class="muted">极早期开发阶段 · 文档随版本更新</p>
+    </div>
+    <nav class="footer-nav">
+      <a href="../index.html">首页</a>
+      <a href="../download.html">下载</a>
+      <a href="../zxms.html">子服教程</a>
+      <a href="index.html">文档</a>
+      <a href="../help.html">帮助文档</a>
+      <a href="../changelog.html">更新日志</a>
+      <a href="https://github.com/weiqi114514/ZincXManager" target="_blank" rel="noopener">GitHub</a>
+    </nav>
+    <p class="copyright">© <span id="year">2026</span> ZincXManager · zxm.zincms.top</p>
+  </div>
+</footer>
+
+<script src="../assets/js/main.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>① 认识与安装 · ZincXManager 文档</title>
+<meta name="description" content="这是什么、三端关系、装客户端、首次向导、连接方式与权限等级">
+<link rel="icon" href="../assets/img/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="../assets/css/style.css">
+<style>
+.doc-body h1 { font-size: 28px; margin: 6px 0 14px; }
+.doc-body h2 { font-size: 22px; margin: 26px 0 10px; border-left: 4px solid var(--accent); padding-left: 10px; }
+.doc-body h3 { font-size: 18px; margin: 20px 0 8px; }
+.doc-body h4 { font-size: 16px; margin: 16px 0 6px; }
+.doc-body p, .doc-body li { line-height: 1.85; }
+.doc-body code { background: rgba(22,163,74,.10); padding: 1px 5px; border-radius: 5px; font-size: 13.5px; }
+.doc-body pre { background: #0f1b16; color: #d7f5e3; padding: 14px 16px; border-radius: 10px; overflow: auto; }
+.doc-body pre code { background: none; color: inherit; padding: 0; }
+.doc-body table { border-collapse: collapse; width: 100%; margin: 12px 0; font-size: 14px; }
+.doc-body th, .doc-body td { border: 1px solid rgba(127,127,127,.32); padding: 7px 10px; text-align: left; vertical-align: top; }
+.doc-body th { background: rgba(22,163,74,.10); }
+.doc-body blockquote { margin: 12px 0; padding: 10px 14px; border-left: 4px solid rgba(127,127,127,.4); background: rgba(127,127,127,.07); border-radius: 0 8px 8px 0; }
+.doc-body hr { border: none; border-top: 1px solid rgba(127,127,127,.25); margin: 22px 0; }
+.doc-nav { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 18px; }
+.doc-nav a { font-size: 13.5px; padding: 5px 10px; border-radius: 999px; background: rgba(22,163,74,.12); }
+.doc-nav a.cur { background: var(--accent); color: #04220f; font-weight: 600; }
+</style>
+</head>
+<body>
+
+<header class="site-header" id="header">
+  <div class="wrap header-inner">
+    <a class="brand" href="../index.html" aria-label="ZincXManager 首页">
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 48 48" width="30" height="30" role="img">
+          <rect x="2" y="2" width="44" height="44" rx="12" fill="#16a34a"/>
+          <path d="M12 16h24L16 32h20" fill="none" stroke="#eafff2" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </span>
+      <span class="brand-text">ZincXManager<em>ZXM</em></span>
+    </a>
+    <button class="nav-toggle" id="navToggle" aria-expanded="false" aria-controls="siteNav" aria-label="打开导航">
+      <span></span><span></span><span></span>
+    </button>
+    <nav class="site-nav" id="siteNav">
+      <a href="../index.html#features">功能</a>
+      <a href="../index.html#arch">架构</a>
+      <a href="../index.html#modes">模式</a>
+      <a href="../download.html">下载</a>
+      <a href="../zxms.html">子服教程</a>
+      <a href="index.html">文档</a>
+      <a href="../help.html">帮助文档</a>
+      <a href="../changelog.html">更新日志</a>
+      <a class="btn btn-ghost" href="https://github.com/weiqi114514/ZincXManager" target="_blank" rel="noopener">GitHub</a>
+    </nav>
+  </div>
+</header>
+
+<main id="top">
+  <section class="section">
+    <div class="wrap">
+      <nav class="doc-nav">
+        <a href="01-getting-started.html" class="cur">① 认识与安装</a>
+        <a href="02-client-manual.html">② 客户端使用手册</a>
+        <a href="03-zxms-deploy.html">③ 子服务端部署手册</a>
+        <a href="04-tech-architecture.html">④ 技术文档 · 架构与协议</a>
+        <a href="05-tech-build-test-ops.html">⑤ 技术文档 · 构建测试运维</a>
+        <a href="index.html">目录</a>
+      </nav>
+      <article class="doc-body">
+<h2>ZXM ① 认识与安装</h2>
+<blockquote>分类导航:① 认识与安装 · ② 客户端使用手册 · ③ 子服务端部署手册 · ④ 技术文档 · 架构与协议 · ⑤ 技术文档 · 构建测试运维</blockquote>
+<blockquote>官网 <a href="http://zxm.zincms.top/" target="_blank" rel="noopener">http://zxm.zincms.top/</a> · 帮助页 <a href="http://zxm.zincms.top/help.html" target="_blank" rel="noopener">http://zxm.zincms.top/help.html</a> · 交流群 QQ <code>835964502</code></blockquote>
+<hr>
+<h3>一、这套东西是什么</h3>
+<p>ZincXManager(锌X管理面板,简称 ZXM)是给 Minecraft 服主、社区管理员和玩家用的一体化管理面板:既能管 MC 服务端,也能做社区运营(账号与权限、白名单、经济与商店、蓝图、公告与消息推送)。</p>
+<p><strong>你只需要装两个东西里的一个或两个:</strong></p>
+<table><thead><tr><th>端</th><th>谁装</th><th>干什么</th></tr></thead><tbody>
+<tr><td>客户端 ZXMC</td><td>每个玩家 / 管理员</td><td>你操作的面板(桌面程序,Windows)</td></tr>
+<tr><td>子服务端 ZXMS</td><td>想自己开一台子服的服主</td><td>替你的玩家做中转,管本服账号、封禁、消息</td></tr>
+</tbody></table>
+<p><strong>官方服务端</strong>由官方运行,提供官方社区与官方蓝图库,并负责给子服和客户端登记身份 —— 它是"官方提供的一项服务",<strong>不用你搭建</strong>。</p>
+<blockquote>⚠️ 最容易搞混的一点:<strong>官方服务端 ≠ 子服务端</strong>。<br>官方服务端是官方那一台(所有人共用,默认地址 <code>zxm.zincms.top:25000</code>);子服务端是<strong>你自己那台</strong>(你自己部署,玩家连你的地址)。</blockquote>
+<hr>
+<h3>二、安装客户端(ZXMC)</h3>
+<ol>
+<li>打开官网<strong>下载页</strong> <a href="http://zxm.zincms.top/download.html" target="_blank" rel="noopener">http://zxm.zincms.top/download.html</a>,取其中一个:</li>
+</ol>
+<ul>
+<li><strong>安装包(推荐)</strong>:<code>ZincXManagerClient-0.1.0-x64.msi</code>,双击安装,自动建开始菜单与桌面快捷方式;卸载在「应用和功能」里;</li>
+<li><strong>免安装压缩包</strong>:解压到任意文件夹,双击 <code>ZincXManagerClient.exe</code> 即可。</li>
+</ul>
+<ol>
+<li>系统要求:64 位 Windows 10 / 11。单文件程序,<strong>不需要装 .NET 运行时</strong>;首次运行可能提示"未知发布者"(用的是开发签名证书),点「仍要运行」即可。</li>
+<li>首次启动会走一遍<strong>使用向导</strong>:</li>
+</ol>
+<ul>
+<li>选连接方式(见下一节,新手用默认即可)</li>
+<li>官方服务端地址<strong>已经默认填好</strong> <code>zxm.zincms.top:25000</code>,不用改</li>
+<li>注册或登录账号(等级默认 Player)</li>
+</ul>
+<ol>
+<li>登录成功后进入主界面。</li>
+</ol>
+<hr>
+<h3>三、连接方式与权限等级</h3>
+<h4>3.1 三种连接方式(设置 → 模式与数据源)</h4>
+<table><thead><tr><th>方式</th><th>含义</th><th>什么时候用</th></tr></thead><tbody>
+<tr><td><strong>OOS</strong></td><td>只连官方服务端</td><td>普通玩家:只上官方社区</td></tr>
+<tr><td><strong>OS</strong></td><td>只连子服务端</td><td>你有自己的子服,只用子服的功能</td></tr>
+<tr><td><strong>SAOS</strong></td><td>同时连子服务端与官方服务端</td><td>最常见的玩法:连自己子服,同时享受官方社区;此时客户端<strong>经由子服中转</strong>与官方端通信</td></tr>
+</tbody></table>
+<blockquote>只有在 SAOS 且已连上子服时,客户端才走中转;否则直连官方端。</blockquote>
+<h4>3.2 四种权限等级</h4>
+<table><thead><tr><th>等级</th><th>说明</th></tr></thead><tbody>
+<tr><td><strong>Player</strong></td><td>玩家:社区、经济、商店等玩家功能</td></tr>
+<tr><td><strong>LAdmin</strong></td><td>低管:发公告、处理玩家申请等低权限管理</td></tr>
+<tr><td><strong>HAdmin</strong></td><td>高管:可管 MC 服务端等高权限操作</td></tr>
+<tr><td><strong>System</strong></td><td>系统:最高权限(文件操作、重启软件等),不兼容低/高管功能</td></tr>
+</tbody></table>
+<hr>
+      </article>
+      <p class="muted" style="margin-top:26px">文档源文件在仓库 <code>docs/</code>;在线版(分页,持续更新):
+        <a href="https://docs.qq.com/aio/DZXRUa1phVnZoa25o" target="_blank" rel="noopener">腾讯文档</a> ·
+        反馈:QQ <code>835964502</code></p>
+    </div>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap footer-inner">
+    <div class="footer-brand">
+      <span class="brand-text">ZincXManager<em>ZXM</em></span>
+      <p class="muted">极早期开发阶段 · 文档随版本更新</p>
+    </div>
+    <nav class="footer-nav">
+      <a href="../index.html">首页</a>
+      <a href="../download.html">下载</a>
+      <a href="../zxms.html">子服教程</a>
+      <a href="index.html">文档</a>
+      <a href="../help.html">帮助文档</a>
+      <a href="../changelog.html">更新日志</a>
+      <a href="https://github.com/weiqi114514/ZincXManager" target="_blank" rel="noopener">GitHub</a>
+    </nav>
+    <p class="copyright">© <span id="year">2026</span> ZincXManager · zxm.zincms.top</p>
+  </div>
+</footer>
+
+<script src="../assets/js/main.js" defer></script>
+</body>
+</html>

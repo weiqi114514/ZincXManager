@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>③ 子服务端部署手册 · ZincXManager 文档</title>
+<meta name="description" content="拿包、config.ini、首次启动自动注册、让玩家连上、控制台命令(逐条带示例)、常见问题">
+<link rel="icon" href="../assets/img/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="../assets/css/style.css">
+<style>
+.doc-body h1 { font-size: 28px; margin: 6px 0 14px; }
+.doc-body h2 { font-size: 22px; margin: 26px 0 10px; border-left: 4px solid var(--accent); padding-left: 10px; }
+.doc-body h3 { font-size: 18px; margin: 20px 0 8px; }
+.doc-body h4 { font-size: 16px; margin: 16px 0 6px; }
+.doc-body p, .doc-body li { line-height: 1.85; }
+.doc-body code { background: rgba(22,163,74,.10); padding: 1px 5px; border-radius: 5px; font-size: 13.5px; }
+.doc-body pre { background: #0f1b16; color: #d7f5e3; padding: 14px 16px; border-radius: 10px; overflow: auto; }
+.doc-body pre code { background: none; color: inherit; padding: 0; }
+.doc-body table { border-collapse: collapse; width: 100%; margin: 12px 0; font-size: 14px; }
+.doc-body th, .doc-body td { border: 1px solid rgba(127,127,127,.32); padding: 7px 10px; text-align: left; vertical-align: top; }
+.doc-body th { background: rgba(22,163,74,.10); }
+.doc-body blockquote { margin: 12px 0; padding: 10px 14px; border-left: 4px solid rgba(127,127,127,.4); background: rgba(127,127,127,.07); border-radius: 0 8px 8px 0; }
+.doc-body hr { border: none; border-top: 1px solid rgba(127,127,127,.25); margin: 22px 0; }
+.doc-nav { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 18px; }
+.doc-nav a { font-size: 13.5px; padding: 5px 10px; border-radius: 999px; background: rgba(22,163,74,.12); }
+.doc-nav a.cur { background: var(--accent); color: #04220f; font-weight: 600; }
+</style>
+</head>
+<body>
+
+<header class="site-header" id="header">
+  <div class="wrap header-inner">
+    <a class="brand" href="../index.html" aria-label="ZincXManager 首页">
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 48 48" width="30" height="30" role="img">
+          <rect x="2" y="2" width="44" height="44" rx="12" fill="#16a34a"/>
+          <path d="M12 16h24L16 32h20" fill="none" stroke="#eafff2" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </span>
+      <span class="brand-text">ZincXManager<em>ZXM</em></span>
+    </a>
+    <button class="nav-toggle" id="navToggle" aria-expanded="false" aria-controls="siteNav" aria-label="打开导航">
+      <span></span><span></span><span></span>
+    </button>
+    <nav class="site-nav" id="siteNav">
+      <a href="../index.html#features">功能</a>
+      <a href="../index.html#arch">架构</a>
+      <a href="../index.html#modes">模式</a>
+      <a href="../download.html">下载</a>
+      <a href="../zxms.html">子服教程</a>
+      <a href="index.html">文档</a>
+      <a href="../help.html">帮助文档</a>
+      <a href="../changelog.html">更新日志</a>
+      <a class="btn btn-ghost" href="https://github.com/weiqi114514/ZincXManager" target="_blank" rel="noopener">GitHub</a>
+    </nav>
+  </div>
+</header>
+
+<main id="top">
+  <section class="section">
+    <div class="wrap">
+      <nav class="doc-nav">
+        <a href="01-getting-started.html">① 认识与安装</a>
+        <a href="02-client-manual.html">② 客户端使用手册</a>
+        <a href="03-zxms-deploy.html" class="cur">③ 子服务端部署手册</a>
+        <a href="04-tech-architecture.html">④ 技术文档 · 架构与协议</a>
+        <a href="05-tech-build-test-ops.html">⑤ 技术文档 · 构建测试运维</a>
+        <a href="index.html">目录</a>
+      </nav>
+      <article class="doc-body">
+<h2>ZXM ③ 子服务端部署手册</h2>
+<blockquote>分类导航:① 认识与安装 · ② 客户端使用手册 · ③ 子服务端部署手册 · ④ 技术文档 · 架构与协议 · ⑤ 技术文档 · 构建测试运维</blockquote>
+<blockquote>官网 <a href="http://zxm.zincms.top/" target="_blank" rel="noopener">http://zxm.zincms.top/</a> · 帮助页 <a href="http://zxm.zincms.top/help.html" target="_blank" rel="noopener">http://zxm.zincms.top/help.html</a> · 交流群 QQ <code>835964502</code></blockquote>
+<hr>
+<h3>六、子服务端 ZXMS:部署与使用</h3>
+<h4>6.1 拿到程序</h4>
+<p>官网下载页 → 「子服务端 ZXMS」压缩包,解压到任意目录(别放需要管理员权限的目录,免得日志写不进去)。里面有:</p>
+<pre><code>ZincXManagerServer.exe     主程序(双击运行,带控制台)
+config.ini                 配置(第一次运行会自动补全缺失项)
+说明.txt                   同内容速查</code></pre>
+<p>运行后会生成:<code>users.json</code>(本服玩家账号)、<code>bans.json</code>(封禁)、<code>messages.json</code>(消息存档)、<code>logs\</code>(日志)。</p>
+<h4>6.2 配置 config.ini</h4>
+<table><thead><tr><th>键</th><th>含义</th><th>默认</th></tr></thead><tbody>
+<tr><td><code>name</code></td><td>本服显示名(会下发给客户端,玩家看到的就是它)</td><td>我的子服</td></tr>
+<tr><td><code>czport</code></td><td><strong>玩家接入端口</strong>(防火墙要放行)</td><td>21000</td></tr>
+<tr><td><code>connectOS</code></td><td>0 = 启动就连官方服务端;1 = 不连</td><td>0</td></tr>
+<tr><td><code>ozip</code></td><td>官方服务端地址(<strong>可以写域名</strong>)</td><td>127.0.0.1</td></tr>
+<tr><td><code>ozport</code></td><td>官方服务端端口</td><td>25000</td></tr>
+<tr><td><code>osuser</code></td><td>你在官方端的账号名(第一次连上会<strong>自动注册</strong>)</td><td>空</td></tr>
+<tr><td><code>oshash</code></td><td>密码密文(启动时问一次明文,只存密文)</td><td>空</td></tr>
+<tr><td><code>msgdays</code></td><td>本服消息保留天数(下发给客户端)</td><td>7</td></tr>
+<tr><td><code>servercode</code></td><td>本实例身份证(32 位十六进制,<strong>首次自动生成</strong>)</td><td>自动</td></tr>
+</tbody></table>
+<blockquote>⚠️ <strong><code>servercode</code> 和 <code>oshash</code> 千万别手改</strong>:<br>改显示名用控制台 <code>name 新名字</code>;改官方端账号/密码用 <code>osuser 新账号 新密码</code>(写成同名就只改密码)。<br>直接改 config 会被官方端判成"换了台实例",接入时报「身份不一致」。</blockquote>
+<h4>6.3 第一次启动</h4>
+<ol>
+<li>双击 <code>ZincXManagerServer.exe</code> → 黑底控制台(管理入口就是这个控制台);</li>
+<li>缺 <code>osuser</code> / <code>oshash</code> 时会<strong>问一次账号名与密码</strong>,问完写回 config(只存密文);</li>
+<li>它会自动连官方服务端:<strong>账号不存在就自动注册</strong>;</li>
+<li>看到这一行就成功了:</li>
+</ol>
+<pre><code>[ZXMOS] 账号认证通过:你的账号名|1|-</code></pre>
+<h4>6.4 让玩家连上你的子服</h4>
+<p>玩家客户端:设置 → 模式与数据源 → 连接方式 <strong>SAOS</strong> → 数据源地址填 <code>&lt;你的域名或IP&gt;:&lt;czport&gt;</code> → 重连即可。</p>
+<h4>6.5 控制台命令(每条都有示例)</h4>
+<blockquote>在子服那个黑窗口里直接敲、回车执行。示例里 <code>&gt;</code> 后面是你要敲的,<strong>它下面的 <code>输出:</code> 是正常会看到的东西</strong>;<br><code>&lt; &gt;</code> 是占位符,不要照抄尖括号。想先看全部命令:敲 <code>help</code>。</blockquote>
+<h4>① 看状态</h4>
+<p><strong><code>help</code></strong> —— 列出所有命令与用法</p>
+<pre><code>&gt; help
+输出:
+  net  &lt;子命令&gt;:网络相关
+    status        查看 ZXMOS 连接与客户端接入情况
+    clients       查看连接登记表(身份 / 账号 / 等级 / 地址 / 在线 / 收包)
+    reconnect     断开并重新连接官方服务端
+  info            查看本端身份:名称 / 账号 / 服务端码 / 机器码 / 连接状态
+  name &lt;新名称&gt;    改本端显示名(会下发给客户端)
+  ...</code></pre>
+<p><strong><code>net status</code></strong> —— 官方端连接 + 客户端接入情况</p>
+<pre><code>&gt; net status
+输出:
+[消息] 官方服务端:zxm.zincms.top:25000(已认证)
+[消息] 客户端接入:0.0.0.0:21000 · 当前在线 3</code></pre>
+<p><strong><code>net clients</code></strong> —— 在线登记表(身份 / 账号 / 等级 / 地址 / 在线 / 收包)</p>
+<pre><code>&gt; net clients
+输出:
+身份        账号        等级     地址                在线      收包
+ZXMC        xiaoming    Player   192.168.1.30:51234  00:12:31  48
+ZXMC        admin       HAdmin   192.168.1.31:51240  00:03:02  12</code></pre>
+<p><strong><code>info</code></strong> —— 本端身份一览(排错第一步)</p>
+<pre><code>&gt; info
+输出:
+名称        锌能源子服
+账号        ZXMS-Test
+服务端码     ba97eb4c40f6c868c8698cfbf91aa3aa
+机器码       9b2b9f53c975b7e78d2a6ac22bd9f865cd4924b774778ffe329eaedcf1abc2f5
+连接状态     已连接 zxm.zincms.top:25000(已认证)</code></pre>
+<p><strong><code>net reconnect</code></strong> —— 断开并重连官方端(改完网络/配置后用)</p>
+<pre><code>&gt; net reconnect
+输出:
+[ZXMOS] 连接失败: ...(若真的连不上)
+[ZXMOS] 握手成功: ZXMOS ok
+[ZXMOS] 账号认证通过:ZXMS-Test|1|-</code></pre>
+<p><strong><code>srv show</code></strong> —— 看本端接入官方端用的账号名</p>
+<pre><code>&gt; srv show
+输出:
+接入官方服务端的账号:ZXMS-Test</code></pre>
+<h4>② 改配置(别手改 config.ini)</h4>
+<p><strong><code>name &lt;新名称&gt;</code></strong> —— 改显示名(对新接入的客户端立刻生效)</p>
+<pre><code>&gt; name 锌能源二服
+输出:
+[配置] 名称已改为 锌能源二服(新接入的客户端会看到新名字)</code></pre>
+<p><strong><code>osuser &lt;新账号&gt; &lt;新密码&gt;</code></strong> —— 改本端在官方端的账号/密码(需已连上官方端)</p>
+<pre><code>&gt; osuser ZXMS-Test 新密码123
+输出:
+[ZXMOS] 改名成功:ZXMS-Test → ZXMS-Test
+
+# 只想改密码:名字写成一样的即可
+&gt; osuser ZXMS-Test 另一个新密码
+输出:
+[ZXMOS] 改名成功:ZXMS-Test → ZXMS-Test</code></pre>
+<p><strong><code>msgdays &lt;1-365&gt;</code></strong> —— 本服消息保留天数(下发给客户端)</p>
+<pre><code>&gt; msgdays 14
+输出:
+[消息] 本服消息保留天数已设为 14 天,已通知 3 个在线客户端</code></pre>
+<h4>③ 发消息(公告 / 定向推送)</h4>
+<p>卡片种类:不写就是 <code>text</code>;<code>update</code>(一个链接按钮)、<code>choice</code>(两个按钮)、<code>input</code>(输入框+确认)、<code>select</code>(下拉框+确认)。</p>
+<p><strong><code>notice &lt;标题&gt;|&lt;正文&gt;[|种类|主动作|次动作|选项]</code></strong> —— 给本服所有客户端发公告</p>
+<pre><code># 纯文本公告
+&gt; notice 维护公告|今晚 23:00 停机维护,预计 30 分钟
+输出:
+[消息] 公告已下发(1 张卡片,覆盖 3 个在线客户端)
+
+# 是否同意(两个按钮)
+&gt; notice 是否同意|新协议要点见附件|choice|是|否
+输出:
+[消息] 公告已下发(1 张卡片,覆盖 3 个在线客户端)
+
+# 带链接按钮的更新提示
+&gt; notice 更新提示|加入 XXX 功能,修复已知 BUG|update|立刻下载并更新
+输出:
+[消息] 公告已下发(1 张卡片,覆盖 3 个在线客户端)
+
+# 填空(玩家填完点确认,内容会回报给你)
+&gt; notice 你的省份|请填写你所在的省份|input|确认
+输出:
+[消息] 公告已下发(1 张卡片,覆盖 3 个在线客户端)
+
+# 下拉选择(选项用逗号分隔)
+&gt; notice 版本选择|请选择你游玩的版本|select|||1.21.1,1.21,1.20.6
+输出:
+[消息] 公告已下发(1 张卡片,覆盖 3 个在线客户端)</code></pre>
+<p>玩家点了按钮之后,你这边会看到<strong>动作回执</strong>:</p>
+<pre><code>输出:
+[消息] xiaoming 在卡片「是否同意」上点了「否」(本服卡片)</code></pre>
+<p><strong><code>push &lt;账号&gt; &lt;标题&gt;|&lt;正文&gt;[...]</code></strong> —— 只发给某个玩家</p>
+<pre><code>&gt; push xiaoming 版本选择|请选一个版本|select|||1.21.1,1.21
+输出:
+[消息] 定向推送已发给 xiaoming(1 张卡片)
+
+&gt; push xiaoming 私信|你申请的补偿已到账
+输出:
+[消息] 定向推送已发给 xiaoming(1 张卡片)</code></pre>
+<h4>④ 账号管理</h4>
+<p><strong><code>user list</code></strong> —— 列出本服账号</p>
+<pre><code>&gt; user list
+输出:
+ID   名称        等级
+1    xiaoming    Player
+2    admin       HAdmin</code></pre>
+<p><strong><code>user reg &lt;名称&gt; &lt;密码&gt; &lt;等级&gt;</code></strong> —— 新建账号(等级 = Player / LAdmin / HAdmin / System)</p>
+<pre><code>&gt; user reg xiaoming 密码123 Player
+输出:
+[账号] 已创建 xiaoming(ID 1,等级 Player)
+
+&gt; user reg admin 管理员密码 LAdmin
+输出:
+[账号] 已创建 admin(ID 2,等级 LAdmin)</code></pre>
+<p><strong><code>user rep &lt;名称或ID&gt; &lt;新密码&gt;</code></strong> —— 改密码(玩家忘记密码就用它)</p>
+<pre><code>&gt; user rep xiaoming 新密码456
+输出:
+[账号] 已修改 xiaoming 的密码</code></pre>
+<p><strong><code>user rel &lt;名称或ID&gt; &lt;新等级&gt;</code></strong> —— 改等级</p>
+<pre><code>&gt; user rel xiaoming HAdmin
+输出:
+[账号] xiaoming 的等级已改为 HAdmin</code></pre>
+<p><strong><code>user del &lt;名称或ID&gt;</code></strong> —— 删账号</p>
+<pre><code>&gt; user del xiaoming
+输出:
+[账号] 已删除 xiaoming</code></pre>
+<h4>⑤ 封禁</h4>
+<p><strong><code>ban user &lt;名称或ID&gt; [时长] [原因] [--ip] [--machine]</code></strong> —— 封号(可连坐 IP / 机器码)</p>
+<pre><code># 只封账号
+&gt; ban user xiaoming
+输出:
+[封禁] 已封禁账号 xiaoming(永久)
+
+# 封 3 天,带原因
+&gt; ban user xiaoming 3d 刷物品
+输出:
+[封禁] 已封禁账号 xiaoming(3 天),原因:刷物品
+
+# 连坐:账号 + IP + 机器码一起封
+&gt; ban user xiaoming 7d 小号刷屏 --ip --machine
+输出:
+[封禁] 已封禁账号 xiaoming(7 天),并连坐 IP 与机器码</code></pre>
+<p><strong><code>ban add</code></strong> —— 手动加一条封禁(按 IP / 机器码 / 账号)</p>
+<pre><code>&gt; ban add ip 192.168.1.30 3d 攻击服务器
+输出:
+[封禁] 已加入:IP 192.168.1.30(3 天)</code></pre>
+<p><strong><code>ban list</code></strong> —— 查封禁表</p>
+<pre><code>&gt; ban list
+输出:
+编号  类型    目标                到期        原因
+1     账号    xiaoming            永久        刷物品
+2     IP      192.168.1.30        2026-10-14  攻击服务器</code></pre>
+<p><strong><code>ban del &lt;编号&gt;</code></strong> —— 解封</p>
+<pre><code>&gt; ban del 1
+输出:
+[封禁] 已解封第 1 条(账号 xiaoming)</code></pre>
+<p><strong><code>exit</code></strong> —— 退出程序(会断开与官方端的连接)</p>
+<pre><code>&gt; exit
+输出:
+[命令] 收到退出命令,正在退出...</code></pre>
+<h4>⑥ 示例:一条完整的运营流程</h4>
+<pre><code>&gt; name 锌能源二服                        # 先改个名字
+&gt; msgdays 14                            # 本服消息留 14 天
+&gt; user reg admin 管理员密码 LAdmin        # 建个低管
+&gt; notice 开服公告|今晚 20:00 正式开服|choice|收到|没空
+&gt; push admin 值班安排|今天你值班        # 单独通知
+&gt; ban user 破坏者 7d 恶意破坏 --ip --machine
+&gt; net clients                          # 看看谁在线
+&gt; info                                 # 核对本端身份</code></pre>
+<h4>6.6 子服常见问题</h4>
+<table><thead><tr><th>现象</th><th>原因与处理</th></tr></thead><tbody>
+<tr><td>接入报「身份不一致」</td><td>官方端登记的 <code>servercode</code> 和你现在的不一样(通常是 <code>config.ini</code> 被整体覆盖、码丢了)。① 把 <code>servercode</code> 改回原来那个;② 让官方端清掉这个服务端账号,你重连时会自动重新注册</td></tr>
+<tr><td>接入报「密码错误」</td><td>控制台敲 <code>osuser 同一个账号名 新密码</code>(这是改子服账号密码的唯一正确方式)</td></tr>
+<tr><td>玩家连不上你的子服</td><td>检查 <code>czport</code> 有没有被占用、防火墙有没有放行、玩家填的是不是你的公网地址</td></tr>
+<tr><td>提示「对端不是官方服务端」</td><td>官方发行的 ZXMS 只连官方服务端;确实要连自建端,在 <code>config.ini</code> 写 <code>officialcheck=0</code>(会记警告)</td></tr>
+<tr><td>想换显示名但不想被当成"新实例"</td><td>别改 config,用 <code>name</code> 命令</td></tr>
+</tbody></table>
+<h4>6.7 数据与备份</h4>
+<ul>
+<li>要备份的:<code>config.ini</code>(含 <code>servercode</code> / <code>oshash</code>)、<code>users.json</code>、<code>bans.json</code>、<code>messages.json</code>;</li>
+<li>日志在 <code>logs\</code>,排错时按时间找最新的那份;</li>
+<li>换机器时把整个目录拷走即可(注意 <code>servercode</code> 必须一起带走,否则要重新登记)。</li>
+</ul>
+<hr>
+      </article>
+      <p class="muted" style="margin-top:26px">文档源文件在仓库 <code>docs/</code>;在线版(分页,持续更新):
+        <a href="https://docs.qq.com/aio/DZXRUa1phVnZoa25o" target="_blank" rel="noopener">腾讯文档</a> ·
+        反馈:QQ <code>835964502</code></p>
+    </div>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap footer-inner">
+    <div class="footer-brand">
+      <span class="brand-text">ZincXManager<em>ZXM</em></span>
+      <p class="muted">极早期开发阶段 · 文档随版本更新</p>
+    </div>
+    <nav class="footer-nav">
+      <a href="../index.html">首页</a>
+      <a href="../download.html">下载</a>
+      <a href="../zxms.html">子服教程</a>
+      <a href="index.html">文档</a>
+      <a href="../help.html">帮助文档</a>
+      <a href="../changelog.html">更新日志</a>
+      <a href="https://github.com/weiqi114514/ZincXManager" target="_blank" rel="noopener">GitHub</a>
+    </nav>
+    <p class="copyright">© <span id="year">2026</span> ZincXManager · zxm.zincms.top</p>
+  </div>
+</footer>
+
+<script src="../assets/js/main.js" defer></script>
+</body>
+</html>

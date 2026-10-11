@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>④ 技术文档 · 架构与协议 · ZincXManager 文档</title>
+<meta name="description" content="架构总览、通信协议与类型编号表、身份与账号、数据文件">
+<link rel="icon" href="../assets/img/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="../assets/css/style.css">
+<style>
+.doc-body h1 { font-size: 28px; margin: 6px 0 14px; }
+.doc-body h2 { font-size: 22px; margin: 26px 0 10px; border-left: 4px solid var(--accent); padding-left: 10px; }
+.doc-body h3 { font-size: 18px; margin: 20px 0 8px; }
+.doc-body h4 { font-size: 16px; margin: 16px 0 6px; }
+.doc-body p, .doc-body li { line-height: 1.85; }
+.doc-body code { background: rgba(22,163,74,.10); padding: 1px 5px; border-radius: 5px; font-size: 13.5px; }
+.doc-body pre { background: #0f1b16; color: #d7f5e3; padding: 14px 16px; border-radius: 10px; overflow: auto; }
+.doc-body pre code { background: none; color: inherit; padding: 0; }
+.doc-body table { border-collapse: collapse; width: 100%; margin: 12px 0; font-size: 14px; }
+.doc-body th, .doc-body td { border: 1px solid rgba(127,127,127,.32); padding: 7px 10px; text-align: left; vertical-align: top; }
+.doc-body th { background: rgba(22,163,74,.10); }
+.doc-body blockquote { margin: 12px 0; padding: 10px 14px; border-left: 4px solid rgba(127,127,127,.4); background: rgba(127,127,127,.07); border-radius: 0 8px 8px 0; }
+.doc-body hr { border: none; border-top: 1px solid rgba(127,127,127,.25); margin: 22px 0; }
+.doc-nav { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 18px; }
+.doc-nav a { font-size: 13.5px; padding: 5px 10px; border-radius: 999px; background: rgba(22,163,74,.12); }
+.doc-nav a.cur { background: var(--accent); color: #04220f; font-weight: 600; }
+</style>
+</head>
+<body>
+
+<header class="site-header" id="header">
+  <div class="wrap header-inner">
+    <a class="brand" href="../index.html" aria-label="ZincXManager 首页">
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 48 48" width="30" height="30" role="img">
+          <rect x="2" y="2" width="44" height="44" rx="12" fill="#16a34a"/>
+          <path d="M12 16h24L16 32h20" fill="none" stroke="#eafff2" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </span>
+      <span class="brand-text">ZincXManager<em>ZXM</em></span>
+    </a>
+    <button class="nav-toggle" id="navToggle" aria-expanded="false" aria-controls="siteNav" aria-label="打开导航">
+      <span></span><span></span><span></span>
+    </button>
+    <nav class="site-nav" id="siteNav">
+      <a href="../index.html#features">功能</a>
+      <a href="../index.html#arch">架构</a>
+      <a href="../index.html#modes">模式</a>
+      <a href="../download.html">下载</a>
+      <a href="../zxms.html">子服教程</a>
+      <a href="index.html">文档</a>
+      <a href="../help.html">帮助文档</a>
+      <a href="../changelog.html">更新日志</a>
+      <a class="btn btn-ghost" href="https://github.com/weiqi114514/ZincXManager" target="_blank" rel="noopener">GitHub</a>
+    </nav>
+  </div>
+</header>
+
+<main id="top">
+  <section class="section">
+    <div class="wrap">
+      <nav class="doc-nav">
+        <a href="01-getting-started.html">① 认识与安装</a>
+        <a href="02-client-manual.html">② 客户端使用手册</a>
+        <a href="03-zxms-deploy.html">③ 子服务端部署手册</a>
+        <a href="04-tech-architecture.html" class="cur">④ 技术文档 · 架构与协议</a>
+        <a href="05-tech-build-test-ops.html">⑤ 技术文档 · 构建测试运维</a>
+        <a href="index.html">目录</a>
+      </nav>
+      <article class="doc-body">
+<h2>ZXM ④ 技术文档 · 架构与协议</h2>
+<blockquote>分类导航:① 认识与安装 · ② 客户端使用手册 · ③ 子服务端部署手册 · ④ 技术文档 · 架构与协议 · ⑤ 技术文档 · 构建测试运维</blockquote>
+<blockquote>官网 <a href="http://zxm.zincms.top/" target="_blank" rel="noopener">http://zxm.zincms.top/</a> · 帮助页 <a href="http://zxm.zincms.top/help.html" target="_blank" rel="noopener">http://zxm.zincms.top/help.html</a> · 交流群 QQ <code>835964502</code></blockquote>
+<hr>
+<h3>1. 架构总览</h3>
+<pre><code>                 ┌──────────────┐
+   玩家/管理员 ──▶│ ZXMC 客户端  │ 桌面程序(Avalonia,Windows)
+                 └──────┬───────┘
+             SAOS/OS    │            OOS(直连)
+                 ┌──────▼───────┐    │
+                 │ ZXMS 子服务端 │    │
+                 └──────┬───────┘    │
+                        │ 100/101 握手 + 600~612 账号
+                 ┌──────▼────────────▼──────┐
+                 │ ZXMOS 官方服务端(官方运行)│
+                 └──────────────────────────┘</code></pre>
+<table><thead><tr><th>端</th><th>项目</th><th>职责</th></tr></thead><tbody>
+<tr><td><strong>ZXMC</strong></td><td><code>ZincXManagerClient</code></td><td>桌面界面;连子服或官方端;消息面板与卡片;本地消息存档</td></tr>
+<tr><td><strong>ZXMS</strong></td><td><code>ZincXManagerServer</code></td><td>本服账号/封禁/消息/蓝图;向官方端登记身份;替客户端中转</td></tr>
+<tr><td><strong>ZXMOS</strong></td><td><code>ZincXManagerOServer</code>(+<code>…NO</code> 为早期 C++ 原型)</td><td>官方社区、官方蓝图库、账号与子服登记;<strong>仅官方运行</strong></td></tr>
+<tr><td><strong>ZXMM</strong></td><td>规划中(协议预留)</td><td>模组端:在 MC 服务端里执行 ZXMS 传来的指令,<strong>未实现</strong></td></tr>
+</tbody></table>
+<ul>
+<li>三端共用 <code>ZincXManagerShared</code>:协议常量、账号与密码哈希、命令框架、日志、网络库、官方验证。</li>
+<li>客户端三种连接方式:<strong>OS</strong>(只连子服)/ <strong>OOS</strong>(只连官方端)/ <strong>SAOS</strong>(都连;连上子服时经子服中转)。</li>
+<li>权限等级:ZXMS 侧 <code>Player / LAdmin / HAdmin / System</code>;官方端侧 <code>Player / Admin / System</code>;子服接入账号等级为占位符 <code>-</code>。</li>
+</ul>
+<h3>2. 通信协议</h3>
+<h4>2.1 包结构</h4>
+<p>每包 = <code>长度(4 字节,含头)</code> + <code>序号(4 字节)</code> + <code>类型(2 字节)</code> + <code>负载(UTF-8 或字节)</code>。</p>
+<p>收包由 <code>Packet.ReadAsync</code> 解析完整包后交给 <code>PacketDispatcher</code> 的处理器按顺序执行(处理器慢不会卡住收包)。</p>
+<h4>2.2 类型编号(三端共用,<code>ZincXManagerShared/Network/Protocol.cs</code>)</h4>
+<table><thead><tr><th>段</th><th>编号</th><th>名称</th><th>方向 / 负载</th></tr></thead><tbody>
+<tr><td>1xx 子服↔官方</td><td>100</td><td><code>SOnline</code></td><td>ZXMS → ZXMOS 子服上线握手</td></tr>
+<tr><td></td><td>101</td><td><code>SBack</code></td><td>ZXMOS → ZXMS 收到</td></tr>
+<tr><td>2xx 服务端声明</td><td>200</td><td><code>ServerIdent</code></td><td>服务端 → 对方:<code>"ZXMS"</code> / <code>"ZXMOS"</code></td></tr>
+<tr><td></td><td>201</td><td><code>ServerName</code></td><td>服务端 → 对方:显示名(每次接入现读 config)</td></tr>
+<tr><td></td><td>202</td><td><code>ServerConfig</code></td><td>服务端 → 客户端:配置下发(如 <code>msgdays</code>)</td></tr>
+<tr><td>3xx 客户端上线</td><td>300</td><td><code>Conline</code></td><td>ZXMC → 服务端:<code>"ZXMC:&lt;模式&gt;"</code></td></tr>
+<tr><td></td><td>301</td><td><code>CBack</code></td><td>服务端 → ZXMC:收到</td></tr>
+<tr><td>4xx 业务</td><td>400/401</td><td><code>FriendMsg</code>/<code>Ack</code></td><td><strong>未实施</strong>(编号先占)</td></tr>
+<tr><td>5xx 消息</td><td>500</td><td><code>Notice</code></td><td>服务端 → 客户端:公告卡片,逐跳原样转发</td></tr>
+<tr><td></td><td>501</td><td><code>Push</code></td><td>服务端 → 客户端:定向推送,`目标账号</td><td>卡片`,每跳按账号过滤</td></tr>
+<tr><td></td><td>502</td><td><code>CardAction</code></td><td>客户端 → 服务端:点了卡片按钮,`动作</td><td>输入</td><td>原卡片`</td></tr>
+<tr><td></td><td>503</td><td><code>CardActionAck</code></td><td>服务端 → 客户端:`ok</td><td>提示<code> 或 </code>err</td><td>原因`</td></tr>
+<tr><td></td><td>504</td><td><code>MessageHistory</code></td><td>服务端 → 客户端:历史消息(补发)</td></tr>
+<tr><td></td><td>505</td><td><code>MessageHistoryReq</code></td><td>客户端/子服 → 服务端:请求补发(负载 <code>self</code> = 收"给本端"的)</td></tr>
+<tr><td></td><td>506</td><td><code>MessageHistoryDone</code></td><td>服务端 → 请求方:补发结束</td></tr>
+<tr><td>6xx 账号</td><td>600/601</td><td><code>AccountLogin</code>/<code>Ack</code></td><td>登录:`名称</td><td>密文</td><td>等级</td><td>端</td><td>机器码</td><td>服务端码`</td></tr>
+<tr><td></td><td>602/603</td><td><code>AccountRegister</code>/<code>Ack</code></td><td>注册:`名称</td><td>密文</td><td>机器码</td><td>服务端码`</td></tr>
+<tr><td></td><td>604/605</td><td><code>AccountAvatarReq</code>/<code>Ack</code></td><td>取头像(字节)/ 设置结果</td></tr>
+<tr><td></td><td>606</td><td><code>AccountAvatarSet</code></td><td>设置头像</td></tr>
+<tr><td></td><td>610</td><td><code>AccountMigrate</code></td><td>ZXMOS → ZXMS:拉黑前把用户账号移交给子服</td></tr>
+<tr><td></td><td>611/612</td><td><code>AccountRename</code>/<code>Ack</code></td><td>改子服账号名(顺带改密),控制台 <code>osuser</code> 发起</td></tr>
+<tr><td>官方验证</td><td>520</td><td><code>OfficialChallenge</code></td><td>客户端/子服 → 官方端:发 nonce 要证明</td></tr>
+<tr><td></td><td>521</td><td><code>OfficialProof</code></td><td>官方端 → 请求方:证明或 `err</td><td>…`</td></tr>
+</tbody></table>
+<blockquote>4xx 及以上的包会被自动记进 <code>clients.log</code>,排查问题时先看它。</blockquote>
+<h4>2.3 消息卡片负载</h4>
+<p><code>种类|标题|正文|来源|主动作|次动作|选项</code>,种类 = <code>text</code> / <code>update</code> / <code>choice</code> / <code>input</code> / <code>select</code>。</p>
+<p>动作回传:<code>动作|输入|原卡片原文</code> —— 服务端用"原卡片原文"识别是哪张卡,不需要额外序号。</p>
+<p>子服收到来源为 <code>ZXMOS-…</code> 卡片动作时,会在负载前多带一段账号转交给官方端。</p>
+<h3>3. 身份与账号</h3>
+<ul>
+<li><strong>机器码(设备)</strong>:<code>MachineCode.Value</code>,由硬件信息派生,许可证与封禁都用它;每次启动打进日志。</li>
+<li><strong>服务端码(实例)</strong>:ZXMS 首次生成的 32 位十六进制,存 <code>config.ini</code> 的 <code>servercode</code>;<strong>丢了就会被判"身份不一致"</strong>。</li>
+<li><strong>密码</strong>:只存密文,<code>SHA-256(小写账号名 + ":" + 明文密码)</code>;<code>oshash</code> 同一套算法。</li>
+<li><strong>账号表</strong>:</li>
+</ul>
+<table><thead><tr><th>文件</th><th>谁</th><th>等级表</th></tr></thead><tbody>
+<tr><td><code>users.json</code></td><td>子服的玩家/管理账号</td><td>Player / LAdmin / HAdmin / System</td></tr>
+<tr><td><code>osusers.json</code></td><td>官方端的玩家/管理账号</td><td>Player / Admin / System</td></tr>
+<tr><td><code>zxms.json</code></td><td>官方端登记的子服接入账号(等级 <code>-</code>)</td><td><code>-</code></td></tr>
+</tbody></table>
+<p>两张表<strong>互相查重</strong>:官方端的玩家账号与服务端账号不能同名。</p>
+<ul>
+<li><strong>改名协议</strong>:<code>AccountRename(611)</code> 校验"账号存在 + 机器码 + 服务端码与登记一致"才允许改;</li>
+</ul>
+<p>直接改 <code>config.ini</code> 会被判成"换了台实例",接入时报「身份不一致」。</p>
+<h3>4. 目录与数据文件</h3>
+<table><thead><tr><th>端</th><th>运行时生成(与 exe 同目录)</th></tr></thead><tbody>
+<tr><td>ZXMC</td><td><code>config.ini</code>、<code>messages.json</code>(消息存档)、<code>logs\</code>、头像缓存</td></tr>
+<tr><td>ZXMS</td><td><code>config.ini</code>、<code>users.json</code>、<code>bans.json</code>、<code>messages.json</code>、<code>logs\</code></td></tr>
+<tr><td>ZXMOS</td><td><code>config.ini</code>、<code>osusers.json</code>、<code>zxms.json</code>、<code>bans.json</code>、<code>messages.json</code>、<code>blacklist\</code>(拉黑归档)、<code>logs\</code></td></tr>
+</tbody></table>
+<p>配置键(常用):</p>
+<table><thead><tr><th>键</th><th>端</th><th>含义 / 默认</th></tr></thead><tbody>
+<tr><td><code>port</code></td><td>ZXMOS</td><td>监听端口 / <strong>25000</strong></td></tr>
+<tr><td><code>name</code></td><td>ZXMS·ZXMOS</td><td>本端显示名(下发给客户端)</td></tr>
+<tr><td><code>msgdays</code></td><td>ZXMS·ZXMOS</td><td>消息存档保留天数(ZXMS 默认 7,官方端默认 50)</td></tr>
+<tr><td><code>czport</code></td><td>ZXMS</td><td>玩家接入端口 / 21000</td></tr>
+<tr><td><code>connectOS</code></td><td>ZXMS</td><td>0 = 启动就连官方端</td></tr>
+<tr><td><code>ozip</code> / <code>ozport</code></td><td>ZXMS·ZXMC</td><td>官方端地址与端口(<strong>可写域名</strong>) / 25000</td></tr>
+<tr><td><code>osuser</code> / <code>oshash</code></td><td>ZXMS</td><td>子服在官方端的账号与密码密文</td></tr>
+<tr><td><code>servercode</code></td><td>ZXMS</td><td>本实例身份证(首次自动生成,<strong>别手改</strong>)</td></tr>
+<tr><td><code>mode</code> / <code>czip</code> / <code>czport</code> / <code>ozip</code> / <code>ozport</code></td><td>ZXMC</td><td>连接方式与两组地址</td></tr>
+<tr><td><code>officialcheck</code></td><td>ZXMS</td><td>0 = 放行非官方对端(默认 1 强制)</td></tr>
+<tr><td><code>allowunverified</code></td><td>ZXMC</td><td>1 = 允许连非官方服务端</td></tr>
+<tr><td><code>testaction</code> / <code>startpage</code> / <code>startsection</code> / <code>skipauth</code></td><td>ZXMC</td><td>自动化测试用开关</td></tr>
+</tbody></table>
+      </article>
+      <p class="muted" style="margin-top:26px">文档源文件在仓库 <code>docs/</code>;在线版(分页,持续更新):
+        <a href="https://docs.qq.com/aio/DZXRUa1phVnZoa25o" target="_blank" rel="noopener">腾讯文档</a> ·
+        反馈:QQ <code>835964502</code></p>
+    </div>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap footer-inner">
+    <div class="footer-brand">
+      <span class="brand-text">ZincXManager<em>ZXM</em></span>
+      <p class="muted">极早期开发阶段 · 文档随版本更新</p>
+    </div>
+    <nav class="footer-nav">
+      <a href="../index.html">首页</a>
+      <a href="../download.html">下载</a>
+      <a href="../zxms.html">子服教程</a>
+      <a href="index.html">文档</a>
+      <a href="../help.html">帮助文档</a>
+      <a href="../changelog.html">更新日志</a>
+      <a href="https://github.com/weiqi114514/ZincXManager" target="_blank" rel="noopener">GitHub</a>
+    </nav>
+    <p class="copyright">© <span id="year">2026</span> ZincXManager · zxm.zincms.top</p>
+  </div>
+</footer>
+
+<script src="../assets/js/main.js" defer></script>
+</body>
+</html>
