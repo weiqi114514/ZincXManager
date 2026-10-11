@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48" role="img" aria-label="ZincXManager">
+  <rect width="48" height="48" rx="12" fill="#0b1220"/>
+  <rect x="2" y="2" width="44" height="44" rx="11" fill="none" stroke="#22c55e" stroke-width="2.5"/>
+  <path d="M12 16h24L16 32h20" fill="none" stroke="#4ade80" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
