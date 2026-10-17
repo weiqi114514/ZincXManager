@@ -3,6 +3,8 @@ using System.Net;
 using System.Net.Sockets;
 using ZincXManagerShared.Logging;
 
+using ZincXManagerShared.Security;
+
 namespace ZincXManagerShared.Network;
 
 /// <summary>
@@ -133,6 +135,18 @@ public class TcpServer : IServer
             while (!_cts.Token.IsCancellationRequested)
             {
                 var packet = await Packet.ReadAsync(connection.Stream, _cts.Token);
+
+                if ((packet.Flags & SessionCrypto.FlagEncrypted) != 0)
+                {
+                    if (connection.Crypto is null)
+                    {
+                        throw new InvalidDataException("收到加密包,但会话密钥尚未协商");
+                    }
+
+                    packet = new Packet(packet.Id, packet.Type, connection.Crypto.Decrypt(packet.Data),
+                        (ushort)(packet.Flags & ~SessionCrypto.FlagEncrypted));
+                }
+
                 Registry.Touch(connection.Id);
                 await _dispatcher.EnqueueAsync(new ServerboundPacket(packet, connection), _cts.Token);
             }

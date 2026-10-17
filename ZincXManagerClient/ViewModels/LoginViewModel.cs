@@ -221,7 +221,12 @@ public partial class LoginViewModel : ViewModelBase
         // 登录载荷第 4 段是"这条请求归哪一端"(zxms / zxmos);注册永远是玩家账号,交给 ZXMS 决定
         var side = AccountLevels.SideFor(Mode, IsAdminAccount, AdminSide);
         // 注册也要带机器码:服务端在注册阶段就能按机器码拦(注册载荷 = 名称|密文|机器码)
-        var payload = register ? $"{user}|{hash}|{MachineCode.Value}" : $"{user}|{hash}|{level}|{side}|{MachineCode.Value}";
+        // 登录附带挑战-响应:nonce 每次不同,proof = SHA256(密文 : nonce);密文本身仅用于转发给 ZXMOS(整包已加密)
+        var nonce = ZincXManagerShared.Account.LoginProof.NewNonce();
+        var proof = ZincXManagerShared.Account.LoginProof.Compute(hash, nonce);
+        var payload = register
+            ? $"{user}|{hash}|{MachineCode.Value}|{nonce}|{proof}"
+            : $"{user}|{hash}|{level}|{side}|{MachineCode.Value}|{nonce}|{proof}";
 
         if (!await _connect.SendAsync(type, payload))
         {

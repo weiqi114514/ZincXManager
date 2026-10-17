@@ -395,7 +395,12 @@ public partial class OobeViewModel : ViewModelBase
         var type = register ? Protocol.AccountRegister : Protocol.AccountLogin;
         var side = AccountLevels.SideFor(Mode, IsAdminAccount, AdminSide);
         // 注册也要带机器码:服务端在注册阶段就能按机器码拦(注册载荷 = 名称|密文|机器码)
-        var payload = register ? $"{UserName.Trim()}|{hash}|{MachineCode.Value}" : $"{UserName.Trim()}|{hash}|{Level}|{side}|{MachineCode.Value}";
+        // 附带挑战-响应:nonce 每次不同,proof = SHA256(密文 : nonce)
+        var nonce = ZincXManagerShared.Account.LoginProof.NewNonce();
+        var proof = ZincXManagerShared.Account.LoginProof.Compute(hash, nonce);
+        var payload = register
+            ? $"{UserName.Trim()}|{hash}|{MachineCode.Value}|{nonce}|{proof}"
+            : $"{UserName.Trim()}|{hash}|{Level}|{side}|{MachineCode.Value}|{nonce}|{proof}";
 
         if (!await _connect.SendAsync(type, payload))
         {

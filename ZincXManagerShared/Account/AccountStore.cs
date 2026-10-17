@@ -209,6 +209,38 @@ public sealed class AccountStore
     public bool TryRegisterAs(string name, string passwordHash, string level, string ip, out Account? account, out string error)
         => Add(name, passwordHash, level, ip, out account, out error);
 
+    /// <summary>
+    /// 挑战-响应登录:proof = SHA256(存储的密文 : nonce)。
+    /// 账号不存在 / 证明不匹配 / nonce 过期或重放 → 失败。
+    /// </summary>
+    public bool TryLoginProof(string name, string nonce, string proof, string level, out Account? account, out string error)
+    {
+        var found = Find(name);
+        if (found is null)
+        {
+            account = null;
+            error = "账号不存在";
+            return false;
+        }
+
+        if (!LoginProof.IsFresh(nonce) || !LoginProof.TryUse(nonce))
+        {
+            account = null;
+            error = "登录凭据已过期,请重新登录";
+            return false;
+        }
+
+        if (!LoginProof.Verify(found.Password, nonce, proof))
+        {
+            account = null;
+            error = "密码错误";
+            return false;
+        }
+
+        // 证明对上了,走原来的等级 / 封禁 / 记录流程
+        return TryLogin(name, found.Password, level, out account, out error);
+    }
+
     /// <summary>登录校验:账号存在 + 密文一致 + 所选等级与该账号一致。</summary>
     public bool TryLogin(string name, string passwordHash, string level, out Account? account, out string error)
     {

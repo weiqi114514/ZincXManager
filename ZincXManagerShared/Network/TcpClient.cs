@@ -5,6 +5,8 @@ using ZincXManagerShared.Logging;
 // BCL 的连接对象与本类同名,文件内部统一用 SocketClient 指代它
 using SocketClient = System.Net.Sockets.TcpClient;
 
+using ZincXManagerShared.Security;
+
 namespace ZincXManagerShared.Network;
 
 /// <summary>
@@ -44,6 +46,9 @@ public class TcpClient : IClient
 
     /// <summary>是否仍处于已连接状态(连上了、接收循环还在跑、还没关闭);命令和界面显示用。</summary>
     public bool IsConnected => _stream is not null && _closed == 0 && !_disconnected;
+
+    /// <summary>会话加密器;协商完成后非 null,之后收发的包都会加解密。</summary>
+    public SessionCrypto? Crypto { get; set; }
 
     /// <summary>连的是谁(日志/报错用)。</summary>
     public string Target => _ipAddress?.ToString() ?? _host ?? "?";
@@ -129,6 +134,18 @@ public class TcpClient : IClient
             while (!_cts.Token.IsCancellationRequested)
             {
                 var packet = await Packet.ReadAsync(_stream!, _cts.Token);
+
+                if ((packet.Flags & SessionCrypto.FlagEncrypted) != 0)
+                {
+                    if (Crypto is null)
+                    {
+                        throw new InvalidDataException("收到加密包,但会话密钥尚未协商");
+                    }
+
+                    packet = new Packet(packet.Id, packet.Type, Crypto.Decrypt(packet.Data),
+                        (ushort)(packet.Flags & ~SessionCrypto.FlagEncrypted));
+                }
+
                 await _dispatcher.EnqueueAsync(packet, _cts.Token);
             }
         }
@@ -170,7 +187,15 @@ public class TcpClient : IClient
         await _writeLock.WaitAsync(cancellationToken);
         try
         {
-            await _stream.WriteAsync(packet.ToBytes(), cancellationToken);
+            var outgoing = packet;
+            if (Crypto is not null)
+            {
+                var encrypted = Crypto.Encrypt(packet.Data);
+                outgoing = new Packet(packet.Id, packet.Type, encrypted,
+                    (ushort)(packet.Flags | SessionCrypto.FlagEncrypted));
+            }
+
+            await _stream.WriteAsync(outgoing.ToBytes(), cancellationToken);
         }
         finally
         {

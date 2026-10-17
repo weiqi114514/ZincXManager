@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Sockets;
+using ZincXManagerShared.Security;
 
 namespace ZincXManagerShared.Network;
 
@@ -36,6 +37,9 @@ public sealed class TcpConnection : IAsyncDisposable
     /// <summary>该连接的网络流(接收循环从这里读包)。</summary>
     public NetworkStream Stream { get; }
 
+    /// <summary>会话加密器;协商完成后非 null,之后的包都会加密发送。</summary>
+    public SessionCrypto? Crypto { get; set; }
+
     /// <summary>是否已关闭。</summary>
     public bool IsClosed => _disposed != 0;
 
@@ -50,7 +54,15 @@ public sealed class TcpConnection : IAsyncDisposable
         await _writeLock.WaitAsync(cancellationToken);
         try
         {
-            await Stream.WriteAsync(packet.ToBytes(), cancellationToken);
+            var outgoing = packet;
+            if (Crypto is not null)
+            {
+                var encrypted = Crypto.Encrypt(packet.Data);
+                outgoing = new Packet(packet.Id, packet.Type, encrypted,
+                    (ushort)(packet.Flags | SessionCrypto.FlagEncrypted));
+            }
+
+            await Stream.WriteAsync(outgoing.ToBytes(), cancellationToken);
         }
         finally
         {

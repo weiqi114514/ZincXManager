@@ -26,6 +26,10 @@ public static class Protocol
     public const ushort Conline = 300;   // ZXMC → 服务端:客户端上线(负载 "ZXMC:<模式>")
     public const ushort CBack = 301;     // 服务端 → ZXMC:收到
 
+    // ---------- 会话加密(ZCMC ↔ ZXMS,抗抓包重放) ----------
+    public const ushort SessionHello = 380;      // ZXMC → ZXMS:客户端 ECDH 公钥
+    public const ushort SessionHelloAck = 381;   // ZXMS → ZXMC:服务端 ECDH 公钥
+
     // ---------- 4xx+:业务(先占位,协议定好再填实) ----------
     /// <summary>好友消息 —— <b>未实施</b>:编号先占着,以后要做再定负载(那时才需要"每跳按包 Id 记上游"的回执链路)。</summary>
     public const ushort FriendMsg = 400;

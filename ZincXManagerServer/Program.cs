@@ -10,6 +10,7 @@ using ZincXManagerShared.Command;
 using ZincXManagerShared.FileIO;
 using ZincXManagerShared.Logging;
 using ZincXManagerShared.Network;
+using ZincXManagerShared.Security;
 using ZincXManagerShared.Verify;
 using ZincXManagerServer.Command;
 
@@ -366,15 +367,37 @@ internal static class Program
                     break;
                 }
 
+                // ---- 会话加密:ZXMC 发 ECDH 公钥,回自己的公钥,之后报文全部加密 ----
+                case Protocol.SessionHello:
+                {
+                    var handshake = new SessionHandshake();
+                    await packet.Connection.SendAsync(Protocol.SessionHelloAck, handshake.PublicKey, packet.Id);
+                    packet.Connection.Crypto = handshake.Complete(packet.Data, isServer: true);
+                    Logger.Log(LogLevel.Info, $"[会话] 与 ZXMC 建立加密通道 ← {packet.Connection.RemoteEndPoint}");
+                    break;
+                }
+
                 // ---- 账号:登录(负载 "名称|密码密文|等级") ----
                 case Protocol.AccountLogin:
                 {
+                    // 未协商加密的登录一律拒绝:登录凭据不能走明文链路(否则抓包就能重放)
+                    if (packet.Connection.Crypto is null)
+                    {
+                        Logger.Log(LogLevel.Warning, $"[安全] 拒绝明文登录 ← {packet.Connection.RemoteEndPoint}(客户端过旧,需更新)");
+                        await packet.Connection.SendAsync(Protocol.AccountLoginAck,
+                            "err|客户端版本过旧(缺少加密会话),请更新到 a0.3.1 或更高版本", packet.Id);
+                        break;
+                    }
+
                     var parts = Encoding.UTF8.GetString(packet.Data).Split('|');
                     var user = parts.Length > 0 ? parts[0].Trim() : "";
                     var passwordHash = parts.Length > 1 ? parts[1] : "";
                     var level = parts.Length > 2 ? parts[2].Trim() : Protocol.RegisterLevel;
                     var side = DecideAccountSide(level, parts.Length > 3 ? parts[3] : "");
                     var machine = parts.Length > 4 ? parts[4].Trim() : "";
+                    // 第 6/7 段是挑战-响应(loginNonce / proof),用于本地账号增强校验
+                    var loginNonce = parts.Length > 5 ? parts[5].Trim() : "";
+                    var loginProof = parts.Length > 6 ? parts[6].Trim() : "";
                     var fromIp = packet.Connection.RemoteEndPoint?.Address.ToString() ?? "";
 
                     if (Bans.Check(user, fromIp, machine, out var ban))
@@ -405,7 +428,11 @@ internal static class Program
                         Logger.Log(LogLevel.Warning, "[账号] 官方服务端未连接,玩家账号退回本端处理");
                     }
 
-                    if (Accounts.TryLogin(user, passwordHash, level, out var account, out var error))
+                    var ok = loginNonce.Length > 0 && loginProof.Length > 0
+                        ? Accounts.TryLoginProof(user, loginNonce, loginProof, level, out var account, out var error)
+                        : Accounts.TryLogin(user, passwordHash, level, out account, out error);
+
+                    if (ok)
                     {
                         _server.Registry.SetAccount(packet.Connection.Id, account!.Name, account.Level);
                         Accounts.Touch(account.Name, fromIp, machine);

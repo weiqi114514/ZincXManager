@@ -15,6 +15,8 @@ using ZincXManagerShared.Verify;
 // 与 BCL 的 TcpClient 同名,起个别名
 using TcpClient = ZincXManagerShared.Network.TcpClient;
 
+using ZincXManagerShared.Security;
+
 namespace ZincXManagerClient.ViewModels;
 
 /// <summary>
@@ -53,6 +55,9 @@ public partial class ConnectViewModel : ViewModelBase, IDisposable
 
     private readonly UiLogSink _sink;
     private TcpClient? _client;
+
+    /// <summary>等 381(加密协商回包)用。</summary>
+    private TaskCompletionSource<byte[]>? _sessionWait;
 
     /// <summary>身份校验没通过(已断开),用来忽略后续到达的 301。</summary>
     private bool _rejected;
@@ -224,6 +229,11 @@ public partial class ConnectViewModel : ViewModelBase, IDisposable
 
                 switch (packet.Type)
                 {
+                    // 会话加密协商:服务端公钥(381)
+                    case Protocol.SessionHelloAck:
+                        _sessionWait?.TrySetResult(packet.Data);
+                        break;
+
                     // 服务端自报身份 → 按模式校验
                     case ServerIdent:
                         Logger.Log(LogLevel.Info, $"[ZXMC] 收到服务端身份包:{text}");
@@ -271,6 +281,29 @@ public partial class ConnectViewModel : ViewModelBase, IDisposable
         {
             await client.ConnectAsync();
             _client = client;
+
+            // 连接建立后先协商会话密钥(后面所有报文都加密;拿不到 381 说明是旧版服务端)
+            try
+            {
+                var handshake = new SessionHandshake();
+                _sessionWait = new TaskCompletionSource<byte[]>(TaskCreationOptions.RunContinuationsAsynchronously);
+                await client.SendAsync(Protocol.SessionHello, handshake.PublicKey);
+
+                var done = await Task.WhenAny(_sessionWait.Task, Task.Delay(5000));
+                if (done == _sessionWait.Task)
+                {
+                    client.Crypto = handshake.Complete(_sessionWait.Task.Result, isServer: false);
+                    Logger.Log(LogLevel.Info, "[ZXMC] 已建立加密会话(ECDH P-256 + AES-256-GCM)");
+                }
+                else
+                {
+                    Logger.Log(LogLevel.Warning, "[ZXMC] 服务端未响应加密协商,可能是旧版 ZXMS —— 登录凭据将以明文哈希传输");
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Log(LogLevel.Warning, "[ZXMC] 加密协商失败: " + ex.Message);
+            }
 
             // 报上自己是谁 + 连接模式(服务端登记表要记模式),例如 "ZXMC:SAOS"
             await client.WriteAsync(new Packet(1, Conline, Encoding.UTF8.GetBytes($"ZXMC:{Mode}")));
