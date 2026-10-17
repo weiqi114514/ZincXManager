@@ -1,0 +1,196 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ZincXManager 技术文档 · 第 3 页 协议时序</title>
+<style>
+:root{--bg:#0e1116;--panel:#151b23;--line:#232c38;--fg:#e6edf3;--muted:#8b98a9;--accent:#4cc2ff;--accent2:#7ee787}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.6 "Segoe UI","Microsoft YaHei",sans-serif}
+a{color:var(--accent);text-decoration:none}
+a:hover{text-decoration:underline}
+header{position:sticky;top:0;z-index:20;background:rgba(14,17,22,.94);border-bottom:1px solid var(--line);padding:10px 18px;display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+header .brand{font-weight:700;font-size:16px}
+header input{flex:1;min-width:220px;background:#0b0f14;border:1px solid var(--line);color:var(--fg);border-radius:8px;padding:8px 12px}
+header .hint{color:var(--muted);font-size:12px}
+main{padding:18px;max-width:1600px;margin:0 auto}
+h1{font-size:22px;margin:8px 0 4px}
+h2{font-size:18px;margin:28px 0 10px;padding-left:10px;border-left:4px solid var(--accent)}
+h3{font-size:15px;margin:18px 0 8px;color:var(--accent2)}
+p.lead{color:var(--muted)}
+table{width:100%;border-collapse:collapse;margin:8px 0 18px;font-size:13px;background:var(--panel)}
+th,td{border:1px solid var(--line);padding:6px 8px;vertical-align:top;text-align:left}
+th{background:#1b2430;position:sticky;top:52px;z-index:5;white-space:nowrap}
+tr:nth-child(even) td{background:#121820}
+td.mono,code,span.mono{font-family:Consolas,"Cascadia Mono",monospace;font-size:12.5px}
+.tag{display:inline-block;padding:0 6px;border-radius:5px;background:#1f2a36;color:#9fb3c8;font-size:11.5px;margin:1px 3px 1px 0;white-space:nowrap}
+.muted{color:var(--muted)}
+details{background:var(--panel);border:1px solid var(--line);border-radius:10px;margin:10px 0;padding:6px 12px}
+details>summary{cursor:pointer;font-weight:600;padding:6px 0}
+.kv{color:var(--muted)}
+.count{color:var(--muted);font-weight:400;font-size:12px}
+.hidden{display:none!important}
+footer{color:var(--muted);border-top:1px solid var(--line);margin-top:30px;padding:16px 18px;font-size:12px}
+</style></head><body>
+
+<div id="lock" style="min-height:100vh;display:flex;align-items:center;justify-content:center">
+  <div style="background:#151b23;border:1px solid #232c38;border-radius:14px;padding:28px 32px;min-width:320px;text-align:center">
+    <h1 style="margin:0 0 6px;font-size:20px">技术文档 · 需要口令</h1>
+    <p style="color:#8b98a9;margin:0 0 18px;font-size:13px">输入口令后按回车</p>
+    <input id="pw" type="password" autocomplete="off" style="width:260px;background:#0b0f14;border:1px solid #232c38;color:#e6edf3;border-radius:8px;padding:10px 12px;font-size:15px">
+    <p id="err" style="margin:12px 0 0;font-size:12px;color:#ff7b72;min-height:18px"></p>
+  </div>
+</div>
+
+<div id="protected" style="display:none">
+<header><span class="brand">ZincXManager 技术文档 · 第 3 页 协议时序</span><a href="tech.html">第 1 页:协议码/命令/类与函数</a><a href="arch.html">第 2 页:架构与模块</a><a href="seq.html">第 3 页:协议时序</a><a href="help.html">文档与帮助</a><a href="index.html">官网首页</a>
+<input id="q" placeholder="搜索:类名 / 函数名 / 文件 / 命令 / 协议码 / 说明关键字">
+</header>
+<main>
+<h1>第 3 页:协议时序</h1>
+<p class="lead">每个场景一张表:谁发、谁收、用哪个码、负载长什么样、这一步在干什么。码后面的数字就是包类型(见第 1 页协议码表)。</p>
+<p class="lead">链路总览:<span class="mono">ZXMOS(官方,25000) ⇄ ZXMS(子服,czport) ⇄ ZXMC(客户端)</span>;官方消息逐跳转发,子服不解析公告正文。</p>
+<h2>A. 客户端连上子服并登录</h2>
+<p class="lead">ZXMC 是图形客户端:连上 TCP 后先握手(300/301),拿服务端身份(200/201),再登录(600/601),登录成功后服务端补一次配置(202)和一次历史(505→504×N→506)。</p>
+<table><thead><tr><th>步</th><th>发送端</th><th>接收端</th><th>协议码</th><th>负载</th><th>这一步做什么</th></tr></thead><tbody>
+<tr><td class="mono">1</td><td class="mono">ZXMC</td><td class="mono">ZXMS</td><td class="mono">300 Conline</td><td class="mono">ZXMC:&lt;模式&gt;</td><td>客户端上线;ZXMS 记录这条连接,此时还没算登录</td></tr>
+<tr><td class="mono">2</td><td class="mono">ZXMS</td><td class="mono">ZXMC</td><td class="mono">301 CBack</td><td class="mono">—</td><td>收到,握手完成</td></tr>
+<tr><td class="mono">3</td><td class="mono">ZXMS</td><td class="mono">ZXMC</td><td class="mono">200 ServerIdent</td><td class="mono">ZXMS</td><td>我是谁</td></tr>
+<tr><td class="mono">4</td><td class="mono">ZXMS</td><td class="mono">ZXMC</td><td class="mono">201 ServerName</td><td class="mono">服务端显示名</td><td>客户端标题栏显示这个名字</td></tr>
+<tr><td class="mono">5</td><td class="mono">ZXMC</td><td class="mono">ZXMS</td><td class="mono">600 AccountLogin</td><td class="mono">名称|密码密文|等级</td><td>登录请求(密码不是明文)</td></tr>
+<tr><td class="mono">6</td><td class="mono">ZXMS</td><td class="mono">ZXMC</td><td class="mono">601 AccountLoginAck</td><td class="mono">ok|名称|ID|等级 或 err|原因</td><td>成功/失败</td></tr>
+<tr><td class="mono">7</td><td class="mono">ZXMS</td><td class="mono">ZXMC</td><td class="mono">202 ServerConfig</td><td class="mono">msgdays=天数</td><td>登录成功后补一次,告诉客户端本地留多久</td></tr>
+<tr><td class="mono">8</td><td class="mono">ZXMC</td><td class="mono">ZXMS</td><td class="mono">505 MessageHistoryReq</td><td class="mono">client / self / 空</td><td>客户端要历史</td></tr>
+<tr><td class="mono">9</td><td class="mono">ZXMS</td><td class="mono">ZXMC</td><td class="mono">504 MessageHistory</td><td class="mono">卡片原文(第 8 段带消息号)</td><td>一条消息一个包,可能连发多个</td></tr>
+<tr><td class="mono">10</td><td class="mono">ZXMS</td><td class="mono">ZXMC</td><td class="mono">506 MessageHistoryDone</td><td class="mono">条数</td><td>收尾;客户端按 来源+消息号 去重</td></tr>
+</tbody></table>
+<pre style="background:#121820;border:1px solid #232c38;border-radius:8px;padding:10px;overflow:auto;font-size:12px">ZXMC:Conline → ZXMS:CBack → ZXMS:ServerIdent → ZXMS:ServerName → ZXMC:AccountLogin → ZXMS:AccountLoginAck → ZXMS:ServerConfig → ZXMC:MessageHistoryReq → ZXMS:MessageHistory → ZXMS:MessageHistoryDone</pre>
+<h2>B. 子服连官方端(ZXMS → ZXMOS)</h2>
+<p class="lead">子服启动时若 connectOS=1 就连官方端:100 上线 → 101 回执 → 双方 200/201 互报身份 → 官方端发起 520 挑战,子服 521 证明自己。</p>
+<table><thead><tr><th>步</th><th>发送端</th><th>接收端</th><th>协议码</th><th>负载</th><th>这一步做什么</th></tr></thead><tbody>
+<tr><td class="mono">1</td><td class="mono">ZXMS</td><td class="mono">ZXMOS</td><td class="mono">100 SOnline</td><td class="mono">子服账号|端口|名称</td><td>子服上线</td></tr>
+<tr><td class="mono">2</td><td class="mono">ZXMOS</td><td class="mono">ZXMS</td><td class="mono">101 SBack</td><td class="mono">—</td><td>收到</td></tr>
+<tr><td class="mono">3</td><td class="mono">ZXMOS</td><td class="mono">ZXMS</td><td class="mono">200 ServerIdent</td><td class="mono">ZXMOS</td><td>官方端报身份</td></tr>
+<tr><td class="mono">4</td><td class="mono">ZXMOS</td><td class="mono">ZXMS</td><td class="mono">201 ServerName</td><td class="mono">官方端名称</td><td>下发给子服(只读 ozname)</td></tr>
+<tr><td class="mono">5</td><td class="mono">ZXMOS</td><td class="mono">ZXMS</td><td class="mono">520 OfficialChallenge</td><td class="mono">32 位十六进制 nonce</td><td>要证明“你是官方服务端”;只有已登录的连接才会收到</td></tr>
+<tr><td class="mono">6</td><td class="mono">ZXMS</td><td class="mono">ZXMOS</td><td class="mono">521 OfficialProof</td><td class="mono">Base64(lic)|nonce|HMAC-SHA256</td><td>拿不出合法证明就回 err|原因(例如 err|development)</td></tr>
+</tbody></table>
+<pre style="background:#121820;border:1px solid #232c38;border-radius:8px;padding:10px;overflow:auto;font-size:12px">ZXMS:SOnline → ZXMOS:SBack → ZXMOS:ServerIdent → ZXMOS:ServerName → ZXMOS:OfficialChallenge → ZXMS:OfficialProof</pre>
+<h2>C. 官方端发公告(逐跳转发)</h2>
+<p class="lead">ZXMOS 只发给子服;子服不解析正文,原样转给自己名下所有客户端。</p>
+<table><thead><tr><th>步</th><th>发送端</th><th>接收端</th><th>协议码</th><th>负载</th><th>这一步做什么</th></tr></thead><tbody>
+<tr><td class="mono">1</td><td class="mono">ZXMOS</td><td class="mono">ZXMS</td><td class="mono">500 Notice</td><td class="mono">卡片:种类|标题|正文|来源|主动作|次动作|选项</td><td>官方公告</td></tr>
+<tr><td class="mono">2</td><td class="mono">ZXMS</td><td class="mono">ZXMC</td><td class="mono">500 Notice</td><td class="mono">同一张卡片</td><td>子服把它转给名下每个客户端(单向,不等回执)</td></tr>
+</tbody></table>
+<pre style="background:#121820;border:1px solid #232c38;border-radius:8px;padding:10px;overflow:auto;font-size:12px">ZXMOS:Notice → ZXMS:Notice</pre>
+<h2>D. 定向推送(按账号过滤)</h2>
+<p class="lead">每跳都按目标账号本地过滤:命中才投,不命中静默丢弃。ZXMOS 的 push 命令支持 @账号 / @clients:子服名 / @servers。</p>
+<table><thead><tr><th>步</th><th>发送端</th><th>接收端</th><th>协议码</th><th>负载</th><th>这一步做什么</th></tr></thead><tbody>
+<tr><td class="mono">1</td><td class="mono">ZXMOS</td><td class="mono">ZXMS</td><td class="mono">501 Push</td><td class="mono">目标账号|卡片</td><td>官方端推一条</td></tr>
+<tr><td class="mono">2</td><td class="mono">ZXMS</td><td class="mono">ZXMC</td><td class="mono">501 Push</td><td class="mono">目标账号|卡片</td><td>子服只把它发给这个账号,其他人收不到</td></tr>
+</tbody></table>
+<pre style="background:#121820;border:1px solid #232c38;border-radius:8px;padding:10px;overflow:auto;font-size:12px">ZXMOS:Push → ZXMS:Push</pre>
+<h2>E. 玩家点消息卡片上的按钮</h2>
+<p class="lead">客户端把“点了哪个动作 + 填了什么 + 原卡片”一起回给服务端,服务端据此知道是哪张卡片。</p>
+<table><thead><tr><th>步</th><th>发送端</th><th>接收端</th><th>协议码</th><th>负载</th><th>这一步做什么</th></tr></thead><tbody>
+<tr><td class="mono">1</td><td class="mono">ZXMC</td><td class="mono">ZXMS</td><td class="mono">502 CardAction</td><td class="mono">动作|输入|原卡片</td><td>动作 = 按钮文案(下拉框固定“选择”),输入 = 填空内容</td></tr>
+<tr><td class="mono">2</td><td class="mono">ZXMS</td><td class="mono">ZXMC</td><td class="mono">503 CardActionAck</td><td class="mono">ok|提示文本 或 err|原因</td><td>回执</td></tr>
+<tr><td class="mono">3</td><td class="mono">ZXMS</td><td class="mono">ZXMOS</td><td class="mono">502 CardAction</td><td class="mono">动作|输入|原卡片</td><td>若卡片来源是 ZXMOS,子服把它转给官方端(转发时负载前面多一段序号)</td></tr>
+</tbody></table>
+<pre style="background:#121820;border:1px solid #232c38;border-radius:8px;padding:10px;overflow:auto;font-size:12px">ZXMC:CardAction → ZXMS:CardActionAck → ZXMS:CardAction</pre>
+<h2>F. 历史补发(两路合并)</h2>
+<p class="lead">子服自己也有存档(srvmsgdays):505 到达时,先把官方端那路要回来,再把自己存档的合并进去,统一按 504 发、506 收尾。</p>
+<table><thead><tr><th>步</th><th>发送端</th><th>接收端</th><th>协议码</th><th>负载</th><th>这一步做什么</th></tr></thead><tbody>
+<tr><td class="mono">1</td><td class="mono">ZXMC</td><td class="mono">ZXMS</td><td class="mono">505 MessageHistoryReq</td><td class="mono">client / self</td><td>要历史</td></tr>
+<tr><td class="mono">2</td><td class="mono">ZXMS</td><td class="mono">ZXMOS</td><td class="mono">505 MessageHistoryReq</td><td class="mono">self</td><td>子服替玩家向官方端要(中转为 client)</td></tr>
+<tr><td class="mono">3</td><td class="mono">ZXMOS</td><td class="mono">ZXMS</td><td class="mono">504 MessageHistory</td><td class="mono">卡片原文 + 消息号</td><td>官方端逐条回</td></tr>
+<tr><td class="mono">4</td><td class="mono">ZXMS</td><td class="mono">ZXMC</td><td class="mono">504 MessageHistory</td><td class="mono">本服存档 + 官方给的历史(合并去重)</td><td>两路合并后逐条发</td></tr>
+<tr><td class="mono">5</td><td class="mono">ZXMS</td><td class="mono">ZXMC</td><td class="mono">506 MessageHistoryDone</td><td class="mono">条数</td><td>收尾</td></tr>
+</tbody></table>
+<pre style="background:#121820;border:1px solid #232c38;border-radius:8px;padding:10px;overflow:auto;font-size:12px">ZXMC:MessageHistoryReq → ZXMS:MessageHistoryReq → ZXMOS:MessageHistory → ZXMS:MessageHistory → ZXMS:MessageHistoryDone</pre>
+<h2>G. 子服改名(611/612)</h2>
+<p class="lead">由控制台 osuser 命令触发;官方端校验新名可用后回执,子服把本地账号名与密码一起换掉。</p>
+<table><thead><tr><th>步</th><th>发送端</th><th>接收端</th><th>协议码</th><th>负载</th><th>这一步做什么</th></tr></thead><tbody>
+<tr><td class="mono">1</td><td class="mono">ZXMS</td><td class="mono">ZXMOS</td><td class="mono">611 AccountRename</td><td class="mono">旧名|新名|密码密文|机器码</td><td>改名请求</td></tr>
+<tr><td class="mono">2</td><td class="mono">ZXMOS</td><td class="mono">ZXMS</td><td class="mono">612 AccountRenameAck</td><td class="mono">ok|新名 或 err|原因</td><td>回执</td></tr>
+</tbody></table>
+<pre style="background:#121820;border:1px solid #232c38;border-radius:8px;padding:10px;overflow:auto;font-size:12px">ZXMS:AccountRename → ZXMOS:AccountRenameAck</pre>
+<h2>H. 断线与重连</h2>
+<p class="lead">子服掉线后不会自动重发本地存档,等客户端下次 505 再补;控制台 net reconnect 可以立刻重连官方端。</p>
+<table><thead><tr><th>步</th><th>发送端</th><th>接收端</th><th>协议码</th><th>负载</th><th>这一步做什么</th></tr></thead><tbody>
+<tr><td class="mono">1</td><td class="mono">ZXMS</td><td class="mono">ZXMOS</td><td class="mono">100 SOnline</td><td class="mono">子服账号|端口|名称</td><td>重连后重新走一遍 100 上线</td></tr>
+<tr><td class="mono">2</td><td class="mono">ZXMOS</td><td class="mono">ZXMS</td><td class="mono">101 SBack</td><td class="mono">—</td><td>收到</td></tr>
+<tr><td class="mono">3</td><td class="mono">ZXMS</td><td class="mono">ZXMC</td><td class="mono">504 MessageHistory</td><td class="mono">本服存档</td><td>官方端不在线时,玩家仍能收到本服存档的消息</td></tr>
+</tbody></table>
+<pre style="background:#121820;border:1px solid #232c38;border-radius:8px;padding:10px;overflow:auto;font-size:12px">ZXMS:SOnline → ZXMOS:SBack → ZXMS:MessageHistory</pre>
+</main>
+<footer>技术文档 · 由源码扫描生成,改动代码后重跑生成脚本即可刷新</footer>
+</div>
+<script>
+const q=document.getElementById('q');
+if(q){q.addEventListener('input',()=>{const v=q.value.trim().toLowerCase();
+document.querySelectorAll('table tbody tr').forEach(tr=>{tr.classList.toggle('hidden', v && !tr.textContent.toLowerCase().includes(v))});});}
+</script>
+<script>
+(function(){
+  var WANT = 'b0c0190fbe124fa2c094b6990bdaefd2';
+  var pw = document.getElementById('pw');
+  var err = document.getElementById('err');
+  function md5(input){
+  function toUtf8(s){
+    var out=[],i,c;
+    for(i=0;i<s.length;i++){
+      c=s.charCodeAt(i);
+      if(c<0x80) out.push(c);
+      else if(c<0x800){ out.push(0xc0|(c>>6),0x80|(c&63)); }
+      else if(c>=0xd800&&c<=0xdbff&&i+1<s.length){
+        var c2=s.charCodeAt(++i);
+        var cp=0x10000+((c-0xd800)<<10)+(c2-0xdc00);
+        out.push(0xf0|(cp>>18),0x80|((cp>>12)&63),0x80|((cp>>6)&63),0x80|(cp&63));
+      } else { out.push(0xe0|(c>>12),0x80|((c>>6)&63),0x80|(c&63)); }
+    }
+    return out;
+  }
+  var bytes=toUtf8(input);
+  var ml=bytes.length*8;
+  bytes.push(0x80);
+  while(bytes.length%64!==56) bytes.push(0);
+  var lo=ml>>>0, hi=Math.floor(ml/4294967296)>>>0;
+  bytes.push(lo&255,(lo>>>8)&255,(lo>>>16)&255,(lo>>>24)&255,hi&255,(hi>>>8)&255,(hi>>>16)&255,(hi>>>24)&255);
+  var a0=0x67452301,b0=0xefcdab89,c0=0x98badcfe,d0=0x10325476;
+  var S=[7,12,17,22,7,12,17,22,7,12,17,22,7,12,17,22,
+         5,9,14,20,5,9,14,20,5,9,14,20,5,9,14,20,
+         4,11,16,23,4,11,16,23,4,11,16,23,4,11,16,23,
+         6,10,15,21,6,10,15,21,6,10,15,21,6,10,15,21];
+  var K=[]; for(var i=0;i<64;i++) K[i]=(Math.floor(Math.abs(Math.sin(i+1))*4294967296))>>>0;
+  function rotl(x,c){ return ((x<<c)|(x>>>(32-c)))>>>0; }
+  for(var off=0;off<bytes.length;off+=64){
+    var M=[]; for(var j=0;j<16;j++){ var pp=off+j*4; M[j]=(bytes[pp]|(bytes[pp+1]<<8)|(bytes[pp+2]<<16)|(bytes[pp+3]<<24))>>>0; }
+    var A=a0,B=b0,C=c0,D=d0;
+    for(var k=0;k<64;k++){
+      var F,g;
+      if(k<16){ F=(B&C)|((~B)&D); g=k; }
+      else if(k<32){ F=(D&B)|((~D)&C); g=(5*k+1)%16; }
+      else if(k<48){ F=B^C^D; g=(3*k+5)%16; }
+      else { F=C^(B|(~D)); g=(7*k)%16; }
+      F=(F+A+K[k]+M[g])>>>0;
+      A=D; D=C; C=B;
+      B=(B+rotl(F,S[k]))>>>0;
+    }
+    a0=(a0+A)>>>0; b0=(b0+B)>>>0; c0=(c0+C)>>>0; d0=(d0+D)>>>0;
+  }
+  function hex(x){ var s="",i; for(i=0;i<4;i++){ s+=((x>>>(i*8))&255).toString(16).padStart(2,"0"); } return s; }
+  return hex(a0)+hex(b0)+hex(c0)+hex(d0);
+}
+  function unlock(){
+    if (md5(pw.value) === WANT) {
+      document.getElementById('lock').style.display = 'none';
+      document.getElementById('protected').style.display = '';
+    } else {
+      err.textContent = '口令不对(' + md5(pw.value).slice(0,8) + '…)';
+      pw.select();
+    }
+  }
+  pw.addEventListener('keydown', function(e){ if (e.key === 'Enter') unlock(); });
+  pw.focus();
+})();
+</script>
+</body></html>
