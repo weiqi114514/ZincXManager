@@ -74,7 +74,6 @@ wix build installer\zxmc.wxs -o out\ZincXManagerClient-x64.msi `
 | --- | --- |
 | `ZincXManagerClient` | 客户端 **ZXMC**:Avalonia 桌面界面(登录 / OOBE 向导 / 主界面 / 设置) |
 | `ZincXManagerServer` | 子服务端 **ZXMS**:本服账号、封禁、消息、蓝图,负责与客户端和官方端通信 |
-| `ZincXManagerOServer` | 官方服务端 **ZXMOS**(带控制台) |
 | `ZincXManagerOServerNO` | 官方服务端(裁剪版) |
 | `ZincXManagerShared` | 三端共用:协议、账号与权限、命令分发、日志、官方验证 |
 | `installer/` | 客户端 MSI 定义(WiX)与打包说明 |
@@ -97,13 +96,6 @@ ZXMC 有四种权限模式:Player(玩家)/ LAdmin(低管)/ HAdmin(高管)/ Syste
 
 > TIPS:此 OS(OnlyServer)非彼 OS(ZincXManagerOfficialServer)。
 > TIPS:**官方服务端 ≠ 子服务端** —— 一个是官方提供、所有人共用的社区端,一个是各服自己部署的子端。
-
-## 官方验证(防止别人冒名官方服务端)
-
-- **第一层**:ZXMS / ZXMC 内置官方公钥,启动时自校验发行产物是否被改过
-- **第二层**:接入后走 `520` / `521` 对端验证,确认对面确实是官方 ZXMOS
-- 官方发行版验证不过会直接断开;开发构建只记警告
-  (运维开关:子服 `officialcheck=0`,客户端 `allowunverified=1`)
 
 ## 相关链接
 
