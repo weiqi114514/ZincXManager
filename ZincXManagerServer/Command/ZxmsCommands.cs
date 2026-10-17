@@ -326,11 +326,16 @@ public static class ZxmsCommands
         // 名称是官方服务端在连接时下发的(201),没收到就只显示地址
         var name = osName.Length > 0 ? $"(名称:{osName})" : "(名称:未收到)";
 
-        Logger.Log(LogLevel.Info,
+        LogBlock(
             $"[网络] ZXMOS  {osState}\n" +
             $"[网络] 目标    {target} {name}\n" +
             $"[网络] 已接入客户端 {clientCount} 个");
     }
+
+    /// <summary>
+    /// 多行信息输出:先空一行再打印,免得第一行贴着命令行/提示符导致"错位"。
+    /// </summary>
+    private static void LogBlock(string text) => Logger.Log(LogLevel.Info, Environment.NewLine + text);
 
     /// <summary>net clients:打印连接登记表(表格格式由共享库统一生成)</summary>
     private static void CmdClients(ClientRegistry? registry)
@@ -341,7 +346,7 @@ public static class ZxmsCommands
             return;
         }
 
-        Logger.Log(LogLevel.Info, registry.ToTable("[网络] "));
+        LogBlock(registry.ToTable("[网络] "));
     }
 
     /// <summary>user list</summary>
@@ -564,7 +569,7 @@ public static class ZxmsCommands
     private static void CmdInfo(ZxmsIdentity identity, TcpClient? os, string target)
     {
         var state = os is null ? "未连接" : os.IsConnected ? "已连接" : "已断开(可 net reconnect)";
-        Logger.Log(LogLevel.Info,
+        LogBlock(
             $"[身份] 名称       {identity.Name()}\n" +
             $"[身份] 账号       {identity.User()}\n" +
             $"[身份] 服务端码   {identity.ServerCode()}\n" +
