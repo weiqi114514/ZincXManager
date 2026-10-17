@@ -1,4 +1,4 @@
-/* 首页大标题 Zinc[X]Manager 的词条滑动:X 每 5 秒换一次(下移出/上移入),Manager 跟着词宽移动 */
+/* 首页大标题 Zinc[X]Manager:X 每 5 秒换一次(下移出/上移入),Manager 跟着词宽移动 */
 (function () {
   var WORDS = ["X", "Admin", "User", "Player", "System"];
   var PERIOD = 5000;
@@ -13,7 +13,7 @@
     return w;
   }
 
-  function init(hero) {
+  function start(hero) {
     var slot = hero.querySelector(".bm-slot");
     if (!slot || slot.dataset.ready === "1") return;
     slot.dataset.ready = "1";
@@ -42,10 +42,14 @@
   }
 
   function boot() {
-    Array.prototype.forEach.call(document.querySelectorAll(".zxm-hero"), init);
+    var heroes = document.querySelectorAll(".zxm-hero");
+    for (var i = 0; i < heroes.length; i++) start(heroes[i]);
   }
 
-  if (document.readyState === "loading") {
+  // 等字体就绪再量宽度,否则 X 的位置会偏
+  if (document.fonts && document.fonts.ready) {
+    document.fonts.ready.then(boot);
+  } else if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", boot);
   } else {
     boot();
