@@ -636,10 +636,7 @@ internal static class Program
     /// </summary>
     private static async Task LoginOServerAsync(TcpClient client, ZFile config)
     {
-        var user = AskIfMissing(config, KeyOsUser,
-            "[CONFIG]输入本 ZXMS 在官方服务端注册的账号名",
-            value => value.Length >= 2,
-            fallback: Dns.GetHostName());
+        var user = AskOsUser(config);
 
         // 密文没有就不问明文存明文,而是问一次、当场算成密文存下来
         var hash = config.MapGet(KeyOsHash).Trim();
@@ -832,18 +829,101 @@ internal static class Program
         return "ok|" + newName;
     }
 
+    /// <summary>
+    /// 问本端在 ZXMOS 上的账号名。**控制台命令不算数**:以前有人在提问里输了 `srv show`,
+    /// 结果官方端账号就叫 "srv show" —— 这里直接拒掉并重问(带空格的名字也不收)。
+    /// </summary>
+    private static string AskOsUser(ZFile config)
+    {
+        var current = config.MapGet(KeyOsUser).Trim();
+        if (current.Length >= 2)
+        {
+            return current;
+        }
+
+        Logger.Log(LogLevel.Info,
+            $"[CONFIG]输入本 ZXMS 在官方服务端注册的账号名(2-32 字符、不要带空格、不是控制台命令;回车用 {Dns.GetHostName()})");
+
+        for (var attempt = 0; attempt < 10; attempt++)
+        {
+            var input = Console.ReadLine()?.Trim();
+
+            if (string.IsNullOrEmpty(input))
+            {
+                input = Dns.GetHostName();
+            }
+
+            if (Command.ZxmsCommands.LooksLikeConsoleCommand(input))
+            {
+                Logger.Log(LogLevel.Warning,
+                    $"[CONFIG]「{input}」看起来是控制台命令,不是账号名 —— 这里要的是账号名(例如 ZXMS-Main);请重新输入");
+                continue;
+            }
+
+            if (input.Length < 2 || input.Length > 32 || input.Contains(' '))
+            {
+                Logger.Log(LogLevel.Warning, "[CONFIG]账号名要 2-32 个字符且不能带空格,请重新输入");
+                continue;
+            }
+
+            config.WriteFileMap(KeyOsUser, input);
+            Logger.Log(LogLevel.Info, $"[CONFIG]osuser 已设置为 {input}");
+            return input;
+        }
+
+        var fallback = Dns.GetHostName();
+        config.WriteFileMap(KeyOsUser, fallback);
+        Logger.Log(LogLevel.Warning, $"[CONFIG]多次输入不合法,已用主机名 {fallback} 当账号名");
+        return fallback;
+    }
+
     /// <summary>问一次密码并算成密文写回 config.ini(明文只在内存里过一下)。</summary>
     private static string AskPasswordHash(ZFile config, string user)
     {
-        Logger.Log(LogLevel.Info, $"[CONFIG]输入账号 {user} 的密码(只保存密文)");
+        string? input = null;
 
-        var input = Console.ReadLine();
+        for (var attempt = 0; attempt < 10; attempt++)
+        {
+            Logger.Log(LogLevel.Info, $"[CONFIG]输入账号 {user} 的密码(只保存密文,至少 4 位;这里要密码,不是命令)");
+            input = Console.ReadLine();
+
+            if (string.IsNullOrEmpty(input))
+            {
+                break;
+            }
+
+            input = input.Trim();
+
+            if (Command.ZxmsCommands.LooksLikeConsoleCommand(input))
+            {
+                Logger.Log(LogLevel.Warning,
+                    $"[CONFIG]「{input}」看起来是控制台命令,不是密码 —— 请重新输入密码");
+                input = null;
+                continue;
+            }
+
+            if (input.Equals(user, StringComparison.OrdinalIgnoreCase))
+            {
+                Logger.Log(LogLevel.Warning, "[CONFIG]密码不能和账号名一样,请重新输入");
+                input = null;
+                continue;
+            }
+
+            if (input.Length < 4)
+            {
+                Logger.Log(LogLevel.Warning, "[CONFIG]密码至少 4 位,请重新输入");
+                input = null;
+                continue;
+            }
+
+            break;
+        }
 
         if (string.IsNullOrEmpty(input))
         {
             // 管道 / 重定向 / 非交互启动:随机生成一个,打在日志里让管理员能看到
             input = Guid.NewGuid().ToString("N")[..16];
-            Logger.Log(LogLevel.Warning, "[CONFIG]没有读到输入,已随机生成密码(请改用 user rep 修改): " + input);
+            Logger.Log(LogLevel.Warning, "[CONFIG]没有读到合法密码,已随机生成一个(请改用 osuser 修改): " + input);
         }
 
         var hash = PasswordHash.Hash(user, input);

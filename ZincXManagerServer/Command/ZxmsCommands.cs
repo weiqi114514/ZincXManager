@@ -163,6 +163,26 @@ public static class ZxmsCommands
             "srv show");
     }
 
+    /// <summary>控制台命令的首词 —— 用来判断"这行输入其实是命令,不是账号名/密码"。</summary>
+    private static readonly string[] CommandWords =
+    {
+        "help", "echo", "exit", "info", "infopc", "msgdays", "srvmsgdays", "name",
+        "notice", "push", "osuser", "srv", "user", "ban", "file", "net", "config", "exitc",
+    };
+
+    /// <summary>这行输入看起来像控制台命令吗(像的话就不该被当成账号名 / 密码收下)。</summary>
+    internal static bool LooksLikeConsoleCommand(string text)
+    {
+        var trimmed = (text ?? "").Trim();
+        if (trimmed.Length == 0)
+        {
+            return false;
+        }
+
+        var first = trimmed.Split(' ', StringSplitOptions.RemoveEmptyEntries)[0].ToLowerInvariant();
+        return Array.IndexOf(CommandWords, first) >= 0;
+    }
+
     /// <summary>ban add &lt;user|ip|machine&gt; &lt;值&gt; [perm|30d|12h] [原因]</summary>
     private static void CmdBanAdd(BanStore bans, string[] args)
     {
@@ -229,9 +249,23 @@ public static class ZxmsCommands
 
     /// <summary>srv show:本端服务端账号</summary>
     private static void CmdSrvShow(string name)
-        => Logger.Log(LogLevel.Info, name.Length > 0
-            ? $"[服务端账号] 本端接入官方服务端用的账号:{name}"
-            : "[服务端账号] 还没注册;连上官方服务端时会自动注册,之后可以用 osuser <新名> <新密码> 改名或改密码");
+    {
+        if (name.Length == 0)
+        {
+            Logger.Log(LogLevel.Info,
+                "[服务端账号] 还没注册;连上官方服务端时会自动注册,之后可以用 osuser <新名> <新密码> 改名或改密码");
+            return;
+        }
+
+        Logger.Log(LogLevel.Info, $"[服务端账号] 本端接入官方服务端用的账号:{name}");
+
+        // 以前有人在"账号名"提问里输了命令,结果账号就叫 srv show —— 这里顺手提示怎么改
+        if (LooksLikeConsoleCommand(name) || name.Contains(' '))
+        {
+            Logger.Log(LogLevel.Warning,
+                "[服务端账号] 这个名字像是误输入(像命令 / 带空格);要改:osuser <新名> <新密码>(会先问官方端同意)");
+        }
+    }
 
 
     /// <summary>ban del &lt;类型&gt; &lt;值&gt; / ban list / ban add / ban user</summary>
