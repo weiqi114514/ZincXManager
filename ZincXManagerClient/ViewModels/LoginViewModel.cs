@@ -226,7 +226,7 @@ public partial class LoginViewModel : ViewModelBase
         var proof = ZincXManagerShared.Account.LoginProof.Compute(hash, nonce);
         var payload = register
             ? $"{user}|{hash}|{MachineCode.Value}|{nonce}|{proof}"
-            : $"{user}|{hash}|{level}|{side}|{MachineCode.Value}|{nonce}|{proof}";
+            : $"{user}|{hash}|{level}|{side}|{MachineCode.Value}||{nonce}|{proof}";
 
         if (!await _connect.SendAsync(type, payload))
         {

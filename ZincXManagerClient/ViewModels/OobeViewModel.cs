@@ -400,7 +400,7 @@ public partial class OobeViewModel : ViewModelBase
         var proof = ZincXManagerShared.Account.LoginProof.Compute(hash, nonce);
         var payload = register
             ? $"{UserName.Trim()}|{hash}|{MachineCode.Value}|{nonce}|{proof}"
-            : $"{UserName.Trim()}|{hash}|{Level}|{side}|{MachineCode.Value}|{nonce}|{proof}";
+            : $"{UserName.Trim()}|{hash}|{Level}|{side}|{MachineCode.Value}||{nonce}|{proof}";
 
         if (!await _connect.SendAsync(type, payload))
         {

@@ -396,8 +396,8 @@ internal static class Program
                     var side = DecideAccountSide(level, parts.Length > 3 ? parts[3] : "");
                     var machine = parts.Length > 4 ? parts[4].Trim() : "";
                     // 第 6/7 段是挑战-响应(loginNonce / proof),用于本地账号增强校验
-                    var loginNonce = parts.Length > 5 ? parts[5].Trim() : "";
-                    var loginProof = parts.Length > 6 ? parts[6].Trim() : "";
+                    var loginNonce = parts.Length > 6 ? parts[6].Trim() : "";
+                    var loginProof = parts.Length > 7 ? parts[7].Trim() : "";
                     var fromIp = packet.Connection.RemoteEndPoint?.Address.ToString() ?? "";
 
                     if (Bans.Check(user, fromIp, machine, out var ban))
