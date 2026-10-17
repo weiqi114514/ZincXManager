@@ -3,14 +3,23 @@
   var WORDS = ["X", "Admin", "User", "Player", "System"];
   var PERIOD = 5000;
 
+  // 用和真实文字完全一致的字体度量来量宽度,否则会影响 Manager 的位置
   function measure(slot, word) {
     var probe = document.createElement("span");
     probe.className = "bm-cur bm-probe";
     probe.textContent = word;
+
+    var cs = window.getComputedStyle(slot);
+    probe.style.fontSize = cs.fontSize;
+    probe.style.fontFamily = cs.fontFamily;
+    probe.style.fontWeight = cs.fontWeight;
+    probe.style.letterSpacing = cs.letterSpacing;
+    probe.style.whiteSpace = "nowrap";
+
     slot.appendChild(probe);
     var w = probe.getBoundingClientRect().width;
     slot.removeChild(probe);
-    return w;
+    return Math.ceil(w);
   }
 
   function start(hero) {
@@ -37,6 +46,7 @@
         cur.textContent = word;
         nxt.textContent = "";
         slot.classList.remove("bm-rolling");
+        slot.style.width = measure(slot, word) + "px";
       }, 440);
     }, PERIOD);
   }
@@ -46,7 +56,6 @@
     for (var i = 0; i < heroes.length; i++) start(heroes[i]);
   }
 
-  // 等字体就绪再量宽度,否则 X 的位置会偏
   if (document.fonts && document.fonts.ready) {
     document.fonts.ready.then(boot);
   } else if (document.readyState === "loading") {

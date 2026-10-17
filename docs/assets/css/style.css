@@ -280,3 +280,10 @@ code.sha { display: block; word-break: break-all; font-size: 12px; color: var(--
 .zxm-hero .bm-slot{height:1em;line-height:1;overflow:hidden;vertical-align:baseline}
 .zxm-hero .bm-cur,.zxm-hero .bm-next{line-height:1}
 
+
+/* 首页大标题:词条槽高度与 h1 行高对齐,避免 X 上下错位 */
+.zxm-hero{display:flex;align-items:baseline;flex-wrap:wrap}
+.zxm-hero>span{display:inline-block}
+.zxm-hero .bm-slot{display:inline-block;height:1.16em;line-height:1.16;overflow:hidden;vertical-align:baseline}
+.zxm-hero .bm-cur,.zxm-hero .bm-next{display:block;line-height:1.16}
+
