@@ -1243,6 +1243,8 @@ internal static class Program
             "officialcheck" => _officialCheck ? "1" : "0",
             "ozname" => config.MapGet(KeyOsName).Trim(),
             "servercode" => config.MapGet(KeyServerCode).Trim(),
+            "oshash" => config.MapGet(KeyOsHash).Trim(),
+            "configver" => config.MapGet(KeyConfigVer).Trim(),
             _ => "",
         };
     }
@@ -1339,6 +1341,16 @@ internal static class Program
                 config.WriteFileMap(KeyOsUser, value);
                 Logger.Log(LogLevel.Warning,
                     "[配置] 只改了账号名;密码还是旧的,而且官方端可能不认 —— 正常改名请用 osuser <新名> <新密码>");
+                return "";
+
+            case "oshash":
+                if (!PasswordHash.IsHash(value))
+                {
+                    return "要 64 位十六进制密文";
+                }
+
+                config.WriteFileMap(KeyOsHash, value);
+                Logger.Log(LogLevel.Info, "[配置] 官方账号密文已写入,下次连接 ZXMOS 时生效");
                 return "";
 
             case "msgdays":

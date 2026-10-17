@@ -40,6 +40,8 @@ internal static class ConfigMode
         new() { Key = "officialcheck", Cn = "对端校验",     Description = "1 = 对端不是官方就断开,0 = 只警告",       Type = "1/0" },
         new() { Key = "ozname",        Cn = "官方端名称",   Description = "ZXMOS 下发的名称(只读)",                 Type = "只读",       ReadOnly = true },
         new() { Key = "servercode",    Cn = "服务端码",     Description = "本实例的身份证(只读)",                   Type = "只读",       ReadOnly = true },
+        new() { Key = "oshash",        Cn = "官方账号密文", Description = "本端在 ZXMOS 上的账号密文(下次连接生效)",  Type = "64 位十六进制" },
+        new() { Key = "configver",     Cn = "配置版本",     Description = "配置文件结构版本(只读)",                 Type = "只读",       ReadOnly = true },
     ];
 
     private static bool _active;
