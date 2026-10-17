@@ -185,7 +185,7 @@ document.querySelectorAll('table tbody tr').forEach(tr=>{tr.classList.toggle('hi
       document.getElementById('lock').style.display = 'none';
       document.getElementById('protected').style.display = '';
     } else {
-      err.textContent = '口令不对(' + md5(pw.value).slice(0,8) + '…)';
+      err.textContent = '口令不对';
       pw.select();
     }
   }

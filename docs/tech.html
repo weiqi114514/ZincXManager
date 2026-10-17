@@ -50,35 +50,35 @@ footer{color:var(--muted);border-top:1px solid var(--line);margin-top:30px;paddi
 <h2 id="proto">① 协议码表</h2>
 <p class="lead">所有网络包第一段就是这套编号。<b>发送端</b> = 谁构造并发出;<b>接收端</b> = 谁读取处理。ZXMOS→ZXMS→ZXMC 之间是逐跳转发,所以同一条消息可能被多个端“收到再转出”。</p>
 <table id="tbl-proto"><thead><tr><th>码</th><th>常量名</th><th>发送端</th><th>接收端</th><th>代表的信息</th><th>定义位置</th></tr></thead><tbody>
-<tr><td class="mono">100</td><td class="mono">SOnline</td><td>ZXMS</td><td>ZXMOS</td><td>ZXMS → ZXMOS:子服务端上线(握手)</td><td class="mono muted">Network/Protocol.cs</td></tr>
-<tr><td class="mono">101</td><td class="mono">SBack</td><td>ZXMOS</td><td>ZXMS</td><td>ZXMOS → ZXMS:收到</td><td class="mono muted">Network/Protocol.cs</td></tr>
-<tr><td class="mono">200</td><td class="mono">ServerIdent</td><td>服务端</td><td>对方</td><td>服务端 → 对方:我是谁(负载 &quot;ZXMS&quot; / &quot;ZXMOS&quot;)</td><td class="mono muted">Network/Protocol.cs</td></tr>
-<tr><td class="mono">201</td><td class="mono">ServerName</td><td>服务端</td><td>对方</td><td>服务端 → 对方:服务端名称(负载 = 显示名;由服务端给,客户端不用填)</td><td class="mono muted">Network/Protocol.cs</td></tr>
-<tr><td class="mono">202</td><td class="mono">ServerConfig</td><td>服务端</td><td>客户端</td><td>服务端 → 客户端:服务端配置(客户端连上后下发一次),负载按行 键=值。 目前只有 msgdays = 这个子服务端的消息保留天数(客户端据此决定本地留多久;不认识的行忽略)。</td><td class="mono muted">Network/Protocol.cs</td></tr>
-<tr><td class="mono">300</td><td class="mono">Conline</td><td>ZXMC</td><td>服务端</td><td>ZXMC → 服务端:客户端上线(负载 &quot;ZXMC:&lt;模式&gt;&quot;)</td><td class="mono muted">Network/Protocol.cs</td></tr>
-<tr><td class="mono">301</td><td class="mono">CBack</td><td>服务端</td><td>ZXMC</td><td>服务端 → ZXMC:收到</td><td class="mono muted">Network/Protocol.cs</td></tr>
-<tr><td class="mono">400</td><td class="mono">FriendMsg</td><td>—</td><td>—</td><td>好友消息 —— 未实施:编号先占着,以后要做再定负载(那时才需要&quot;每跳按包 Id 记上游&quot;的回执链路)。</td><td class="mono muted">Network/Protocol.cs</td></tr>
-<tr><td class="mono">400</td><td class="mono">BusinessFrom</td><td>—</td><td>—</td><td>业务包起始编号:4xx 及以上算业务包,发送时会自动记 clients.log。</td><td class="mono muted">Network/Protocol.cs</td></tr>
-<tr><td class="mono">401</td><td class="mono">FriendMsgAck</td><td>—</td><td>—</td><td>好友消息回执 —— 未实施,理由同上。</td><td class="mono muted">Network/Protocol.cs</td></tr>
-<tr><td class="mono">500</td><td class="mono">Notice</td><td>服务端</td><td>客户端</td><td>服务端公告(群发,单向:服务端 → 客户端)。负载 = 消息卡片,见 : 种类|标题|正文|来源|主动作|次动作|选项。 ZXMOS → ZXMS → ZXMC:ZXMS 收到后原样转给自己名下所有 ZXMC。</td><td class="mono muted">Network/Protocol.cs</td></tr>
-<tr><td class="mono">501</td><td class="mono">Push</td><td>服务端</td><td>客户端</td><td>服务端定向推送(单向:服务端 → 客户端)。负载 = 目标账号|卡片(见 )。 每一跳都按目标账号本地过滤:命中才投,不命中静默丢弃。</td><td class="mono muted">Network/Protocol.cs</td></tr>
-<tr><td class="mono">502</td><td class="mono">CardAction</td><td>ZXMC</td><td>服务端</td><td>ZXMC → 服务端:玩家点了消息卡片上的按钮 / 选了下拉框。负载 动作|输入|原卡片 (见 ):动作 = 按钮文案(下拉框固定&quot;选择&quot;), 输入 = 填空卡片填的内容,原卡片 = 收到的那张卡片原文 —— 服务端据此知道是哪张卡片,不用另加卡片序号。 卡片来源是 ZXMOS-… 时,子服务端会把动作转交给官方服务端(转发时负载前面多一段账号)。</td><td class="mono muted">Network/Protocol.cs</td></tr>
-<tr><td class="mono">503</td><td class="mono">CardActionAck</td><td>服务端</td><td>ZXMC</td><td>服务端 → ZXMC:卡片动作回执,ok|提示文本 或 err|原因。</td><td class="mono muted">Network/Protocol.cs</td></tr>
-<tr><td class="mono">504</td><td class="mono">MessageHistory</td><td>服务端</td><td>客户端</td><td>服务端 → 客户端:补发的一条历史消息(一条消息一个包,负载就是那张卡片原文 —— 第 8 段带着消息号)。正文里有换行也不会坏,不用按行切分。 客户端按「来源 + 消息号」去重(见 ): 本地已经有的跳过,所以老客户端不会重复、新客户端一条不落。</td><td class="mono muted">Network/Protocol.cs</td></tr>
-<tr><td class="mono">505</td><td class="mono">MessageHistoryReq</td><td>客户端</td><td>服务端</td><td>客户端 → 服务端:把我还缺的服务端消息给我。客户端登录成功后发一次,负载 = client(替玩家要,子服务端中转时用)或 self(子服务端自己来要;空 = client)。 服务端按连接逐条回 ,最后回一条 收尾。</td><td class="mono muted">Network/Protocol.cs</td></tr>
-<tr><td class="mono">506</td><td class="mono">MessageHistoryDone</td><td>服务端</td><td>客户端</td><td>服务端 → 客户端:这批补发完了(负载 = 补发条数)。客户端拿它收尾报提示, 中转端(ZXMS)拿它清掉&quot;是哪条连接要的&quot;那条记录。</td><td class="mono muted">Network/Protocol.cs</td></tr>
-<tr><td class="mono">520</td><td class="mono">OfficialChallenge</td><td>验证方</td><td>服务端</td><td>验证方 → 服务端:要一张&quot;你确实是官方服务端&quot;的证明(官方验证第二层)。 负载 = 32 位十六进制 nonce(一次性随机数);只有**已经登录过**的连接才会得到应答。</td><td class="mono muted">Network/Protocol.cs</td></tr>
-<tr><td class="mono">521</td><td class="mono">OfficialProof</td><td>服务端</td><td>验证方</td><td>服务端 → 验证方:证明自己。负载 = Base64(许可证原文)|nonce|HMAC-SHA256(pepper, nonce); 拿不出合法证明时回 err|&amp;lt;原因代号&amp;gt;(例如 err|development = 开发构建没有证)。 验证方用内置公钥验签(证明这张证是你签发的)+ 校验 nonce(证明是现算的,不是重放), 见 。</td><td class="mono muted">Network/Protocol.cs</td></tr>
-<tr><td class="mono">600</td><td class="mono">AccountLogin</td><td>ZXMC</td><td>ZXMS</td><td>ZXMC → ZXMS:登录,负载 &quot;名称|密码密文|等级&quot;</td><td class="mono muted">Network/Protocol.cs</td></tr>
-<tr><td class="mono">601</td><td class="mono">AccountLoginAck</td><td>ZXMS</td><td>ZXMC</td><td>ZXMS → ZXMC:&quot;ok|名称|ID|等级&quot; 或 &quot;err|原因&quot;</td><td class="mono muted">Network/Protocol.cs</td></tr>
-<tr><td class="mono">602</td><td class="mono">AccountRegister</td><td>ZXMC</td><td>ZXMS</td><td>ZXMC → ZXMS:注册,负载 &quot;名称|密码密文&quot;(等级固定 Player)</td><td class="mono muted">Network/Protocol.cs</td></tr>
-<tr><td class="mono">603</td><td class="mono">AccountRegisterAck</td><td>ZXMS</td><td>ZXMC</td><td>ZXMS → ZXMC:&quot;ok|名称|ID|等级&quot; 或 &quot;err|原因&quot;</td><td class="mono muted">Network/Protocol.cs</td></tr>
-<tr><td class="mono">604</td><td class="mono">AccountAvatarReq</td><td>ZXMC</td><td>ZXMS</td><td>ZXMC → ZXMS:要当前账号的头像(负载空)</td><td class="mono muted">Network/Protocol.cs</td></tr>
-<tr><td class="mono">605</td><td class="mono">AccountAvatarAck</td><td>ZXMS</td><td>ZXMC</td><td>ZXMS → ZXMC:图片字节(空 = 没头像);设置头像时回 &quot;ok&quot; / &quot;err|原因&quot;</td><td class="mono muted">Network/Protocol.cs</td></tr>
-<tr><td class="mono">606</td><td class="mono">AccountAvatarSet</td><td>—</td><td>—</td><td></td><td class="mono muted">Network/Protocol.cs</td></tr>
-<tr><td class="mono">610</td><td class="mono">AccountMigrate</td><td>ZXMOS</td><td>ZXMS</td><td>ZXMOS → ZXMS:把某些用户账号移交给子服务端(拉黑前先移交,别让玩家丢号)。负载 &quot;名称|密文|等级&quot; 每行一条。</td><td class="mono muted">Network/Protocol.cs</td></tr>
-<tr><td class="mono">611</td><td class="mono">AccountRename</td><td>ZXMS</td><td>ZXMOS</td><td>ZXMS → ZXMOS:改本端子服务端账号的名字(顺带改密码),由控制台 osuser 命令发起。 负载 &quot;旧名|新名|新密文|机器码|服务端码&quot;;ZXMOS 校验账号存在 + 机器码 / 服务端码与登记一致才改。</td><td class="mono muted">Network/Protocol.cs</td></tr>
-<tr><td class="mono">612</td><td class="mono">AccountRenameAck</td><td>ZXMOS</td><td>ZXMS</td><td>ZXMOS → ZXMS:改名回执,&quot;ok|新名&quot; 或 &quot;err|原因&quot;。</td><td class="mono muted">Network/Protocol.cs</td></tr>
+<tr><td class="mono">100</td><td class="mono">SOnline</td><td class="mono">ZXMS</td><td class="mono">ZXMOS</td><td>ZXMS → ZXMOS:子服务端上线(握手)</td><td class="mono muted">Network/Protocol.cs</td></tr>
+<tr><td class="mono">101</td><td class="mono">SBack</td><td class="mono">ZXMOS</td><td class="mono">ZXMS</td><td>ZXMOS → ZXMS:收到</td><td class="mono muted">Network/Protocol.cs</td></tr>
+<tr><td class="mono">200</td><td class="mono">ServerIdent</td><td class="mono">ZXMS, ZXMOS</td><td class="mono">ZXMC, ZXMS</td><td>服务端 → 对方:我是谁(负载 &quot;ZXMS&quot; / &quot;ZXMOS&quot;)</td><td class="mono muted">Network/Protocol.cs</td></tr>
+<tr><td class="mono">201</td><td class="mono">ServerName</td><td class="mono">ZXMS, ZXMOS</td><td class="mono">ZXMC, ZXMS</td><td>服务端 → 对方:服务端名称(负载 = 显示名;由服务端给,客户端不用填)</td><td class="mono muted">Network/Protocol.cs</td></tr>
+<tr><td class="mono">202</td><td class="mono">ServerConfig</td><td class="mono">ZXMS</td><td class="mono">ZXMC</td><td>服务端 → 客户端:服务端配置(客户端连上后下发一次),负载按行 键=值。 目前只有 msgdays = 这个子服务端的消息保留天数(客户端据此决定本地留多久;不认识的行忽略)。</td><td class="mono muted">Network/Protocol.cs</td></tr>
+<tr><td class="mono">300</td><td class="mono">Conline</td><td class="mono">ZXMC</td><td class="mono">ZXMS</td><td>ZXMC → 服务端:客户端上线(负载 &quot;ZXMC:&lt;模式&gt;&quot;)</td><td class="mono muted">Network/Protocol.cs</td></tr>
+<tr><td class="mono">301</td><td class="mono">CBack</td><td class="mono">ZXMS</td><td class="mono">ZXMC</td><td>服务端 → ZXMC:收到</td><td class="mono muted">Network/Protocol.cs</td></tr>
+<tr><td class="mono">400</td><td class="mono">FriendMsg</td><td class="mono">ZXMC</td><td class="mono">ZXMS, ZXMC</td><td>好友消息 —— 未实施:编号先占着,以后要做再定负载(那时才需要&quot;每跳按包 Id 记上游&quot;的回执链路)。</td><td class="mono muted">Network/Protocol.cs</td></tr>
+<tr><td class="mono">400</td><td class="mono">BusinessFrom</td><td class="mono">ZXMC</td><td class="mono">ZXMS, ZXMC</td><td>业务包起始编号:4xx 及以上算业务包,发送时会自动记 clients.log。</td><td class="mono muted">Network/Protocol.cs</td></tr>
+<tr><td class="mono">401</td><td class="mono">FriendMsgAck</td><td class="mono">ZXMS, ZXMC</td><td class="mono">ZXMC</td><td>好友消息回执 —— 未实施,理由同上。</td><td class="mono muted">Network/Protocol.cs</td></tr>
+<tr><td class="mono">500</td><td class="mono">Notice</td><td class="mono">ZXMOS</td><td class="mono">ZXMS, ZXMC</td><td>服务端公告(群发,单向:服务端 → 客户端)。负载 = 消息卡片,见 : 种类|标题|正文|来源|主动作|次动作|选项。 ZXMOS → ZXMS → ZXMC:ZXMS 收到后原样转给自己名下所有 ZXMC。</td><td class="mono muted">Network/Protocol.cs</td></tr>
+<tr><td class="mono">501</td><td class="mono">Push</td><td class="mono">ZXMOS</td><td class="mono">ZXMS, ZXMC</td><td>服务端定向推送(单向:服务端 → 客户端)。负载 = 目标账号|卡片(见 )。 每一跳都按目标账号本地过滤:命中才投,不命中静默丢弃。</td><td class="mono muted">Network/Protocol.cs</td></tr>
+<tr><td class="mono">502</td><td class="mono">CardAction</td><td class="mono">ZXMC</td><td class="mono">ZXMS, ZXMOS</td><td>ZXMC → 服务端:玩家点了消息卡片上的按钮 / 选了下拉框。负载 动作|输入|原卡片 (见 ):动作 = 按钮文案(下拉框固定&quot;选择&quot;), 输入 = 填空卡片填的内容,原卡片 = 收到的那张卡片原文 —— 服务端据此知道是哪张卡片,不用另加卡片序号。 卡片来源是 ZXMOS-… 时,子服务端会把动作转交给官方服务端(转发时负载前面多一段账号)。</td><td class="mono muted">Network/Protocol.cs</td></tr>
+<tr><td class="mono">503</td><td class="mono">CardActionAck</td><td class="mono">ZXMS, ZXMOS</td><td class="mono">ZXMC</td><td>服务端 → ZXMC:卡片动作回执,ok|提示文本 或 err|原因。</td><td class="mono muted">Network/Protocol.cs</td></tr>
+<tr><td class="mono">504</td><td class="mono">MessageHistory</td><td class="mono">ZXMS</td><td class="mono">ZXMC</td><td>服务端 → 客户端:补发的一条历史消息(一条消息一个包,负载就是那张卡片原文 —— 第 8 段带着消息号)。正文里有换行也不会坏,不用按行切分。 客户端按「来源 + 消息号」去重(见 ): 本地已经有的跳过,所以老客户端不会重复、新客户端一条不落。</td><td class="mono muted">Network/Protocol.cs</td></tr>
+<tr><td class="mono">505</td><td class="mono">MessageHistoryReq</td><td class="mono">ZXMC</td><td class="mono">ZXMS</td><td>客户端 → 服务端:把我还缺的服务端消息给我。客户端登录成功后发一次,负载 = client(替玩家要,子服务端中转时用)或 self(子服务端自己来要;空 = client)。 服务端按连接逐条回 ,最后回一条 收尾。</td><td class="mono muted">Network/Protocol.cs</td></tr>
+<tr><td class="mono">506</td><td class="mono">MessageHistoryDone</td><td class="mono">ZXMS</td><td class="mono">ZXMC</td><td>服务端 → 客户端:这批补发完了(负载 = 补发条数)。客户端拿它收尾报提示, 中转端(ZXMS)拿它清掉&quot;是哪条连接要的&quot;那条记录。</td><td class="mono muted">Network/Protocol.cs</td></tr>
+<tr><td class="mono">520</td><td class="mono">OfficialChallenge</td><td class="mono">ZXMS, ZXMC</td><td class="mono">ZXMOS, ZXMS</td><td>验证方 → 服务端:要一张&quot;你确实是官方服务端&quot;的证明(官方验证第二层)。 负载 = 32 位十六进制 nonce(一次性随机数);只有**已经登录过**的连接才会得到应答。</td><td class="mono muted">Network/Protocol.cs</td></tr>
+<tr><td class="mono">521</td><td class="mono">OfficialProof</td><td class="mono">ZXMOS, ZXMS</td><td class="mono">ZXMS, ZXMC</td><td>服务端 → 验证方:证明自己。负载 = Base64(许可证原文)|nonce|HMAC-SHA256(pepper, nonce); 拿不出合法证明时回 err|&amp;lt;原因代号&amp;gt;(例如 err|development = 开发构建没有证)。 验证方用内置公钥验签(证明这张证是你签发的)+ 校验 nonce(证明是现算的,不是重放), 见 。</td><td class="mono muted">Network/Protocol.cs</td></tr>
+<tr><td class="mono">600</td><td class="mono">AccountLogin</td><td class="mono">ZXMC</td><td class="mono">ZXMS</td><td>ZXMC → ZXMS:登录,负载 &quot;名称|密码密文|等级&quot;</td><td class="mono muted">Network/Protocol.cs</td></tr>
+<tr><td class="mono">601</td><td class="mono">AccountLoginAck</td><td class="mono">ZXMS</td><td class="mono">ZXMC</td><td>ZXMS → ZXMC:&quot;ok|名称|ID|等级&quot; 或 &quot;err|原因&quot;</td><td class="mono muted">Network/Protocol.cs</td></tr>
+<tr><td class="mono">602</td><td class="mono">AccountRegister</td><td class="mono">ZXMC</td><td class="mono">ZXMS</td><td>ZXMC → ZXMS:注册,负载 &quot;名称|密码密文&quot;(等级固定 Player)</td><td class="mono muted">Network/Protocol.cs</td></tr>
+<tr><td class="mono">603</td><td class="mono">AccountRegisterAck</td><td class="mono">ZXMS</td><td class="mono">ZXMC</td><td>ZXMS → ZXMC:&quot;ok|名称|ID|等级&quot; 或 &quot;err|原因&quot;</td><td class="mono muted">Network/Protocol.cs</td></tr>
+<tr><td class="mono">604</td><td class="mono">AccountAvatarReq</td><td class="mono">ZXMC</td><td class="mono">ZXMS</td><td>ZXMC → ZXMS:要当前账号的头像(负载空)</td><td class="mono muted">Network/Protocol.cs</td></tr>
+<tr><td class="mono">605</td><td class="mono">AccountAvatarAck</td><td class="mono">ZXMS</td><td class="mono">ZXMC</td><td>ZXMS → ZXMC:图片字节(空 = 没头像);设置头像时回 &quot;ok&quot; / &quot;err|原因&quot;</td><td class="mono muted">Network/Protocol.cs</td></tr>
+<tr><td class="mono">606</td><td class="mono">AccountAvatarSet</td><td class="mono">ZXMC</td><td class="mono">ZXMS</td><td></td><td class="mono muted">Network/Protocol.cs</td></tr>
+<tr><td class="mono">610</td><td class="mono">AccountMigrate</td><td class="mono">ZXMOS</td><td class="mono">ZXMS</td><td>ZXMOS → ZXMS:把某些用户账号移交给子服务端(拉黑前先移交,别让玩家丢号)。负载 &quot;名称|密文|等级&quot; 每行一条。</td><td class="mono muted">Network/Protocol.cs</td></tr>
+<tr><td class="mono">611</td><td class="mono">AccountRename</td><td class="mono">ZXMS</td><td class="mono">ZXMOS</td><td>ZXMS → ZXMOS:改本端子服务端账号的名字(顺带改密码),由控制台 osuser 命令发起。 负载 &quot;旧名|新名|新密文|机器码|服务端码&quot;;ZXMOS 校验账号存在 + 机器码 / 服务端码与登记一致才改。</td><td class="mono muted">Network/Protocol.cs</td></tr>
+<tr><td class="mono">612</td><td class="mono">AccountRenameAck</td><td class="mono">ZXMOS</td><td class="mono">ZXMS</td><td>ZXMOS → ZXMS:改名回执,&quot;ok|新名&quot; 或 &quot;err|原因&quot;。</td><td class="mono muted">Network/Protocol.cs</td></tr>
 </tbody></table>
 <h2 id="cmd">② 各端命令表</h2>
 <p class="lead">控制台命令(ZXMC 是图形客户端,没有控制台命令)。参数写法里的 <span class="mono">&lt;...&gt;</span> 表示必填位。</p>
@@ -2585,7 +2585,7 @@ q.addEventListener('input',()=>{
       document.getElementById('lock').style.display = 'none';
       document.getElementById('protected').style.display = '';
     } else {
-      err.textContent = '口令不对(' + md5(pw.value).slice(0,8) + '…)';
+      err.textContent = '口令不对';
       pw.select();
     }
   }
