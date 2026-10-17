@@ -116,7 +116,42 @@ footer{color:var(--muted);border-top:1px solid var(--line);margin-top:30px;paddi
 <tr><td >官方验证</td><td class="mono">验证方：520 挑战(nonce) → 服务端：521 Base64(lic)|nonce|HMAC</td><td class="mono">520 / 521</td><td >只有登录过的连接才应答;校验机器码绑定</td></tr>
 <tr><td >账号改名</td><td class="mono">ZXMS → ZXMOS：611 改名 → 612 回执(ok|新名 或 err|原因)</td><td class="mono">611 / 612</td><td >控制台 osuser 命令触发</td></tr>
 </tbody></table>
-<h2 id="config">⑦ config.ini 的配置项(子服)</h2>
+<h2 id="startup">⑦ 程序启动流程</h2>
+<p class="lead">按 <span class="mono">Program.Main</span> / <span class="mono">App.OnFrameworkInitializationCompleted</span> 里的实际调用顺序整理;括号里是代码行号所在的文件。</p>
+<table><thead><tr><th>程序</th><th>步</th><th>这一步做什么</th><th>代码位置</th></tr></thead><tbody>
+<tr><td>ZXMS 子服务端</td><td class="mono">1</td><td>打印横幅 + 欢迎语 + 官网地址</td><td class="mono muted">Program.cs Main 开头</td></tr>
+<tr><td>ZXMS 子服务端</td><td class="mono">2</td><td>OpenLog():开当天日志文件</td><td class="mono muted">Program.cs</td></tr>
+<tr><td>ZXMS 子服务端</td><td class="mono">3</td><td>new ZFile + FileOperate(&quot;config.ini&quot;,&quot;rwNFC&quot;):读配置</td><td class="mono muted">Program.cs</td></tr>
+<tr><td>ZXMS 子服务端</td><td class="mono">4</td><td>name:缺了就当场问(不再静默写默认名)</td><td class="mono muted">Program.cs</td></tr>
+<tr><td>ZXMS 子服务端</td><td class="mono">5</td><td>linkname:缺失写默认 1(名称跟官方账号名)</td><td class="mono muted">Program.cs</td></tr>
+<tr><td>ZXMS 子服务端</td><td class="mono">6</td><td>servercode:缺失/格式不对就生成 32 位十六进制并写回</td><td class="mono muted">Program.cs</td></tr>
+<tr><td>ZXMS 子服务端</td><td class="mono">7</td><td>读 czport / ozip / ozport / msgdays / srvmsgdays;officialcheck 决定“对端校验”开还是关</td><td class="mono muted">Program.cs</td></tr>
+<tr><td>ZXMS 子服务端</td><td class="mono">8</td><td>ResolveConnectOS():决定这次要不要连官方端(兼容老配置)</td><td class="mono muted">Program.cs:55(相对)</td></tr>
+<tr><td>ZXMS 子服务端</td><td class="mono">9</td><td>new TcpServer(IPAddress.Any, czport) 起监听</td><td class="mono muted">Program.cs:309</td></tr>
+<tr><td>ZXMS 子服务端</td><td class="mono">10</td><td>connectOS=1 → 异步连 ZXMOS(连不上不影响本地服务)</td><td class="mono muted">Program.cs:641 osReconnect</td></tr>
+<tr><td>ZXMS 子服务端</td><td class="mono">11</td><td>new CommandHandler():注册 ZXMS 命令 + config 模式拦截</td><td class="mono muted">Program.cs:610 / 656</td></tr>
+<tr><td>ZXMS 子服务端</td><td class="mono">12</td><td>进入管理循环(Console.ReadLine),按 Ctrl+C 退出</td><td class="mono muted">Program.cs</td></tr>
+<tr><td>ZXMOS 官方服务端</td><td class="mono">1</td><td>OpenLog():开当天日志文件</td><td class="mono muted">Program.cs</td></tr>
+<tr><td>ZXMOS 官方服务端</td><td class="mono">2</td><td>new ZFile:读 config.ini(port 缺失会问)</td><td class="mono muted">Program.cs</td></tr>
+<tr><td>ZXMOS 官方服务端</td><td class="mono">3</td><td>new TcpServer(IPAddress.Any, port) 起监听(默认 25000)</td><td class="mono muted">Program.cs:163</td></tr>
+<tr><td>ZXMOS 官方服务端</td><td class="mono">4</td><td>OfficialGuard.Allow():校验 official.lic(机器码绑定);不通过直接退出</td><td class="mono muted">Program.cs:173</td></tr>
+<tr><td>ZXMOS 官方服务端</td><td class="mono">5</td><td>new CommandHandler():注册 ZXMOS 命令</td><td class="mono muted">Program.cs:608</td></tr>
+<tr><td>ZXMOS 官方服务端</td><td class="mono">6</td><td>cmd.Start():命令线程起来</td><td class="mono muted">Program.cs:634</td></tr>
+<tr><td>ZXMOS 官方服务端</td><td class="mono">7</td><td>进入管理循环</td><td class="mono muted">Program.cs</td></tr>
+<tr><td>ZXMC 客户端</td><td class="mono">1</td><td>ThemeManager.ApplySaved():读 config.ini(主题、亚克力/半透明、不透明度 alpha)</td><td class="mono muted">App.axaml.cs:24</td></tr>
+<tr><td>ZXMC 客户端</td><td class="mono">2</td><td>oobe 还没做过 → 先开 OobeWindow(引导)</td><td class="mono muted">App.axaml.cs:38</td></tr>
+<tr><td>ZXMC 客户端</td><td class="mono">3</td><td>否则 → MainWindow + MainViewModel(主界面)</td><td class="mono muted">App.axaml.cs:67</td></tr>
+<tr><td>ZXMC 客户端</td><td class="mono">4</td><td>连 ZXMS:300 上线 → 301 回执</td><td class="mono muted">ClientSession</td></tr>
+<tr><td>ZXMC 客户端</td><td class="mono">5</td><td>收 200/201:记下服务端身份与名称(标题栏用)</td><td class="mono muted">ClientSession</td></tr>
+<tr><td>ZXMC 客户端</td><td class="mono">6</td><td>600 登录 → 601 回执(ok|名称|ID|等级 或 err|原因)</td><td class="mono muted">ClientSession</td></tr>
+<tr><td>ZXMC 客户端</td><td class="mono">7</td><td>收 202:服务端补一次配置(msgdays)</td><td class="mono muted">ClientSession</td></tr>
+<tr><td>ZXMC 客户端</td><td class="mono">8</td><td>505 要历史 → 504 逐条 → 506 收尾;按 来源+消息号 去重落地 messages.json</td><td class="mono muted">ClientSession / MessageStore</td></tr>
+<tr><td>ZXMTL 许可证工具</td><td class="mono">1</td><td>解析命令行参数(机器码 / 输出路径 / 序列号 / 到期)</td><td class="mono muted">ZincXManagerLicTool/Program.cs</td></tr>
+<tr><td>ZXMTL 许可证工具</td><td class="mono">2</td><td>读私钥(本机 _keys 或参数指定)</td><td class="mono muted">ZincXManagerLicTool</td></tr>
+<tr><td>ZXMTL 许可证工具</td><td class="mono">3</td><td>按机器码签 official.lic 并写文件</td><td class="mono muted">ZincXManagerLicTool</td></tr>
+</tbody></table>
+<p class="lead">要点:三端都是「先读 config(缺项自动补默认)→ 再起监听/开界面」;只有 ZXMOS 在起监听后立刻校验许可证,ZXMS 不校验本端许可证(它只校验对端是不是官方,由 officialcheck 控制)。</p>
+<h2 id="config">⑧ config.ini 的配置项(子服)</h2>
 <table><thead><tr><th>中文名</th><th>键名</th><th>类型</th><th>作用</th></tr></thead><tbody>
 <tr><td class="">服务端名称</td><td class="mono">name</td><td class="mono">文本 1-32 字符</td><td class="">玩家看到的名称(linkname=1 时跟账号名)</td></tr>
 <tr><td class="">名称联动</td><td class="mono">linkname</td><td class="mono">1/0</td><td class="">1 = 名称与官方账号名一致,0 = 分开设置</td></tr>
