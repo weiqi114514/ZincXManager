@@ -77,7 +77,6 @@ wix build installer\zxmc.wxs -o out\ZincXManagerClient-x64.msi `
 | `ZincXManagerOServer` | 官方服务端 **ZXMOS**(带控制台) |
 | `ZincXManagerOServerNO` | 官方服务端(裁剪版) |
 | `ZincXManagerShared` | 三端共用:协议、账号与权限、命令分发、日志、官方验证 |
-| `ZincXManagerLicTool` | 官方许可证签发工具(仅官方使用) |
 | `installer/` | 客户端 MSI 定义(WiX)与打包说明 |
 
 ## 四端架构与运行模式
