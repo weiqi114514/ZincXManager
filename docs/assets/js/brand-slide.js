@@ -1,10 +1,27 @@
-/* 首页大标题 Zinc[X]Manager:旧词向下滑出、新词从上方滑入,Manager 随宽度移动 */
+/* 首页大标题 Zinc[X]Manager:旧词下滑出、新词上滑入,槽宽做过渡 => Manager 平滑滑动而不是瞬移 */
 (function () {
   var WORDS = ["X", "Admin", "User", "Player", "System"];
   var PERIOD = 5000;
   var DUR = 440;
 
-  function setMove(el, y, animated) {
+  var probe = document.createElement("span");
+  probe.className = "bm-cur";
+  probe.style.cssText = "position:absolute;left:-9999px;top:0;visibility:hidden;white-space:nowrap;";
+
+  function widthOf(slot, word) {
+    var cur = slot.querySelector(".bm-cur");
+    var cs = window.getComputedStyle(cur);
+    probe.style.fontFamily = cs.fontFamily;
+    probe.style.fontSize = cs.fontSize;
+    probe.style.fontWeight = cs.fontWeight;
+    probe.style.fontStyle = cs.fontStyle;
+    probe.textContent = word;
+
+    if (!probe.isConnected) document.body.appendChild(probe);
+    return Math.ceil(probe.getBoundingClientRect().width);
+  }
+
+  function move(el, y, animated) {
     el.style.transition = animated ? "transform " + DUR + "ms cubic-bezier(.22,.61,.36,1)" : "none";
     el.style.transform = "translateY(" + y + "%)";
   }
@@ -14,13 +31,14 @@
     if (!slot || slot.dataset.ready === "1") return;
     slot.dataset.ready = "1";
 
-    var cur = slot.querySelector(".bm-cur");   // 在文档流里:宽度由它决定
-    var old = slot.querySelector(".bm-next");  // 绝对定位:只用来播放旧词
+    var cur = slot.querySelector(".bm-cur");
+    var old = slot.querySelector(".bm-next");
     var i = 0;
     var busy = false;
 
-    setMove(old, -100, false);
-    setMove(cur, 0, false);
+    slot.style.width = widthOf(slot, cur.textContent) + "px";
+    move(old, -100, false);
+    move(cur, 0, false);
 
     setInterval(function () {
       if (busy) return;
@@ -29,19 +47,21 @@
       i = (i + 1) % WORDS.length;
       var word = WORDS[i];
 
-      // 旧词交给绝对层,先摆回原位;新词先藏到上方
       old.textContent = cur.textContent;
       cur.textContent = word;
-      setMove(old, 0, false);
-      setMove(cur, -100, false);
-      void slot.offsetWidth;   // 强制回流,让下面的过渡有起点
 
-      // 旧词向下滑出,新词从上方滑入
-      setMove(old, 100, true);
-      setMove(cur, 0, true);
+      // 槽宽一起过渡(这是"滑动"而不是"瞬移"的关键)
+      slot.style.width = widthOf(slot, word) + "px";
+
+      move(old, 0, false);
+      move(cur, -100, false);
+      void slot.offsetWidth;
+
+      move(old, 100, true);
+      move(cur, 0, true);
 
       setTimeout(function () {
-        setMove(old, -100, false);
+        move(old, -100, false);
         old.textContent = "";
         busy = false;
       }, DUR + 20);
