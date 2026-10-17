@@ -2,24 +2,14 @@
 (function () {
   var WORDS = ["X", "Admin", "User", "Player", "System"];
   var PERIOD = 5000;
+  var canvas = document.createElement("canvas");
+  var ctx = canvas.getContext("2d");
 
-  // 用和真实文字完全一致的字体度量来量宽度,否则会影响 Manager 的位置
+  // 用 canvas 按真实字体量宽度(比插一个隐藏 span 稳)
   function measure(slot, word) {
-    var probe = document.createElement("span");
-    probe.className = "bm-cur bm-probe";
-    probe.textContent = word;
-
-    var cs = window.getComputedStyle(slot);
-    probe.style.fontSize = cs.fontSize;
-    probe.style.fontFamily = cs.fontFamily;
-    probe.style.fontWeight = cs.fontWeight;
-    probe.style.letterSpacing = cs.letterSpacing;
-    probe.style.whiteSpace = "nowrap";
-
-    slot.appendChild(probe);
-    var w = probe.getBoundingClientRect().width;
-    slot.removeChild(probe);
-    return Math.ceil(w);
+    var cs = window.getComputedStyle(slot.closest(".zxm-hero") || slot);
+    ctx.font = [cs.fontStyle, cs.fontWeight, cs.fontSize, cs.fontFamily].join(" ");
+    return Math.ceil(ctx.measureText(word).width);
   }
 
   function start(hero) {
