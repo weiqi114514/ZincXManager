@@ -3,11 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>帮助文档 · ZincXManager</title>
-<meta name="description" content="ZincXManager 文档:认识与安装、客户端使用手册、子服务端部署手册,每条控制台命令都带示例。">
+<title>文档与帮助 · ZincXManager</title>
+<meta name="description" content="ZincXManager 文档与帮助:认识与安装、客户端使用手册、子服务端部署手册,以及下载与反馈入口。">
 <link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="assets/css/style.css">
-<meta http-equiv="refresh" content="6;url=guide/index.html">
 </head>
 <body>
 
@@ -26,8 +25,7 @@
       <a href="index.html#modes">模式</a>
       <a href="download.html">下载</a>
       <a href="zxms.html">子服教程</a>
-      <a href="guide/index.html">文档</a>
-      <a href="help.html" class="active">帮助文档</a>
+      <a href="help.html" class="active">文档</a>
       <a href="changelog.html">更新日志</a>
       <a href="index.html#about">关于</a>
       <a class="btn btn-ghost" href="https://github.com/weiqi114514/ZincXManager" target="_blank" rel="noopener">GitHub</a>
@@ -39,36 +37,33 @@
   <section class="section">
     <div class="wrap">
       <header class="section-head">
-        <h2>帮助文档</h2>
-        <p>完整文档就在本站:<b>5 篇分类文档</b>(使用 3 篇 + 技术 2 篇),<b>不用登录、不依赖第三方</b>。
-          源文件随仓库走(GPL-2.0),官网与 GitHub Pages 同步发布。</p>
+        <h2>文档与帮助</h2>
+        <p>文档和帮助合并在一页:<b>3 篇分类文档</b> + <b>常用入口与常见问题</b>。
+          不用登录、不依赖第三方;源文件随仓库走(GPL-2.0),官网与 GitHub Pages 同步发布。</p>
       </header>
 
-      <article class="card cta-card">
-        <h3>正在打开发文档目录…</h3>
-        <p class="muted">如果浏览器没有自动跳转,点下面的按钮:</p>
-        <p>
-          <a class="btn btn-primary btn-lg" href="guide/index.html">打开《ZincXManager 文档目录》</a>
-        </p>
-        <p class="muted"><span id="left">6</span> 秒后自动打开 ·
-          <a href="#" id="stay">留在此页看分类</a></p>
-      </article>
-
-      <div class="grid grid-2" style="margin-top:22px">
+      <h3 class="doc-group">分类文档</h3>
+      <div class="grid grid-2" style="margin-top:12px">
         <article class="card">
-          <h3>使用篇(给玩家与服主)</h3>
-          <ul class="facts">
-            <li><span>① 认识与安装</span><span>这是什么、三端关系、装客户端、首次向导、连接方式与权限等级 ·
-              <a href="guide/01-getting-started.html">打开</a></span></li>
-            <li><span>② 客户端使用手册</span><span>界面分区、消息面板与五种卡片、存档规则、提示条、设置页、连接设置、常见问题 ·
-              <a href="guide/02-client-manual.html">打开</a></span></li>
-            <li><span>③ 子服务端部署手册</span><span>config.ini 逐项、首次启动自动注册、让玩家连上、<b>控制台命令逐条带示例</b>、常见问题 ·
-              <a href="guide/03-zxms-deploy.html">打开</a></span></li>
-          </ul>
+          <h3><a href="guide/01-getting-started.html">① 认识与安装</a></h3>
+          <p class="muted">这是什么、三端关系、装客户端、首次向导、连接方式与权限等级</p>
         </article>
-        </div>
+        <article class="card">
+          <h3><a href="guide/02-client-manual.html">② 客户端使用手册</a></h3>
+          <p class="muted">界面分区、消息面板与五种卡片、存档规则、提示条、设置页、连接设置、常见问题</p>
+        </article>
+        <article class="card">
+          <h3><a href="guide/03-zxms-deploy.html">③ 子服务端部署手册</a></h3>
+          <p class="muted">config.ini 逐项、首次启动自动注册、让玩家连上、控制台命令逐条带示例、常见问题</p>
+        </article>
+        <article class="card">
+          <h3><a href="zxms.html">子服教程(网页版)</a></h3>
+          <p class="muted">不想读长文档?这一页是 ZXMS 部署的最短路径</p>
+        </article>
+      </div>
 
-      <div class="grid grid-2" style="margin-top:22px">
+      <h3 class="doc-group" style="margin-top:28px">常用入口</h3>
+      <div class="grid grid-2" style="margin-top:12px">
         <article class="card">
           <h3>下载</h3>
           <ul class="facts">
@@ -80,9 +75,9 @@
         <article class="card">
           <h3>其它</h3>
           <ul class="facts">
-            <li><span>子服教程</span><span><a href="zxms.html">ZXMS 部署(网页版)</a></span></li>
             <li><span>更新日志</span><span><a href="changelog.html">版本记录</a></span></li>
             <li><span>反馈</span><span>QQ 群 <code>1129776132</code> · <a href="https://github.com/weiqi114514/ZincXManager/issues" target="_blank" rel="noopener">Issues</a></span></li>
+            <li><span>入门</span><span><a href="guide/01-getting-started.html">从「认识与安装」开始</a></span></li>
           </ul>
         </article>
       </div>
@@ -100,8 +95,7 @@
       <a href="index.html">首页</a>
       <a href="download.html">下载</a>
       <a href="zxms.html">子服教程</a>
-      <a href="help.html">帮助文档</a>
-      <a href="guide/index.html">文档目录</a>
+      <a href="help.html">文档与帮助</a>
       <a href="changelog.html">更新日志</a>
       <a href="https://github.com/weiqi114514/ZincXManager" target="_blank" rel="noopener">GitHub</a>
     </nav>
@@ -109,23 +103,6 @@
   </div>
 </footer>
 
-<script>
-  (function () {
-    var stay = false, left = 6, el = document.getElementById('left');
-    var timer = setInterval(function () {
-      if (stay) { clearInterval(timer); return; }
-      left -= 1;
-      if (el) el.textContent = left > 0 ? left : 0;
-      if (left <= 0) { clearInterval(timer); location.href = 'guide/index.html'; }
-    }, 1000);
-    var s = document.getElementById('stay');
-    if (s) s.addEventListener('click', function (e) {
-      e.preventDefault(); stay = true; clearInterval(timer);
-      var c = document.querySelector('.cta-card h3'); if (c) c.textContent = '已留在本页';
-      if (el) el.textContent = '—';
-    });
-  })();
-</script>
 <script src="assets/js/main.js" defer></script>
 <script src="assets/js/release.js" defer></script>
 </body>
