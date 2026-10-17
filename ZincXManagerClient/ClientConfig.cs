@@ -17,7 +17,11 @@ internal static class ClientConfig
     private static ZFile Open()
     {
         var file = new ZFile();
-        if (!file.FileOperate("config.ini", "rwNFC"))
+        // 用 exe 所在目录,别用当前工作目录 —— 从别处(计划任务、快捷方式、命令行)启动时
+        // 相对路径会在那个目录里另建一份空 config,于是又走一次首次引导、免登录记录也读不到。
+        var path = System.IO.Path.Combine(System.AppContext.BaseDirectory, "config.ini");
+
+        if (!file.FileOperate(path, "rwNFC"))
         {
             Logger.Log(LogLevel.Warning, "[ZXMC] 打开 config.ini 失败,使用缺省配置");
         }

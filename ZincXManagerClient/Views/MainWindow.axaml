@@ -1,4 +1,4 @@
-<Window Icon="/Assets/zxm.ico" xmlns="https://github.com/avaloniaui"
+<Window Icon="/Assets/zxm-window.png" xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:ZincXManagerClient.ViewModels"
         xmlns:models="using:ZincXManagerClient.Models"
@@ -94,6 +94,20 @@
     </Style>
 
     <!-- 卡片里的链接式按钮 -->
+    <Style Selector="Button.tab">
+      <Setter Property="Background" Value="Transparent"/>
+      <Setter Property="BorderThickness" Value="0"/>
+      <Setter Property="Padding" Value="0,4"/>
+      <Setter Property="FontSize" Value="15"/>
+      <Setter Property="FontWeight" Value="SemiBold"/>
+      <Setter Property="Foreground" Value="#1F3B3A"/>
+      <Setter Property="HorizontalContentAlignment" Value="Center"/>
+      <Setter Property="Cursor" Value="Hand"/>
+    </Style>
+    <Style Selector="Button.tab:pointerover /template/ ContentPresenter">
+      <Setter Property="Background" Value="Transparent"/>
+    </Style>
+
     <Style Selector="Button.link">
       <Setter Property="Background" Value="Transparent"/>
       <Setter Property="BorderThickness" Value="0"/>
@@ -335,12 +349,38 @@
         <Border Grid.Column="1" Margin="0,8,10,10"
                 Background="{DynamicResource ThemePanel}" BorderBrush="{DynamicResource ThemePanelBorder}" BorderThickness="1">
           <Grid RowDefinitions="Auto,*" Margin="14,12,14,10">
-            <StackPanel Grid.Row="0" Spacing="6">
-              <TextBlock Text="消息" FontSize="17" FontWeight="SemiBold" Foreground="#1F3B3A"/>
-              <Rectangle Width="30" Height="2.5" Fill="{DynamicResource ThemePrimary}" HorizontalAlignment="Left"/>
+            <StackPanel Grid.Row="0" Spacing="2">
+              <!-- 页签多 / 名字长的时候横向滚动,别把后面的挤没 -->
+              <ScrollViewer HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Disabled">
+              <StackPanel Spacing="2">
+              <ItemsControl ItemsSource="{Binding Tabs}">
+                <ItemsControl.ItemsPanel>
+                  <ItemsPanelTemplate>
+                    <StackPanel Orientation="Horizontal"/>
+                  </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="models:MessageTab">
+                    <Button Classes="tab" Content="{Binding Label}" Click="OnTabClick" Width="{Binding Width}"/>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+
+              <!-- 蓝色小条:跟着选中的页签滑过去(放在画布里,宽度=所有页签总宽,滚动时一起走) -->
+              <Canvas Width="{Binding TabsWidth}" Height="4" HorizontalAlignment="Left">
+                <Rectangle x:Name="TabUnderline" Canvas.Left="0" Width="30" Height="2.5"
+                           Fill="{DynamicResource ThemePrimary}" RenderTransformOrigin="0,0.5">
+                  <Rectangle.RenderTransform>
+                    <TranslateTransform X="{Binding UnderlineOffset}"/>
+                  </Rectangle.RenderTransform>
+                </Rectangle>
+              </Canvas>
+              </StackPanel>
+              </ScrollViewer>
             </StackPanel>
 
-            <ScrollViewer Grid.Row="1" Margin="0,12,0,0" VerticalScrollBarVisibility="Auto">
+            <ScrollViewer x:Name="MessagesScroller" Grid.Row="1" Margin="0,12,0,0" VerticalScrollBarVisibility="Hidden"
+                          HorizontalScrollBarVisibility="Disabled" IsVisible="{Binding IsTabMessages}">
               <StackPanel Spacing="11">
                 <ItemsControl ItemsSource="{Binding Messages}">
                   <ItemsControl.ItemTemplate>
@@ -404,6 +444,43 @@
                            IsVisible="{Binding !HasMessages}"/>
               </StackPanel>
             </ScrollViewer>
+
+            <!-- 日志:ZXMC 运行日志 -->
+            <Grid Grid.Row="1" IsVisible="{Binding IsTabLog}" RowDefinitions="Auto,*" Margin="0,10,0,0">
+              <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Margin="0,0,0,6">
+                <TextBlock Grid.Column="0" Classes="source" Text="最近一份运行日志(末尾 400 行)" VerticalAlignment="Center"/>
+                <Button Grid.Column="1" Classes="link" Content="刷新" Click="OnRefreshLogClick"/>
+              </Grid>
+              <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                <SelectableTextBlock Text="{Binding LogText}" FontFamily="Consolas, Microsoft YaHei UI" FontSize="11.5"
+                                     Foreground="#31505F" TextWrapping="Wrap"/>
+              </ScrollViewer>
+            </Grid>
+
+            <!-- 更新日志:根目录 UpdateLog.MD -->
+            <Grid Grid.Row="1" IsVisible="{Binding IsTabChangelog}" RowDefinitions="Auto,*" Margin="0,10,0,0">
+              <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Margin="0,0,0,6">
+                <TextBlock Grid.Column="0" Classes="source" Text="根目录 UpdateLog.MD" VerticalAlignment="Center"/>
+                <Button Grid.Column="1" Classes="link" Content="刷新" Click="OnRefreshChangelogClick"/>
+              </Grid>
+              <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                <SelectableTextBlock Text="{Binding ChangelogText}" FontSize="12.5" Foreground="#31505F" TextWrapping="Wrap"/>
+              </ScrollViewer>
+            </Grid>
+
+            <!-- 自定义网页 -->
+            <Grid Grid.Row="1" IsVisible="{Binding IsTabWeb}" RowDefinitions="Auto,*" Margin="0,10,0,0">
+              <StackPanel Grid.Row="0" Spacing="6" Margin="0,0,0,8">
+                <TextBlock Classes="source" Text="{Binding WebUrl}" TextWrapping="Wrap"/>
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                  <Button Classes="link" Content="重新载入" Click="OnLoadWebClick"/>
+                  <Button Classes="link" Content="在浏览器打开" Click="OnOpenWebClick"/>
+                </StackPanel>
+              </StackPanel>
+              <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                <SelectableTextBlock Text="{Binding WebText}" FontSize="12" Foreground="#31505F" TextWrapping="Wrap"/>
+              </ScrollViewer>
+            </Grid>
           </Grid>
         </Border>
         </Grid>

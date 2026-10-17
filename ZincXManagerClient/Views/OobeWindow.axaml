@@ -1,12 +1,12 @@
-<Window xmlns="https://github.com/avaloniaui"
+<Window Icon="/Assets/zxm-window.png" xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:ZincXManagerClient.ViewModels"
         xmlns:models="using:ZincXManagerClient.Models"
         x:Class="ZincXManagerClient.Views.OobeWindow"
         x:DataType="vm:OobeViewModel"
         Title="ZincXManagerClient · 首次使用"
-        Width="760" Height="560"
-        MinWidth="700" MinHeight="500"
+        Width="1100" Height="700"
+        MinWidth="960" MinHeight="620"
         Background="{DynamicResource ThemeWindowVeil}"
         TransparencyLevelHint="AcrylicBlur,Blur,Transparent"
         FontFamily="Microsoft YaHei UI, Microsoft YaHei, Segoe UI"
@@ -15,85 +15,35 @@
         CanResize="True">
 
   <Window.Styles>
-    <Style Selector="Button.theme">
-      <Setter Property="Background" Value="Transparent"/>
-      <Setter Property="BorderBrush" Value="{DynamicResource ThemeMuted}"/>
-      <Setter Property="BorderThickness" Value="1"/>
-      <Setter Property="CornerRadius" Value="0"/>
-      <Setter Property="Padding" Value="2"/>
-      <Setter Property="MinWidth" Value="0"/>
-      <Setter Property="MinHeight" Value="0"/>
-      <Setter Property="Cursor" Value="Hand"/>
+    <Style Selector="TextBlock.h1">
+      <Setter Property="FontSize" Value="46"/>
+      <Setter Property="FontWeight" Value="SemiBold"/>
+      <Setter Property="Foreground" Value="#1F3B3A"/>
     </Style>
-    <Style Selector="Button.theme /template/ ContentPresenter">
-      <Setter Property="Background" Value="Transparent"/>
-      <Setter Property="CornerRadius" Value="0"/>
-      <Setter Property="Padding" Value="0"/>
+    <Style Selector="TextBlock.h2">
+      <Setter Property="FontSize" Value="26"/>
+      <Setter Property="FontWeight" Value="SemiBold"/>
+      <Setter Property="Foreground" Value="#1F3B3A"/>
     </Style>
-    <Style Selector="Button.theme.selected">
-      <Setter Property="BorderBrush" Value="{DynamicResource ThemePrimary}"/>
-      <Setter Property="BorderThickness" Value="3"/>
-    </Style>
-    <!-- 标题栏按钮:背景画在按钮身上并撑满高度,不然上下会留白、点击区域也小 -->
-    <Style Selector="Button.chrome">
-      <Setter Property="Background" Value="Transparent"/>
-      <Setter Property="BorderThickness" Value="0"/>
-      <Setter Property="CornerRadius" Value="0"/>
-      <Setter Property="Padding" Value="0"/>
-      <Setter Property="Margin" Value="0"/>
-      <Setter Property="MinWidth" Value="0"/>
-      <Setter Property="MinHeight" Value="0"/>
-      <Setter Property="HorizontalAlignment" Value="Stretch"/>
-      <Setter Property="VerticalAlignment" Value="Stretch"/>
-      <Setter Property="HorizontalContentAlignment" Value="Center"/>
-      <Setter Property="VerticalContentAlignment" Value="Center"/>
-      <Setter Property="Cursor" Value="Hand"/>
-    </Style>
-    <Style Selector="Button.chrome /template/ ContentPresenter">
-      <Setter Property="Background" Value="Transparent"/>
-      <Setter Property="BorderThickness" Value="0"/>
-      <Setter Property="CornerRadius" Value="0"/>
-      <Setter Property="Padding" Value="0"/>
-      <Setter Property="Margin" Value="0"/>
-    </Style>
-    <Style Selector="Button.chrome:pointerover /template/ ContentPresenter">
-      <Setter Property="Background" Value="{DynamicResource ThemePrimaryHover}"/>
-    </Style>
-    <Style Selector="Button.close">
-      <Setter Property="Background" Value="#E81123"/>
-    </Style>
-    <Style Selector="Button.close /template/ ContentPresenter">
-      <Setter Property="Background" Value="#E81123"/>
-    </Style>
-    <Style Selector="Button.close:pointerover /template/ ContentPresenter">
-      <Setter Property="Background" Value="#F1707A"/>
-    </Style>
-    <!-- 模式选择:连在一起的段选控件(外框由 Border 提供,段与段之间不留缝) -->
-    <Style Selector="Button.step">
-      <Setter Property="Background" Value="Transparent"/>
-      <Setter Property="Foreground" Value="#14202B"/>
-      <Setter Property="BorderThickness" Value="0"/>
-      <Setter Property="CornerRadius" Value="0"/>
-      <Setter Property="Width" Value="130"/>
-      <Setter Property="Padding" Value="0,9"/>
+    <Style Selector="TextBlock.label">
       <Setter Property="FontSize" Value="13"/>
-      <Setter Property="HorizontalContentAlignment" Value="Center"/>
-      <Setter Property="VerticalContentAlignment" Value="Center"/>
-      <Setter Property="MinHeight" Value="0"/>
-      <Setter Property="Cursor" Value="Hand"/>
+      <Setter Property="Foreground" Value="#5C7A88"/>
     </Style>
-    <Style Selector="Button.step /template/ ContentPresenter">
-      <Setter Property="Background" Value="Transparent"/>
-      <Setter Property="CornerRadius" Value="0"/>
-      <Setter Property="Padding" Value="0"/>
+    <Style Selector="TextBlock.body">
+      <Setter Property="FontSize" Value="13.5"/>
+      <Setter Property="Foreground" Value="#3E5C6B"/>
     </Style>
-    <Style Selector="Button.step:pointerover /template/ ContentPresenter">
-      <Setter Property="Background" Value="{DynamicResource ThemeSecondary}"/>
+    <Style Selector="TextBlock.steps">
+      <Setter Property="FontSize" Value="12.5"/>
+      <Setter Property="Foreground" Value="#6E8A98"/>
     </Style>
-    <Style Selector="Button.step.selected /template/ ContentPresenter">
-      <Setter Property="Background" Value="{DynamicResource ThemeSecondary}"/>
+
+    <Style Selector="TextBlock.chip">
+      <Setter Property="FontSize" Value="12.5"/>
+      <Setter Property="Foreground" Value="#9BB0BC"/>
     </Style>
-    <Style Selector="Button.step.selected">
+    <Style Selector="TextBlock.chip.current">
+      <Setter Property="Foreground" Value="{DynamicResource ThemePrimary}"/>
       <Setter Property="FontWeight" Value="SemiBold"/>
     </Style>
 
@@ -114,6 +64,22 @@
       <Setter Property="Background" Value="{DynamicResource ThemePrimaryHover}"/>
     </Style>
 
+    <!-- 禁用态:不能用的时候明确变灰 -->
+    <Style Selector="Button.primary:disabled">
+      <Setter Property="Foreground" Value="#F2F6F8"/>
+      <Setter Property="Cursor" Value="Arrow"/>
+    </Style>
+    <Style Selector="Button.primary:disabled /template/ ContentPresenter">
+      <Setter Property="Background" Value="#B6C4CE"/>
+    </Style>
+    <Style Selector="Button.secondary:disabled">
+      <Setter Property="Foreground" Value="#9FB0BA"/>
+      <Setter Property="Cursor" Value="Arrow"/>
+    </Style>
+    <Style Selector="Button.secondary:disabled /template/ ContentPresenter">
+      <Setter Property="Background" Value="#E2E9EE"/>
+    </Style>
+
     <Style Selector="Button.secondary">
       <Setter Property="Background" Value="{DynamicResource ThemeLight}"/>
       <Setter Property="Foreground" Value="#1F3B3A"/>
@@ -127,35 +93,63 @@
       <Setter Property="Background" Value="{DynamicResource ThemeLight}"/>
       <Setter Property="CornerRadius" Value="0"/>
     </Style>
-    <Style Selector="Button.secondary:pointerover /template/ ContentPresenter">
-      <Setter Property="Background" Value="{DynamicResource ThemeSecondary}"/>
+
+    <Style Selector="Button.chrome">
+      <Setter Property="Background" Value="Transparent"/>
+      <Setter Property="BorderThickness" Value="0"/>
+      <Setter Property="Padding" Value="0"/>
+      <Setter Property="CornerRadius" Value="0"/>
+      <Setter Property="HorizontalContentAlignment" Value="Center"/>
+      <Setter Property="VerticalContentAlignment" Value="Center"/>
+    </Style>
+    <Style Selector="Button.chrome:pointerover /template/ ContentPresenter">
+      <Setter Property="Background" Value="#33FFFFFF"/>
+    </Style>
+    <Style Selector="Button.chrome.close:pointerover /template/ ContentPresenter">
+      <Setter Property="Background" Value="#E81123"/>
     </Style>
 
-    <Style Selector="TextBlock.h1">
-      <Setter Property="FontSize" Value="26"/>
-      <Setter Property="FontWeight" Value="SemiBold"/>
-      <Setter Property="Foreground" Value="#1F3B3A"/>
+    <Style Selector="Button.swatch">
+      <Setter Property="Width" Value="96"/>
+      <Setter Property="Height" Value="64"/>
+      <Setter Property="BorderThickness" Value="3"/>
+      <Setter Property="BorderBrush" Value="Transparent"/>
+      <Setter Property="CornerRadius" Value="2"/>
+      <Setter Property="Cursor" Value="Hand"/>
     </Style>
-    <Style Selector="TextBlock.h2">
-      <Setter Property="FontSize" Value="18"/>
-      <Setter Property="FontWeight" Value="SemiBold"/>
-      <Setter Property="Foreground" Value="#1F3B3A"/>
+
+    <Style Selector="Border.thumb">
+      <Setter Property="Width" Value="220"/>
+      <Setter Property="Height" Value="130"/>
+      <Setter Property="BorderThickness" Value="3"/>
+      <Setter Property="BorderBrush" Value="Transparent"/>
+      <Setter Property="CornerRadius" Value="2"/>
+      <Setter Property="Cursor" Value="Hand"/>
     </Style>
-    <Style Selector="TextBlock.label">
+    <Style Selector="Border.thumb.active">
+      <Setter Property="BorderBrush" Value="{DynamicResource ThemePrimary}"/>
+    </Style>
+
+    <Style Selector="Button.mode">
+      <Setter Property="Background" Value="Transparent"/>
+      <Setter Property="BorderThickness" Value="0"/>
+      <Setter Property="CornerRadius" Value="2"/>
+      <Setter Property="HorizontalAlignment" Value="Stretch"/>
+      <Setter Property="HorizontalContentAlignment" Value="Center"/>
+      <Setter Property="VerticalAlignment" Value="Center"/>
+      <Setter Property="Height" Value="28"/>
       <Setter Property="FontSize" Value="13"/>
-      <Setter Property="Foreground" Value="#5A7A88"/>
-    </Style>
-    <Style Selector="TextBlock.body">
-      <Setter Property="FontSize" Value="13.5"/>
       <Setter Property="Foreground" Value="#1F3B3A"/>
+      <Setter Property="Cursor" Value="Hand"/>
     </Style>
+    <Style Selector="Button.mode:pointerover /template/ ContentPresenter">
+      <Setter Property="Background" Value="Transparent"/>
+    </Style>
+
     <Style Selector="TextBox.field">
-      <Setter Property="FontSize" Value="13.5"/>
+      <Setter Property="FontSize" Value="13"/>
       <Setter Property="CornerRadius" Value="0"/>
-      <Setter Property="Background" Value="#FFFFFF"/>
-      <Setter Property="BorderBrush" Value="#C7DCE8"/>
-      <Setter Property="BorderThickness" Value="1"/>
-      <Setter Property="Padding" Value="8,6"/>
+      <Setter Property="Padding" Value="8,5"/>
     </Style>
   </Window.Styles>
 
@@ -167,185 +161,235 @@
         <Rectangle Grid.Column="0" Width="1.5" Height="16" Fill="#80FFFFFF" Margin="16,0,0,0" VerticalAlignment="Center"/>
         <TextBlock Grid.Column="1" Text="ZincXManagerClient · 首次使用引导" Foreground="White" FontSize="13"
                    Margin="14,0,0,0" VerticalAlignment="Center"/>
-                <Button Grid.Column="2" Classes="chrome" Width="48" Click="OnMinimizeClick">
+        <Button Grid.Column="2" Classes="chrome" Width="48" Click="OnMinimizeClick">
           <Rectangle Width="13" Height="1.6" Fill="White"/>
         </Button>
-                <Button Grid.Column="3" Classes="chrome close" Width="54" Click="OnCloseClick">
+        <Button Grid.Column="3" Classes="chrome close" Width="54" Click="OnCloseClick">
           <Path Data="M0,0 L12,12 M12,0 L0,12" Stroke="White" StrokeThickness="1.7"/>
         </Button>
       </Grid>
     </Border>
 
     <!-- 内容 -->
-    <Grid Grid.Row="1" Margin="28,22,28,0" RowDefinitions="Auto,*">
+    <Grid Grid.Row="1" Margin="32,18,32,0" RowDefinitions="Auto,*">
 
-      <!-- 进度 -->
-      <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="10">
+      <!-- 进度(右上角) -->
+      <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="10" HorizontalAlignment="Right">
         <TextBlock Classes="label" Text="{Binding StepText}" VerticalAlignment="Center"/>
-        <Rectangle Width="120" Height="3" Fill="#C7DCE8" VerticalAlignment="Center"/>
-        <TextBlock Classes="label" Text="欢迎 → 个性化 → 数据源与连接方式 → 登录 / 注册" VerticalAlignment="Center"/>
-      </StackPanel>
-
-      <!-- 第 1 步:欢迎 -->
-      <StackPanel Grid.Row="1" Spacing="16" VerticalAlignment="Center" IsVisible="{Binding IsWelcome}">
-        <TextBlock Classes="h1" Text="欢迎使用 ZincXManager"/>
-        <TextBlock Classes="body" TextWrapping="Wrap"
-                   Text="ZincXManager 是一套 Minecraft 服务器管理工具。"/>
-        <TextBlock Classes="body" TextWrapping="Wrap"
-                   Text="四步完成首次设置,随时可以返回上一步。"/>
-      </StackPanel>
-
-      <!-- 第 2 步:个性化 -->
-      <StackPanel Grid.Row="1" Spacing="14" VerticalAlignment="Center" IsVisible="{Binding IsPersonalize}">
-        <TextBlock Classes="h2" Text="个性化"/>
-        <TextBlock Classes="label" Text="背景壁纸"/>
-        <StackPanel Orientation="Horizontal" Spacing="10">
-          <Button Classes="secondary" Content="选择图片…" Focusable="False" Click="OnPickWallpaperClick"/>
-          <Button Classes="secondary" Content="恢复默认" Click="OnClearWallpaperClick"/>
-        </StackPanel>
-        <TextBlock Classes="body" Text="{Binding WallpaperHint}" TextWrapping="Wrap"/>
-
-        <Grid ColumnDefinitions="*,Auto">
-          <StackPanel Grid.Column="0" Spacing="4" VerticalAlignment="Center">
-            <TextBlock Classes="label" Text="透明样式"/>
-            <TextBlock Classes="body" Text="{Binding GlassHint}" TextWrapping="Wrap"/>
-          </StackPanel>
-          <ToggleSwitch Grid.Column="1" IsChecked="{Binding GlassEnabled}" OnContent="开" OffContent="关"
-                        VerticalAlignment="Center"/>
-        </Grid>
-
-        <Grid ColumnDefinitions="*,240">
-          <StackPanel Grid.Column="0" Spacing="4" VerticalAlignment="Center">
-            <TextBlock Classes="label" Text="透明效果不透明度"/>
-            <TextBlock Classes="body" Text="{Binding OpacityHint}" TextWrapping="Wrap"/>
-          </StackPanel>
-          <Slider Grid.Column="1" Minimum="50" Maximum="100" TickFrequency="5" IsSnapToTickEnabled="True"
-                  Value="{Binding OpacityPercent}" VerticalAlignment="Center"/>
-        </Grid>
-        <TextBlock Classes="label" Text="支持 png / jpg / bmp"/>
-
-        <TextBlock Classes="label" Text="配色"/>
-
-        <ItemsControl ItemsSource="{Binding ThemeOptions}">
+        <ProgressBar Width="140" Height="4" Minimum="0" Maximum="100" Value="{Binding ProgressValue}"
+                     VerticalAlignment="Center"/>
+        <ItemsControl ItemsSource="{Binding Chips}" VerticalAlignment="Center">
           <ItemsControl.ItemsPanel>
             <ItemsPanelTemplate>
-              <WrapPanel/>
+              <StackPanel Orientation="Horizontal" Spacing="8"/>
             </ItemsPanelTemplate>
           </ItemsControl.ItemsPanel>
           <ItemsControl.ItemTemplate>
-            <DataTemplate x:DataType="models:ThemeOption">
-              <StackPanel Spacing="6" Margin="0,0,18,12">
-                <Button Classes="theme" Classes.selected="{Binding IsSelected}"
-                        Tag="{Binding Name}" Click="OnThemeClick" Focusable="False">
-                  <Grid Width="40" Height="40" ColumnDefinitions="*,*">
-                    <Rectangle Grid.Column="0" Fill="{Binding PrimaryBrush}"/>
-                    <Grid Grid.Column="1" RowDefinitions="2*,*">
-                      <Rectangle Grid.Row="0" Fill="{Binding SecondaryBrush}"/>
-                      <Rectangle Grid.Row="1" Fill="{Binding LightBrush}"/>
-                    </Grid>
-                  </Grid>
-                </Button>
-                <TextBlock Classes="label" Text="{Binding Name}" HorizontalAlignment="Center"/>
-              </StackPanel>
+            <DataTemplate x:DataType="models:StepChip">
+              <TextBlock Classes="chip" Classes.current="{Binding IsCurrent}" Text="{Binding Name}"
+                         VerticalAlignment="Center"/>
             </DataTemplate>
           </ItemsControl.ItemTemplate>
         </ItemsControl>
       </StackPanel>
 
-      <!-- 第 3 步:数据源与连接方式 -->
-      <StackPanel Grid.Row="1" Spacing="14" IsVisible="{Binding IsDataSource}">
-        <TextBlock Classes="h2" Text="选择数据源与连接方式"/>
+      <!-- ① 欢迎:Zinc[变化的词]Manager -->
+      <Grid Grid.Row="1" IsVisible="{Binding IsWelcome}">
+        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Left" Spacing="10" Margin="0,0,0,40">
+          <Grid ColumnDefinitions="Auto,Auto,Auto" VerticalAlignment="Center">
+            <TextBlock Grid.Column="0" Classes="h1" Text="Zinc"/>
+            <!-- 会变的那一段:上下滑动切换 -->
+            <Border Grid.Column="1" x:Name="XSlot" ClipToBounds="True" VerticalAlignment="Center">
+              <Grid x:Name="XStack">
+                <TextBlock x:Name="XCurrent" Classes="h1" Text="X"/>
+                <TextBlock x:Name="XIncoming" Classes="h1" Text="Admin" IsVisible="False"/>
+              </Grid>
+            </Border>
+            <TextBlock Grid.Column="2" x:Name="ManagerText" Classes="h1" Text="Manager"/>
+          </Grid>
+          <TextBlock Classes="body" Text="欢迎使用" FontSize="18"/>
+          <TextBlock Classes="label" Text="一套 Minecraft 服务器管理工具:协议、账号、消息与运维集中在一处。" TextWrapping="Wrap" MaxWidth="560"/>
+        </StackPanel>
+      </Grid>
 
-        <TextBlock Classes="label" Text="连接方式(ZXMC 模式,决定先连谁)"/>
-        <Border BorderBrush="{DynamicResource ThemeMuted}" BorderThickness="1" Background="{DynamicResource ThemeLight}"
-                HorizontalAlignment="Left">
-          <StackPanel Orientation="Horizontal">
-            <Button Classes="step" Classes.selected="{Binding IsSaos}" Tag="SAOS" Content="SAOS" Click="OnModeClick"/>
-            <Button Classes="step" Classes.selected="{Binding IsOs}" Tag="OS" Content="OS" Click="OnModeClick"/>
-            <Button Classes="step" Classes.selected="{Binding IsOos}" Tag="OOS" Content="OOS" Click="OnModeClick"/>
+      <!-- ② 配色 -->
+      <Grid Grid.Row="1" IsVisible="{Binding IsTheme}" RowDefinitions="Auto,*">
+        <TextBlock Grid.Row="0" Classes="h2" Text="选择你喜欢的配色"/>
+        <ItemsControl Grid.Row="1" ItemsSource="{Binding ThemeOptions}" VerticalAlignment="Center">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+              <WrapPanel Orientation="Horizontal" HorizontalAlignment="Center"/>
+            </ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="models:ThemeOption">
+              <StackPanel Margin="12,10" Width="100">
+                <Button Classes="swatch" Tag="{Binding Name}" Click="OnThemeClick"
+                        Background="{Binding Light}" BorderBrush="{Binding Primary}">
+                  <StackPanel Spacing="3">
+                    <Rectangle Height="14" Fill="{Binding Primary}"/>
+                    <Rectangle Height="10" Fill="{Binding Secondary}"/>
+                    <Rectangle Height="6" Fill="{Binding Light}"/>
+                  </StackPanel>
+                </Button>
+                <TextBlock Classes="label" Text="{Binding Name}" HorizontalAlignment="Center" Margin="0,6,0,0"/>
+              </StackPanel>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </Grid>
+
+      <!-- ③ 透明样式 -->
+      <Grid Grid.Row="1" IsVisible="{Binding IsGlass}" RowDefinitions="Auto,*,Auto">
+        <TextBlock Grid.Row="0" Classes="h2" Text="选择你喜欢的透明样式"/>
+        <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="28" HorizontalAlignment="Center" VerticalAlignment="Center">
+          <StackPanel Spacing="8">
+            <Border Classes="thumb" Classes.active="{Binding GlassEnabled}" Tag="glass" PointerPressed="OnGlassPick"
+                    Background="#BFFFFFFF">
+              <StackPanel Margin="14" Spacing="6">
+                <Rectangle Height="18" Fill="#D8E9F5"/>
+                <Rectangle Height="34" Fill="#8FB6CF" Opacity="0.55"/>
+                <Rectangle Height="18" Fill="#D8E9F5"/>
+              </StackPanel>
+            </Border>
+            <TextBlock Classes="label" Text="毛玻璃(亚克力模糊)" HorizontalAlignment="Center"/>
           </StackPanel>
-        </Border>
-        <TextBlock Classes="label" TextWrapping="Wrap"
-                   Text="SAOS = 子服务端 + 官方服务端;OS = 只连子服务端;OOS = 只连官方服务端。"/>
-        <TextBlock Classes="label" TextWrapping="Wrap"
-                   Text="SAOS / OS 只连子服务端。"/>
-
-        <!-- OS / SAOS:客户端只连子服务端,填这一组就够 -->
-        <Grid ColumnDefinitions="Auto,160,Auto,160" Margin="0,6,0,0" IsVisible="{Binding ShowClientSource}">
-          <TextBlock Grid.Column="0" Classes="label" Text="子服务端地址" VerticalAlignment="Center" Margin="0,0,8,0"/>
-          <TextBox Grid.Column="1" Classes="field" Text="{Binding CzIp}" Margin="0,0,18,0"/>
-          <TextBlock Grid.Column="2" Classes="label" Text="端口" VerticalAlignment="Center" Margin="0,0,8,0"/>
-          <TextBox Grid.Column="3" Classes="field" Text="{Binding CzPort}"/>
+          <StackPanel Spacing="8">
+            <Border Classes="thumb" Classes.active="{Binding !GlassEnabled}" Tag="plain" PointerPressed="OnGlassPick"
+                    Background="#F2FFFFFF">
+              <StackPanel Margin="14" Spacing="6">
+                <Rectangle Height="18" Fill="#D8E9F5"/>
+                <Rectangle Height="34" Fill="#C9DCE8"/>
+                <Rectangle Height="18" Fill="#D8E9F5"/>
+              </StackPanel>
+            </Border>
+            <TextBlock Classes="label" Text="半透明(不模糊,省性能)" HorizontalAlignment="Center"/>
+          </StackPanel>
+        </StackPanel>
+        <Grid Grid.Row="2" ColumnDefinitions="Auto,320,Auto" Margin="0,10,0,24" HorizontalAlignment="Center">
+          <TextBlock Grid.Column="0" Classes="label" Text="不透明度" VerticalAlignment="Center" Margin="0,0,10,0"/>
+          <Slider Grid.Column="1" Minimum="50" Maximum="100" Value="{Binding OpacityPercent}" VerticalAlignment="Center"/>
+          <TextBlock Grid.Column="2" Classes="label" Text="{Binding OpacityHint}" VerticalAlignment="Center" Margin="10,0,0,0"/>
         </Grid>
+      </Grid>
 
-        <!-- 子服务端名称:连接后由服务端下发,这里不用填 -->
-        <TextBlock Classes="body" IsVisible="{Binding ShowClientSource}" TextWrapping="Wrap"
-                   Text="名称由服务端提供"/>
+      <!-- ④ 消息分类 -->
+      <Grid Grid.Row="1" IsVisible="{Binding IsMessages}" RowDefinitions="Auto,*">
+        <TextBlock Grid.Row="0" Classes="h2" Text="添加你喜欢的消息分类"/>
+        <StackPanel Grid.Row="1" Spacing="10" VerticalAlignment="Center" MaxWidth="520" HorizontalAlignment="Center">
+          <TextBlock Classes="label" TextWrapping="Wrap"
+                     Text="消息窗口可以显示更多内容:勾选后,主界面消息面板会出现对应的分类页签。"/>
+          <CheckBox Content="消息" IsChecked="True" IsEnabled="False"/>
+          <CheckBox Content="日志(ZXMC 运行日志)" IsChecked="{Binding CategoryLog}"/>
+          <CheckBox Content="更新日志(根目录 UpdateLog.MD)" IsChecked="{Binding CategoryChangelog}"/>
+          <CheckBox Content="自定义网页" IsChecked="{Binding CategoryWeb}"/>
+          <TextBox Classes="field" Watermark="页签名称(例如:社区公告)" Text="{Binding WebName}"
+                   IsVisible="{Binding ShowWebUrl}"/>
+          <TextBox Classes="field" Watermark="网页地址 https://example.com" Text="{Binding WebUrl}"
+                   IsVisible="{Binding ShowWebUrl}"/>
+        </StackPanel>
+      </Grid>
 
-        <!-- OOS:客户端直连官方服务端,才需要填这一组 -->
-        <Grid ColumnDefinitions="Auto,160,Auto,160" Margin="0,6,0,0" IsVisible="{Binding ShowOfficialSource}">
-          <TextBlock Grid.Column="0" Classes="label" Text="官方服务端地址" VerticalAlignment="Center" Margin="0,0,8,0"/>
-          <TextBox Grid.Column="1" Classes="field" Text="{Binding OzIp}" Margin="0,0,18,0"/>
-          <TextBlock Grid.Column="2" Classes="label" Text="端口" VerticalAlignment="Center" Margin="0,0,8,0"/>
-          <TextBox Grid.Column="3" Classes="field" Text="{Binding OzPort}"/>
-        </Grid>
+      <!-- ⑤ 数据源添加 -->
+      <Grid Grid.Row="1" IsVisible="{Binding IsDataSource}" RowDefinitions="Auto,*">
+        <StackPanel Grid.Row="0" Spacing="6" HorizontalAlignment="Center">
+          <TextBlock Classes="h2" Text="添加数据源" HorizontalAlignment="Center"/>
+        </StackPanel>
+        <StackPanel Grid.Row="1" Spacing="12" VerticalAlignment="Center" HorizontalAlignment="Center" Width="380">
+          <TextBlock Classes="label" Text="模式选择" HorizontalAlignment="Center"/>
+          <Border Background="#EAF3F8" BorderBrush="#CBDDE8" BorderThickness="1" CornerRadius="3"
+                  HorizontalAlignment="Center" Padding="3">
+            <Grid x:Name="ModeGroup" ColumnDefinitions="92,92,92">
+              <!-- 高亮块:选哪个就滑到哪个下面 -->
+              <Border x:Name="ModeHighlight" Width="92" Height="28" HorizontalAlignment="Left" VerticalAlignment="Center"
+                      Background="#B9D8EA" CornerRadius="2" IsHitTestVisible="False">
+                <Border.RenderTransform>
+                  <TranslateTransform X="0"/>
+                </Border.RenderTransform>
+              </Border>
+              <Button Grid.Column="0" Classes="mode" Content="SAOS" Tag="SAOS" Click="OnModeClick"/>
+              <Button Grid.Column="1" Classes="mode" Content="OS" Tag="OS" Click="OnModeClick"/>
+              <Button Grid.Column="2" Classes="mode" Content="OOS" Tag="OOS" Click="OnModeClick"/>
+            </Grid>
+          </Border>
 
-        <!-- 官方服务端名称:同样由服务端下发 -->
-        <TextBlock Classes="body" IsVisible="{Binding ShowOfficialSource}" TextWrapping="Wrap"
-                   Text="名称由服务端提供"/>
-      </StackPanel>
+          <TextBlock Classes="label" Text="连接端 IP" HorizontalAlignment="Center" Margin="0,8,0,0"/>
+          <TextBox Classes="field" Text="{Binding CzIp}" HorizontalAlignment="Center" Width="320"/>
 
-      <!-- 第 4 步:登录 / 注册 -->
-      <StackPanel Grid.Row="1" Spacing="12" IsVisible="{Binding IsAccount}">
-        <TextBlock Classes="h2" Text="登录或注册"/>
-        <TextBlock Classes="label" TextWrapping="Wrap"
-                   Text="管理账号由服务端创建,这里只登录。"/>
+          <TextBlock Classes="label" Text="连接端端口" HorizontalAlignment="Center"/>
+          <TextBox Classes="field" Text="{Binding CzPort}" HorizontalAlignment="Center" Width="320"/>
 
-        <Grid ColumnDefinitions="Auto,220,Auto,150" RowDefinitions="Auto,Auto">
-          <TextBlock Grid.Row="0" Grid.Column="0" Classes="label" Text="账号" VerticalAlignment="Center" Margin="0,0,8,10"/>
-          <TextBox Grid.Row="0" Grid.Column="1" Classes="field" Text="{Binding UserName}" Margin="0,0,18,10"/>
-          <TextBlock Grid.Row="0" Grid.Column="2" Classes="label" Text="密码" VerticalAlignment="Center" Margin="0,0,8,10"/>
-          <TextBox Grid.Row="0" Grid.Column="3" Classes="field" Text="{Binding Password}" PasswordChar="•" Margin="0,0,0,10"/>
+          <StackPanel Orientation="Horizontal" Spacing="12" HorizontalAlignment="Center" Margin="0,6,0,0">
+            <Button Classes="primary" Content="连接" Click="OnConnectSourceClick"/>
+            <TextBlock Classes="label" Text="{Binding SourceHint}" VerticalAlignment="Center"/>
+          </StackPanel>
+        </StackPanel>
+      </Grid>
 
-          <TextBlock Grid.Row="1" Grid.Column="0" Classes="label" Text="权限等级" VerticalAlignment="Center" Margin="0,0,8,0"/>
-          <ComboBox Grid.Row="1" Grid.Column="1" ItemsSource="{Binding Levels}" SelectedItem="{Binding Level}"
-                    FontSize="13" CornerRadius="0" Padding="6,3" HorizontalAlignment="Left" Width="150"/>
+      <!-- ⑥ 登录 / 注册 -->
+      <Grid Grid.Row="1" IsVisible="{Binding IsAccount}" RowDefinitions="Auto,*">
+        <StackPanel Grid.Row="0" Spacing="6" HorizontalAlignment="Center">
+          <TextBlock Classes="h2" Text="登录账号" HorizontalAlignment="Center"/>
+        </StackPanel>
+        <StackPanel Grid.Row="1" Spacing="10" VerticalAlignment="Center" HorizontalAlignment="Center" Width="380">
+          <Ellipse Width="68" Height="68" Fill="#BFD9E8" HorizontalAlignment="Center"/>
 
-          <!-- 管理账号:勾上就只登录(管理账号只能在服务端 user reg 创建) -->
-          <CheckBox Grid.Row="1" Grid.Column="2" Grid.ColumnSpan="2" Content="登录管理账号"
-                    IsChecked="{Binding IsAdminAccount}" FontSize="13" Margin="0,0,0,0"/>
-        </Grid>
+          <TextBlock Classes="label" Text="账号名称" HorizontalAlignment="Center"/>
+          <TextBox Classes="field" Text="{Binding UserName}" HorizontalAlignment="Center" Width="320"/>
 
-        <!-- SAOS 下要选"哪一端的管理账号" -->
-        <StackPanel Spacing="6" IsVisible="{Binding AdminSideVisible}">
-          <TextBlock Classes="label" Text="哪一端的管理账号"/>
-          <!-- 下拉项是 ComboBoxItem,不能直接和字符串双向绑定,所以绑索引(0=ZXMS,1=ZXMOS) -->
-          <ComboBox SelectedIndex="{Binding AdminSideIndex}" FontSize="13" CornerRadius="0" Padding="6,3"
-                    HorizontalAlignment="Left" Width="220">
-            <ComboBoxItem Content="ZXMS(子服务端)"/>
-            <ComboBoxItem Content="ZXMOS(官方服务端)"/>
+          <TextBlock Classes="label" Text="账号密码" HorizontalAlignment="Center"/>
+          <TextBox Classes="field" Text="{Binding Password}" PasswordChar="•" HorizontalAlignment="Center" Width="320"/>
+
+          <CheckBox Content="登录管理账号" IsChecked="{Binding IsAdminAccount}" HorizontalAlignment="Center"/>
+
+          <ComboBox IsVisible="{Binding AdminSideVisible}" SelectedIndex="{Binding AdminSideIndex}" FontSize="13"
+                    CornerRadius="0" Padding="6,3" HorizontalAlignment="Center" Width="320">
+            <ComboBoxItem Content="ZXMS 管理账号"/>
+            <ComboBoxItem Content="ZXMOS 管理账号"/>
           </ComboBox>
+
+          <ComboBox ItemsSource="{Binding Levels}" SelectedItem="{Binding Level}" FontSize="13" CornerRadius="0"
+                    Padding="6,3" HorizontalAlignment="Center" Width="320"
+                    IsVisible="{Binding IsAdminAccount}"/>
+
+          <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Center" Margin="0,6,0,0">
+            <Button Classes="primary" Content="登录" Click="OnLoginClick" IsEnabled="{Binding !IsBusy}" MinWidth="90"/>
+            <Button Classes="secondary" Content="注册" Click="OnRegisterClick"
+                    IsVisible="{Binding CanRegister}" IsEnabled="{Binding !IsBusy}" MinWidth="90"/>
+          </StackPanel>
+
+          <TextBlock Classes="body" Text="{Binding Message}" TextWrapping="Wrap" HorizontalAlignment="Center"/>
         </StackPanel>
+      </Grid>
 
-        <TextBlock Classes="label" Text="{Binding LevelHint}" TextWrapping="Wrap"/>
-
-        <StackPanel Orientation="Horizontal" Spacing="10">
-          <Button Classes="primary" Content="登录" Click="OnLoginClick" IsEnabled="{Binding !IsBusy}"/>
-          <Button Classes="secondary" Content="注册" Click="OnRegisterClick"
-                  IsVisible="{Binding CanRegister}" IsEnabled="{Binding !IsBusy}"/>
+      <!-- S1:来自 ZXMS 的欢迎信息(占位) -->
+      <Grid Grid.Row="1" IsVisible="{Binding IsWelcomeInfo}" RowDefinitions="Auto,*">
+        <TextBlock Grid.Row="0" Classes="h2" Text="来自 ZXMS 的欢迎信息"/>
+        <StackPanel Grid.Row="1" VerticalAlignment="Center" Spacing="8">
+          <TextBlock Classes="body" Text="(占位:这里以后显示子服务端下发的欢迎语)" TextWrapping="Wrap"/>
         </StackPanel>
+      </Grid>
 
-        <TextBlock Classes="body" Text="{Binding Message}" TextWrapping="Wrap"/>
-      </StackPanel>
+      <!-- S2:来自 ZXMS 的介绍信息(占位) -->
+      <Grid Grid.Row="1" IsVisible="{Binding IsIntroInfo}" RowDefinitions="Auto,*">
+        <TextBlock Grid.Row="0" Classes="h2" Text="来自 ZXMS 的介绍信息"/>
+        <StackPanel Grid.Row="1" VerticalAlignment="Center" Spacing="8">
+          <TextBlock Classes="body" Text="(占位:这里以后显示子服务端下发的服务器介绍)" TextWrapping="Wrap"/>
+        </StackPanel>
+      </Grid>
+
+      <!-- ⑦ 开始使用 -->
+      <Grid Grid.Row="1" IsVisible="{Binding IsFinish}">
+        <TextBlock Classes="h1" Text="开始使用你的ZincXManager吧！" HorizontalAlignment="Center" VerticalAlignment="Center"
+                   TextWrapping="Wrap" TextAlignment="Center"/>
+      </Grid>
     </Grid>
 
     <!-- 底部按钮 -->
-    <Grid Grid.Row="2" ColumnDefinitions="*,Auto,Auto" Margin="28,0,28,18">
-      <TextBlock Grid.Column="0" Classes="label" VerticalAlignment="Center"
-                 Text="完成后会写进 config.ini,下次启动直接进主界面"/>
-      <Button Grid.Column="1" Classes="secondary" Content="上一步" Click="OnBackClick"
-              IsEnabled="{Binding CanGoBack}" Margin="0,0,10,0"/>
-      <Button Grid.Column="2" Classes="primary" Content="{Binding NextText}" Click="OnNextClick"/>
-    </Grid>
+    <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="10" HorizontalAlignment="Right"
+                VerticalAlignment="Center" Margin="32,0,32,20">
+      <Button Classes="secondary" Content="上一步" Click="OnBackClick" IsEnabled="{Binding CanGoBack}"/>
+      <Button Classes="primary" Content="{Binding NextText}" Click="OnNextClick" IsEnabled="{Binding CanGoNext}"/>
+    </StackPanel>
   </Grid>
 </Window>

@@ -20,7 +20,10 @@ namespace ZincXManagerClient.ViewModels;
 /// </summary>
 public partial class OobeViewModel : ViewModelBase
 {
-    public const int StepCount = 4;
+    /// <summary>OOS 模式不连 ZXMS,所以不给 S1/S2(ZXMS 的欢迎/介绍) */}
+    public int LastStep => Mode == "OOS" ? 6 : 8;
+
+    public int StepCount => LastStep + 1;
 
     /// <summary>OOBE 内部自己用的连接(负责 300 握手与收账号回复)。</summary>
     private readonly ConnectViewModel _connect = new();
@@ -28,18 +31,99 @@ public partial class OobeViewModel : ViewModelBase
     private TaskCompletionSource<(bool Ok, string Text)>? _reply;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsWelcome), nameof(IsPersonalize), nameof(IsDataSource), nameof(IsAccount),
+    [NotifyPropertyChangedFor(nameof(IsWelcome), nameof(IsTheme), nameof(IsGlass), nameof(IsMessages), nameof(IsDataSource), nameof(IsAccount),
+        nameof(IsWelcomeInfo), nameof(IsIntroInfo), nameof(IsFinish), nameof(StepText), nameof(CanGoBack),
+        nameof(NextText), nameof(CanGoNext), nameof(ProgressValue),
         nameof(StepText), nameof(CanGoBack), nameof(NextText))]
     public partial int Step { get; set; }
 
+    // ---------- 右上角进度:百分比 + 每一步高亮 ----------
+
+    /// <summary>进度条上的步骤(名字;OOS 模式没有 S1/S2 两颗)。</summary>
+    public System.Collections.ObjectModel.ObservableCollection<ZincXManagerClient.Models.StepChip> Chips { get; } = new();
+
+    /// <summary>进度条填充比例(0-100)。</summary>
+    public double ProgressValue => StepCount <= 1 ? 100 : (Step + 1) * 100.0 / StepCount;
+
+    private void RebuildChips()
+    {
+        var names = new System.Collections.Generic.List<(string Name, int Step)>
+        {
+            ("欢迎", 0), ("配色", 1), ("透明样式", 2), ("消息窗口", 3),
+            ("数据源", 4), ("账号", 5),
+        };
+
+        if (Mode != "OOS")
+        {
+            names.Add(("欢迎信息", 6));
+            names.Add(("介绍", 7));
+            names.Add(("开始", LastStep));
+        }
+        else
+        {
+            names.Add(("开始", 6));
+        }
+
+        Chips.Clear();
+        foreach (var (name, step) in names)
+        {
+            Chips.Add(new ZincXManagerClient.Models.StepChip(name) { IsCurrent = step == Step });
+        }
+    }
+
+    /// <summary>刷新进度条:百分比 + 当前步骤高亮。</summary>
+    private void UpdateChips()
+    {
+        var i = 0;
+        foreach (var chip in Chips)
+        {
+            chip.IsCurrent = i == Step;
+            i++;
+        }
+
+        OnPropertyChanged(nameof(ProgressValue));
+    }
+
+    partial void OnStepChanged(int value)
+    {
+        UpdateChips();
+
+        ZincXManagerShared.Logging.Logger.Log(ZincXManagerShared.Logging.LogLevel.Info,
+            $"[ZXMC] OOBE 步骤={value} 数据源={IsDataSource} 账号={IsAccount} 欢迎信息={IsWelcomeInfo} 介绍={IsIntroInfo} 完成={IsFinish} 已连接={IsSourceConnected} 已登录={IsLoggedIn}");
+    }
+
     public bool IsWelcome => Step == 0;
-    public bool IsPersonalize => Step == 1;
-    public bool IsDataSource => Step == 2;
-    public bool IsAccount => Step == 3;
+    public bool IsTheme => Step == 1;
+    public bool IsGlass => Step == 2;
+    public bool IsMessages => Step == 3;
+    public bool IsDataSource => Step == 4;
+    public bool IsAccount => Step == 5;
+    public bool IsWelcomeInfo => Step == 6 && Mode != "OOS";   // oobeS1:来自 ZXMS 的欢迎信息(占位)
+    public bool IsIntroInfo => Step == 7 && Mode != "OOS";     // oobeS2:来自 ZXMS 的介绍信息(占位)
+    public bool IsFinish => Step == LastStep;                  // 开始使用
+
+    /// <summary>旧名字,留着让别处引用不炸。</summary>
+    public bool IsPersonalize => false;
 
     public string StepText => $"{Step + 1} / {StepCount}";
     public bool CanGoBack => Step > 0;
-    public string NextText => Step >= StepCount - 1 ? "完成" : "下一步";
+    public string NextText => Step >= LastStep ? "开始使用" : "下一步";
+
+    /// <summary>能不能点"下一步":数据源那步要先连上,账号那步要先登录。</summary>
+    public bool CanGoNext => Step switch
+    {
+        4 => IsSourceConnected,
+        5 => IsLoggedIn,
+        _ => true,
+    };
+
+    /// <summary>数据源连上了没(下一步按这个放开)。</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanGoNext), nameof(SourceHint))]
+    public partial bool IsSourceConnected { get; set; }
+
+    /// <summary>数据源那边的提示。</summary>
+    public string SourceHint => IsSourceConnected ? "已连接,可以下一步" : "先点「连接」,连上才能下一步";
 
     /// <summary>给外面(主界面)接着用的连接。</summary>
     public ConnectViewModel Connect => _connect;
@@ -139,7 +223,24 @@ public partial class OobeViewModel : ViewModelBase
 
     partial void OnAdminSideIndexChanged(int value) => AdminSide = value == 1 ? "ZXMOS" : "ZXMS";
 
-    partial void OnModeChanged(string value) => ResetLevelDeferred();
+    partial void OnModeChanged(string value)
+    {
+        ResetLevelDeferred();
+        OnPropertyChanged(nameof(LastStep));
+        OnPropertyChanged(nameof(StepCount));
+        OnPropertyChanged(nameof(IsWelcomeInfo));
+        OnPropertyChanged(nameof(IsIntroInfo));
+        OnPropertyChanged(nameof(IsFinish));
+        OnPropertyChanged(nameof(NextText));
+        OnPropertyChanged(nameof(CanGoNext));
+        OnPropertyChanged(nameof(ProgressValue));
+        OnPropertyChanged(nameof(ModeIndex));
+        RebuildChips();
+        if (Step > LastStep)
+        {
+            Step = LastStep;
+        }
+    }
 
     /// <summary>SAOS 才需要选"哪一端的管理账号"。</summary>
     public bool AdminSideVisible => IsAdminAccount && Mode == "SAOS";
@@ -191,7 +292,9 @@ public partial class OobeViewModel : ViewModelBase
         return body.StartsWith("失败:") ? body[3..] : body;
     }
     [ObservableProperty] public partial bool IsBusy { get; set; }
-    [ObservableProperty] public partial bool IsLoggedIn { get; set; }
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanGoNext))]
+    public partial bool IsLoggedIn { get; set; }
 
     public OobeViewModel()
     {
@@ -209,6 +312,15 @@ public partial class OobeViewModel : ViewModelBase
         GlassEnabled = ThemeManager.GlassEnabled;
         OpacityPercent = ThemeManager.SurfaceAlpha;
 
+        var cats = ClientConfig.GetOrEmpty("msgcats");
+        CategoryLog = cats.Contains("log");
+        CategoryChangelog = cats.Contains("changelog");
+        CategoryWeb = cats.Contains("web");
+        WebUrl = ClientConfig.GetOrEmpty("weburl");
+        WebName = ClientConfig.GetOrEmpty("webname");
+
+        RebuildChips();
+
         // 截图 / 调试用:配置里写 oobestep=2 就直接从第 3 步开始
         if (int.TryParse(ClientConfig.GetOrEmpty("oobestep"), out var step) && step >= 0 && step < StepCount)
         {
@@ -224,6 +336,9 @@ public partial class OobeViewModel : ViewModelBase
 
     /// <summary>选择连接方式(= ZXMC 模式)。</summary>
     public void SelectMode(string mode) => Mode = mode;
+
+    /// <summary>模式在联排按钮里的下标(0=SAOS,1=OS,2=OOS),高亮块按它滑动。</summary>
+    public int ModeIndex => Mode switch { "OS" => 1, "OOS" => 2, _ => 0 };
 
     /// <summary>选了背景壁纸。</summary>
     public void SelectWallpaper(string path) => WallpaperPath = path;
@@ -352,12 +467,42 @@ public partial class OobeViewModel : ViewModelBase
     }
 
     /// <summary>走完流程:存配置 + 标记 OOBE 完成。</summary>
+    // ---------- 第 4 步:消息分类 ----------
+
+    /// <summary>「消息」分类固定勾选,不允许取消。</summary>
+    public bool CategoryMessages => true;
+
+    [ObservableProperty] public partial bool CategoryLog { get; set; }
+
+    [ObservableProperty] public partial bool CategoryChangelog { get; set; }
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowWebUrl))]
+    public partial bool CategoryWeb { get; set; }
+
+    /// <summary>勾了「自定义网页」才显示网址输入框。</summary>
+    public bool ShowWebUrl => CategoryWeb;
+
+    [ObservableProperty] public partial string WebUrl { get; set; } = "";
+
+    /// <summary>这个网页在消息面板里显示的名字(用户自己起)。</summary>
+    [ObservableProperty] public partial string WebName { get; set; } = "";
+
     public void Finish()
     {
         SaveDataSource();
         ClientConfig.Set("wallpaper", WallpaperPath);
         ClientConfig.Set("level", IsLoggedIn ? ClientSession.Level : Level);
         ClientConfig.Set("oobe", "1");
+
+        // 消息分类(消息始终在)
+        var cats = new System.Collections.Generic.List<string> { "messages" };
+        if (CategoryLog) cats.Add("log");
+        if (CategoryChangelog) cats.Add("changelog");
+        if (CategoryWeb) cats.Add("web");
+        ClientConfig.Set("msgcats", string.Join(",", cats));
+        ClientConfig.Set("weburl", WebUrl.Trim());
+        ClientConfig.Set("webname", WebName.Trim().Length > 0 ? WebName.Trim() : "自定义网页");
 
         Logger.Log(LogLevel.Info,
             $"[ZXMC] OOBE 完成:模式={Mode} 数据源={CzipText()} 官方={OzipText()} 账号={ClientSession.User} 等级={Level}");

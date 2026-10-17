@@ -60,6 +60,7 @@ public partial class MainViewModel : ViewModelBase
         LocalMessageDays = int.TryParse(ClientConfig.GetOrEmpty("msgdays"), out var keepDays)
             ? Math.Clamp(keepDays, 1, 3650)
             : MessageStore.DefaultLocalKeepDays;
+        Settings.MessageTabsChanged += () => Avalonia.Threading.Dispatcher.UIThread.Post(BuildTabs);
         Settings.MessageDaysChanged += days =>
         {
             LocalMessageDays = days;
@@ -67,6 +68,7 @@ public partial class MainViewModel : ViewModelBase
             SaveMessages();
         };
         LoadMessages();
+        BuildTabs();
 
         // 截图 / 调试用:config 里写 startpage=设置、startsection=模式与数据源 就直接落在那一页
         var startPage = ClientConfig.GetOrEmpty("startpage");
@@ -91,6 +93,185 @@ public partial class MainViewModel : ViewModelBase
 
     /// <summary>顶部那句:权限等级 - 连接方式(如 Player - SAOS),两段都来自设置页。</summary>
     public string ModeText => $"{Settings.Role} - {Settings.Mode}";
+
+    // ================= 消息面板分类 =================
+
+    /// <summary>消息面板顶部的页签(消息一定有;日志 / 更新日志 / 自定义网页 由 OOBE 里勾选生成)。</summary>
+    public ObservableCollection<MessageTab> Tabs { get; } = new();
+
+    /// <summary>当前选中页签的下标。</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsTabMessages), nameof(IsTabLog), nameof(IsTabChangelog), nameof(IsTabWeb),
+        nameof(UnderlineOffset))]
+    public partial int TabIndex { get; set; }
+
+    /// <summary>页签宽度(和 <see cref="MessageTab.Width"/> 一致)。</summary>
+    public static double TabWidthOf(MessageTab tab) => tab.Width;
+
+    /// <summary>所有页签加起来有多宽(给滚动区与蓝色小条的画布用)。</summary>
+    public double TabsWidth
+    {
+        get
+        {
+            double w = 0;
+            foreach (var t in Tabs)
+            {
+                w += t.Width;
+            }
+
+            return w;
+        }
+    }
+
+    /// <summary>蓝色小条的位置:前面所有页签宽度之和 + 当前页签居中。</summary>
+    public double UnderlineOffset
+    {
+        get
+        {
+            double x = 0;
+            for (var i = 0; i < Tabs.Count && i < TabIndex; i++)
+            {
+                x += TabWidthOf(Tabs[i]);
+            }
+
+            return x + (TabIndex >= 0 && TabIndex < Tabs.Count ? (TabWidthOf(Tabs[TabIndex]) - 30) / 2 : 19);
+        }
+    }
+
+    public bool IsTabMessages => TabOf(TabIndex) == "messages";
+    public bool IsTabLog => TabOf(TabIndex) == "log";
+    public bool IsTabChangelog => TabOf(TabIndex) == "changelog";
+    public bool IsTabWeb => TabOf(TabIndex) == "web";
+
+    private string TabOf(int index) => index >= 0 && index < Tabs.Count ? Tabs[index].Key : "messages";
+
+    /// <summary>运行日志内容(取最新一份日志的末尾)。</summary>
+    [ObservableProperty] public partial string LogText { get; set; } = "";
+
+    /// <summary>更新日志内容(根目录 UpdateLog.MD)。</summary>
+    [ObservableProperty] public partial string ChangelogText { get; set; } = "";
+
+    /// <summary>自定义网页地址与抓到的正文。</summary>
+    [ObservableProperty] public partial string WebUrl { get; set; } = "";
+
+    [ObservableProperty] public partial string WebText { get; set; } = "";
+
+    /// <summary>建立页签:按 config 的 msgcats 决定有哪些。</summary>
+    private void BuildTabs()
+    {
+        var cats = ClientConfig.GetOrEmpty("msgcats");
+        Tabs.Clear();
+        Tabs.Add(new MessageTab("messages", "消息"));
+
+        if (cats.Contains("log"))
+        {
+            Tabs.Add(new MessageTab("log", "日志"));
+        }
+
+        if (cats.Contains("changelog"))
+        {
+            Tabs.Add(new MessageTab("changelog", "更新日志"));
+        }
+
+        if (cats.Contains("web"))
+        {
+            // 页签名由用户在 OOBE 里自己起;没填就用默认
+            var webName = ClientConfig.GetOrEmpty("webname").Trim();
+            Tabs.Add(new MessageTab("web", webName.Length > 0 ? webName : "自定义网页"));
+        }
+
+        WebUrl = ClientConfig.GetOrEmpty("weburl");
+        TabIndex = 0;
+    }
+
+    /// <summary>点页签。</summary>
+    public void SelectTab(int index)
+    {
+        TabIndex = Math.Clamp(index, 0, Math.Max(0, Tabs.Count - 1));
+
+        if (IsTabLog)
+        {
+            LoadLog();
+        }
+        else if (IsTabChangelog)
+        {
+            LoadChangelog();
+        }
+        else if (IsTabWeb)
+        {
+            _ = LoadWebAsync();
+        }
+    }
+
+    /// <summary>读最新一份 ZXMC 日志的末尾(最多 400 行)。</summary>
+    public void LoadLog()
+    {
+        try
+        {
+            var dir = Path.Combine(AppContext.BaseDirectory, "logs");
+            var file = Directory.Exists(dir)
+                ? new DirectoryInfo(dir).GetFiles("*.log").OrderByDescending(f => f.LastWriteTime).FirstOrDefault()
+                : null;
+
+            if (file is null)
+            {
+                LogText = "还没有日志文件(客户端还没写过日志)。";
+                return;
+            }
+
+            // 日志文件正被本进程开着写:必须带 FileShare.ReadWrite,否则会报"被另一个进程占用"
+            using var fs = new FileStream(file.FullName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+            using var reader = new StreamReader(fs);
+            var all = reader.ReadToEnd().Replace("\r\n", "\n").Split('\n');
+            var lines = all;
+            var tail = lines.Length > 400 ? lines[(lines.Length - 400)..] : lines;
+            LogText = $"# {file.Name}(最近 400 行){Environment.NewLine}{Environment.NewLine}" + string.Join(Environment.NewLine, tail);
+        }
+        catch (Exception ex)
+        {
+            LogText = "读取日志失败:" + ex.Message;
+        }
+    }
+
+    /// <summary>读根目录 UpdateLog.MD。</summary>
+    public void LoadChangelog()
+    {
+        try
+        {
+            var path = Path.Combine(AppContext.BaseDirectory, "UpdateLog.MD");
+            ChangelogText = File.Exists(path)
+                ? File.ReadAllText(path)
+                : $"还没有更新日志。把 UpdateLog.MD 放到程序根目录({AppContext.BaseDirectory})就会显示在这里。";
+        }
+        catch (Exception ex)
+        {
+            ChangelogText = "读取更新日志失败:" + ex.Message;
+        }
+    }
+
+    /// <summary>抓自定义网页的正文(纯文本显示;打不开就给出原因)。</summary>
+    public async Task LoadWebAsync()
+    {
+        if (WebUrl.Length == 0)
+        {
+            WebText = "还没有设置网址:在 OOBE 第 4 步或设置里填一个 http(s) 地址。";
+            return;
+        }
+
+        try
+        {
+            using var http = new System.Net.Http.HttpClient { Timeout = TimeSpan.FromSeconds(8) };
+            var html = await http.GetStringAsync(WebUrl);
+            var text = System.Text.RegularExpressions.Regex.Replace(html, @"<script[\s\S]*?</script>|<style[\s\S]*?</style>", " ");
+            text = System.Text.RegularExpressions.Regex.Replace(text, "<[^>]+>", " ");
+            text = System.Text.RegularExpressions.Regex.Replace(text, @"\s+", " ").Trim();
+            WebText = text.Length > 20000 ? text[..20000] + "…" : text;
+        }
+        catch (Exception ex)
+        {
+            WebText = "打开失败:" + ex.Message;
+        }
+    }
 
     /// <summary>消息列表为空时显示的文案。</summary>
     public string EmptyMessage { get; } = "没有其他消息啦";

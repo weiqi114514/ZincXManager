@@ -206,6 +206,57 @@ public partial class SettingsView : UserControl
     }
 
     /// <summary>切换左侧二级导航。</summary>
+    // ---------- 关于页:外链与目录 ----------
+
+    private void OpenUrl(string url)
+    {
+        try
+        {
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(url) { UseShellExecute = true });
+        }
+        catch (Exception ex)
+        {
+            ZincXManagerShared.Logging.Logger.Log(ZincXManagerShared.Logging.LogLevel.Warning, "[ZXMC] 打开链接失败: " + ex.Message);
+        }
+    }
+
+    private void OpenFolder(string path)
+    {
+        try
+        {
+            if (!System.IO.Directory.Exists(path))
+            {
+                System.IO.Directory.CreateDirectory(path);
+            }
+
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(path) { UseShellExecute = true });
+        }
+        catch (Exception ex)
+        {
+            ZincXManagerShared.Logging.Logger.Log(ZincXManagerShared.Logging.LogLevel.Warning, "[ZXMC] 打开目录失败: " + ex.Message);
+        }
+    }
+
+    private void OnOpenWebsiteClick(object? sender, RoutedEventArgs e) => OpenUrl(Vm?.WebsiteUrl ?? "");
+
+    private void OnOpenDocsClick(object? sender, RoutedEventArgs e) => OpenUrl(Vm?.DocsUrl ?? "");
+
+    private void OnOpenRepoClick(object? sender, RoutedEventArgs e) => OpenUrl(Vm?.RepoUrl ?? "");
+
+    private void OnOpenChangelogClick(object? sender, RoutedEventArgs e) => OpenUrl(Vm?.ChangelogUrl ?? "");
+
+    private void OnOpenConfigFolderClick(object? sender, RoutedEventArgs e)
+    {
+        var p = Vm?.ConfigPath;
+        if (!string.IsNullOrEmpty(p))
+        {
+            var dir = System.IO.Path.GetDirectoryName(p);
+            if (!string.IsNullOrEmpty(dir)) OpenFolder(dir);
+        }
+    }
+
+    private void OnOpenLogFolderClick(object? sender, RoutedEventArgs e) => OpenFolder(Vm?.LogDirectory ?? "");
+
     private void OnSubNavClick(object? sender, RoutedEventArgs e)
     {
         if (sender is Button { DataContext: SubNavItem item })

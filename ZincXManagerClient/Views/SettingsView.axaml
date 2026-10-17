@@ -232,6 +232,7 @@
       <!-- ========== 个性化:背景壁纸在这里(不在"设置"首页) ========== -->
       <Border Grid.Row="1" Margin="0,12,0,0" Background="#CCFFFFFF"
               BorderBrush="{DynamicResource ThemeMuted}" BorderThickness="1" IsVisible="{Binding IsPersonalizePage}">
+        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
         <StackPanel Margin="20,18,20,18" Spacing="16">
 
           <Grid ColumnDefinitions="*,Auto">
@@ -295,7 +296,26 @@
               </DataTemplate>
             </ItemsControl.ItemTemplate>
           </ItemsControl>
-        </StackPanel>
+                  <Rectangle Height="1" Fill="#66E3EEF4"/>
+
+          <TextBlock Classes="label" Text="消息窗口"/>
+
+          <StackPanel Spacing="8">
+            <CheckBox Content="消息" IsChecked="True" IsEnabled="False"/>
+            <CheckBox Content="日志(ZXMC 运行日志)" IsChecked="{Binding MessageCategoryLog}"/>
+            <CheckBox Content="更新日志(根目录 UpdateLog.MD)" IsChecked="{Binding MessageCategoryChangelog}"/>
+            <CheckBox Content="自定义网页" IsChecked="{Binding MessageCategoryWeb}"/>
+          </StackPanel>
+
+          <StackPanel Spacing="6" IsVisible="{Binding ShowWebSettings}">
+            <TextBlock Classes="label" Text="页签名称"/>
+            <TextBox Text="{Binding WebTabName}" Width="320" HorizontalAlignment="Left"/>
+            <TextBlock Classes="label" Text="网页地址"/>
+            <TextBox Text="{Binding WebTabUrl}" Width="320" HorizontalAlignment="Left"/>
+          </StackPanel>
+
+</StackPanel>
+        </ScrollViewer>
       </Border>
 
       <!-- ========== 账户与安全:头像 / 账号 / 登录选项 ========== -->
@@ -364,6 +384,47 @@
                        Text="客户端本地产的消息按这个天数保留,默认 60 天。官方服务端(ZXMOS)下发的消息固定最多保留 20 天;子服务端(ZXMS)下发的消息按子服务端自己的设置保留(默认 7 天)。过期消息在开客户端时自动清理,也可以在消息卡片上手动删除。"/>
           </StackPanel>
         </StackPanel>
+      </Border>
+
+      <!-- ========== 关于 ========== -->
+      <Border Grid.Row="1" Margin="0,12,0,0" Background="#CCFFFFFF"
+              BorderBrush="{DynamicResource ThemeMuted}" BorderThickness="1" IsVisible="{Binding IsAboutPage}">
+        <ScrollViewer VerticalScrollBarVisibility="Hidden">
+          <StackPanel Spacing="14" Margin="18,16,18,18">
+
+            <TextBlock Classes="panelTitle" Text="{Binding AppName}"/>
+            <TextBlock Classes="label" Text="{Binding AppVersion, StringFormat='版本 {0}'}"/>
+            <TextBlock Classes="tips" TextWrapping="Wrap"
+                       Text="ZincXManager 是一套 Minecraft 服务器管理工具:客户端(ZXMC)+ 子服务端(ZXMS)+ 官方服务端(ZXMOS)+ 模组端(ZXMM)。"/>
+
+            <Rectangle Height="1" Fill="#66E3EEF4"/>
+
+            <TextBlock Classes="label" Text="制作人"/>
+            <TextBlock Classes="body" Text="{Binding ProducerQq, StringFormat='QQ:{0}'}"/>
+
+            <TextBlock Classes="label" Text="相关链接" Margin="0,6,0,0"/>
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <Button Classes="small" Content="官网" Click="OnOpenWebsiteClick"/>
+              <Button Classes="small" Content="技术文档" Click="OnOpenDocsClick"/>
+              <Button Classes="small" Content="源码仓库" Click="OnOpenRepoClick"/>
+              <Button Classes="small" Content="更新日志" Click="OnOpenChangelogClick"/>
+            </StackPanel>
+
+            <Rectangle Height="1" Fill="#66E3EEF4"/>
+
+            <TextBlock Classes="label" Text="运行环境"/>
+            <TextBlock Classes="body" Text="{Binding RuntimeInfo}" TextWrapping="Wrap"/>
+
+            <TextBlock Classes="label" Text="文件位置" Margin="0,6,0,0"/>
+            <TextBlock Classes="tips" Text="{Binding ConfigPath}" TextWrapping="Wrap"/>
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <Button Classes="small" Content="打开配置所在目录" Click="OnOpenConfigFolderClick"/>
+              <Button Classes="small" Content="打开日志目录" Click="OnOpenLogFolderClick"/>
+            </StackPanel>
+
+            <TextBlock Classes="tips" Text="© 2026 ZincXManager · 保留所有权利" Margin="0,10,0,0"/>
+          </StackPanel>
+        </ScrollViewer>
       </Border>
 
       <!-- ========== 其它还没做的页面 ========== -->

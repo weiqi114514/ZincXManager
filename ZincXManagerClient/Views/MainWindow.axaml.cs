@@ -1,7 +1,12 @@
 using System;
 using System.Text;
 using System.Threading.Tasks;
+using Avalonia;
+using Avalonia.Animation;
+using Avalonia.Animation.Easings;
 using Avalonia.Controls;
+using Avalonia.Controls.Shapes;
+using Avalonia.Styling;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Media;
@@ -17,6 +22,7 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        Opened += (_, _) => ScrollDrag.AttachAll(this);
 
         // 窗口材质只在这里定一次:运行中改 TransparencyLevelHint 会让 Windows 重建窗口,
         // 屏幕上会闪出"像多了一个窗口"的东西,所以开关只换材料、不动材质
@@ -59,6 +65,97 @@ public partial class MainWindow : Window
         if (Vm is { } vm)
         {
             _ = vm.RequestMessageHistoryAsync();
+        }
+    }
+
+    // ---------- 消息面板页签 ----------
+
+    /// <summary>点页签:切到对应分类。</summary>
+    private void OnTabClick(object? sender, RoutedEventArgs e)
+    {
+        if (Vm is null || sender is not Button b || b.DataContext is not Models.MessageTab tab)
+        {
+            return;
+        }
+
+        var index = Vm.Tabs.IndexOf(tab);
+        if (index < 0)
+        {
+            return;
+        }
+
+        Logger.Log(LogLevel.Info, $"[ZXMC] 切到页签:{tab.Label}(index={index})");
+        Vm.SelectTab(index);
+        AnimateUnderline(Vm.UnderlineOffset);
+    }
+
+    /// <summary>蓝色小条滑到目标位置(180ms);动画失败就直接跳位,不影响切换。</summary>
+    private void AnimateUnderline(double to)
+    {
+        if (this.FindControl<Rectangle>("TabUnderline")?.RenderTransform is not TranslateTransform t)
+        {
+            return;
+        }
+
+        // 先把逻辑位置定下来:即使动画库出问题,小条也不会停在旧位置
+        t.X = to;
+
+        try
+        {
+            var animation = new Animation
+            {
+                Duration = TimeSpan.FromMilliseconds(180),
+                Easing = new CubicEaseOut(),
+                FillMode = FillMode.Forward,
+                Children =
+                {
+                    new KeyFrame
+                    {
+                        Cue = new Cue(1d),
+                        Setters =
+                        {
+                            new Setter { Property = TranslateTransform.XProperty, Value = to },
+                        },
+                    },
+                },
+            };
+
+            _ = animation.RunAsync(t);
+        }
+        catch (Exception ex)
+        {
+            Logger.Log(LogLevel.Warning, "[ZXMC] 页签小条动画失败(已直接跳位): " + ex.Message);
+        }
+    }
+
+    private void OnRefreshLogClick(object? sender, RoutedEventArgs e) => Vm?.LoadLog();
+
+    private void OnRefreshChangelogClick(object? sender, RoutedEventArgs e) => Vm?.LoadChangelog();
+
+    private void OnLoadWebClick(object? sender, RoutedEventArgs e)
+    {
+        if (Vm is not null)
+        {
+            _ = Vm.LoadWebAsync();
+        }
+    }
+
+    /// <summary>用系统默认浏览器打开自定义网页。</summary>
+    private void OnOpenWebClick(object? sender, RoutedEventArgs e)
+    {
+        var url = Vm?.WebUrl ?? "";
+        if (url.Length == 0)
+        {
+            return;
+        }
+
+        try
+        {
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(url) { UseShellExecute = true });
+        }
+        catch (Exception ex)
+        {
+            Logger.Log(LogLevel.Warning, "[ZXMC] 打开网页失败: " + ex.Message);
         }
     }
 

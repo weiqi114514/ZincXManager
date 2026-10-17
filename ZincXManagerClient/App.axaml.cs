@@ -23,6 +23,9 @@ public partial class App : Application
         // 先应用配色,再建窗口(否则第一帧会是默认色)
         ThemeManager.ApplySaved();
 
+        // 启动先把上次登录的账号填进会话(不然免登录握手完成前,主界面左下角是「未登录」)
+        ClientSession.SeedFromConfig();
+
         // 截图 / 调试用:config 里写 cropdemo=<图片路径> 就直接开裁剪窗口
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime cropLife
             && ClientConfig.GetOrEmpty("cropdemo") is { Length: > 0 } cropPath)
@@ -120,7 +123,14 @@ public partial class App : Application
 
         if (await login.AutoLoginAsync())
         {
+            // 主界面是登录前就建好的 —— 会话数据要补推给它,否则左下角会一直停在「未登录」
+            main.SetUser(ClientSession.User, ClientSession.UserId);
+            main.RefreshAvatar();
+            _ = main.RequestMessageHistoryAsync();
             main.StatusText = $"已登录:{ClientSession.User}({ClientSession.Level})";
+
+            // 头像(605)是登录之后才回来的:一秒后再补刷一次
+            _ = Task.Delay(1200).ContinueWith(_ => Avalonia.Threading.Dispatcher.UIThread.Post(main.RefreshAvatar));
             return;
         }
 

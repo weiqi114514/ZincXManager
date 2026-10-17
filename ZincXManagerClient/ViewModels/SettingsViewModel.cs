@@ -190,7 +190,7 @@ public partial class SettingsViewModel : ViewModelBase
 
     /// <summary>内容区当前显示的页面。</summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsModePage), nameof(IsPersonalizePage), nameof(IsSecurityPage), nameof(IsAdvancedPage), nameof(IsOtherPage))]
+    [NotifyPropertyChangedFor(nameof(IsModePage), nameof(IsPersonalizePage), nameof(IsSecurityPage), nameof(IsAdvancedPage), nameof(IsAboutPage), nameof(IsOtherPage))]
     public partial string CurrentSection { get; set; } = "模式与数据源";
 
     public bool IsModePage => CurrentSection == "模式与数据源";
@@ -200,12 +200,114 @@ public partial class SettingsViewModel : ViewModelBase
     /// <summary>是否在"高级"页(本地消息保留天数在这里)。</summary>
     public bool IsAdvancedPage => CurrentSection == "高级";
 
+    public bool IsAboutPage => CurrentSection == "关于";
+
+    // ---------- 关于页 ----------
+
+    /// <summary>客户端版本(取程序集版本)。</summary>
+    public string AppVersion
+    {
+        get
+        {
+            // 显示版本用 InformationalVersion(a0.3.0);安装包内部用数字版本 0.3.0
+            var attr = (System.Reflection.AssemblyInformationalVersionAttribute?)System.Attribute.GetCustomAttribute(
+                typeof(SettingsViewModel).Assembly, typeof(System.Reflection.AssemblyInformationalVersionAttribute));
+            var info = attr?.InformationalVersion;
+
+            if (!string.IsNullOrWhiteSpace(info))
+            {
+                var plus = info.IndexOf('+');
+                return plus > 0 ? info[..plus] : info;
+            }
+
+            var v = typeof(SettingsViewModel).Assembly.GetName().Version;
+            return v is null ? "a0.3.0" : "a" + v.ToString(3);
+        }
+    }
+
+    /// <summary>客户端名。</summary>
+    public string AppName => "ZincXManager 客户端(ZXMC)";
+
+    /// <summary>制作人 QQ。</summary>
+    public string ProducerQq => "2016811976";
+
+    /// <summary>官网首页。</summary>
+    public string WebsiteUrl => "https://weiqi114514.github.io/ZincXManager/";
+
+    /// <summary>技术文档。</summary>
+    public string DocsUrl => "https://weiqi114514.github.io/ZincXManager/help.html";
+
+    /// <summary>源码仓库。</summary>
+    public string RepoUrl => "https://github.com/weiqi114514/ZincXManager";
+
+    /// <summary>更新日志。</summary>
+    public string ChangelogUrl => "https://weiqi114514.github.io/ZincXManager/changelog.html";
+
+    /// <summary>运行环境一行说明。</summary>
+    public string RuntimeInfo =>
+        $"{System.Runtime.InteropServices.RuntimeInformation.FrameworkDescription} · " +
+        $"{System.Runtime.InteropServices.RuntimeInformation.ProcessArchitecture} · " +
+        (System.Runtime.CompilerServices.RuntimeFeature.IsDynamicCodeSupported ? "JIT" : "AOT 单文件");
+
+    /// <summary>配置文件路径。</summary>
+    public string ConfigPath => System.IO.Path.Combine(System.AppContext.BaseDirectory, "config.ini");
+
+    /// <summary>日志目录。</summary>
+    public string LogDirectory => System.IO.Path.Combine(System.AppContext.BaseDirectory, "logs");
+
     /// <summary>本地消息保留天数(高级设置;默认 60,范围 1-3650)。</summary>
     [ObservableProperty]
     public partial string MessageDays { get; set; } = "60";
 
     /// <summary>保留天数改了(主界面据此重算并清理)。</summary>
     public event Action<int>? MessageDaysChanged;
+
+    // ---------- 消息窗口:显示哪些分类(个性化里可改) ----------
+
+    /// <summary>改了消息窗口分类:主界面据此重建页签。</summary>
+    public event Action? MessageTabsChanged;
+
+    /// <summary>「消息」分类固定有,不给关。</summary>
+    public bool MessageCategoryMessages => true;
+
+    [ObservableProperty] public partial bool MessageCategoryLog { get; set; }
+
+    [ObservableProperty] public partial bool MessageCategoryChangelog { get; set; }
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowWebSettings))]
+    public partial bool MessageCategoryWeb { get; set; }
+
+    /// <summary>勾了自定义网页才显示名称/网址。</summary>
+    public bool ShowWebSettings => MessageCategoryWeb;
+
+    [ObservableProperty] public partial string WebTabName { get; set; } = "";
+
+    [ObservableProperty] public partial string WebTabUrl { get; set; } = "";
+
+    partial void OnMessageCategoryLogChanged(bool value) => SaveMessageCats();
+
+    partial void OnMessageCategoryChangelogChanged(bool value) => SaveMessageCats();
+
+    partial void OnMessageCategoryWebChanged(bool value) => SaveMessageCats();
+
+    partial void OnWebTabNameChanged(string value) => SaveMessageCats();
+
+    partial void OnWebTabUrlChanged(string value) => SaveMessageCats();
+
+    /// <summary>写回 config.ini 并通知主界面重建页签。</summary>
+    private void SaveMessageCats()
+    {
+        var cats = new System.Collections.Generic.List<string> { "messages" };
+        if (MessageCategoryLog) cats.Add("log");
+        if (MessageCategoryChangelog) cats.Add("changelog");
+        if (MessageCategoryWeb) cats.Add("web");
+
+        ClientConfig.Set("msgcats", string.Join(",", cats));
+        ClientConfig.Set("webname", WebTabName.Trim().Length > 0 ? WebTabName.Trim() : "自定义网页");
+        ClientConfig.Set("weburl", WebTabUrl.Trim());
+        MessageTabsChanged?.Invoke();
+    }
 
     partial void OnMessageDaysChanged(string value)
     {
@@ -219,7 +321,7 @@ public partial class SettingsViewModel : ViewModelBase
         ClientConfig.Set("msgdays", days.ToString());
         MessageDaysChanged?.Invoke(days);
     }
-    public bool IsOtherPage => !IsModePage && !IsPersonalizePage && !IsSecurityPage && !IsAdvancedPage;
+    public bool IsOtherPage => !IsModePage && !IsPersonalizePage && !IsSecurityPage && !IsAdvancedPage && !IsAboutPage;
 
     // ---------- 账户与安全 ----------
     /// <summary>当前账号的头像。</summary>
@@ -371,6 +473,13 @@ public partial class SettingsViewModel : ViewModelBase
     {
         // 读上次的选择(没有就写缺省值)
         MessageDays = ClientConfig.Get("msgdays", "60");
+
+        var cats = ClientConfig.GetOrEmpty("msgcats");
+        MessageCategoryLog = cats.Contains("log");
+        MessageCategoryChangelog = cats.Contains("changelog");
+        MessageCategoryWeb = cats.Contains("web");
+        WebTabName = ClientConfig.GetOrEmpty("webname");
+        WebTabUrl = ClientConfig.GetOrEmpty("weburl");
         Mode = ClientConfig.Get(KeyMode, "SAOS");
 
         // 权限等级优先用登录账号的等级(账号系统),没有就退回设置里的 role
