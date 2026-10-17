@@ -53,10 +53,10 @@ public partial class OobeViewModel : ViewModelBase
         ? "已选择:" + WallpaperPath
         : "先用默认底色(以后可在 设置 → 个性化 里换)";
 
-    /// <summary>侧边栏不透明度(%):个性化滑杆,50-100,默认 85(只有侧边栏是透明的)。</summary>
+    /// <summary>透明效果不透明度(%):个性化滑杆,50-100,默认 90(只作用于半透明样式)。</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(OpacityHint))]
-    public partial double OpacityPercent { get; set; } = 85;
+    public partial double OpacityPercent { get; set; } = 90;
 
     /// <summary>滑杆说明(跟着数值变)。</summary>
     public string OpacityHint => $"{(int)OpacityPercent}%";

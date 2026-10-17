@@ -16,7 +16,7 @@
         <SolidColorBrush x:Key="ThemeWindow" Color="#F2F5F8"/>
         <SolidColorBrush x:Key="ThemeGlass" Color="#B82662A7"/>
         <SolidColorBrush x:Key="ThemeGlassLight" Color="#8CFFFFFF"/>
-        <SolidColorBrush x:Key="ThemeWindowVeil" Color="#D9FFFFFF"/>
+        <SolidColorBrush x:Key="ThemeWindowVeil" Color="#E6FFFFFF"/>
         <SolidColorBrush x:Key="ThemePanel" Color="#B8FFFFFF"/>
         <SolidColorBrush x:Key="ThemeContentVeil" Color="#99E9EFF3"/>
         <SolidColorBrush x:Key="ThemePage" Color="#8CFFFFFF"/>

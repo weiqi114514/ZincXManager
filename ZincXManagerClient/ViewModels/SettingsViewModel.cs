@@ -68,10 +68,10 @@ public partial class SettingsViewModel : ViewModelBase
     [NotifyPropertyChangedFor(nameof(WallpaperHint))]
     public partial string WallpaperPath { get; set; } = "";
 
-    /// <summary>半透明档的表面不透明度(%):个性化滑杆,50-100,默认 85。</summary>
+    /// <summary>半透明档的表面不透明度(%):个性化滑杆,50-100,默认 90。</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(OpacityHint))]
-    public partial double OpacityPercent { get; set; } = 85;
+    public partial double OpacityPercent { get; set; } = 90;
 
     /// <summary>滑杆说明(跟着数值变)。</summary>
     public string OpacityHint => $"{(int)OpacityPercent}%";

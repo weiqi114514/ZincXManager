@@ -25,8 +25,11 @@ internal static class ThemeManager
     /// <summary>当前是否开启毛玻璃(亚克力)。</summary>
     public static bool GlassEnabled { get; private set; } = true;
 
-    /// <summary>半透明档的表面不透明度(%):个性化里的滑杆,默认 85(太透会看不清内容)。</summary>
-    public static int SurfaceAlpha { get; private set; } = 85;
+    /// <summary>半透明档不透明度的默认值(%)—— 只在 config.ini 没写 alpha 时用一次,之后以 config 为准。</summary>
+    public const int DefaultAlpha = 90;
+
+    /// <summary>当前半透明档的表面不透明度(%):读 config.ini 的 alpha(默认 90),个性化滑杆可改。</summary>
+    public static int SurfaceAlpha { get; private set; } = DefaultAlpha;
 
     /// <summary>毛玻璃开关变化时通知界面(主窗口据此调壁纸模糊半径与窗口材质)。</summary>
     public static event Action<bool>? GlassChanged;
@@ -70,8 +73,21 @@ internal static class ThemeManager
         // 没配过就是开;config 里 glass=0 表示关
         ApplyGlass(ClientConfig.GetOrEmpty("glass") != "0", save: false);
 
-        // 半透明档的不透明度(config 里 alpha=85;没配过或非法都退回 85)
-        ApplyAlpha(int.TryParse(ClientConfig.GetOrEmpty("alpha"), out var alpha) ? alpha : 85, save: false);
+        // 半透明档的不透明度:以 config.ini 的 alpha 为准;没配过/非法就写入默认值 90,之后一切读 config
+        var raw = ClientConfig.GetOrEmpty("alpha").Trim();
+        if (!int.TryParse(raw, out var alpha))
+        {
+            if (raw.Length > 0)
+            {
+                Logger.Log(LogLevel.Warning, $"[ZXMC] config.ini 的 alpha 不合法({raw}),已重置为 90");
+            }
+
+            ClientConfig.Set("alpha", DefaultAlpha.ToString());
+            alpha = DefaultAlpha;
+            Logger.Log(LogLevel.Info, $"[CONFIG]alpha 未配置,已写入默认值 {DefaultAlpha}(半透明样式不透明度)");
+        }
+
+        ApplyAlpha(alpha, save: false);
     }
 
     /// <summary>
@@ -161,7 +177,7 @@ internal static class ThemeManager
         Logger.Log(LogLevel.Info, $"[ZXMC] 配色已切换为 {theme.Name}");
     }
 
-    /// <summary>半透明档的表面不透明度(50-100,默认 85):个性化滑杆调它。</summary>
+    /// <summary>半透明档的表面不透明度(50-100,默认 90):个性化滑杆调它。</summary>
     public static void ApplyAlpha(int percent, bool save = true)
     {
         SurfaceAlpha = Math.Clamp(percent, 50, 100);
@@ -199,21 +215,20 @@ internal static class ThemeManager
 
         var percent = Math.Clamp(SurfaceAlpha, 50, 100);
         var railByte = (byte)(percent * 255 / 100);
-        // 侧栏:亚克力档 80%(透出模糊);半透明档完全不透明 —— 和"半透明样式=实心"的语义一致
-        var rail = glass ? (byte)0xCC : (byte)0xFF;
-        var veil = railByte.ToString("X2");
+        // 侧栏:亚克力档 80%(透出模糊);半透明档按滑杆的百分比(默认 90%)
+        var rail = glass ? (byte)0xCC : railByte;
+
 
         resources["ThemeGlass"] = Solid(Alpha(theme.Primary, rail));     // 侧边栏:主题色 + 不透明度
 
-        // 毛玻璃档:**不是全透** —— 内容区 / 消息面板各留一层白(全透会显得"没颜色"),卡片再白一点压在最上面;
-        // 半透明档:全部不透明,只有侧栏透
-        resources["ThemeGlassLight"] = Solid(glass ? "#E6FFFFFF" : "#FFFFFFFF");   // 消息卡片:90% 白
-        resources["ThemePanel"] = Solid(glass ? "#5CFFFFFF" : "#FFFFFFFF");        // 面板 / 内容区:约 36% 白(让亚克力透出来)
+        // 亚克力档:内容区留 36% 白,让窗口的模糊透出来;半透明档:整层按滑杆的百分比透(默认 90%)
+        resources["ThemeGlassLight"] = Solid(glass ? "#E6FFFFFF" : "#FFFFFFFF");   // 消息卡片:亚克力 90%,半透明档纯白
+        resources["ThemePanel"] = Solid(glass ? "#5CFFFFFF" : "#FFFFFFFF");        // 面板 / 内容区:亚克力 36%,半透明档不透明
         resources["ThemePage"] = Solid(glass ? "#5CFFFFFF" : "#FFFFFFFF");         // 设置页底:同上
         resources["ThemeContentVeil"] = Solid(glass ? "#66E9EFF3" : "#99E9EFF3");  // 内容区那层磨砂:再压一层白
 
         // 入口窗口(登录 / OOBE / 连接 / 弹窗)只有一层白幕:
-        // 亚克力档 60% 白(让窗口的模糊透出来);半透明档完全不透明 —— 和主界面"只有侧栏透"一致
+        // 亚克力档 60% 白(让窗口的模糊透出来);半透明档不透明(工作区/窗口不要透)
         var veilByte = glass ? (byte)0x99 : (byte)0xFF;
         resources["ThemeWindowVeil"] = Solid("#" + veilByte.ToString("X2") + "FFFFFF");
     }
