@@ -58,7 +58,13 @@ internal static class Program
     /// 同一台机器可以跑多个 ZXMS,靠它区分"是哪一个实例"(机器码只用来识别设备 / 防绕过)。</summary>
     private const string KeyServerCode = "servercode";
 
+    /// <summary>要不要连官方服务端(ZXMOS):<b>1 = 连接(默认)</b>,0 = 不连接。</summary>
     private const string KeyConnectOs = "connectOS";
+
+    /// <summary>配置格式版本。2 起 connectOS 是「1=连接、0=不连接」(以前正好相反)。</summary>
+    private const string KeyConfigVer = "configver";
+
+    private const string ConfigVerNow = "2";
     private const string KeyOzip = "ozip";
     private const string KeyOzport = "ozport";
     private const string KeyCzport = "czport";
@@ -95,6 +101,40 @@ internal static class Program
             Console.Error.WriteLine("[Fatal]打开日志文件失败: " + logFile);
             Environment.Exit(1);
         }
+    }
+
+    /// <summary>
+    /// 解析 connectOS。<b>1 = 默认连接 ZXMOS,0 = 不连接。</b>
+    ///
+    /// <para>老配置(没有 configver)里 0 表示"连接"、1 表示"不连" —— 直接按新语义读会让老部署突然不连了,
+    /// 所以碰到老配置先把值翻过来、写上 configver=2,只迁移一次。</para>
+    /// </summary>
+    static string ResolveConnectOS(ZFile config)
+    {
+        var raw = config.MapGet(KeyConnectOs).Trim();
+        var legacy = config.MapGet(KeyConfigVer).Trim().Length == 0;
+
+        if (legacy && raw is "0" or "1")
+        {
+            var flipped = raw == "0" ? "1" : "0";
+            config.WriteFileMap(KeyConnectOs, flipped);
+            config.WriteFileMap(KeyConfigVer, ConfigVerNow);
+            Logger.Log(LogLevel.Info,
+                $"[CONFIG]{KeyConnectOs} 已迁移到新语义:{raw} → {flipped}(1=连接 ZXMOS,0=不连接)");
+            raw = flipped;
+        }
+
+        var value = AskIfMissing(config, KeyConnectOs,
+            "[CONFIG]输入1默认连接官方服务端(ZXMOS),输入0不连接",
+            v => v is "0" or "1",
+            fallback: "1");
+
+        if (config.MapGet(KeyConfigVer).Trim().Length == 0)
+        {
+            config.WriteFileMap(KeyConfigVer, ConfigVerNow);
+        }
+
+        return value;
     }
 
     /// <summary>
@@ -161,13 +201,11 @@ internal static class Program
         config.FileOperate("config.ini", "rwNFC");
 
         // 本端名称:客户端连进来时发给它(客户端不用自己填服务端名称)
-        var serverName = config.MapGet(KeyName).Trim();
-        if (serverName.Length == 0)
-        {
-            serverName = DefaultName;
-            config.WriteFileMap(KeyName, serverName);
-            Logger.Log(LogLevel.Info, $"[CONFIG]{KeyName} 未配置,已写入默认名称 {serverName}");
-        }
+        // 没有就当场问 —— 以前是静默写个默认名,结果只能事后用 name 命令改
+        var serverName = AskIfMissing(config, KeyName,
+            $"[CONFIG]输入本服务端的显示名称(下发给客户端,直接回车用默认:{DefaultName})",
+            v => v.Trim().Length >= 1 && v.Trim().Length <= 32,
+            fallback: DefaultName);
 
         // 服务端码:本实例的身份证。缺失或格式不对就生成一个 32 位十六进制并写回
         var serverCode = config.MapGet(KeyServerCode).Trim().ToLowerInvariant();
@@ -193,11 +231,8 @@ internal static class Program
 
         // ================= 配置检查:缺哪项就问哪项,问完写回 config.ini =================
 
-        // 要不要连官方服务端
-        var connectOS = AskIfMissing(config, KeyConnectOs,
-            "[CONFIG]输入0启用默认连接OS，输入1关闭默认连接OS",
-            value => value is "0" or "1",
-            fallback: "0");
+        // 要不要连官方服务端(1 = 连接 ZXMOS,0 = 不连接)
+        var connectOS = ResolveConnectOS(config);
 
         // 消息保留天数(下发给客户端):config 里的 msgdays,默认 7,合法范围 1-365
         _config = config;
@@ -531,8 +566,8 @@ internal static class Program
         }
 
         // ================= 按配置连接官方服务端 =================
-        // connectOS:0 = 启用(默认),1 = 关闭 —— 和提示语一致
-        if (connectOS != "1")
+        // connectOS:1 = 连接 ZXMOS(默认),0 = 不连接
+        if (connectOS == "1")
         {
             await ConnectOServerAsync(config);
         }
@@ -1065,6 +1100,21 @@ internal static class Program
         {
             await _os.CloseAsync();
             _os = null;
+        }
+
+        // 连官方端时还能改一次本端名称:只有"还是默认名"时才问,免得每次重连都打扰
+        var nameNow = config.MapGet(KeyName).Trim();
+        if (nameNow.Length == 0 || nameNow == DefaultName)
+        {
+            Logger.Log(LogLevel.Info,
+                $"[CONFIG]本服务端显示名称当前是「{(nameNow.Length == 0 ? DefaultName : nameNow)}」" +
+                "(会下发给客户端);回车沿用,或直接输入新名称:");
+            var nameInput = Console.ReadLine()?.Trim();
+            if (!string.IsNullOrEmpty(nameInput) && nameInput.Length <= 32)
+            {
+                config.WriteFileMap(KeyName, nameInput);
+                Logger.Log(LogLevel.Info, $"[CONFIG]{KeyName} 已设置为 {nameInput}(新接入的客户端立刻用新名称)");
+            }
         }
 
         // 官方服务端(ZXMOS)的地址 / 端口:没有或不合法就问

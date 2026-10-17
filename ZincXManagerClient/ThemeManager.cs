@@ -51,6 +51,15 @@ internal static class ThemeManager
         Logger.Log(LogLevel.Info, GlassEnabled
             ? $"[ZXMC] 窗口材质:{window.GetType().Name} → AcrylicBlur(毛玻璃档)"
             : $"[ZXMC] 窗口材质:{window.GetType().Name} → Transparent(半透明档,不申请模糊)");
+
+        // 诊断:开窗后把"系统实际批的材质"也记下来 —— 请求了 AcrylicBlur 不等于真拿到了,
+        // 拿不到时窗口就是纯透明 = 看着像半透明(这正是"亚克力变半透明"的根因判定点)。
+        window.Opened += (_, _) =>
+        {
+            var actual = window.ActualTransparencyLevel;
+            Logger.Log(LogLevel.Info,
+                $"[ZXMC] 材质实测:{window.GetType().Name} 请求={(GlassEnabled ? "AcrylicBlur" : "Transparent")} 实际={actual}");
+        };
     }
 
     /// <summary>启动时按配置应用一次(配色 + 毛玻璃开关)。</summary>
@@ -190,7 +199,8 @@ internal static class ThemeManager
 
         var percent = Math.Clamp(SurfaceAlpha, 50, 100);
         var railByte = (byte)(percent * 255 / 100);
-        var rail = glass ? (byte)0xCC : railByte;                        // 侧栏:亚克力档 80%,半透明档听滑杆
+        // 侧栏:亚克力档 80%(透出模糊);半透明档完全不透明 —— 和"半透明样式=实心"的语义一致
+        var rail = glass ? (byte)0xCC : (byte)0xFF;
         var veil = railByte.ToString("X2");
 
         resources["ThemeGlass"] = Solid(Alpha(theme.Primary, rail));     // 侧边栏:主题色 + 不透明度
@@ -198,12 +208,14 @@ internal static class ThemeManager
         // 毛玻璃档:**不是全透** —— 内容区 / 消息面板各留一层白(全透会显得"没颜色"),卡片再白一点压在最上面;
         // 半透明档:全部不透明,只有侧栏透
         resources["ThemeGlassLight"] = Solid(glass ? "#E6FFFFFF" : "#FFFFFFFF");   // 消息卡片:90% 白
-        resources["ThemePanel"] = Solid(glass ? "#8CFFFFFF" : "#FFFFFFFF");        // 面板 / 内容区:约 55% 白
-        resources["ThemePage"] = Solid(glass ? "#8CFFFFFF" : "#FFFFFFFF");         // 设置页底:同上
+        resources["ThemePanel"] = Solid(glass ? "#5CFFFFFF" : "#FFFFFFFF");        // 面板 / 内容区:约 36% 白(让亚克力透出来)
+        resources["ThemePage"] = Solid(glass ? "#5CFFFFFF" : "#FFFFFFFF");         // 设置页底:同上
         resources["ThemeContentVeil"] = Solid(glass ? "#66E9EFF3" : "#99E9EFF3");  // 内容区那层磨砂:再压一层白
 
-        // 入口窗口(登录 / OOBE / 连接 / 弹窗)没有侧栏,保留"透过窗口看桌面"
-        resources["ThemeWindowVeil"] = Solid("#" + veil + "FFFFFF");
+        // 入口窗口(登录 / OOBE / 连接 / 弹窗)只有一层白幕:
+        // 亚克力档 60% 白(让窗口的模糊透出来);半透明档完全不透明 —— 和主界面"只有侧栏透"一致
+        var veilByte = glass ? (byte)0x99 : (byte)0xFF;
+        resources["ThemeWindowVeil"] = Solid("#" + veilByte.ToString("X2") + "FFFFFF");
     }
 
     private static IBrush Solid(string argbHex) => new SolidColorBrush(Color.Parse(argbHex));

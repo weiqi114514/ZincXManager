@@ -207,7 +207,7 @@
 
         <Grid ColumnDefinitions="*,Auto">
           <StackPanel Grid.Column="0" Spacing="4" VerticalAlignment="Center">
-            <TextBlock Classes="label" Text="毛玻璃(亚克力)"/>
+            <TextBlock Classes="label" Text="透明样式"/>
             <TextBlock Classes="body" Text="{Binding GlassHint}" TextWrapping="Wrap"/>
           </StackPanel>
           <ToggleSwitch Grid.Column="1" IsChecked="{Binding GlassEnabled}" OnContent="开" OffContent="关"
@@ -216,7 +216,7 @@
 
         <Grid ColumnDefinitions="*,240">
           <StackPanel Grid.Column="0" Spacing="4" VerticalAlignment="Center">
-            <TextBlock Classes="label" Text="侧边栏不透明度"/>
+            <TextBlock Classes="label" Text="透明效果不透明度"/>
             <TextBlock Classes="body" Text="{Binding OpacityHint}" TextWrapping="Wrap"/>
           </StackPanel>
           <Slider Grid.Column="1" Minimum="50" Maximum="100" TickFrequency="5" IsSnapToTickEnabled="True"
