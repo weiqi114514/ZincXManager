@@ -62,6 +62,7 @@ public static class ZxmsCommands
         Func<Task> osReconnect,
         Func<string, string, Task<string>> osRename,
         Func<int, int> setMsgDays,
+        Func<int, int> setSrvMsgDays,
         Func<CardInput, int> localNotice,
         Func<string, CardInput, int> localPush,
         Func<BanStore> banProvider,
@@ -134,6 +135,20 @@ public static class ZxmsCommands
             var sent = setMsgDays(days);
             Logger.Log(LogLevel.Info, $"[消息] 本服消息保留天数已设为 {Math.Clamp(days, 1, 365)} 天,已通知 {sent} 个在线客户端");
         }, "设置本服消息保留天数(下发给客户端):msgdays <天数>", "msgdays 14");
+
+        cmd.Register("srvmsgdays", args =>
+        {
+            if (args.Length < 1 || !int.TryParse(args[0].Trim(), out var days))
+            {
+                Logger.Log(LogLevel.Warning,
+                    "[消息] 用法:srvmsgdays <天数 1-365>(本服自己存档的保留天数,补发历史消息用)");
+                return;
+            }
+
+            var left = setSrvMsgDays(days);
+            Logger.Log(LogLevel.Info,
+                $"[消息] 本服消息存档保留天数已设为 {Math.Clamp(days, 1, 365)} 天,现存 {left} 条");
+        }, "设置本服自己存档的保留天数(影响补发的历史消息):srvmsgdays <天数>", "srvmsgdays 14");
 
         cmd.Register("notice", args => CmdNotice(localNotice, args),
             "给本服所有客户端发公告:notice <标题>|<正文>[|种类|主动作|次动作|选项];种类 = text / update / choice / input / select",

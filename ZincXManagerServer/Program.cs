@@ -40,6 +40,15 @@ internal static class Program
     /// <summary>当前消息保留天数(启动时从 config 读,`msgdays` 命令可改)。</summary>
     private static int _msgDays = DefaultMsgDays;
 
+    /// <summary>本服自己的消息存档保留天数(config.ini 的 srvmsgdays,默认 7):补发时给客户端看多久的本服历史。</summary>
+    private const string KeySrvMsgDays = "srvmsgdays";
+
+    /// <summary>本服存档保留天数默认值(天)。</summary>
+    private const int DefaultSrvMsgDays = 7;
+
+    /// <summary>当前本服存档保留天数(启动时从 config 读,srvmsgdays 命令可改)。</summary>
+    private static int _srvMsgDays = DefaultSrvMsgDays;
+
     /// <summary>官方验证第二层的开关(config.ini 的 officialcheck,默认 1 = 开):对端不是官方服务端就断开。</summary>
     private const string KeyOfficialCheck = "officialcheck";
 
@@ -200,6 +209,20 @@ internal static class Program
             config.WriteFileMap(KeyMsgDays, _msgDays.ToString());
             Logger.Log(LogLevel.Info, $"[CONFIG]{KeyMsgDays} 未配置,已写入默认值 {_msgDays}(消息保留天数)");
         }
+
+        // 本服自己的消息存档保留天数(config 的 srvmsgdays,默认 7,合法范围 1-365)
+        _srvMsgDays = int.TryParse(config.MapGet(KeySrvMsgDays).Trim(), out var srvDays) && srvDays is >= 1 and <= 365
+            ? srvDays
+            : DefaultSrvMsgDays;
+        if (config.MapGet(KeySrvMsgDays).Trim().Length == 0)
+        {
+            config.WriteFileMap(KeySrvMsgDays, _srvMsgDays.ToString());
+            Logger.Log(LogLevel.Info,
+                $"[CONFIG]{KeySrvMsgDays} 未配置,已写入默认值 {_srvMsgDays}(本服消息存档保留天数)");
+        }
+
+        MessageArchive.SetKeepDays(_srvMsgDays);
+        MessageArchive.Load();
 
         // 官方验证第二层:config.ini 的 officialcheck,默认 1(开)= 对端不是官方服务端就断开
         _officialCheck = config.MapGet(KeyOfficialCheck).Trim() != "0";
@@ -445,28 +468,38 @@ internal static class Program
                         intent = "client";
                     }
 
+                    var forClient = !string.Equals(intent, "self", StringComparison.OrdinalIgnoreCase);
+
+                    // ① 先把本服自己的存档给出去:官方端掉线 / OS 模式(只连子服)时也能补到本服消息。
+                    //    官方端连着时跳过"从官方端转下来的那些"(官方那边本来就会给,免得发两遍、506 数字虚高)
+                    var osLive = _os is { IsConnected: true };
+                    var localSent = await SendLocalHistoryAsync(packet, who, forClient, osLive);
+
+                    // ② 官方端连着就再要一批;收尾时把"官方条数 + 本服条数"合成一条 506 回给客户端
                     var os = _os;
                     if (os is null || !os.IsConnected)
                     {
-                        Logger.Log(LogLevel.Info, $"[消息] {who} 来要补发,但官方服务端未连接,先回 0 条");
-                        await packet.SendAsync(Protocol.MessageHistoryDone, "0", packet.Id);
+                        Logger.Log(LogLevel.Info,
+                            $"[消息] {who} 来要补发:官方服务端未连接,只补本服 {localSent} 条");
+                        await packet.SendAsync(Protocol.MessageHistoryDone, localSent.ToString(), packet.Id);
                         break;
                     }
 
                     var relayId = Interlocked.Increment(ref _relayId);
-                    HistoryRelay[relayId] = (packet.Connection.Id, packet.Id);
+                    HistoryRelay[relayId] = (packet.Connection.Id, packet.Id, localSent);
 
                     try
                     {
                         await os.WriteAsync(new Packet(relayId, Protocol.MessageHistoryReq,
                             Encoding.UTF8.GetBytes(intent)));
-                        Logger.Log(LogLevel.Info, $"[消息] 已替 {who} 向官方服务端要补发(relay={relayId})");
+                        Logger.Log(LogLevel.Info,
+                            $"[消息] 已替 {who} 向官方服务端要补发(relay={relayId}),本服已先给 {localSent} 条");
                     }
                     catch (Exception ex)
                     {
                         HistoryRelay.TryRemove(relayId, out _);
                         Logger.Log(LogLevel.Error, "[消息] 转发补发请求失败: " + ex.Message);
-                        await packet.SendAsync(Protocol.MessageHistoryDone, "0", packet.Id);
+                        await packet.SendAsync(Protocol.MessageHistoryDone, localSent.ToString(), packet.Id);
                     }
 
                     break;
@@ -529,6 +562,7 @@ internal static class Program
             osRename: (newName, newPassword) => RenameOsAccountAsync(config, newName, newPassword),
             // 名称现读:name 命令改完,之后发的消息来源标签立刻跟着变
             setMsgDays: SetMsgDaysLocal,
+            setSrvMsgDays: SetSrvMsgDaysLocal,
             localNotice: card => NoticeLocal(config.MapGet(KeyName).Trim(), card),
             localPush: (target, card) => PushLocal(config.MapGet(KeyName).Trim(), target, card),
             banProvider: () => Bans,
@@ -790,10 +824,10 @@ internal static class Program
     private static readonly ConcurrentDictionary<ulong, (Guid Connection, ulong PacketId)> AccountRelay = new();
 
     /// <summary>
-    /// 转给 ZXMOS 的补发请求:包 Id → (哪条 ZXMC 连接要的, 它原来的包 Id)。
-    /// ZXMOS 的 504 一条条按这个 Id 找到人转过去,506 到了就把这条记录清掉。
+    /// 转给 ZXMOS 的补发请求:包 Id → (哪条 ZXMC 连接要的, 它原来的包 Id, 本服先给了几条)。
+    /// ZXMOS 的 504 一条条按这个 Id 找到人转过去;506 到了把"官方条数 + 本服条数"合成一条收尾回给客户端。
     /// </summary>
-    private static readonly ConcurrentDictionary<ulong, (Guid Connection, ulong PacketId)> HistoryRelay = new();
+    private static readonly ConcurrentDictionary<ulong, (Guid Connection, ulong PacketId, int LocalSent)> HistoryRelay = new();
 
     /// <summary>
     /// 官方验证第二层:等官方服务端回证明(521)的等待者 + 这次发出去的 nonce。
@@ -852,6 +886,65 @@ internal static class Program
     /// <summary>补发包的日志摘要:504 是一张卡片,506 只有一个条数。</summary>
     private static string Brief(ushort type, string text)
         => type == Protocol.MessageHistoryDone ? $"{text.Trim()} 条" : MessageCard.Summary(text);
+
+    /// <summary>从卡片里取来源标签(解析不出来就是空串)。</summary>
+    private static string CardSource(string card)
+    {
+        MessageCard.TryParse(card, out var fields);
+        return fields.Source;
+    }
+
+    /// <summary>
+    /// 把本服自己的存档逐条(504)回给这条连接,不在这里收尾;返回条数。
+    /// <paramref name="forClient"/> = 这次是替玩家要的:点名给本端自己的(<c>@server:</c>)消息就不给玩家;
+    /// 点名给本端名下客户端的(<c>@clients:</c>)给;别的玩家的定向推送只给他本人。
+    /// </summary>
+    private static async Task<int> SendLocalHistoryAsync(ServerboundPacket packet, string who, bool forClient, bool skipOfficial)
+    {
+        var sent = 0;
+
+        foreach (var entry in MessageArchive.Recent())
+        {
+            // 官方端连着时,官方转下来的那批由官方端自己补,不再从这里发一遍
+            if (skipOfficial && entry.Source.StartsWith("ZXMOS-", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            var target = entry.Target;
+
+            if (target.StartsWith("@server:", StringComparison.OrdinalIgnoreCase))
+            {
+                if (forClient)
+                {
+                    continue;
+                }
+            }
+            else if (target.StartsWith("@clients:", StringComparison.OrdinalIgnoreCase))
+            {
+                // 点名给本端名下所有客户端的:谁都该收到
+            }
+            else if (target.Length > 0 && !target.Equals("@all", StringComparison.OrdinalIgnoreCase)
+                     && !target.Equals(who, StringComparison.OrdinalIgnoreCase))
+            {
+                // 别的玩家的定向推送
+                continue;
+            }
+
+            try
+            {
+                await packet.SendAsync(Protocol.MessageHistory, entry.Card, packet.Id);
+                sent++;
+            }
+            catch (Exception ex)
+            {
+                Logger.Log(LogLevel.Warning, "[消息] 本服补发失败: " + ex.Message);
+                break;
+            }
+        }
+
+        return sent;
+    }
 
     /// <summary>
     /// 把服务端消息发(转)给本服的 ZXMC 客户端:给了 <paramref name="target"/> 就按登录账号过滤
@@ -929,19 +1022,41 @@ internal static class Program
         return SendToLocalClientsAsync(Protocol.ServerConfig, $"msgdays={days}", null).GetAwaiter().GetResult();
     }
 
-    /// <summary>控制台 notice:给本服所有客户端发一条公告;返回投递条数。来源打成 ZXMS-&lt;本服名称&gt;。</summary>
+    /// <summary>控制台 srvmsgdays:改本服自己存档的保留天数(写 config + 立刻清一次过期)。返回剩余条数。</summary>
+    private static int SetSrvMsgDaysLocal(int days)
+    {
+        days = Math.Clamp(days, 1, 365);
+        _srvMsgDays = days;
+        _config?.WriteFileMap(KeySrvMsgDays, days.ToString());
+        MessageArchive.SetKeepDays(days);
+        MessageArchive.Prune();
+        return MessageArchive.Count;
+    }
+
+    /// <summary>
+    /// 控制台 notice:给本服所有客户端发一条公告;返回投递条数。来源打成 ZXMS-&lt;本服名称&gt;。
+    /// 先入库拿到本服消息号,再发<b>同一张</b>卡 —— 这样在线收到的和以后补发的能对上(去重靠来源 + 号)。
+    /// </summary>
     private static int NoticeLocal(string serverName, CardInput card)
-        => SendToLocalClientsAsync(Protocol.Notice, BuildCard(card, serverName), null).GetAwaiter().GetResult();
+    {
+        var (_, text) = MessageArchive.Add(id => BuildCard(card, serverName, id),
+            MessageCard.SourceTag("ZXMS", serverName));
+        return SendToLocalClientsAsync(Protocol.Notice, text, null).GetAwaiter().GetResult();
+    }
 
     /// <summary>控制台 push:只给本服的某个账号定向推送;返回投递条数。来源同上。</summary>
     private static int PushLocal(string serverName, string target, CardInput card)
-        => SendToLocalClientsAsync(Protocol.Push, MessageCard.BuildPush(target, BuildCard(card, serverName)), target)
+    {
+        var (_, text) = MessageArchive.Add(id => BuildCard(card, serverName, id),
+            MessageCard.SourceTag("ZXMS", serverName), target);
+        return SendToLocalClientsAsync(Protocol.Push, MessageCard.BuildPush(target, text), target)
             .GetAwaiter().GetResult();
+    }
 
     /// <summary>把命令读出来的卡片拼成线格式,来源统一带本服名称(ZXMS-&lt;名称&gt;)。</summary>
-    private static string BuildCard(CardInput card, string serverName)
+    private static string BuildCard(CardInput card, string serverName, int id = 0)
         => MessageCard.Build(card.Kind, card.Title, card.Body, MessageCard.SourceTag("ZXMS", serverName),
-            card.Primary, card.Secondary, card.Options);
+            card.Primary, card.Secondary, card.Options, id);
 
     private static async Task ConnectOServerAsync(ZFile config)
     {
@@ -1096,15 +1211,20 @@ internal static class Program
                         break;
                     }
 
-                    await target.WriteAsync(new Packet(pending.PacketId, packet.Type, packet.Data));
-
                     if (packet.Type == Protocol.MessageHistoryDone)
                     {
+                        // 本服那批已经发过了,收尾只回一条:官方条数 + 本服条数
                         HistoryRelay.TryRemove(packet.Id, out _);
-                        Logger.Log(LogLevel.Info, $"[消息] 官方服务端补发结束,已转给客户端 {text} 条");
+                        var remote = int.TryParse(text.Trim(), out var count) ? count : 0;
+                        var total = pending.LocalSent + remote;
+                        await target.WriteAsync(new Packet(pending.PacketId, Protocol.MessageHistoryDone,
+                            Encoding.UTF8.GetBytes(total.ToString())));
+                        Logger.Log(LogLevel.Info,
+                            $"[消息] 官方服务端补发结束:官方 {remote} 条 + 本服 {pending.LocalSent} 条 = 合计 {total} 条");
                     }
                     else
                     {
+                        await target.WriteAsync(new Packet(pending.PacketId, packet.Type, packet.Data));
                         Logger.Log(LogLevel.Info, "[消息] 补发转给客户端:" + MessageCard.Summary(text));
                     }
 
@@ -1115,6 +1235,7 @@ internal static class Program
                 case Protocol.Notice:
                 {
                     var card = Encoding.UTF8.GetString(packet.Data);
+                    MessageArchive.Add(card, CardSource(card));
                     var sent = await SendToLocalClientsAsync(Protocol.Notice, card, null);
                     Logger.Log(LogLevel.Info,
                         $"[消息] 收到官方服务端公告,已转给本服 {sent} 个客户端 {MessageCard.Summary(card)}");
@@ -1145,6 +1266,8 @@ internal static class Program
                             break;
                         }
 
+                        MessageArchive.Add(card, CardSource(card), "@server:" + selfName);
+
                         MessageCard.TryParse(card, out var parsed);   // 解析不出来就是空卡片,照样打印
                         Logger.Log(LogLevel.Info,
                             "┌─ 官方服务端给本端的消息 ────────────────\n" +
@@ -1164,6 +1287,8 @@ internal static class Program
                             break;
                         }
 
+                        MessageArchive.Add(card, CardSource(card), "@clients:" + selfName);
+
                         var all = await SendToLocalClientsAsync(Protocol.Push, text, null);
                         Logger.Log(LogLevel.Info, all > 0
                             ? $"[消息] 官方服务端给本端名下所有客户端的消息,已投给 {all} 个客户端 {MessageCard.Summary(card)}"
@@ -1174,6 +1299,8 @@ internal static class Program
                     // ③ 全体(@all):本服所有客户端都收
                     if (target.Equals("@all", StringComparison.OrdinalIgnoreCase))
                     {
+                        MessageArchive.Add(card, CardSource(card), "@all");
+
                         var all = await SendToLocalClientsAsync(Protocol.Push, text, null);
                         Logger.Log(LogLevel.Info, all > 0
                             ? $"[消息] 官方服务端的全体推送,已投给本服 {all} 个客户端 {MessageCard.Summary(card)}"
@@ -1182,6 +1309,8 @@ internal static class Program
                     }
 
                     // ④ 普通玩法:按玩家账号过滤
+                    MessageArchive.Add(card, CardSource(card), target);
+
                     var sent = await SendToLocalClientsAsync(Protocol.Push, text, target);
                     Logger.Log(LogLevel.Info, sent > 0
                         ? $"[消息] 定向推送 → {target}:已投给本服 {sent} 个客户端 {MessageCard.Summary(card)}"
