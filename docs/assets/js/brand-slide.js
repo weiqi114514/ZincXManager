@@ -2,14 +2,25 @@
 (function () {
   var WORDS = ["X", "Admin", "User", "Player", "System"];
   var PERIOD = 5000;
-  var canvas = document.createElement("canvas");
-  var ctx = canvas.getContext("2d");
 
-  // 用 canvas 按真实字体量宽度(比插一个隐藏 span 稳)
+  // 用一个独立的隐藏测量盒(不放进 slot,避免被 overflow 裁剪影响)
+  var box = document.createElement("span");
+  box.style.cssText = "position:absolute;left:-9999px;top:0;visibility:hidden;white-space:nowrap;";
+
   function measure(slot, word) {
-    var cs = window.getComputedStyle(slot.closest(".zxm-hero") || slot);
-    ctx.font = [cs.fontStyle, cs.fontWeight, cs.fontSize, cs.fontFamily].join(" ");
-    return Math.ceil(ctx.measureText(word).width);
+    var cur = slot.querySelector(".bm-cur");
+    var cs = window.getComputedStyle(cur);
+    box.style.fontFamily = cs.fontFamily;
+    box.style.fontSize = cs.fontSize;
+    box.style.fontWeight = cs.fontWeight;
+    box.style.fontStyle = cs.fontStyle;
+    box.style.letterSpacing = cs.letterSpacing;
+    box.textContent = word;
+
+    if (!box.isConnected) document.body.appendChild(box);
+    var w = Math.ceil(box.getBoundingClientRect().width);
+    slot.dataset.measure = w;   // 方便排查:量到的宽度
+    return w;
   }
 
   function start(hero) {
