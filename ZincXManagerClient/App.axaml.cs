@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
@@ -20,7 +22,7 @@ public partial class App : Application
 
     public override void OnFrameworkInitializationCompleted()
     {
-        // 先应用配色,再建窗口(否则第一帧会是默认色)
+        // 先把 config 里存的配色 / 透明样式应用一次,否则所有窗口都是写死的默认蓝
         ThemeManager.ApplySaved();
 
         // 启动先把上次登录的账号填进会话(不然免登录握手完成前,主界面左下角是「未登录」)
@@ -59,25 +61,7 @@ public partial class App : Application
                 return;
             }
 
-            // ③ 有 7 天内的登录记录(且记住了密码)→ 直接主界面 + 后台免登录
-            if (LoginRecord.CanAutoLogin())
-            {
-                var login = new LoginViewModel();
-                _connect = login.Connect;
-                ClientSession.Connect = _connect;
-
-                var mainViewModel = new MainViewModel();
-                var mainWindow = new MainWindow { DataContext = mainViewModel };
-                WindowPlacement.CenterOnPrimaryScreen(mainWindow);
-                AppWindows.Register(mainWindow);
-                desktop.MainWindow = mainWindow;
-                _ = AutoLoginAsync(login, mainViewModel, mainWindow);
-
-                base.OnFrameworkInitializationCompleted();
-                return;
-            }
-
-            // 调试 / 截图用:config 里写 skipauth=1 就直接进主界面(不连服务端)
+            // 维护 / 截图用:skipauth=1 直接进主界面(不连服务端)
             if (ClientConfig.GetOrEmpty("skipauth") == "1")
             {
                 _connect = new ConnectViewModel();
@@ -90,13 +74,17 @@ public partial class App : Application
                 return;
             }
 
-            // ④ 其他情况 → 弹登录窗口
-            var loginWindow = new LoginViewModel();
-            _connect = loginWindow.Connect;
-            ClientSession.Connect = _connect;
-            var firstLogin = new LoginWindow { DataContext = loginWindow };
-            WindowPlacement.CenterOnPrimaryScreen(firstLogin);
-            desktop.MainWindow = firstLogin;
+            // ③ 打开客户端先连数据源:连不上就停在连接界面(弹窗给 host:port + 具体异常);
+            //    连上了才进登录界面 / 免登录主界面
+            var probe = new ConnectViewModel();
+            _connect = probe;
+            ClientSession.Connect = probe;
+
+            var waitWindow = new StartupWindow($"{probe.Host}:{probe.Port}");
+            WindowPlacement.CenterOnPrimaryScreen(waitWindow);
+            desktop.MainWindow = waitWindow;
+
+            waitWindow.Opened += (_, _) => _ = StartAfterProbeAsync(desktop, probe, waitWindow);
         }
 
         base.OnFrameworkInitializationCompleted();
@@ -114,6 +102,109 @@ public partial class App : Application
         var port = ClientConfig.GetOrEmpty(official ? "ozport" : "czport");
 
         return ip.Length > 0 && port.Length > 0;
+    }
+
+    /// <summary>
+    /// 打开客户端时的数据源自检:连得上返回 null,连不上返回错误说明。
+    /// 探测期间把 ErrorRaised 收走,避免和界面自己的弹窗重复。
+    /// </summary>
+    private static async Task<string?> ProbeDataSourceAsync(ConnectViewModel vm)
+    {
+        if (vm.IsConnected)
+        {
+            return null;
+        }
+
+        var errors = new List<string>();
+        void OnError(string title, string text) => errors.Add(text);
+
+        vm.ErrorRaised += OnError;
+        try
+        {
+            await vm.ConnectAsync();
+
+            // 连接本身就被拒(TCP 都连不上)就不用再等满 6 秒
+            if (!vm.IsConnected)
+            {
+                await Task.Delay(300);
+                if (!vm.IsConnected)
+                {
+                    return errors.Count > 0 ? errors[^1] : "无法建立连接(地址或端口不对,或服务端没启动)";
+                }
+            }
+
+            if (await vm.WaitConnectedAsync(6000))
+            {
+                return null;
+            }
+
+            return errors.Count > 0 ? errors[^1] : "6 秒内没有完成握手(服务端无响应或地址/端口不对)";
+        }
+        catch (Exception ex)
+        {
+            return ex.Message;
+        }
+        finally
+        {
+            vm.ErrorRaised -= OnError;
+        }
+    }
+
+    /// <summary>
+    /// 启动时先把数据源连上:连上了才进登录界面 / 主界面;连不上就停在连接界面,
+    /// 由 ConnectWindow 自己弹窗给出「无法连接到数据源 + host:port + 具体异常」。
+    /// </summary>
+    private static async Task StartAfterProbeAsync(IClassicDesktopStyleApplicationLifetime desktop, ConnectViewModel vm, Window waitWindow)
+    {
+        vm.SuppressErrorDialog = true;   // 探测期间的错误由这里统一弹,界面别再弹一次
+        var error = await ProbeDataSourceAsync(vm);
+        vm.SuppressErrorDialog = false;
+
+        if (error is not null)
+        {
+            // 连不上:换成完整连接窗口 + 弹「连接 ZXMS 失败」/「连接 ZXMOS 失败」
+            var target = vm.Mode == "OOS" ? "ZXMOS" : "ZXMS";
+
+            await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                var connectWindow = new ConnectWindow { DataContext = vm };
+                WindowPlacement.CenterOnPrimaryScreen(connectWindow);
+                desktop.MainWindow = connectWindow;
+                connectWindow.Show();
+                waitWindow.Close();
+
+                _ = MessageDialog.InfoAsync(connectWindow, $"连接 {target} 失败",
+                    $"{vm.Host}:{vm.Port}\n{error}",
+                    hint: "检查数据源地址、端口,确认服务端已启动后重试");
+            });
+
+            return;
+        }
+
+        // 连上了:进登录窗口(有免登录记录就直接主界面)
+        await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() =>
+        {
+            if (LoginRecord.CanAutoLogin())
+            {
+                var autoLogin = new LoginViewModel(vm);
+                var mainViewModel = new MainViewModel();
+                var mainWindow = new MainWindow { DataContext = mainViewModel };
+                WindowPlacement.CenterOnPrimaryScreen(mainWindow);
+                AppWindows.Register(mainWindow);
+                desktop.MainWindow = mainWindow;
+                mainWindow.Show();
+                waitWindow.Close();
+                _ = AutoLoginAsync(autoLogin, mainViewModel, mainWindow);
+                return;
+            }
+
+            var login = new LoginViewModel(vm);
+            var loginWindow = new LoginWindow { DataContext = login };
+            WindowPlacement.CenterOnPrimaryScreen(loginWindow);
+            desktop.MainWindow = loginWindow;
+            loginWindow.Show();
+            waitWindow.Close();
+        });
     }
 
     /// <summary>用记住的密文免登录;成功就用主界面,失败就把登录窗口放出来。</summary>

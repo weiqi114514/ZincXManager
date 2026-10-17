@@ -189,23 +189,45 @@ public partial class OobeWindow : Window
             return;
         }
 
+        string? lastError = null;
+        void OnConnectError(string title, string text) => lastError = text;
+
         try
         {
+            Vm.Connect.ErrorRaised += OnConnectError;
             await Vm.Connect.ConnectAsync();
             var ok = await Vm.Connect.WaitConnectedAsync();
             Vm.IsSourceConnected = ok;
             Vm.Message = ok ? "数据源已连接" : "连接失败,检查地址和端口";
+
             if (ok)
             {
                 ClientConfig.Set("czip", Vm.CzIp.Trim());
                 ClientConfig.Set("czport", Vm.CzPort.Trim());
                 ClientConfig.Set("mode", Vm.Mode);
+                return;
             }
+
+            // 连不上要明确弹窗,别只改一行状态文字
+            var target = Vm.Mode == "OOS" ? "ZXMOS" : "ZXMS";
+            var detail = string.IsNullOrWhiteSpace(lastError) ? Vm.Message : lastError!;
+            _ = MessageDialog.InfoAsync(this, $"连接 {target} 失败",
+                $"{Vm.CzIp.Trim()}:{Vm.CzPort.Trim()}\n{detail}",
+                hint: "检查数据源地址、端口,确认服务端已启动后重试");
         }
         catch (Exception ex)
         {
             Vm.IsSourceConnected = false;
             Vm.Message = "连接出错:" + ex.Message;
+
+            var target = Vm.Mode == "OOS" ? "ZXMOS" : "ZXMS";
+            _ = MessageDialog.InfoAsync(this, $"连接 {target} 失败",
+                $"{Vm.CzIp.Trim()}:{Vm.CzPort.Trim()}\n{ex.Message}",
+                hint: "检查数据源地址、端口,确认服务端已启动后重试");
+        }
+        finally
+        {
+            Vm.Connect.ErrorRaised -= OnConnectError;
         }
     }
 

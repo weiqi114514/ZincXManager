@@ -20,12 +20,19 @@ namespace ZincXManagerClient.ViewModels;
 /// </summary>
 public partial class LoginViewModel : ViewModelBase
 {
-    private readonly ConnectViewModel _connect = new();
+    private readonly ConnectViewModel _connect;
     private TaskCompletionSource<(bool Ok, string Text)>? _reply;
     private string _usedHash = "";
 
-    public LoginViewModel()
+    /// <summary>自己建连接(默认)。</summary>
+    public LoginViewModel() : this(new ConnectViewModel())
     {
+    }
+
+    /// <summary>复用外面已经建好、可能已经连上的连接(启动自检那条路)。</summary>
+    public LoginViewModel(ConnectViewModel connect)
+    {
+        _connect = connect;
         _connect.PacketReceived += OnPacket;
         _connect.AccountReply += OnAccountReply;
 

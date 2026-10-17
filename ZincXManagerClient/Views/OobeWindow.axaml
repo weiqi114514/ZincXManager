@@ -139,7 +139,7 @@
       <Setter Property="VerticalAlignment" Value="Center"/>
       <Setter Property="Height" Value="28"/>
       <Setter Property="FontSize" Value="13"/>
-      <Setter Property="Foreground" Value="#1F3B3A"/>
+      <Setter Property="Foreground" Value="{DynamicResource ThemePrimaryDark}"/>
       <Setter Property="Cursor" Value="Hand"/>
     </Style>
     <Style Selector="Button.mode:pointerover /template/ ContentPresenter">
@@ -297,12 +297,12 @@
         </StackPanel>
         <StackPanel Grid.Row="1" Spacing="12" VerticalAlignment="Center" HorizontalAlignment="Center" Width="380">
           <TextBlock Classes="label" Text="模式选择" HorizontalAlignment="Center"/>
-          <Border Background="#EAF3F8" BorderBrush="#CBDDE8" BorderThickness="1" CornerRadius="3"
+          <Border Background="{DynamicResource ThemeLight}" BorderBrush="{DynamicResource ThemeMuted}" BorderThickness="1" CornerRadius="3"
                   HorizontalAlignment="Center" Padding="3">
             <Grid x:Name="ModeGroup" ColumnDefinitions="92,92,92">
               <!-- 高亮块:选哪个就滑到哪个下面 -->
               <Border x:Name="ModeHighlight" Width="92" Height="28" HorizontalAlignment="Left" VerticalAlignment="Center"
-                      Background="#B9D8EA" CornerRadius="2" IsHitTestVisible="False">
+                      Background="{DynamicResource ThemeSecondary}" CornerRadius="2" IsHitTestVisible="False">
                 <Border.RenderTransform>
                   <TranslateTransform X="0"/>
                 </Border.RenderTransform>

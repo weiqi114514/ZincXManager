@@ -18,7 +18,15 @@ public partial class ConnectWindow : Window
         {
             if (DataContext is ConnectViewModel vm)
             {
-                vm.ErrorRaised += (title, text) => _ = MessageDialog.InfoAsync(this, title, text, hint: "检查数据源地址与连接方式");
+                vm.ErrorRaised += (title, text) =>
+                {
+                    if (vm.SuppressErrorDialog)
+                    {
+                        return;
+                    }
+
+                    _ = MessageDialog.InfoAsync(this, title, text, hint: "检查数据源地址与连接方式");
+                };
             }
         };
     }
@@ -102,7 +110,16 @@ public partial class ConnectWindow : Window
     /// <summary>连上之后进入主界面(原来的主界面,连接界面关闭)。</summary>
     private void OnOpenMainClick(object? sender, RoutedEventArgs e)
     {
-        // 已有主界面就置顶它,没有才新建在连接界面这个位置,然后关掉自己
-        AppWindows.ShowMain(this);
+        // 连接好之后先进登录界面;登录成功再由登录窗口进主界面(不在这里直进主界面)
+        if (Vm is null)
+        {
+            return;
+        }
+
+        var login = new LoginViewModel(Vm);
+        var loginWindow = new LoginWindow { DataContext = login };
+        WindowPlacement.PlaceAt(loginWindow, this);
+        loginWindow.Show();
+        Close();
     }
 }

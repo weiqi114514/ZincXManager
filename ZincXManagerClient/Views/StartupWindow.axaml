@@ -1,0 +1,22 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="ZincXManagerClient.Views.StartupWindow"
+        Title="ZincXManagerClient"
+        Width="380" Height="150"
+        CanResize="False"
+        ShowInTaskbar="True"
+        WindowStartupLocation="CenterScreen"
+        WindowDecorations="BorderOnly"
+        Background="{DynamicResource ThemeWindow}"
+        FontFamily="Microsoft YaHei UI, Microsoft YaHei, Segoe UI">
+
+  <Border Background="{DynamicResource ThemeWindow}"
+          BorderBrush="{DynamicResource ThemeMuted}" BorderThickness="1" CornerRadius="6" Margin="1">
+    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="12">
+      <TextBlock Text="正在连接数据源…" FontSize="15" HorizontalAlignment="Center"
+                 Foreground="{DynamicResource ThemePrimaryDark}"/>
+      <TextBlock x:Name="TargetText" Text="" FontSize="12" HorizontalAlignment="Center"
+                 Foreground="{DynamicResource ThemeMuted}"/>
+    </StackPanel>
+  </Border>
+</Window>

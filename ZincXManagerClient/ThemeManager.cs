@@ -1,6 +1,7 @@
 using System;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Media;
 using ZincXManagerClient.Models;
 using ZincXManagerShared.Logging;
@@ -105,6 +106,17 @@ internal static class ThemeManager
         }
 
         ApplySurface();
+
+        // 已经打开的窗口要一起换材质:亚克力档申请模糊,半透明档只申请 Transparent,
+        // 不然切了开关窗口还是旧材质(半透明档看起来还像亚克力)
+        if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
+        {
+            foreach (var window in desktop.Windows)
+            {
+                ApplyWindowMaterial(window);
+            }
+        }
+
         GlassChanged?.Invoke(enabled);
         Logger.Log(LogLevel.Info, $"[ZXMC] 亚克力已{(enabled ? "开启" : "关闭")}");
     }
@@ -215,22 +227,30 @@ internal static class ThemeManager
 
         var percent = Math.Clamp(SurfaceAlpha, 50, 100);
         var railByte = (byte)(percent * 255 / 100);
-        // 侧栏:亚克力档 80%(透出模糊);半透明档按滑杆的百分比(默认 90%)
-        var rail = glass ? (byte)0xCC : railByte;
 
+        // 亚克力档:所有表面按"设计基准 × 滑杆比例"整体缩放 ——
+        // 拖滑杆时是同一套基准一起 +/- ,不是每个面各自从一个死值加减。
+        var factor = percent / 100.0;
+        byte Scale(int baseAlpha) => (byte)Math.Clamp((int)Math.Round(baseAlpha * factor), 0, 255);
 
-        resources["ThemeGlass"] = Solid(Alpha(theme.Primary, rail));     // 侧边栏:主题色 + 不透明度
+        if (glass)
+        {
+            resources["ThemeGlass"] = Solid(Alpha(theme.Primary, Scale(0xCC)));       // 侧边栏 基准 80%
+            resources["ThemeGlassLight"] = Solid(Alpha("FFFFFF", Scale(0xE6)));      // 卡片   基准 90%
+            resources["ThemePanel"] = Solid(Alpha("FFFFFF", Scale(0x5C)));           // 面板   基准 36%
+            resources["ThemePage"] = Solid(Alpha("FFFFFF", Scale(0x5C)));            // 设置页 基准 36%
+            resources["ThemeContentVeil"] = Solid(Alpha("E9EFF3", Scale(0x66)));     // 内容磨砂 基准 40%
+            resources["ThemeWindowVeil"] = Solid(Alpha("FFFFFF", Scale(0x99)));      // 入口窗口白幕 基准 60%
+            return;
+        }
 
-        // 亚克力档:内容区留 36% 白,让窗口的模糊透出来;半透明档:内容/卡片不透明,只有侧栏按 alpha 透
-        resources["ThemeGlassLight"] = Solid(glass ? "#E6FFFFFF" : "#FFFFFFFF");   // 消息卡片:亚克力 90%,半透明档纯白
-        resources["ThemePanel"] = Solid(glass ? "#5CFFFFFF" : "#FFFFFFFF");        // 面板 / 内容区:亚克力 36%,半透明档不透明
-        resources["ThemePage"] = Solid(glass ? "#5CFFFFFF" : "#FFFFFFFF");         // 设置页底:同上
-        resources["ThemeContentVeil"] = Solid(glass ? "#66E9EFF3" : "#99E9EFF3");  // 内容区那层磨砂:再压一层白
-
-        // 入口窗口(登录 / OOBE / 连接 / 弹窗)只有一层白幕:
-        // 亚克力档 60% 白(让窗口的模糊透出来);半透明档不透明(工作区/窗口不要透)
-        var veilByte = glass ? (byte)0x99 : (byte)0xFF;
-        resources["ThemeWindowVeil"] = Solid("#" + veilByte.ToString("X2") + "FFFFFF");
+        // 半透明档:只有侧栏按滑杆透,其它表面一律不透明
+        resources["ThemeGlass"] = Solid(Alpha(theme.Primary, railByte));
+        resources["ThemeGlassLight"] = Solid(Alpha("FFFFFF", 0xFF));
+        resources["ThemePanel"] = Solid(Alpha("FFFFFF", 0xFF));
+        resources["ThemePage"] = Solid(Alpha("FFFFFF", 0xFF));
+        resources["ThemeContentVeil"] = Solid("#99E9EFF3");
+        resources["ThemeWindowVeil"] = Solid("#FFFFFFFF");
     }
 
     private static IBrush Solid(string argbHex) => new SolidColorBrush(Color.Parse(argbHex));

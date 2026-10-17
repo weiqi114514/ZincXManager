@@ -74,6 +74,9 @@ public partial class ConnectViewModel : ViewModelBase, IDisposable
     /// <summary>需要弹窗提示的错误(标题, 内容):连不上、模式不匹配。</summary>
     public event Action<string, string>? ErrorRaised;
 
+    /// <summary>启动自检期间置 true:错误由 App 自己按模式弹「连接 ZXMS/ZXMOS 失败」,界面别再弹一次。</summary>
+    public bool SuppressErrorDialog { get; set; }
+
     /// <summary>服务端自报的名称(连接后才有)。</summary>
     [ObservableProperty]
     public partial string ServerName { get; set; } = "";
@@ -314,7 +317,7 @@ public partial class ConnectViewModel : ViewModelBase, IDisposable
         {
             Logger.Log(LogLevel.Error, "[ZXMC] 连接失败: " + ex.Message);
             SetState("连接失败", "#D64545");
-            ErrorRaised?.Invoke("无法连接服务器", $"{host}:{port}\n{ex.Message}");
+            ErrorRaised?.Invoke("无法连接到数据源", $"{host}:{port}\n{ex.Message}");
             await client.CloseAsync();
         }
         finally

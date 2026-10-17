@@ -200,7 +200,7 @@
             <Button Grid.Column="0" Classes="primary" Content="连接" Click="OnConnectClick"
                     IsEnabled="{Binding !IsBusy}"/>
             <Button Grid.Column="1" Classes="secondary" Content="断开" Click="OnDisconnectClick" Margin="8,0"/>
-            <Button Grid.Column="2" Classes="primary" Content="进入主界面" Click="OnOpenMainClick"
+            <Button Grid.Column="2" Classes="primary" Content="去登录" Click="OnOpenMainClick"
                     IsEnabled="{Binding IsConnected}"/>
           </Grid>
 

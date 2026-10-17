@@ -223,7 +223,8 @@ internal static class Program
     static async Task Main(string[] args)
     {
         Console.WriteLine(" _____   _           _  __ __  ___                                     _____    \r\n/__  /  (_)___  ____| |/ //  |/  /___ _____  ____ _____ ____  _____   / ___/    \r\n  / /  / / __ \\/ ___/   // /|_/ / __ `/ __ \\/ __ `/ __ `/ _ \\/ ___/   \\__ \\     \r\n / /__/ / / / / /__/   |/ /  / / /_/ / / / / /_/ / /_/ /  __/ /      ___/ /     \r\n/____/_/_/ /_/\\___/_/|_/_/  /_/\\__,_/_/ /_/\\__,_/\\__, /\\___/_/      /____/      \r\n                                                /____/                          ");
-        Console.WriteLine("欢迎使用ZincXManager子服务端 -" + AppVersion);
+        Console.WriteLine("欢迎使用ZincXManager子服务端");
+        Console.WriteLine("当前版本为 ZXMS-" + AppVersion);
         Console.WriteLine("ZincXManager官网 https://weiqi114514.github.io/ZincXManager/");
         Console.WriteLine("旧站(带端口) http://zxm.zincms.top:10/");
         Console.ForegroundColor = ConsoleColor.Green;

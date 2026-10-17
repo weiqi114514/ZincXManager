@@ -57,6 +57,8 @@ footer{color:var(--muted);border-top:1px solid var(--line);margin-top:30px;paddi
 <tr><td class="mono">202</td><td class="mono">ServerConfig</td><td class="mono">ZXMS</td><td class="mono">ZXMC</td><td>服务端 → 客户端:服务端配置(客户端连上后下发一次),负载按行 键=值。 目前只有 msgdays = 这个子服务端的消息保留天数(客户端据此决定本地留多久;不认识的行忽略)。</td><td class="mono muted">Network/Protocol.cs</td></tr>
 <tr><td class="mono">300</td><td class="mono">Conline</td><td class="mono">ZXMC</td><td class="mono">ZXMS</td><td>ZXMC → 服务端:客户端上线(负载 &quot;ZXMC:&lt;模式&gt;&quot;)</td><td class="mono muted">Network/Protocol.cs</td></tr>
 <tr><td class="mono">301</td><td class="mono">CBack</td><td class="mono">ZXMS</td><td class="mono">ZXMC</td><td>服务端 → ZXMC:收到</td><td class="mono muted">Network/Protocol.cs</td></tr>
+<tr><td class="mono">380</td><td class="mono">SessionHello</td><td class="mono">ZXMC</td><td class="mono">ZXMS</td><td>ZXMC → ZXMS:客户端 ECDH(P-256)公钥,用于协商会话密钥(此时仍是明文)</td><td class="mono muted">Network/Protocol.cs</td></tr>
+<tr><td class="mono">381</td><td class="mono">SessionHelloAck</td><td class="mono">ZXMS</td><td class="mono">ZXMC</td><td>ZXMS → ZXMC:服务端公钥(明文);包发出后双方各自派生 AES-256-GCM 会话密钥</td><td class="mono muted">Network/Protocol.cs</td></tr>
 <tr><td class="mono">400</td><td class="mono">FriendMsg</td><td class="mono">ZXMC</td><td class="mono">ZXMS, ZXMC</td><td>好友消息 —— 未实施:编号先占着,以后要做再定负载(那时才需要&quot;每跳按包 Id 记上游&quot;的回执链路)。</td><td class="mono muted">Network/Protocol.cs</td></tr>
 <tr><td class="mono">400</td><td class="mono">BusinessFrom</td><td class="mono">ZXMC</td><td class="mono">ZXMS, ZXMC</td><td>业务包起始编号:4xx 及以上算业务包,发送时会自动记 clients.log。</td><td class="mono muted">Network/Protocol.cs</td></tr>
 <tr><td class="mono">401</td><td class="mono">FriendMsgAck</td><td class="mono">ZXMS, ZXMC</td><td class="mono">ZXMC</td><td>好友消息回执 —— 未实施,理由同上。</td><td class="mono muted">Network/Protocol.cs</td></tr>
@@ -80,6 +82,63 @@ footer{color:var(--muted);border-top:1px solid var(--line);margin-top:30px;paddi
 <tr><td class="mono">611</td><td class="mono">AccountRename</td><td class="mono">ZXMS</td><td class="mono">ZXMOS</td><td>ZXMS → ZXMOS:改本端子服务端账号的名字(顺带改密码),由控制台 osuser 命令发起。 负载 &quot;旧名|新名|新密文|机器码|服务端码&quot;;ZXMOS 校验账号存在 + 机器码 / 服务端码与登记一致才改。</td><td class="mono muted">Network/Protocol.cs</td></tr>
 <tr><td class="mono">612</td><td class="mono">AccountRenameAck</td><td class="mono">ZXMOS</td><td class="mono">ZXMS</td><td>ZXMOS → ZXMS:改名回执,&quot;ok|新名&quot; 或 &quot;err|原因&quot;。</td><td class="mono muted">Network/Protocol.cs</td></tr>
 </tbody></table>
+
+<h3 id="secure">会话加密与登录挑战(ZXMC ↔ ZXMS,a0.3.1 起)</h3>
+<p class="lead">以前登录请求里直接带 <span class="mono">SHA256(账号:密码)</span>,这个密文是<b>静态</b>的 —— 抓到一次就能无限重放。现在改成两层:先建加密会话,再叠加一次性挑战。</p>
+
+<h4>① 会话加密(握手 380 / 381)</h4>
+<table><thead><tr><th>步骤</th><th>方向</th><th>内容</th></tr></thead><tbody>
+<tr><td>1</td><td class="mono">ZXMC → ZXMS</td><td><span class="mono">380 SessionHello</span>,负载 = 客户端 ECDH(P-256)公钥(SubjectPublicKeyInfo DER)</td></tr>
+<tr><td>2</td><td class="mono">ZXMS → ZXMC</td><td><span class="mono">381 SessionHelloAck</span>,负载 = 服务端公钥;<b>这一包仍是明文</b>(客户端此时还没有密钥)</td></tr>
+<tr><td>3</td><td class="mono">两端各自计算</td><td>ECDH 共享密钥 → <span class="mono">HKDF-SHA256(salt="zxm-session-v1", info="zxmc-zxms")</span> 派生出 64 字节</td></tr>
+<tr><td>4</td><td class="mono">分方向</td><td>前 32 字节 = 客户端→服务端,后 32 字节 = 服务端→客户端(两把 AES-256-GCM,nonce 不会撞)</td></tr>
+<tr><td>5</td><td class="mono">之后所有包</td><td>包头 <span class="mono">Flags &amp; 0x0001</span> 置位,负载 = <span class="mono">[12 字节 nonce][密文][16 字节 tag]</span></td></tr>
+</tbody></table>
+<p class="tips">服务端收到未加密的登录包会直接拒绝:<span class="mono">err|客户端版本过旧(缺少加密会话),请更新到 a0.3.1 或更高版本</span>。</p>
+
+<h4>② 登录挑战-响应</h4>
+<table><thead><tr><th>字段</th><th>内容</th></tr></thead><tbody>
+<tr><td class="mono">nonce</td><td><span class="mono">unix秒-32位随机hex</span>,每次登录都不同;服务端要求时间偏差 ≤ 5 分钟且<b>同一个 nonce 只能用一次</b></td></tr>
+<tr><td class="mono">proof</td><td><span class="mono">SHA256(密码密文 : nonce)</span>(小写十六进制)</td></tr>
+<tr><td>登录载荷</td><td><span class="mono">user|hash|level|side|machine||nonce|proof</span></td></tr>
+</tbody></table>
+<p class="tips">第 6 段留空是给「服务端码」的:ZXMS 会把载荷原样转发给 ZXMOS,ZXMOS 按第 6 段取 serverCode、第 7/8 段取 nonce/proof,两边解析不打架。</p>
+
+<h4>③ 校验顺序(服务端)</h4>
+<table><thead><tr><th>顺序</th><th>动作</th><th>失败返回</th></tr></thead><tbody>
+<tr><td>1</td><td>连接是否已协商加密</td><td class="mono">err|客户端版本过旧…</td></tr>
+<tr><td>2</td><td>nonce 是否过期 / 是否已用过</td><td class="mono">err|登录凭据已过期,请重新登录</td></tr>
+<tr><td>3</td><td><span class="mono">proof</span> 与「存储密文 + nonce」重算结果是否一致(定长比较)</td><td class="mono">err|密码错误</td></tr>
+<tr><td>4</td><td>账号等级 / 封禁 / 机器码</td><td>同原有逻辑</td></tr>
+</tbody></table>
+<p class="tips">本地账号(管理员、玩家账号在 ZXMS 本地回退时)走完整 proof 校验;转发给 ZXMOS 的路径把 <span class="mono">hash</span> 与 <span class="mono">nonce|proof</span> 一起带过去,由 ZXMOS 用同样的规则校验。</p>
+
+<h4>④ 这样为什么抓包没用</h4>
+<ul>
+<li>报文整体 AES-256-GCM 加密,抓到的 <span class="mono">hash</span> 是密文里的,解不开;</li>
+<li>就算拿到明文 <span class="mono">proof</span>,它绑着当次 nonce —— 换一个 nonce 就验不过,同一个 nonce 第二次出现直接被拒;</li>
+<li>nonce 还带时间戳,超过 5 分钟自动失效。</li>
+</ul>
+
+<h3 id="startup">启动流程(ZXMC,启动自检)</h3>
+<p class="lead">打开客户端不再直接进登录界面:先按配置测一次数据源,连不上就停在连接窗口并弹窗说明原因。</p>
+<table><thead><tr><th>阶段</th><th>动作</th><th>失败/结果</th></tr></thead><tbody>
+<tr><td>① 配置检查</td><td>读 <span class="mono">config.ini</span>:有没有 <span class="mono">czip/czport</span>(OS、SAOS)或 <span class="mono">ozip/ozport</span>(OOS)</td><td>没有 → 直接开连接窗口</td></tr>
+<tr><td>② 等待窗</td><td>开「正在连接数据源…」小窗(只显示目标 host:port)</td><td>—</td></tr>
+<tr><td>③ 探测</td><td><span class="mono">ConnectAsync()</span> + <span class="mono">WaitConnectedAsync(6000)</span>;TCP 直接被拒时 300ms 就判失败,不干等 6 秒</td><td>失败 → 关等待窗,开连接窗口 + 弹「连接 ZXMS 失败 / 连接 ZXMOS 失败」(<span class="mono">OOS → ZXMOS</span>,其它 → <span class="mono">ZXMS</span>),带 host:port 与原始异常</td></tr>
+<tr><td>④ 成功</td><td>关等待窗 → 登录窗口;有 7 天内登录记录则直接主界面 + 后台免登录</td><td>登录成功 → 主界面</td></tr>
+</tbody></table>
+<p class="tips">连接窗口里的按钮是「去登录」:连接成功后进登录界面(复用同一条已建立的连接),不直接进主界面。OOBE 第 5 步「连接数据源」失败也会弹同样的窗。</p>
+
+<h3 id="appearance">外观:配色与窗口材质</h3>
+<table><thead><tr><th>项目</th><th>实现</th><th>说明</th></tr></thead><tbody>
+<tr><td>配色应用</td><td class="mono">ThemeManager.ApplySaved()</td><td>启动时读 <span class="mono">config.ini</span> 的 <span class="mono">theme</span> / <span class="mono">glass</span> / <span class="mono">alpha</span>,覆盖 <span class="mono">Theme*</span> 资源;界面用 <span class="mono">{DynamicResource ThemeXxx}</span> 自动跟随</td></tr>
+<tr><td>可选配色</td><td class="mono">Themes.All</td><td>默认 / 锌源绿 / 薄荷绿 / 高级橙 / 巨硬蓝,每套定义 Primary / PrimaryDark / PrimaryHover / Secondary / Light / Muted</td></tr>
+<tr><td>亚克力档</td><td class="mono">ApplyWindowMaterial</td><td>窗口申请 <span class="mono">AcrylicBlur</span>(拿不到退 Blur / Transparent);所有表面按「设计基准 × alpha%」整体缩放:侧栏 80%、卡片 90%、面板 36%、设置页 36%、内容磨砂 40%、入口窗口白幕 60%</td></tr>
+<tr><td>半透明档</td><td class="mono">ApplyGlass(false)</td><td>窗口只申请 <span class="mono">Transparent</span>(不模糊);<b>只有侧栏</b>按 alpha 透,卡片 / 面板 / 设置页不透明</td></tr>
+<tr><td>切档刷新</td><td class="mono">ApplyGlass → ApplyWindowMaterial</td><td>遍历已打开窗口重新套材质,避免「切到半透明档还是亚克力」</td></tr>
+</tbody></table>
+
 <h2 id="cmd">② 各端命令表</h2>
 <p class="lead">控制台命令(ZXMC 是图形客户端,没有控制台命令)。参数写法里的 <span class="mono">&lt;...&gt;</span> 表示必填位。</p>
 <h3>ZXMS 子服务端 · 21 条</h3>
@@ -105,6 +164,7 @@ footer{color:var(--muted);border-top:1px solid var(--line);margin-top:30px;paddi
 <tr><td class="mono">ban user</td><td class="mono">ban user &lt;名称或ID&gt; [perm|30d] [原因] [--ip] [--machine]</td><td>封一个玩家;加 --ip / --machine 会连带封他的 IP / 机器码。</td><td class="mono">CmdBanUser</td><td class="mono muted">ZincXManagerServer/Command/ZxmsCommands.cs:286</td></tr>
 <tr><td class="mono">ban del</td><td class="mono">ban del &lt;user|ip|machine&gt; &lt;值&gt;</td><td>解除封禁。</td><td class="mono">CmdBanDel</td><td class="mono muted">ZincXManagerServer/Command/ZxmsCommands.cs:290</td></tr>
 <tr><td class="mono">ban list</td><td class="mono">ban list</td><td>列出当前所有封禁项。</td><td class="mono">CmdBanList</td><td class="mono muted">ZincXManagerServer/Command/ZxmsCommands.cs:294</td></tr>
+<tr><td class="mono">config</td><td class="mono">config</td><td>进入配置模式(打印 14 项配置表;只能改表内已有项;exitc 退出;模式内拒绝其它命令)。</td><td class="mono">ConfigMode.Enter</td><td class="mono muted">ZincXManagerServer/Command/ConfigMode.cs</td></tr>
 </tbody></table>
 <h3>ZXMOS 官方服务端 · 21 条</h3>
 <table><thead><tr><th>命令</th><th>参数/用法</th><th>作用</th><th>处理函数</th><th>定义位置</th></tr></thead><tbody>
@@ -129,13 +189,41 @@ footer{color:var(--muted);border-top:1px solid var(--line);margin-top:30px;paddi
 <tr><td class="mono">srv ban</td><td class="mono">srv ban &lt;名称&gt; [perm|30d] [原因]</td><td>封禁一个子服务端(禁止它再连官方端)。</td><td class="mono">—</td><td class="mono muted">ZincXManagerOServer/Command/ZxmosCommands.cs:222</td></tr>
 <tr><td class="mono">srv unban</td><td class="mono">srv unban &lt;名称&gt;</td><td>解封子服务端。</td><td class="mono">—</td><td class="mono muted">ZincXManagerOServer/Command/ZxmosCommands.cs:256</td></tr>
 <tr><td class="mono">srv blacklist</td><td class="mono">srv blacklist</td><td>列出被封禁的子服务端。</td><td class="mono">—</td><td class="mono muted">ZincXManagerOServer/Command/ZxmosCommands.cs:268</td></tr>
+<tr><td class="mono">config</td><td class="mono">config</td><td>进入配置模式(打印 3 项:name / port / msgdays;exitc 退出;模式内拒绝其它命令)。</td><td class="mono">ConfigMode.Enter</td><td class="mono muted">ZincXManagerOServer/Command/ConfigMode.cs</td></tr>
 </tbody></table>
-<h3>配置模式(config 进入)</h3>
+<h3>配置模式(config 进入,ZXMS / ZXMOS 都有)</h3>
 <table><thead><tr><th>输入</th><th>作用</th><th>说明</th></tr></thead><tbody>
 <tr><td class="mono">config</td><td>进入配置模式并打印配置表</td><td>表列:中文名 / 键名 / 当前值 / 类型 / 作用</td></tr>
-<tr><td class="mono">&lt;键名|中文名&gt; &lt;键值&gt;</td><td>修改一项配置</td><td>只能改表里已有的,不能增删;只读项会被拒绝</td></tr>
+<tr><td class="mono">&lt;键名|中文名&gt; &lt;键值&gt;</td><td>修改一项配置</td><td>只能改表里已有的,不能增删;只读项会被拒绝;写回 config.ini</td></tr>
 <tr><td class="mono">exitc</td><td>退出配置模式</td><td>回到普通命令模式;配置模式里的回显标签是 [ConfigSet]</td></tr>
+<tr><td class="mono">其它命令</td><td><b>配置模式内不可用</b></td><td>输入 help / info / exit 等会提示「先输入 exitc 退出配置模式,再执行它」</td></tr>
 </tbody></table>
+
+<h4>ZXMS 配置表(14 项)</h4>
+<table><thead><tr><th>键名</th><th>中文名</th><th>类型</th><th>说明</th></tr></thead><tbody>
+<tr><td class="mono">name</td><td>服务端名称</td><td>文本 1-32</td><td>玩家看到的名称(linkname=1 时跟账号名)</td></tr>
+<tr><td class="mono">linkname</td><td>名称联动</td><td>1/0</td><td>1 = 名称与官方账号名一致</td></tr>
+<tr><td class="mono">connectOS</td><td>连接官方端</td><td>1/0</td><td>启动时是否连 ZXMOS</td></tr>
+<tr><td class="mono">czport</td><td>客户端端口</td><td>1-65535</td><td>ZXMC/ZXMM 接入端口(重启生效)</td></tr>
+<tr><td class="mono">ozip</td><td>官方端地址</td><td>IP 或域名</td><td>ZXMOS 的地址</td></tr>
+<tr><td class="mono">ozport</td><td>官方端端口</td><td>1-65535</td><td>ZXMOS 的端口</td></tr>
+<tr><td class="mono">osuser</td><td>官方账号名</td><td>文本 2-32</td><td>本端在 ZXMOS 上注册的账号</td></tr>
+<tr><td class="mono">oshash</td><td>官方账号密文</td><td>64 位十六进制</td><td>本端在 ZXMOS 上的账号密文(下次连接生效)</td></tr>
+<tr><td class="mono">msgdays</td><td>消息保留天数</td><td>1-365</td><td>下发给客户端:本地留多久</td></tr>
+<tr><td class="mono">srvmsgdays</td><td>存档保留天数</td><td>1-365</td><td>本服存档留多久(补发用)</td></tr>
+<tr><td class="mono">officialcheck</td><td>对端校验</td><td>1/0</td><td>1 = 对端不是官方就断开</td></tr>
+<tr><td class="mono">ozname</td><td>官方端名称</td><td>只读</td><td>ZXMOS 下发的名称</td></tr>
+<tr><td class="mono">servercode</td><td>服务端码</td><td>只读</td><td>本实例的身份证</td></tr>
+<tr><td class="mono">configver</td><td>配置版本</td><td>只读</td><td>配置文件结构版本</td></tr>
+</tbody></table>
+
+<h4>ZXMOS 配置表(3 项)</h4>
+<table><thead><tr><th>键名</th><th>中文名</th><th>类型</th><th>说明</th></tr></thead><tbody>
+<tr><td class="mono">name</td><td>服务端名称</td><td>文本 1-32</td><td>下发/握手时用的名称</td></tr>
+<tr><td class="mono">port</td><td>监听端口</td><td>1-65535</td><td>ZXMS / ZXMC 接入端口(重启生效)</td></tr>
+<tr><td class="mono">msgdays</td><td>存档保留天数</td><td>1-3650</td><td>服务端消息存档保留多久</td></tr>
+</tbody></table>
+<p class="tips">启动横幅也带版本号了:<span class="mono">欢迎使用ZincXManager子服务端 -a0.3.1</span> / <span class="mono">欢迎使用ZincXManager官方服务端 -a0.3.1</span>(取程序集 InformationalVersion,不带 +commit 后缀)。</p>
 <h2 id="classes">③ 类总表</h2>
 <p class="lead">按程序分组。访问修饰符缺省时 C# 类型默认 <span class="mono">internal</span>(同程序集可见)。</p>
 <table id="tbl-classes"><thead><tr><th>程序</th><th>代码文件</th><th>类/结构/接口</th><th>访问修饰符</th><th>基类型/接口</th><th>作用</th><th>属性</th><th>函数</th></tr></thead><tbody>
@@ -825,6 +913,9 @@ footer{color:var(--muted);border-top:1px solid var(--line);margin-top:30px;paddi
 <tr><td class="mono">Account</td><td class="mono">Machine</td><td class="mono">string</td><td class="mono">public</td><td>属性</td><td>最后一次登录的机器码(同上)。</td></tr>
 <tr><td class="mono">Account</td><td class="mono">ServerCode</td><td class="mono">string</td><td class="mono">public</td><td>属性</td><td>本实例的服务端码(ZXMS 用;32 位十六进制,一台机器可跑多个实例,靠它区分)。</td></tr>
 <tr><td class="mono">Account</td><td class="mono">Owner</td><td class="mono">string</td><td class="mono">public</td><td>属性</td><td>这个用户账号是经哪个 ZXMS 注册的(黑名单移交账号时要用;直连官方注册的为空)。</td></tr>
+<tr><td>共享库 ZincXManagerShared</td><td class="mono muted">ZincXManagerShared/Security/SessionCrypto.cs</td><td class="mono">SessionHandshake</td><td class="mono">public sealed</td><td class="mono muted">—</td><td>ECDH(P-256) 会话密钥协商:Create 出临时密钥对,给对方公钥(SubjectPublicKeyInfo DER),拿到对方公钥后 Complete(peer, isServer) 用 HKDF-SHA256 派生 64 字节,分成「客户端→服务端」「服务端→客户端」两把 AES-256 密钥。协议 380 / 381,协商完成后所有报文加密。</td><td class="mono">4</td><td class="mono">2</td></tr>
+<tr><td>共享库 ZincXManagerShared</td><td class="mono muted">ZincXManagerShared/Security/SessionCrypto.cs</td><td class="mono">SessionCrypto</td><td class="mono">public sealed</td><td class="mono muted">—</td><td>AES-256-GCM 收发加解密。Encrypt 输出 [12 字节 nonce][密文][16 字节 tag](nonce 用递增计数器,不会重复);Decrypt 反向还原。包头 Flags 的 0x0001 位表示「负载已加密」。</td><td class="mono">3</td><td class="mono">4</td></tr>
+<tr><td>共享库 ZincXManagerShared</td><td class="mono muted">ZincXManagerShared/Account/LoginProof.cs</td><td class="mono">LoginProof</td><td class="mono">public static</td><td class="mono muted">—</td><td>登录挑战-响应:NewNonce 生成「unix秒-32位随机hex」;Compute = SHA256(密码密文 : nonce);Verify 定长比较;IsFresh 校验 5 分钟时间窗;TryUse 保证同一个 nonce 只能用一次(进程内缓存 + 过期清理)。</td><td class="mono">5</td><td class="mono">2</td></tr>
 </tbody></table></details>
 <details><summary>Account <span class="count">· 9 属性 / 0 字段 · ZincXManagerShared/Account/AccountStore.cs</span></summary>
 <table><thead><tr><th>成员</th><th>名字</th><th>类型</th><th>访问修饰符</th><th>类别</th><th>存什么/干啥</th></tr></thead><tbody>

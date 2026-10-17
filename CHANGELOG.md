@@ -3,6 +3,37 @@
 ZincXManager(锌X管理面板)的变更记录。格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 版本号与 GitHub Release 标签对应(如 `v0.1.1`);未发布的改动记在「未发布」下,发布时归档为版本号。
 
+## [a0.3.2] - 2026-10-17
+
+> **本版本主题**:**启动流程与外观修复**。
+> 打开客户端会先测数据源,连不上直接弹窗并停在连接界面;同时修掉「配色永远默认蓝」「亚克力透明度调不动」
+> 「半透明档还是亚克力」这三处外观问题。含 a0.3.1 的安全协议改造(加密会话 + 登录挑战-响应)。
+
+### 安全
+- **会话加密**:ZXMC 与 ZXMS 握手用 ECDH(P-256)交换公钥,HKDF-SHA256 派生两把 AES-256-GCM 密钥(协议 380 SessionHello / 381 SessionHelloAck),之后所有报文加密(包头 Flags 的 0x0001 位)
+- **登录挑战-响应**:nonce(unix 秒 + 32 位随机)每次登录都不同,proof = SHA256(密码密文 : nonce);服务端按存的密文重算,nonce 一次性 + 5 分钟窗口
+- **服务端拒绝明文登录**:未协商加密的连接直接返回 err|客户端版本过旧
+- 登录载荷:user|hash|level|side|machine||nonce|proof(第 6 段留给服务端码)
+
+### 新增
+- **启动数据源自检**:启动先开「正在连接数据源…」等待窗,连上才进登录界面(有免登录记录直接主界面);连不上弹「连接 ZXMS 失败 / 连接 ZXMOS 失败」并停在连接窗口
+- **连接窗口新增「去登录」**:连接成功后进登录界面,不再直接进主界面
+- **OOBE 第 5 步连接失败会弹窗**(原来只改一行状态文字)
+- **ZXMOS 新增 config 配置模式**:name / port / msgdays,支持按中文名改、exitc 退出
+- **ZXMS 配置表补齐**:新增 oshash(官方账号密文)、configver(只读),与 config.ini 实际键对齐
+- **配置模式拒绝其它命令**:help / info / exit 等提示「先 exitc 退出」;配置项优先(同名键如 msgdays 仍按配置处理)
+- **启动横幅带版本号**:欢迎使用ZincXManager子服务端 -a0.3.2(取程序集 InformationalVersion)
+
+### 修复
+- **配色从未真正应用**:ThemeManager.ApplySaved() 存在但无人调用,所有窗口永远默认蓝;现在启动即按 config.ini 的 theme / glass / alpha 应用
+- **OOBE 模式选择高亮写死颜色**:外框 / 高亮块 / 文字改用 ThemeLight / ThemeMuted / ThemeSecondary / ThemePrimaryDark
+- **亚克力档透明度调不动**:侧栏原写死 80%;现在所有表面按「设计基准 × 滑杆比例」整体缩放(80% / 90% / 36% / 36% / 40% / 60%)
+- **半透明档看起来还是亚克力**:切档时未刷新已打开窗口的 TransparencyLevelHint;现在会遍历窗口重新套材质(半透明档改为 Transparent)
+
+### 变更
+- 弹窗标题统一为「无法连接到数据源」,失败时附带 host:port 与原始异常
+- 配置模式回显标签 [ConfigSet],与普通命令 [Command] 区分
+
 ## [0.1.1] - 2026-10-11
 
 > **本版本主题**:**品牌图标统一** —— 三端 exe 内嵌图标、客户端窗口/任务栏图标、MSI 安装包图标、
