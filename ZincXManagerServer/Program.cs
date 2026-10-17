@@ -651,6 +651,7 @@ internal static class Program
 
         // 配置模式:进入后每一行都交给它,不再当命令分发
         cmd.LineInterceptor = line => Command.ConfigMode.Handle(line);
+        cmd.IsConfigMode = () => Command.ConfigMode.Active;
 
         cmd.Start();
         Logger.Log(LogLevel.Info, "启动成功");

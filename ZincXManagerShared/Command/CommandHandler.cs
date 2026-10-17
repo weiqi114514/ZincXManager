@@ -72,6 +72,9 @@ public class CommandHandler
     /// </summary>
     public Func<string, bool>? LineInterceptor { get; set; }
 
+    /// <summary>拦截器是否处于配置模式(用于把回显标签从 [Command] 换成 [ConfigSet])。</summary>
+    public Func<bool>? IsConfigMode { get; set; }
+
     public void Start()
     {
         if (_running) return;
@@ -101,7 +104,8 @@ public class CommandHandler
             input = input.Trim();
             if (input.Length == 0) continue;
 
-            Logger.Log(LogLevel.Info, $"[Command] > {input}");
+            var echoTag = IsConfigMode?.Invoke() == true ? "[ConfigSet]" : "[Command]";
+            Logger.Log(LogLevel.Info, $"{echoTag} > {input}");
 
             if (LineInterceptor is not null && LineInterceptor(input))
             {

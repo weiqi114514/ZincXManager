@@ -8,7 +8,7 @@ namespace ZincXManagerServer.Command;
 /// config 配置模式:输入 <c>config</c> 进入,**只能改现有项,不能增删**。
 ///
 /// <list type="bullet">
-///   <item>进入时打印配置表:键名 / 中文名 / 作用 / 类型 / 当前值;</item>
+///   <item>进入时打印配置表:中文名 / 键名 / 当前值 / 类型 / 作用;</item>
 ///   <item>设置写 <c>&lt;键名&gt; &lt;键值&gt;</c> 或 <c>&lt;中文名&gt; &lt;键值&gt;</c>;</item>
 ///   <item><c>exitc</c> 退出,回到正常命令模式;</item>
 ///   <item>在这里输入的东西不会被当成控制台命令,也不会被当成"账号名/密码"。</item>
@@ -120,16 +120,30 @@ internal static class ConfigMode
         return true;
     }
 
+    // 控制台里中文占 2 格,按显示宽度补空格,列才不会错位
+    private static int DisplayWidth(string s)
+    {
+        var w = 0;
+        foreach (var c in s) { w += c >= 0x2E80 ? 2 : 1; }
+        return w;
+    }
+
+    private static string Pad(string s, int width)
+    {
+        var pad = width - DisplayWidth(s);
+        return pad > 0 ? s + new string(' ', pad) : s;
+    }
+
     private static string BuildTable()
     {
         var lines = new List<string> { "配置项(只能改这些,不能增删):" };
-        lines.Add($"  {"键名",-14}{"中文名",-14}{"类型",-16}{"作用",-34}当前值");
+        lines.Add($"  {Pad("中文名", 16)}{Pad("键名", 14)}{Pad("当前值", 34)}{Pad("类型", 18)}作用");
         lines.Add("  " + new string('-', 100));
 
         foreach (var item in Items)
         {
             var value = Program.ConfigValue(item.Key);
-            lines.Add($"  {item.Key,-14}{item.Cn,-14}{item.Type,-16}{item.Description,-34}{value}");
+            lines.Add($"  {Pad(item.Cn, 16)}{Pad(item.Key, 14)}{Pad(value, 34)}{Pad(item.Type, 18)}{item.Description}");
         }
 
         return string.Join(Environment.NewLine, lines);
