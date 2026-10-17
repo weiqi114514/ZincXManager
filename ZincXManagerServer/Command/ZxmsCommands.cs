@@ -41,6 +41,9 @@ public sealed class ZxmsIdentity
     /// <summary>本实例的服务端码(32 位十六进制)。</summary>
     public required Func<string> ServerCode { get; init; }
 
+    /// <summary>显示名与官方账号名的联动状态说明(空 = 不显示这一行)。</summary>
+    public Func<string>? LinkHint { get; init; }
+
     /// <summary>改显示名(写 config)。</summary>
     public required Action<string> SetName { get; init; }
 }
@@ -569,8 +572,10 @@ public static class ZxmsCommands
     private static void CmdInfo(ZxmsIdentity identity, TcpClient? os, string target)
     {
         var state = os is null ? "未连接" : os.IsConnected ? "已连接" : "已断开(可 net reconnect)";
+        var link = identity.LinkHint?.Invoke() ?? "";
+
         LogBlock(
-            $"[身份] 名称       {identity.Name()}\n" +
+            $"[身份] 名称       {identity.Name()}" + (link.Length > 0 ? $"({link})" : "") + "\n" +
             $"[身份] 账号       {identity.User()}\n" +
             $"[身份] 服务端码   {identity.ServerCode()}\n" +
             $"[身份] 机器码     {ZincXManagerShared.Account.MachineCode.Value}\n" +

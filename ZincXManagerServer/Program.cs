@@ -28,6 +28,12 @@ internal static class Program
     /// <summary>名称没配时的兜底值。</summary>
     private const string DefaultName = "锌能源服务器";
 
+    /// <summary>显示名是否跟随官方账号名(config.ini 的 linkname:1=一致(默认),0=分开)。</summary>
+    private const string KeyLinkName = "linkname";
+
+    /// <summary>默认与官方账号名一致 —— 玩家看到的服务端名称就是本端在 ZXMOS 上的账号名。</summary>
+    private const string DefaultLinkName = "1";
+
     /// <summary>官方服务端名称(收到 201 后写进 config.ini 的 ozname)。</summary>
     private const string KeyOsName = "ozname";
 
@@ -101,6 +107,23 @@ internal static class Program
             Console.Error.WriteLine("[Fatal]打开日志文件失败: " + logFile);
             Environment.Exit(1);
         }
+    }
+
+    /// <summary>
+    /// 本端显示给玩家的名称。<b>linkname=1(默认)时直接复用官方账号名</b>(和 ZXMOS 上那个账号一个字不差),
+    /// linkname=0 时用 config.ini 的 name,两者互不干扰。
+    /// </summary>
+    static string ResolveName(ZFile config)
+    {
+        var account = config.MapGet(KeyOsUser).Trim();
+        var own = config.MapGet(KeyName).Trim();
+
+        if (config.MapGet(KeyLinkName).Trim() != "0" && account.Length > 0)
+        {
+            return account;
+        }
+
+        return own.Length > 0 ? own : DefaultName;
     }
 
     /// <summary>
@@ -207,6 +230,15 @@ internal static class Program
             v => v.Trim().Length >= 1 && v.Trim().Length <= 32,
             fallback: DefaultName);
 
+        // 显示名与官方账号名是否联动(默认联动:玩家看到的名字 = 本端在 ZXMOS 的账号名)
+        var linkName = config.MapGet(KeyLinkName).Trim();
+        if (linkName.Length == 0)
+        {
+            config.WriteFileMap(KeyLinkName, DefaultLinkName);
+            linkName = DefaultLinkName;
+            Logger.Log(LogLevel.Info, $"[CONFIG]{KeyLinkName} 未配置,已写入默认值 {DefaultLinkName}(1=与官方账号名一致)");
+        }
+
         // 服务端码:本实例的身份证。缺失或格式不对就生成一个 32 位十六进制并写回
         var serverCode = config.MapGet(KeyServerCode).Trim().ToLowerInvariant();
         if (serverCode.Length != 32 || serverCode.Any(c => !Uri.IsHexDigit(c)))
@@ -281,7 +313,7 @@ internal static class Program
             try
             {
                 // 名称每次接入现读一次:name 命令改的是 config,改了之后新接入的客户端立刻拿到新名称
-                var liveName = config.MapGet(KeyName).Trim();
+                var liveName = ResolveName(config);
                 if (liveName.Length == 0)
                 {
                     liveName = serverName;
@@ -581,12 +613,22 @@ internal static class Program
             osNameProvider: () => config.MapGet(KeyOsName),
             identity: new ZxmsIdentity
             {
-                Name = () => config.MapGet(KeyName).Trim(),
+                Name = () => ResolveName(config),
+                LinkHint = () => config.MapGet(KeyLinkName).Trim() != "0" ? "与官方账号名一致" : "独立设置",
                 User = () => config.MapGet(KeyOsUser).Trim(),
                 ServerCode = () => config.MapGet(KeyServerCode).Trim(),
                 SetName = value =>
                 {
                     config.WriteFileMap(KeyName, value);
+
+                    if (config.MapGet(KeyLinkName).Trim() != "0")
+                    {
+                        Logger.Log(LogLevel.Warning,
+                            $"[配置] 已写入 name={value},但 {KeyLinkName}=1(与官方账号名联动),玩家看到的仍是账号名 " +
+                            $"{config.MapGet(KeyOsUser).Trim()};要单独命名请先 {KeyLinkName} 0(改完重启)");
+                        return;
+                    }
+
                     Logger.Log(LogLevel.Info, $"[配置] 本端名称已改为 {value}");
                 },
             },
@@ -598,8 +640,8 @@ internal static class Program
             // 名称现读:name 命令改完,之后发的消息来源标签立刻跟着变
             setMsgDays: SetMsgDaysLocal,
             setSrvMsgDays: SetSrvMsgDaysLocal,
-            localNotice: card => NoticeLocal(config.MapGet(KeyName).Trim(), card),
-            localPush: (target, card) => PushLocal(config.MapGet(KeyName).Trim(), target, card),
+            localNotice: card => NoticeLocal(ResolveName(config), card),
+            localPush: (target, card) => PushLocal(ResolveName(config), target, card),
             banProvider: () => Bans,
             serverAccountNameProvider: () => config.MapGet(KeyOsUser).Trim());
 
@@ -1183,7 +1225,7 @@ internal static class Program
         }
 
         // 连官方端时还能改一次本端名称:只有"还是默认名"时才问,免得每次重连都打扰
-        var nameNow = config.MapGet(KeyName).Trim();
+        var nameNow = ResolveName(config);
         if (nameNow.Length == 0 || nameNow == DefaultName)
         {
             Logger.Log(LogLevel.Info,
