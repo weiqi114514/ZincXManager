@@ -1,4 +1,4 @@
-/* 首页大标题 Zinc[X]Manager:旧词下滑出、新词上滑入;槽宽用 rAF 两段式过渡,Manager 平滑滑动 */
+/* 首页大标题 Zinc[X]Manager:槽宽固定(最宽的词),Manager 在槽内用 translateX 平滑跟随 */
 (function () {
   var WORDS = ["X", "Admin", "User", "Player", "System"];
   var PERIOD = 5000;
@@ -32,10 +32,25 @@
 
     var cur = slot.querySelector(".bm-cur");
     var old = slot.querySelector(".bm-next");
+    var mgr = slot.querySelector(".bm-manager");
     var i = 0;
     var busy = false;
 
-    slot.style.width = widthOf(slot, cur.textContent) + "px";
+    var maxW = 0;
+    for (var k = 0; k < WORDS.length; k++) {
+      maxW = Math.max(maxW, widthOf(slot, WORDS[k]));
+    }
+    slot.style.width = maxW + "px";
+
+    if (mgr) {
+      mgr.style.position = "absolute";
+      mgr.style.left = "0";
+      mgr.style.top = "0";
+      mgr.style.whiteSpace = "nowrap";
+      mgr.style.transition = "transform " + DUR + "ms cubic-bezier(.22,.61,.36,1)";
+      mgr.style.transform = "translateX(" + widthOf(slot, cur.textContent) + "px)";
+    }
+
     move(old, -100, false);
     move(cur, 0, false);
 
@@ -45,20 +60,16 @@
 
       i = (i + 1) % WORDS.length;
       var word = WORDS[i];
-      var from = cur.textContent;
 
-      // 第一段(无过渡):旧词下移到起点、新词仍藏在上方
-      old.textContent = from;
+      old.textContent = cur.textContent;
       cur.textContent = word;
       move(old, 0, false);
       move(cur, -100, false);
 
-      // 先把"旧宽度"提交成已生效样式,下一帧再改宽度,过渡才有起点
-      void slot.offsetWidth;
-
-      // 第二段(下一帧,带过渡):宽度 + 位移一起动
       requestAnimationFrame(function () {
-        slot.style.width = widthOf(slot, word) + "px";
+        if (mgr) {
+          mgr.style.transform = "translateX(" + widthOf(slot, word) + "px)";
+        }
         move(old, 100, true);
         move(cur, 0, true);
       });
