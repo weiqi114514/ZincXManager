@@ -66,6 +66,12 @@ public class CommandHandler
         _usages[key] = string.IsNullOrWhiteSpace(usage) ? key : usage;
     }
 
+    /// <summary>
+    /// 子模式拦截:设了就每一行先交给它;返回 true 表示"这一行它处理了",不再当命令分发。
+    /// config 配置模式就是靠这个进"另一个地方"操作(类似 fdisk 的子模式)。
+    /// </summary>
+    public Func<string, bool>? LineInterceptor { get; set; }
+
     public void Start()
     {
         if (_running) return;
@@ -96,6 +102,11 @@ public class CommandHandler
             if (input.Length == 0) continue;
 
             Logger.Log(LogLevel.Info, $"[Command] > {input}");
+
+            if (LineInterceptor is not null && LineInterceptor(input))
+            {
+                continue;
+            }
 
             var parts = input.Split(' ', StringSplitOptions.RemoveEmptyEntries);
             Dispatch(parts);

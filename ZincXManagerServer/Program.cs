@@ -67,6 +67,9 @@ internal static class Program
     /// <summary>要不要连官方服务端(ZXMOS):<b>1 = 连接(默认)</b>,0 = 不连接。</summary>
     private const string KeyConnectOs = "connectOS";
 
+    /// <summary>connectOS 的默认值(1 = 启动时连官方端)。</summary>
+    private const string DefaultConnectOs = "1";
+
     /// <summary>配置格式版本。2 起 connectOS 是「1=连接、0=不连接」(以前正好相反)。</summary>
     private const string KeyConfigVer = "configver";
 
@@ -643,7 +646,11 @@ internal static class Program
             localNotice: card => NoticeLocal(ResolveName(config), card),
             localPush: (target, card) => PushLocal(ResolveName(config), target, card),
             banProvider: () => Bans,
-            serverAccountNameProvider: () => config.MapGet(KeyOsUser).Trim());
+            serverAccountNameProvider: () => config.MapGet(KeyOsUser).Trim(),
+            enterConfig: Command.ConfigMode.Enter);
+
+        // 配置模式:进入后每一行都交给它,不再当命令分发
+        cmd.LineInterceptor = line => Command.ConfigMode.Handle(line);
 
         cmd.Start();
         Logger.Log(LogLevel.Info, "启动成功");
@@ -1177,6 +1184,160 @@ internal static class Program
 
         // 在线的客户端立刻知道新值(它们据此决定本地留多久)
         return SendToLocalClientsAsync(Protocol.ServerConfig, $"msgdays={days}", null).GetAwaiter().GetResult();
+    }
+
+    /// <summary>配置模式里显示用的当前值(只读项也一样显示)。</summary>
+    internal static string ConfigValue(string key)
+    {
+        var config = _config;
+        if (config is null)
+        {
+            return "";
+        }
+
+        return key.ToLowerInvariant() switch
+        {
+            "name" => ResolveName(config),
+            "linkname" => config.MapGet(KeyLinkName).Trim() is { Length: > 0 } link ? link : DefaultLinkName,
+            "connectos" => config.MapGet(KeyConnectOs).Trim() is { Length: > 0 } conn ? conn : DefaultConnectOs,
+            "czport" => config.MapGet(KeyCzport).Trim(),
+            "ozip" => config.MapGet(KeyOzip).Trim(),
+            "ozport" => config.MapGet(KeyOzport).Trim(),
+            "osuser" => config.MapGet(KeyOsUser).Trim(),
+            "msgdays" => _msgDays.ToString(),
+            "srvmsgdays" => _srvMsgDays.ToString(),
+            "officialcheck" => _officialCheck ? "1" : "0",
+            "ozname" => config.MapGet(KeyOsName).Trim(),
+            "servercode" => config.MapGet(KeyServerCode).Trim(),
+            _ => "",
+        };
+    }
+
+    /// <summary>
+    /// 配置模式里改一个键:校验 → 写 config.ini → 能立刻生效的立刻生效。返回空串表示成功。
+    /// </summary>
+    internal static string SetConfigItem(string key, string value)
+    {
+        var config = _config;
+        if (config is null)
+        {
+            return "配置还没加载完";
+        }
+
+        value = value.Trim();
+
+        switch (key.ToLowerInvariant())
+        {
+            case "name":
+                if (value.Length < 1 || value.Length > 32)
+                {
+                    return "名称要 1-32 个字符";
+                }
+
+                config.WriteFileMap(KeyName, value);
+                if (config.MapGet(KeyLinkName).Trim() != "0")
+                {
+                    return "";
+                }
+
+                Logger.Log(LogLevel.Info, "[配置] 名称已改,新接入的客户端立刻用新名称");
+                return "";
+
+            case "linkname":
+                if (value is not ("0" or "1"))
+                {
+                    return "只能填 1(与账号名一致)或 0(分开)";
+                }
+
+                config.WriteFileMap(KeyLinkName, value);
+                return "";
+
+            case "connectos":
+                if (value is not ("0" or "1"))
+                {
+                    return "只能填 1(连接)或 0(不连接)";
+                }
+
+                config.WriteFileMap(KeyConnectOs, value);
+                Logger.Log(LogLevel.Info, "[配置] 是否连接官方端在下次启动时生效(现在可用 net reconnect 手动连)");
+                return "";
+
+            case "czport":
+                if (!ushort.TryParse(value, out var cz) || cz == 0)
+                {
+                    return "端口范围 1-65535";
+                }
+
+                config.WriteFileMap(KeyCzport, value);
+                Logger.Log(LogLevel.Warning, "[配置] 客户端端口重启后生效");
+                return "";
+
+            case "ozip":
+                if (!HostText.IsHost(value))
+                {
+                    return "要填 IP 或域名";
+                }
+
+                config.WriteFileMap(KeyOzip, value);
+                Logger.Log(LogLevel.Info, "[配置] 官方端地址下次连接时生效(可用 net reconnect)");
+                return "";
+
+            case "ozport":
+                if (!ushort.TryParse(value, out var oz) || oz == 0)
+                {
+                    return "端口范围 1-65535";
+                }
+
+                config.WriteFileMap(KeyOzport, value);
+                return "";
+
+            case "osuser":
+                if (value.Length < 2 || value.Length > 32 || value.Contains(' '))
+                {
+                    return "账号名要 2-32 个字符且不能带空格";
+                }
+
+                if (Command.ZxmsCommands.LooksLikeConsoleCommand(value))
+                {
+                    return "这看起来是控制台命令,不是账号名";
+                }
+
+                config.WriteFileMap(KeyOsUser, value);
+                Logger.Log(LogLevel.Warning,
+                    "[配置] 只改了账号名;密码还是旧的,而且官方端可能不认 —— 正常改名请用 osuser <新名> <新密码>");
+                return "";
+
+            case "msgdays":
+                if (!int.TryParse(value, out var days) || days is < 1 or > 365)
+                {
+                    return "天数范围 1-365";
+                }
+
+                SetMsgDaysLocal(days);
+                return "";
+
+            case "srvmsgdays":
+                if (!int.TryParse(value, out var srvDays) || srvDays is < 1 or > 365)
+                {
+                    return "天数范围 1-365";
+                }
+
+                SetSrvMsgDaysLocal(srvDays);
+                return "";
+
+            case "officialcheck":
+                if (value is not ("0" or "1"))
+                {
+                    return "只能填 1(验不过就断开)或 0(只警告)";
+                }
+
+                _officialCheck = value == "1";
+                config.WriteFileMap(KeyOfficialCheck, value);
+                return "";
+
+            default:
+                return $"没有这个配置项:{key}(不能新增)";
+        }
     }
 
     /// <summary>控制台 srvmsgdays:改本服自己存档的保留天数(写 config + 立刻清一次过期)。返回剩余条数。</summary>

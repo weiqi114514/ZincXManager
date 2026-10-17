@@ -69,7 +69,8 @@ public static class ZxmsCommands
         Func<CardInput, int> localNotice,
         Func<string, CardInput, int> localPush,
         Func<BanStore> banProvider,
-        Func<string> serverAccountNameProvider)
+        Func<string> serverAccountNameProvider,
+        Action enterConfig)
     {
         // 记住本端的服务端账号名:用户账号不能和它重名(和 config 里的 osuser 同步)
         _serverAccountName = serverAccountNameProvider();
@@ -164,6 +165,10 @@ public static class ZxmsCommands
         cmd.Register("srv show", _ => CmdSrvShow(serverAccountNameProvider()),
             "查看本端接入官方服务端用的账号名",
             "srv show");
+
+        cmd.Register("config", _ => enterConfig(),
+            "进入配置模式(表格:键名/中文名/作用/类型/当前值;exitc 退出)",
+            "config");
     }
 
     /// <summary>控制台命令的首词 —— 用来判断"这行输入其实是命令,不是账号名/密码"。</summary>
