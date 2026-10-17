@@ -63,12 +63,12 @@ public partial class OobeViewModel : ViewModelBase
 
     partial void OnOpacityPercentChanged(double value) => ThemeManager.ApplyAlpha((int)Math.Round(value));
 
-    /// <summary>毛玻璃(亚克力)开关:开 = 背景模糊 + Fluent 亚克力着色;关 = 纯半透明。</summary>
+    /// <summary>亚克力开关:开 = 背景模糊 + Fluent 亚克力着色;关 = 纯半透明。</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(GlassHint))]
     public partial bool GlassEnabled { get; set; } = true;
 
-    /// <summary>毛玻璃开关的说明(跟着状态变)。</summary>
+    /// <summary>亚克力开关的说明(跟着状态变)。</summary>
     public string GlassHint => GlassEnabled
         ? "亚克力"
         : "半透明";

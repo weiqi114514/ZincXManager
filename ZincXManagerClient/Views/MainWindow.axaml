@@ -199,9 +199,9 @@
   </Window.Styles>
 
   <Grid>
-    <!-- 不再画默认背景:窗口本身透明,未设置背景图时内容区直接透出(系统毛玻璃/桌面) -->
-    <!-- 用户设置的背景图(在设置里选择);加一层模糊,前面的栏半透明叠上去就是毛玻璃效果 -->
-    <!-- 模糊半径由代码按"毛玻璃"开关设置:开 = Fluent 亚克力 30,关 = 0(纯半透明) -->
+    <!-- 不再画默认背景:窗口本身透明,未设置背景图时内容区直接透出(系统亚克力/桌面) -->
+    <!-- 用户设置的背景图(在设置里选择);加一层模糊,前面的栏半透明叠上去就是亚克力效果 -->
+    <!-- 模糊半径由代码按"亚克力"开关设置:开 = Fluent 亚克力 30,关 = 0(纯半透明) -->
     <Image x:Name="WallpaperImage" Source="{Binding BackgroundImage}" IsVisible="{Binding HasBackgroundImage}"
            Stretch="UniformToFill" Margin="-28">
       <Image.Effect>
@@ -211,7 +211,7 @@
 
     <Grid ColumnDefinitions="236,*" RowDefinitions="44,*">
 
-      <!-- ================= 左侧栏(半透明毛玻璃,透出后面的模糊背景) ================= -->
+      <!-- ================= 左侧栏(半透明亚克力,透出后面的模糊背景) ================= -->
       <Border Grid.Row="0" Grid.RowSpan="2" Grid.Column="0" Background="{DynamicResource ThemeGlass}">
 
 
@@ -331,7 +331,7 @@
         <TextBlock Grid.Column="0" Text="{Binding StatusText}" Foreground="#8AA6B8" FontSize="13"
                    HorizontalAlignment="Center" VerticalAlignment="Center"/>
 
-        <!-- 消息面板:半透明毛玻璃 -->
+        <!-- 消息面板:半透明亚克力 -->
         <Border Grid.Column="1" Margin="0,8,10,10"
                 Background="{DynamicResource ThemePanel}" BorderBrush="{DynamicResource ThemePanelBorder}" BorderThickness="1">
           <Grid RowDefinitions="Auto,*" Margin="14,12,14,10">

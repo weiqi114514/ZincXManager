@@ -22,7 +22,7 @@ internal static class ThemeManager
     /// <summary>当前配色。</summary>
     public static ThemeOption Current { get; private set; } = Themes.Default;
 
-    /// <summary>当前是否开启毛玻璃(亚克力)。</summary>
+    /// <summary>当前是否开启亚克力。</summary>
     public static bool GlassEnabled { get; private set; } = true;
 
     /// <summary>半透明档不透明度的默认值(%)—— 只在 config.ini 没写 alpha 时用一次,之后以 config 为准。</summary>
@@ -31,7 +31,7 @@ internal static class ThemeManager
     /// <summary>当前半透明档的表面不透明度(%):读 config.ini 的 alpha(默认 90),个性化滑杆可改。</summary>
     public static int SurfaceAlpha { get; private set; } = DefaultAlpha;
 
-    /// <summary>毛玻璃开关变化时通知界面(主窗口据此调壁纸模糊半径与窗口材质)。</summary>
+    /// <summary>亚克力开关变化时通知界面(主窗口据此调壁纸模糊半径与窗口材质)。</summary>
     public static event Action<bool>? GlassChanged;
 
     /// <summary>Fluent 亚克力模糊半径(Windows 的亚克力就是 30)。</summary>
@@ -52,7 +52,7 @@ internal static class ThemeManager
         // 记一行:出问题时能直接从日志看出这一档向系统要的是什么材质
         // (半透明档 = 省性能档:只申请 Transparent,不要任何模糊)
         Logger.Log(LogLevel.Info, GlassEnabled
-            ? $"[ZXMC] 窗口材质:{window.GetType().Name} → AcrylicBlur(毛玻璃档)"
+            ? $"[ZXMC] 窗口材质:{window.GetType().Name} → AcrylicBlur(亚克力档)"
             : $"[ZXMC] 窗口材质:{window.GetType().Name} → Transparent(半透明档,不申请模糊)");
 
         // 诊断:开窗后把"系统实际批的材质"也记下来 —— 请求了 AcrylicBlur 不等于真拿到了,
@@ -65,7 +65,7 @@ internal static class ThemeManager
         };
     }
 
-    /// <summary>启动时按配置应用一次(配色 + 毛玻璃开关)。</summary>
+    /// <summary>启动时按配置应用一次(配色 + 亚克力开关)。</summary>
     public static void ApplySaved()
     {
         Apply(Themes.Find(ClientConfig.GetOrEmpty("theme")), save: false);
@@ -91,7 +91,7 @@ internal static class ThemeManager
     }
 
     /// <summary>
-    /// 开关毛玻璃(亚克力)。
+    /// 开关亚克力。
     /// 开 = 壁纸按 Fluent 亚克力模糊(半径 30)、表面着色 80%;
     /// 关 = 不模糊、表面降到 60% 的纯半透明。
     /// </summary>
@@ -106,7 +106,7 @@ internal static class ThemeManager
 
         ApplySurface();
         GlassChanged?.Invoke(enabled);
-        Logger.Log(LogLevel.Info, $"[ZXMC] 毛玻璃(亚克力)已{(enabled ? "开启" : "关闭")}");
+        Logger.Log(LogLevel.Info, $"[ZXMC] 亚克力已{(enabled ? "开启" : "关闭")}");
     }
 
     /// <summary>切换配色;<paramref name="save"/> 为真时写进 config.ini。</summary>
@@ -155,7 +155,7 @@ internal static class ThemeManager
         resources["ThemeWindow"] = Solid("#F2F5F8");
         resources["ThemePanelBorder"] = Solid("#598C9AA5");             // 描边:中性灰 35%
 
-        ApplySurface();                                                 // 表面(受毛玻璃开关影响)
+        ApplySurface();                                                 // 表面(受亚克力开关影响)
         resources["ThemeOnRail"] = Solid("#FFFFFFFF");                 // 左栏前景:纯白
         resources["ThemeOnRailSoft"] = Solid("#A6FFFFFF");               // 左栏前景:65%
         resources["ThemeOnRailFaint"] = Solid("#D9FFFFFF");              // 左栏前景:85%
@@ -194,7 +194,7 @@ internal static class ThemeManager
     /// <summary>
     /// 刷"带透明度的表面"资源 —— 两种档位的区别就在这里:
     ///
-    /// <para><b>毛玻璃(亚克力)开</b>:按设计稿,<b>内容区不铺白底</b>,让窗口的亚克力模糊透出来
+    /// <para><b>亚克力开</b>:按设计稿,<b>内容区不铺白底</b>,让窗口的亚克力模糊透出来
     /// (壁纸 / 桌面是糊的);卡片留 80% 白保证字看得清;侧边栏仍是主题色 80%。</para>
     ///
     /// <para><b>半透明(关)</b>:<b>只有侧边栏半透明</b>(不透明度 = 个性化滑杆),其它表面一律不透明,
@@ -221,7 +221,7 @@ internal static class ThemeManager
 
         resources["ThemeGlass"] = Solid(Alpha(theme.Primary, rail));     // 侧边栏:主题色 + 不透明度
 
-        // 亚克力档:内容区留 36% 白,让窗口的模糊透出来;半透明档:整层按滑杆的百分比透(默认 90%)
+        // 亚克力档:内容区留 36% 白,让窗口的模糊透出来;半透明档:内容/卡片不透明,只有侧栏按 alpha 透
         resources["ThemeGlassLight"] = Solid(glass ? "#E6FFFFFF" : "#FFFFFFFF");   // 消息卡片:亚克力 90%,半透明档纯白
         resources["ThemePanel"] = Solid(glass ? "#5CFFFFFF" : "#FFFFFFFF");        // 面板 / 内容区:亚克力 36%,半透明档不透明
         resources["ThemePage"] = Solid(glass ? "#5CFFFFFF" : "#FFFFFFFF");         // 设置页底:同上

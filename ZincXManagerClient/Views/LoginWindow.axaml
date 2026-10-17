@@ -138,7 +138,7 @@
       </Grid>
     </Border>
 
-    <!-- 横版主体:左边品牌栏(毛玻璃),右边表单 -->
+    <!-- 横版主体:左边品牌栏(亚克力),右边表单 -->
     <Grid Grid.Row="1" ColumnDefinitions="236,*">
 
       <Border Grid.Column="0" Background="{DynamicResource ThemeGlass}">
