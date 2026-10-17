@@ -44,6 +44,13 @@ internal static class ConfigMode
         new() { Key = "configver",     Cn = "配置版本",     Description = "配置文件结构版本(只读)",                 Type = "只读",       ReadOnly = true },
     ];
 
+    /// <summary>正常命令模式里的命令词:配置模式下输入这些要明确拒绝,而不是当成配置项。</summary>
+    private static readonly string[] Commands =
+    {
+        "help", "echo", "exit", "info", "infopc", "msgdays", "srvmsgdays", "name",
+        "notice", "push", "osuser", "srv", "user", "ban", "file", "net", "config",
+    };
+
     private static bool _active;
 
     /// <summary>当前是否在配置模式里。</summary>
@@ -75,6 +82,10 @@ internal static class ConfigMode
         }
 
         var text = line.Trim();
+        if (text.Length == 0)
+        {
+            return true;
+        }
 
         if (text.Equals("exitc", StringComparison.OrdinalIgnoreCase))
         {
@@ -82,25 +93,29 @@ internal static class ConfigMode
             return true;
         }
 
+
         var parts = text.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        var name = parts.Length > 0 ? parts[0] : "";
+        var value = parts.Length > 1 ? string.Join(' ', parts[1..]) : "";
 
-        if (parts.Length < 2)
-        {
-            Logger.Log(LogLevel.Warning, "配置模式用法:<键名|中文名> <键值>;输入 exitc 退出");
-            return true;
-        }
-
-        var name = parts[0];
-        var value = string.Join(' ', parts[1..]);
-
+        // 配置项优先(config 模式下 msgdays 之类既是命令又是配置项,按配置项处理)
         var item = Array.Find(Items, i =>
             i.Key.Equals(name, StringComparison.OrdinalIgnoreCase) ||
             i.Cn.Equals(name, StringComparison.OrdinalIgnoreCase));
 
         if (item is null)
         {
-            Logger.Log(LogLevel.Warning,
-                $"没有这个配置项:{name}(只能改表里已有的,不能新增;输入 exitc 退出后可看配置表)");
+            if (Array.Exists(Commands, c => c.Equals(name, StringComparison.OrdinalIgnoreCase)))
+            {
+                Logger.Log(LogLevel.Warning,
+                    $"配置模式下不能用命令 {name}:先输入 exitc 退出配置模式,再执行它");
+            }
+            else
+            {
+                Logger.Log(LogLevel.Warning,
+                    $"没有这个配置项:{name}(只能改表里已有的,不能新增;输入 exitc 退出后可看配置表)");
+            }
+
             return true;
         }
 
@@ -110,8 +125,13 @@ internal static class ConfigMode
             return true;
         }
 
-        var error = Program.SetConfigItem(item.Key, value);
+        if (value.Length == 0)
+        {
+            Logger.Log(LogLevel.Warning, "配置模式用法:<键名|中文名> <键值>;输入 exitc 退出");
+            return true;
+        }
 
+        var error = Program.SetConfigItem(item.Key, value);
         if (error.Length > 0)
         {
             Logger.Log(LogLevel.Warning, $"{item.Key}({item.Cn})设置失败:{error}");
@@ -122,7 +142,6 @@ internal static class ConfigMode
         return true;
     }
 
-    // 控制台里中文占 2 格,按显示宽度补空格,列才不会错位
     private static int DisplayWidth(string s)
     {
         var w = 0;
