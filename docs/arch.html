@@ -1,0 +1,206 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ZincXManager 技术文档 · 第 2 页 架构与模块</title>
+<style>
+:root{--bg:#0e1116;--panel:#151b23;--line:#232c38;--fg:#e6edf3;--muted:#8b98a9;--accent:#4cc2ff;--accent2:#7ee787}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.6 "Segoe UI","Microsoft YaHei",sans-serif}
+a{color:var(--accent);text-decoration:none}
+a:hover{text-decoration:underline}
+header{position:sticky;top:0;z-index:20;background:rgba(14,17,22,.94);border-bottom:1px solid var(--line);padding:10px 18px;display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+header .brand{font-weight:700;font-size:16px}
+header input{flex:1;min-width:220px;background:#0b0f14;border:1px solid var(--line);color:var(--fg);border-radius:8px;padding:8px 12px}
+header .hint{color:var(--muted);font-size:12px}
+main{padding:18px;max-width:1600px;margin:0 auto}
+h1{font-size:22px;margin:8px 0 4px}
+h2{font-size:18px;margin:28px 0 10px;padding-left:10px;border-left:4px solid var(--accent)}
+h3{font-size:15px;margin:18px 0 8px;color:var(--accent2)}
+p.lead{color:var(--muted)}
+table{width:100%;border-collapse:collapse;margin:8px 0 18px;font-size:13px;background:var(--panel)}
+th,td{border:1px solid var(--line);padding:6px 8px;vertical-align:top;text-align:left}
+th{background:#1b2430;position:sticky;top:52px;z-index:5;white-space:nowrap}
+tr:nth-child(even) td{background:#121820}
+td.mono,code,span.mono{font-family:Consolas,"Cascadia Mono",monospace;font-size:12.5px}
+.tag{display:inline-block;padding:0 6px;border-radius:5px;background:#1f2a36;color:#9fb3c8;font-size:11.5px;margin:1px 3px 1px 0;white-space:nowrap}
+.muted{color:var(--muted)}
+details{background:var(--panel);border:1px solid var(--line);border-radius:10px;margin:10px 0;padding:6px 12px}
+details>summary{cursor:pointer;font-weight:600;padding:6px 0}
+.kv{color:var(--muted)}
+.count{color:var(--muted);font-weight:400;font-size:12px}
+.hidden{display:none!important}
+footer{color:var(--muted);border-top:1px solid var(--line);margin-top:30px;padding:16px 18px;font-size:12px}
+</style></head><body>
+
+<div id="lock" style="min-height:100vh;display:flex;align-items:center;justify-content:center">
+  <div style="background:#151b23;border:1px solid #232c38;border-radius:14px;padding:28px 32px;min-width:320px;text-align:center">
+    <h1 style="margin:0 0 6px;font-size:20px">技术文档 · 需要口令</h1>
+    <p style="color:#8b98a9;margin:0 0 18px;font-size:13px">输入口令后按回车</p>
+    <input id="pw" type="password" autocomplete="off" style="width:260px;background:#0b0f14;border:1px solid #232c38;color:#e6edf3;border-radius:8px;padding:10px 12px;font-size:15px">
+    <p id="err" style="margin:12px 0 0;font-size:12px;color:#ff7b72;min-height:18px"></p>
+  </div>
+</div>
+
+<div id="protected" style="display:none">
+<header><span class="brand">ZincXManager 技术文档 · 第 2 页 架构与模块</span><a href="tech.html">第 1 页:协议码/命令/类与函数</a><a href="help.html">文档与帮助</a><a href="index.html">官网首页</a>
+<input id="q" placeholder="搜索:类名 / 函数名 / 文件 / 命令 / 协议码 / 说明关键字">
+</header>
+<main>
+<h1>第 2 页:架构与模块</h1>
+<p class="lead">从仓库结构、csproj、代码扫描整理:有哪些进程、谁依赖谁、跑在哪些端口、运行时生成哪些文件、模块怎么分。</p>
+<h2 id="projects">① 项目总览</h2>
+<table><thead><tr><th>仓库</th><th>项目</th><th>程序</th><th>输出类型</th><th>目标框架</th><th>AOT</th><th>引用的项目</th><th>代码量</th><th>职责</th></tr></thead><tbody>
+<tr><td>ZincXManager</td><td class="mono">ZincXManagerClient</td><td>ZXMC 客户端</td><td class="mono">WinExe</td><td class="mono">net10.0</td><td class="mono">true</td><td class="mono">ZincXManagerShared.csproj</td><td class="mono">35 文件 / 5171 行</td><td>Avalonia 图形客户端:登录/主窗口/消息卡片/设置/OOBE;连 ZXMS 收发消息</td></tr>
+<tr><td>ZincXManager</td><td class="mono">ZincXManagerServer</td><td>ZXMS 子服务端</td><td class="mono">Exe</td><td class="mono">net10.0</td><td class="mono">True</td><td class="mono">ZincXManagerShared.csproj</td><td class="mono">4 文件 / 2660 行</td><td>控制台子服务端:监听玩家、转官方端消息、存档与补发、管理命令</td></tr>
+<tr><td>ZincXManager</td><td class="mono">ZincXManagerShared</td><td>共享库</td><td class="mono">类库</td><td class="mono">net10.0</td><td class="mono">—</td><td class="mono">—</td><td class="mono">29 文件 / 5022 行</td><td>三端共用的协议、网络、账号、日志、文件与卡片解析</td></tr>
+<tr><td>ZincXManager-Official</td><td class="mono">ZincXManagerLicTool</td><td>ZXMTL 许可证工具</td><td class="mono">Exe</td><td class="mono">net10.0</td><td class="mono">—</td><td class="mono">ZincXManagerShared.csproj</td><td class="mono">1 文件 / 335 行</td><td>许可证签发工具:按机器码签 official.lic</td></tr>
+<tr><td>ZincXManager-Official</td><td class="mono">ZincXManagerOServer</td><td>ZXMOS 官方服务端</td><td class="mono">Exe</td><td class="mono">net10.0</td><td class="mono">true</td><td class="mono">ZincXManagerShared.csproj</td><td class="mono">4 文件 / 1910 行</td><td>控制台官方服务端:子服注册、全局账号、消息广播/推送、许可证校验</td></tr>
+<tr><td>ZincXManager-Official</td><td class="mono">ZincXManagerShared</td><td>共享库</td><td class="mono">类库</td><td class="mono">net10.0</td><td class="mono">—</td><td class="mono">—</td><td class="mono">29 文件 / 5007 行</td><td>三端共用的协议、网络、账号、日志、文件与卡片解析</td></tr>
+</tbody></table>
+<h2 id="ports">② 进程与端口</h2>
+<table><thead><tr><th>进程</th><th>谁连它</th><th>默认端口</th><th>配置键</th><th>说明</th></tr></thead><tbody>
+<tr><td>ZXMOS 官方服务端</td><td>ZXMS 子服 + ZXMC(直连模式)</td><td>25000</td><td>port</td><td>config.ini 的 port;客户端默认 zxm.zincms.top:25000</td></tr>
+<tr><td>ZXMS 子服务端</td><td>ZXMC 客户端</td><td>21000(示例)</td><td>czport</td><td>config.ini 的 czport,改完重启生效;并发的玩家都连这个口</td></tr>
+<tr><td>ZXMS → ZXMOS</td><td>ZXMOS</td><td>25000</td><td>ozport</td><td>子服主动连官方端;online 握手用协议码 100/101</td></tr>
+<tr><td>官网站点</td><td>浏览器</td><td>80 / 10</td><td>—</td><td>nginx 静态站(D:\Web\web\zxm.zincms.top),10 是旧站端口</td></tr>
+<tr><td>宝塔面板</td><td>管理员</td><td>8888</td><td>—</td><td>控制台,不在本项目代码里</td></tr>
+</tbody></table>
+<h2 id="deps">③ 项目依赖</h2>
+<table><thead><tr><th>项目</th><th>引用</th><th>说明</th></tr></thead><tbody>
+<tr><td class="mono">ZincXManagerClient</td><td class="mono">ZincXManagerShared.csproj</td><td>共用协议/网络/账号/日志</td></tr>
+<tr><td class="mono">ZincXManagerServer</td><td class="mono">ZincXManagerShared.csproj</td><td>共用协议/网络/账号/日志</td></tr>
+<tr><td class="mono">ZincXManagerShared</td><td class="mono">—</td><td>—</td></tr>
+<tr><td class="mono">ZincXManagerLicTool</td><td class="mono">ZincXManagerShared.csproj</td><td>共用协议/网络/账号/日志</td></tr>
+<tr><td class="mono">ZincXManagerOServer</td><td class="mono">ZincXManagerShared.csproj</td><td>共用协议/网络/账号/日志</td></tr>
+<tr><td class="mono">ZincXManagerShared</td><td class="mono">—</td><td>—</td></tr>
+</tbody></table>
+<p class="lead">两个仓库各有一份 <span class="mono">ZincXManagerShared</span>(私有仓里的是公开仓的副本),ZXMOS / ZXMTL 只依赖私有仓那份,发布时互不牵连。</p>
+<h2 id="files">④ 运行时生成 / 读取的文件</h2>
+<table><thead><tr><th>文件</th><th>谁写</th><th>内容</th><th>代码位置</th></tr></thead><tbody>
+<tr><td class="mono">config.ini</td><td class="">ZXMC / ZXMS / ZXMOS</td><td class="">全部配置(名称、端口、开关、天数…);第一次运行写入默认值,之后只读配置</td><td class="mono">ZincXManagerShared/FileIO/ZFile.cs</td></tr>
+<tr><td class="mono">messages.json</td><td class="">ZXMC / ZXMS</td><td class="">消息存档:客户端记收到的公告/推送,子服记本服发过的(补发用)</td><td class="mono">Client/MessageStore.cs、Server/MessageArchive.cs</td></tr>
+<tr><td class="mono">bans.json</td><td class="">ZXMS / ZXMOS</td><td class="">封禁表:账号 / IP / 机器码 + 到期时间 + 原因</td><td class="mono">Shared/Account/BanStore.cs</td></tr>
+<tr><td class="mono">osusers.json</td><td class="">ZXMOS / ZXMS</td><td class="">官方账号表(名称、ID、等级、密码密文、机器码绑定)</td><td class="mono">Shared/Account/AccountStore.cs</td></tr>
+<tr><td class="mono">official.lic</td><td class="">ZXMTL 签发</td><td class="">官方服务端许可证(机器码绑定 + RSA 签名)</td><td class="mono">Shared/Verify/OfficialGuard.cs</td></tr>
+<tr><td class="mono">logs/*.log</td><td class="">三端</td><td class="">按天切分的运行日志;命令回显、协议收发都在里面</td><td class="mono">Shared/Logging/Logger.cs</td></tr>
+</tbody></table>
+<h2 id="modules">⑤ 模块目录与主要类型</h2>
+<p class="lead">按“程序 → 目录”汇总,列出该目录里的类与文件数(类名可点开第 1 页的详细说明)。</p>
+<table><thead><tr><th>程序</th><th>目录</th><th>类型</th><th>主要类</th></tr></thead><tbody>
+<tr><td>ZXMC 客户端</td><td class="mono">ZincXManagerClient</td><td class="mono">12</td><td class="mono">App、AppWindows、ClientConfig、ClientSession、LoginRecord、MachineCode、MessageStore、OfficialServer、ThemeManager、ViewLocator、WindowPlacement、ZXMC 主程序类(Program)</td></tr>
+<tr><td>ZXMC 客户端</td><td class="mono">ZincXManagerClient/Logging</td><td class="mono">1</td><td class="mono">UiLogSink</td></tr>
+<tr><td>ZXMC 客户端</td><td class="mono">ZincXManagerClient/Models</td><td class="mono">12</td><td class="mono">AccountLevels、Icons、LogEntry、MessageItem、MessageKind、NavItem、SampleMessages、SubNavItem、ThemeOption、Themes、ToastItem、ToastKind</td></tr>
+<tr><td>ZXMC 客户端</td><td class="mono">ZincXManagerClient/ViewModels</td><td class="mono">6</td><td class="mono">ConnectViewModel、LoginViewModel、MainViewModel、OobeViewModel、SettingsViewModel、ViewModelBase</td></tr>
+<tr><td>ZXMC 客户端</td><td class="mono">ZincXManagerClient/Views</td><td class="mono">8</td><td class="mono">AvatarCropWindow、ConnectWindow、DialogOptions、LoginWindow、MainWindow、MessageDialog、OobeWindow、SettingsView</td></tr>
+<tr><td>ZXMOS 官方服务端</td><td class="mono">ZincXManagerOServer</td><td class="mono">4</td><td class="mono">Blacklist、Entry、MessageArchive、ZXMOS 主程序类(Program)</td></tr>
+<tr><td>ZXMOS 官方服务端</td><td class="mono">ZincXManagerOServer/Command</td><td class="mono">3</td><td class="mono">MessageHooks、SrvBlacklistHooks、ZxmosCommands</td></tr>
+<tr><td>ZXMS 子服务端</td><td class="mono">ZincXManagerServer</td><td class="mono">3</td><td class="mono">Entry、MessageArchive、ZXMS 主程序类(Program)</td></tr>
+<tr><td>ZXMS 子服务端</td><td class="mono">ZincXManagerServer/Command</td><td class="mono">4</td><td class="mono">ConfigMode、Item、ZxmsCommands、ZxmsIdentity</td></tr>
+<tr><td>ZXMTL 许可证工具</td><td class="mono">ZincXManagerLicTool</td><td class="mono">1</td><td class="mono">ZXMTL 主程序类(Program)</td></tr>
+<tr><td>共享库 ZincXManagerShared</td><td class="mono">ZincXManagerShared/Account</td><td class="mono">14</td><td class="mono">Account、AccountStore、AvatarStore、BanEntry、BanStore、MachineCode、PasswordHash</td></tr>
+<tr><td>共享库 ZincXManagerShared</td><td class="mono">ZincXManagerShared/Command</td><td class="mono">2</td><td class="mono">CommandHandler</td></tr>
+<tr><td>共享库 ZincXManagerShared</td><td class="mono">ZincXManagerShared/FileIO</td><td class="mono">2</td><td class="mono">ZFile</td></tr>
+<tr><td>共享库 ZincXManagerShared</td><td class="mono">ZincXManagerShared/Logging</td><td class="mono">12</td><td class="mono">ClientLog、ILogger、LogLevel、LogLevelExtensions、Logger、StreamLogger</td></tr>
+<tr><td>共享库 ZincXManagerShared</td><td class="mono">ZincXManagerShared/Network</td><td class="mono">34</td><td class="mono">CardActionFields、CardFields、CardInput、ClientInfo、ClientRegistry、HostText、IClient、IServer、MessageCard、Packet、PacketDispatcher、Protocol、SendExtensions、ServerboundPacket、TcpClient、TcpConnection、TcpServer</td></tr>
+<tr><td>共享库 ZincXManagerShared</td><td class="mono">ZincXManagerShared/Verify</td><td class="mono">10</td><td class="mono">OfficialGuard、OfficialHandshake、OfficialKey、OfficialLicense、OfficialVerdict</td></tr>
+</tbody></table>
+<h2 id="flows">⑥ 关键链路</h2>
+<table><thead><tr><th>链路</th><th>顺序</th><th>用到的协议码</th><th>要点</th></tr></thead><tbody>
+<tr><td >启动</td><td class="mono">读 config.ini → 补默认值 → 起监听 → (子服)连官方端</td><td class="mono">—</td><td >缺配置项自动写回默认;端口被占用会直接报“监听失败”</td></tr>
+<tr><td >客户端上线</td><td class="mono">ZXMC → ZXMS:300 上线(负载 ZXMC:模式) → ZXMS 回 301</td><td class="mono">300 / 301</td><td >握手完成才算“在线”,连接表里能看到</td></tr>
+<tr><td >子服上线</td><td class="mono">ZXMS → ZXMOS:100 上线 → ZXMOS 回 101</td><td class="mono">100 / 101</td><td >之后 ZXMOS 才能给这个子服转发消息</td></tr>
+<tr><td >身份下发</td><td class="mono">服务端 → 对方:200 我是谁(ZXMS/ZXMOS) → 201 服务端名称</td><td class="mono">200 / 201 / 202</td><td >客户端标题栏显示的名字就来自这里</td></tr>
+<tr><td >消息广播</td><td class="mono">ZXMOS：500 公告 → ZXMS 原样转给自己名下所有 ZXMC</td><td class="mono">500</td><td >负载是消息卡片;子服只转发不解析正文</td></tr>
+<tr><td >定向推送</td><td class="mono">ZXMOS：501 目标账号|卡片 → 每跳按账号过滤,命中才投</td><td class="mono">501</td><td >不命中静默丢弃</td></tr>
+<tr><td >卡片按钮</td><td class="mono">ZXMC：502 动作|输入|原卡片 → 服务端回 503</td><td class="mono">502 / 503</td><td >服务端据此知道是哪张卡片、谁点的</td></tr>
+<tr><td >历史补发</td><td class="mono">ZXMC：505 要历史 → 服务端 504 逐条发 → 506 收尾</td><td class="mono">504 / 505 / 506</td><td >按“来源+消息号”去重;子服 504/505 两路合并</td></tr>
+<tr><td >官方验证</td><td class="mono">验证方：520 挑战(nonce) → 服务端：521 Base64(lic)|nonce|HMAC</td><td class="mono">520 / 521</td><td >只有登录过的连接才应答;校验机器码绑定</td></tr>
+<tr><td >账号改名</td><td class="mono">ZXMS → ZXMOS：611 改名 → 612 回执(ok|新名 或 err|原因)</td><td class="mono">611 / 612</td><td >控制台 osuser 命令触发</td></tr>
+</tbody></table>
+<h2 id="config">⑦ config.ini 的配置项(子服)</h2>
+<table><thead><tr><th>中文名</th><th>键名</th><th>类型</th><th>作用</th></tr></thead><tbody>
+<tr><td class="">服务端名称</td><td class="mono">name</td><td class="mono">文本 1-32 字符</td><td class="">玩家看到的名称(linkname=1 时跟账号名)</td></tr>
+<tr><td class="">名称联动</td><td class="mono">linkname</td><td class="mono">1/0</td><td class="">1 = 名称与官方账号名一致,0 = 分开设置</td></tr>
+<tr><td class="">连接官方端</td><td class="mono">connectOS</td><td class="mono">1/0</td><td class="">启动时是否连 ZXMOS</td></tr>
+<tr><td class="">客户端端口</td><td class="mono">czport</td><td class="mono">1-65535</td><td class="">ZXMC/ZXMM 接入端口(重启生效)</td></tr>
+<tr><td class="">官方端地址</td><td class="mono">ozip</td><td class="mono">IP 或域名</td><td class="">ZXMOS 的 IP 或域名</td></tr>
+<tr><td class="">官方端端口</td><td class="mono">ozport</td><td class="mono">1-65535</td><td class="">ZXMOS 的端口</td></tr>
+<tr><td class="">官方账号名</td><td class="mono">osuser</td><td class="mono">文本 2-32 字符</td><td class="">本端在 ZXMOS 上注册的账号(改名请用 osuser)</td></tr>
+<tr><td class="">消息保留天数</td><td class="mono">msgdays</td><td class="mono">1-365</td><td class="">下发给客户端:本地留多久</td></tr>
+<tr><td class="">存档保留天数</td><td class="mono">srvmsgdays</td><td class="mono">1-365</td><td class="">本服存档留多久(补发用)</td></tr>
+<tr><td class="">对端校验</td><td class="mono">officialcheck</td><td class="mono">1/0</td><td class="">1 = 对端不是官方就断开,0 = 只警告</td></tr>
+<tr><td class="">官方端名称</td><td class="mono">ozname</td><td class="mono">只读</td><td class="">ZXMOS 下发的名称(只读)</td></tr>
+<tr><td class="">服务端码</td><td class="mono">servercode</td><td class="mono">只读</td><td class="">本实例的身份证(只读)</td></tr>
+</tbody></table>
+</main>
+<footer>技术文档 · 由源码扫描生成,改动代码后重跑生成脚本即可刷新</footer>
+</div>
+<script>
+const q=document.getElementById('q');
+if(q){q.addEventListener('input',()=>{const v=q.value.trim().toLowerCase();
+document.querySelectorAll('table tbody tr').forEach(tr=>{tr.classList.toggle('hidden', v && !tr.textContent.toLowerCase().includes(v))});});}
+</script>
+<script>
+(function(){
+  var WANT = 'b0c0190fbe124fa2c094b6990bdaefd2';
+  var pw = document.getElementById('pw');
+  var err = document.getElementById('err');
+  function md5(input){
+  function toUtf8(s){
+    var out=[],i,c;
+    for(i=0;i<s.length;i++){
+      c=s.charCodeAt(i);
+      if(c<0x80) out.push(c);
+      else if(c<0x800){ out.push(0xc0|(c>>6),0x80|(c&63)); }
+      else if(c>=0xd800&&c<=0xdbff&&i+1<s.length){
+        var c2=s.charCodeAt(++i);
+        var cp=0x10000+((c-0xd800)<<10)+(c2-0xdc00);
+        out.push(0xf0|(cp>>18),0x80|((cp>>12)&63),0x80|((cp>>6)&63),0x80|(cp&63));
+      } else { out.push(0xe0|(c>>12),0x80|((c>>6)&63),0x80|(c&63)); }
+    }
+    return out;
+  }
+  var bytes=toUtf8(input);
+  var ml=bytes.length*8;
+  bytes.push(0x80);
+  while(bytes.length%64!==56) bytes.push(0);
+  var lo=ml>>>0, hi=Math.floor(ml/4294967296)>>>0;
+  bytes.push(lo&255,(lo>>>8)&255,(lo>>>16)&255,(lo>>>24)&255,hi&255,(hi>>>8)&255,(hi>>>16)&255,(hi>>>24)&255);
+  var a0=0x67452301,b0=0xefcdab89,c0=0x98badcfe,d0=0x10325476;
+  var S=[7,12,17,22,7,12,17,22,7,12,17,22,7,12,17,22,
+         5,9,14,20,5,9,14,20,5,9,14,20,5,9,14,20,
+         4,11,16,23,4,11,16,23,4,11,16,23,4,11,16,23,
+         6,10,15,21,6,10,15,21,6,10,15,21,6,10,15,21];
+  var K=[]; for(var i=0;i<64;i++) K[i]=(Math.floor(Math.abs(Math.sin(i+1))*4294967296))>>>0;
+  function rotl(x,c){ return ((x<<c)|(x>>>(32-c)))>>>0; }
+  for(var off=0;off<bytes.length;off+=64){
+    var M=[]; for(var j=0;j<16;j++){ var pp=off+j*4; M[j]=(bytes[pp]|(bytes[pp+1]<<8)|(bytes[pp+2]<<16)|(bytes[pp+3]<<24))>>>0; }
+    var A=a0,B=b0,C=c0,D=d0;
+    for(var k=0;k<64;k++){
+      var F,g;
+      if(k<16){ F=(B&C)|((~B)&D); g=k; }
+      else if(k<32){ F=(D&B)|((~D)&C); g=(5*k+1)%16; }
+      else if(k<48){ F=B^C^D; g=(3*k+5)%16; }
+      else { F=C^(B|(~D)); g=(7*k)%16; }
+      F=(F+A+K[k]+M[g])>>>0;
+      A=D; D=C; C=B;
+      B=(B+rotl(F,S[k]))>>>0;
+    }
+    a0=(a0+A)>>>0; b0=(b0+B)>>>0; c0=(c0+C)>>>0; d0=(d0+D)>>>0;
+  }
+  function hex(x){ var s="",i; for(i=0;i<4;i++){ s+=((x>>>(i*8))&255).toString(16).padStart(2,"0"); } return s; }
+  return hex(a0)+hex(b0)+hex(c0)+hex(d0);
+}
+  function unlock(){
+    if (md5(pw.value) === WANT) {
+      document.getElementById('lock').style.display = 'none';
+      document.getElementById('protected').style.display = '';
+    } else {
+      err.textContent = '口令不对(' + md5(pw.value).slice(0,8) + '…)';
+      pw.select();
+    }
+  }
+  pw.addEventListener('keydown', function(e){ if (e.key === 'Enter') unlock(); });
+  pw.focus();
+})();
+</script>
+</body></html>
