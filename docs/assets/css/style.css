@@ -305,10 +305,3 @@ code.sha { display: block; word-break: break-all; font-size: 12px; color: var(--
   vertical-align:baseline;transition:width .44s cubic-bezier(.22,.61,.36,1)}
 .zxm-hero .bm-cur,.zxm-hero .bm-next{position:absolute;left:0;top:0;display:block;white-space:nowrap;line-height:1.16}
 
-
-/* 首页大标题:Manager 在槽内用 translateX 平滑跟随(无宽度动画) */
-.zxm-hero{display:flex;align-items:baseline;flex-wrap:wrap}
-.zxm-hero>span{display:inline-block}
-.zxm-hero .bm-slot{position:relative;display:inline-block;overflow:hidden;height:1.16em;line-height:1.16;vertical-align:baseline}
-.zxm-hero .bm-cur,.zxm-hero .bm-next{position:absolute;left:0;top:0;display:block;white-space:nowrap;line-height:1.16}
-.zxm-hero .bm-manager{display:block;white-space:nowrap;line-height:1.16;position:absolute;left:0;top:0}

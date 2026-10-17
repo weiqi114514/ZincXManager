@@ -1,8 +1,8 @@
-/* 首页大标题 Zinc[X]Manager:槽宽固定(最宽的词),Manager 在槽内用 translateX 平滑跟随 */
+/* 首页大标题 Zinc[X]Manager:旧词下滑出、新词上滑入,槽宽做过渡 => Manager 平滑滑动而不是瞬移 */
 (function () {
   var WORDS = ["X", "Admin", "User", "Player", "System"];
   var PERIOD = 5000;
-  var DUR = 460;
+  var DUR = 440;
 
   var probe = document.createElement("span");
   probe.className = "bm-cur";
@@ -16,6 +16,7 @@
     probe.style.fontWeight = cs.fontWeight;
     probe.style.fontStyle = cs.fontStyle;
     probe.textContent = word;
+
     if (!probe.isConnected) document.body.appendChild(probe);
     return Math.ceil(probe.getBoundingClientRect().width);
   }
@@ -32,33 +33,10 @@
 
     var cur = slot.querySelector(".bm-cur");
     var old = slot.querySelector(".bm-next");
-    var mgr = slot.querySelector(".bm-manager");
     var i = 0;
     var busy = false;
 
-    var maxW = 0;
-    for (var k = 0; k < WORDS.length; k++) {
-      maxW = Math.max(maxW, widthOf(slot, WORDS[k]));
-    }
-
-    // 槽要同时装下"最宽的词 + Manager",否则 Manager 会被裁掉
-    var mgrW = 0;
-    if (mgr) {
-      mgr.style.position = "absolute";
-      mgr.style.left = "0";
-      mgr.style.top = "0";
-      mgr.style.whiteSpace = "nowrap";
-      mgr.style.transition = "transform " + DUR + "ms cubic-bezier(.22,.61,.36,1)";
-      mgr.style.transform = "translateX(0)";
-      mgrW = Math.ceil(mgr.getBoundingClientRect().width);
-    }
-
-    slot.style.width = (maxW + mgrW + 2) + "px";
-
-    if (mgr) {
-      mgr.style.transform = "translateX(" + widthOf(slot, cur.textContent) + "px)";
-    }
-
+    slot.style.width = widthOf(slot, cur.textContent) + "px";
     move(old, -100, false);
     move(cur, 0, false);
 
@@ -71,22 +49,22 @@
 
       old.textContent = cur.textContent;
       cur.textContent = word;
+
+      // 槽宽一起过渡(这是"滑动"而不是"瞬移"的关键)
+      slot.style.width = widthOf(slot, word) + "px";
+
       move(old, 0, false);
       move(cur, -100, false);
+      void slot.offsetWidth;
 
-      requestAnimationFrame(function () {
-        if (mgr) {
-          mgr.style.transform = "translateX(" + widthOf(slot, word) + "px)";
-        }
-        move(old, 100, true);
-        move(cur, 0, true);
-      });
+      move(old, 100, true);
+      move(cur, 0, true);
 
       setTimeout(function () {
         move(old, -100, false);
         old.textContent = "";
         busy = false;
-      }, DUR + 40);
+      }, DUR + 20);
     }, PERIOD);
   }
 
