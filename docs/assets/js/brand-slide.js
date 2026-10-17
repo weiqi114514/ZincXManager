@@ -40,14 +40,22 @@
     for (var k = 0; k < WORDS.length; k++) {
       maxW = Math.max(maxW, widthOf(slot, WORDS[k]));
     }
-    slot.style.width = maxW + "px";
 
+    // 槽要同时装下"最宽的词 + Manager",否则 Manager 会被裁掉
+    var mgrW = 0;
     if (mgr) {
       mgr.style.position = "absolute";
       mgr.style.left = "0";
       mgr.style.top = "0";
       mgr.style.whiteSpace = "nowrap";
       mgr.style.transition = "transform " + DUR + "ms cubic-bezier(.22,.61,.36,1)";
+      mgr.style.transform = "translateX(0)";
+      mgrW = Math.ceil(mgr.getBoundingClientRect().width);
+    }
+
+    slot.style.width = (maxW + mgrW + 2) + "px";
+
+    if (mgr) {
       mgr.style.transform = "translateX(" + widthOf(slot, cur.textContent) + "px)";
     }
 
