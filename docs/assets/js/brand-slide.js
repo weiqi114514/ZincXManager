@@ -53,6 +53,9 @@
       move(old, 0, false);
       move(cur, -100, false);
 
+      // 先把"旧宽度"提交成已生效样式,下一帧再改宽度,过渡才有起点
+      void slot.offsetWidth;
+
       // 第二段(下一帧,带过渡):宽度 + 位移一起动
       requestAnimationFrame(function () {
         slot.style.width = widthOf(slot, word) + "px";
