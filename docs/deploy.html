@@ -34,9 +34,9 @@
   </div></section>
   <section class="doc-body"><div class="wrap doc-main">
 <h2>ZXM ③ 子服务端部署手册</h2>
-<p>&gt; 分类导航:① 认识与安装 · ② 客户端使用手册 · ③ 子服务端部署手册</p>
-<p>&gt; 官网 &lt;http://zxm.zincms.top/&gt; · 帮助页 &lt;http://zxm.zincms.top/help.html&gt; · 交流群 QQ <code>1129776132</code></p>
-<p>---</p>
+<blockquote>分类导航:① 认识与安装 · ② 客户端使用手册 · ③ 子服务端部署手册</blockquote>
+<blockquote>官网 &lt;http://zxm.zincms.top/&gt; · 帮助页 &lt;http://zxm.zincms.top/help.html&gt; · 交流群 QQ <code>1129776132</code></p>
+
 <h2>六、子服务端 ZXMS:部署与使用</h2>
 <h3>6.1 拿到程序</h3>
 <p>官网下载页 → 「子服务端 ZXMS」压缩包,解压到任意目录(别放需要管理员权限的目录,免得日志写不进去)。里面有:</p>
@@ -56,9 +56,9 @@ config.ini                 配置(第一次运行会自动补全缺失项)
 <p>| <code>oshash</code> | 密码密文(启动时问一次明文,只存密文) | 空 |</p>
 <p>| <code>msgdays</code> | 本服消息保留天数(下发给客户端) | 7 |</p>
 <p>| <code>servercode</code> | 本实例身份证(32 位十六进制,<b>首次自动生成</b>) | 自动 |</p>
-<p>&gt; ⚠️ <b><code>servercode</code> 和 <code>oshash</code> 千万别手改</b>:</p>
-<p>&gt; 改显示名用控制台 <code>name 新名字</code>;改官方端账号/密码用 <code>osuser 新账号 新密码</code>(写成同名就只改密码)。</p>
-<p>&gt; 直接改 config 会被官方端判成"换了台实例",接入时报「身份不一致」。</p>
+<blockquote>⚠️ <b><code>servercode</code> 和 <code>oshash</code> 千万别手改</b>:</p>
+<blockquote>改显示名用控制台 <code>name 新名字</code>;改官方端账号/密码用 <code>osuser 新账号 新密码</code>(写成同名就只改密码)。</p>
+<blockquote>直接改 config 会被官方端判成"换了台实例",接入时报「身份不一致」。</blockquote>
 <h3>6.3 第一次启动</h3>
 <p>1. 双击 <code>ZincXManagerServer.exe</code> → 黑底控制台(管理入口就是这个控制台);</p>
 <p>2. 缺 <code>osuser</code> / <code>oshash</code> 时会<b>问一次账号名与密码</b>,问完写回 config(只存密文);</p>
@@ -68,8 +68,8 @@ config.ini                 配置(第一次运行会自动补全缺失项)
 <h3>6.4 让玩家连上你的子服</h3>
 <p>玩家客户端:设置 → 模式与数据源 → 连接方式 <b>SAOS</b> → 数据源地址填 <code>&lt;你的域名或IP&gt;:&lt;czport&gt;</code> → 重连即可。</p>
 <h3>6.5 控制台命令(每条都有示例)</h3>
-<p>&gt; 在子服那个黑窗口里直接敲、回车执行。示例里 <code>&gt;</code> 后面是你要敲的,<b>它下面的 <code>输出:</code> 是正常会看到的东西</b>;</p>
-<p>&gt; <code>&lt; &gt;</code> 是占位符,不要照抄尖括号。想先看全部命令:敲 <code>help</code>。</p>
+<blockquote>在子服那个黑窗口里直接敲、回车执行。示例里 <code>&gt;</code> 后面是你要敲的,<b>它下面的 <code>输出:</code> 是正常会看到的东西</b>;</p>
+<blockquote><code>&lt; &gt;</code> 是占位符,不要照抄尖括号。想先看全部命令:敲 <code>help</code>。</p>
 <h4>① 看状态</h4>
 <p><b><code>help</code></b> —— 列出所有命令与用法</p>
 <pre><code>&gt; help
@@ -250,7 +250,7 @@ ID   名称        等级
 <li>日志在 <code>logs\</code>,排错时按时间找最新的那份;</li>
 <li>换机器时把整个目录拷走即可(注意 <code>servercode</code> 必须一起带走,否则要重新登记)。</li>
 </ul>
-<p>---</p>      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:36px;padding-top:22px;border-top:1px solid var(--line)">
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:36px;padding-top:22px;border-top:1px solid var(--line)">
         <a class="btn" href="help.html">返回文档中心</a>
         <a class="btn" href="zxms.html">部署教程(图文版)</a>
       </div>
