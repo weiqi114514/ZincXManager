@@ -36,144 +36,84 @@
 
 <main>
 
-<!-- 首屏 -->
+<!-- 首屏:讲能干什么 -->
 <section class="hero grid-bg">
   <div class="hero-in">
     <div class="hero-copy">
-      <span class="hero-tag">a0.4.1 · Official online</span>
+      <span class="hero-tag">a0.4.1 · 能直接用的版本</span>
       <h1 class="zxm-hero"><span>Zinc</span><span class="bm-slot"><span class="bm-cur">X</span><span class="bm-next"></span></span><span class="dim">Manager</span></h1>
       <p class="lead">
-        面向 Minecraft 服主与社区管理员的一体化管理面板。
-        一个客户端,既能直连官方服务端,也能接你自己的子服务端 —— 管理、社区、经济,同一套界面。
+        一个客户端,把你的 Minecraft 服务器管起来:
+        发公告、开商店、管玩家、建社区 —— 不用再装一堆后台、开一堆网页。
       </p>
       <div class="hero-actions">
-        <a class="btn btn-primary" href="download.html">下载客户端 ZXMC</a>
-        <a class="btn" href="https://github.com/weiqi114514/ZincXManager" target="_blank" rel="noopener">GitHub 仓库</a>
+        <a class="btn btn-primary" href="download.html">下载客户端(免安装)</a>
+        <a class="btn" href="#capabilities">看它能干什么</a>
       </div>
     </div>
     <div class="hero-side">
-      <div class="stat">
-        <div class="big">3</div>
-        <div class="txt"><b>个端</b><span>客户端 · 子服 · 官服</span></div>
-      </div>
-      <div class="stat">
-        <div class="big">4</div>
-        <div class="txt"><b>组功能</b><span>经济 · 社区 · 组织 · 管理</span></div>
-      </div>
-      <div class="stat">
-        <div class="big">3</div>
-        <div class="txt"><b>种连接</b><span>OS · OOS · SAOS</span></div>
-      </div>
-      <div class="stat">
-        <div class="big enc">🔒</div>
-        <div class="txt"><b>全链路加密</b><span>ECDH + AES-256-GCM</span></div>
-      </div>
+      <div class="stat"><div class="big">3</div><div class="txt"><b>分钟上手</b><span>免安装,双击就跑</span></div></div>
+      <div class="stat"><div class="big">1</div><div class="txt"><b>个客户端</b><span>官服 / 自建服都能连</span></div></div>
+      <div class="stat"><div class="big">0</div><div class="txt"><b>依赖</b><span>不用装 .NET 运行时</span></div></div>
+      <div class="stat"><div class="big enc">🔒</div><div class="txt"><b>全程加密</b><span>登录、聊天、管理都加密</span></div></div>
     </div>
   </div>
 </section>
-
 
 <!-- 跑马灯 -->
 <div class="marquee" aria-hidden="true">
   <div class="marquee-track">
-    <span>ZINCXMANAGER <em>·</em> MADE FOR MINECRAFT <em>·</em> 3 ENDS <em>·</em> AES-256-GCM <em>·</em> ZXMC / ZXMS / ZXMOS <em>·</em>&nbsp;</span>
-    <span>ZINCXMANAGER <em>·</em> MADE FOR MINECRAFT <em>·</em> 3 ENDS <em>·</em> AES-256-GCM <em>·</em> ZXMC / ZXMS / ZXMOS <em>·</em>&nbsp;</span>
+    <span>发公告 <em>·</em> 开商店 <em>·</em> 管玩家 <em>·</em> 建社区 <em>·</em> 白名单 <em>·</em> 银行 <em>·</em> 好友私聊 <em>·</em>&nbsp;</span>
+    <span>发公告 <em>·</em> 开商店 <em>·</em> 管玩家 <em>·</em> 建社区 <em>·</em> 白名单 <em>·</em> 银行 <em>·</em> 好友私聊 <em>·</em>&nbsp;</span>
   </div>
 </div>
 
-
-<!-- ZXMC 介绍 -->
-<section class="sec" id="zxmc">
+<!-- 谁能用 / 用来做什么 -->
+<section class="sec" id="who">
   <div class="wrap">
     <div class="sec-head">
       <div>
-        <div class="k">01 / Client</div>
-        <h2>ZXMC<br>客户端</h2>
+        <div class="k">Who &amp; What</div>
+        <h2>你拿它<br>能干什么</h2>
       </div>
-      <p>玩家与管理员每天面对的那一个窗口。登录、聊天、好友、经济、社区、组织、管理,全在同一条左侧导航里。</p>
-    </div>
-    <div class="sec-body">
-      <div class="row">
-        <div class="side"><h3>你要的都在<br>左侧导航</h3><p>四组子功能 + 好友 + 设置,点一层就到位;右侧消息面板随时展开成全宽。</p></div>
-        <div class="items">
-          <div><h4>子功能卡片</h4><p>一张卡片一个入口,左图标、中间名称说明、右下进入。</p></div>
-          <div><h4>消息面板</h4><p>Markdown / HTML 直接渲染,支持全屏查看。</p></div>
-          <div><h4>三种连接模式</h4><p>OS 连子服、OOS 连官方、SAOS 由子服转发。</p></div>
-          <div><h4>单实例 + 加密</h4><p>重复连接被拦下,整条链路 ECDH + AES-256-GCM。</p></div>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- ZXMS 介绍 -->
-<section class="sec" id="zxms">
-  <div class="wrap">
-    <div class="sec-head">
-      <div>
-        <div class="k">02 / Sub-server</div>
-        <h2>ZXMS<br>子服务端</h2>
-      </div>
-      <p>服主部署在自己机器上的那一端。控制台里敲命令就能管理玩家、配置与日志,向上自动接官方服务端。</p>
-    </div>
-    <div class="sec-body">
-      <div class="row">
-        <div class="side"><h3>一条命令<br>一个动作</h3><p>没有 Web 后台,配置、用户、日志、文件都在控制台里完成。</p></div>
-        <div class="items">
-          <div><h4>config</h4><p>广场名称、消息保留天数、官方服务端地址等。</p></div>
-          <div><h4>user</h4><p>本服账号的增删改查与权限。</p></div>
-          <div><h4>log / file</h4><p>日志查看与文件操作。</p></div>
-          <div><h4>向上自动连通</h4><p>启动即连官方服务端并完成加密握手。</p></div>
-        </div>
-      </div>
-      <p style="margin-top:22px"><a class="btn" href="zxms.html">看部署教程</a></p>
-    </div>
-  </div>
-</section>
-
-<!-- 三端 -->
-<section class="sec" id="arch">
-  <div class="wrap">
-    <div class="sec-head">
-      <div>
-        <div class="k">Architecture</div>
-        <h2>一端入口<br>两种数据源</h2>
-      </div>
-      <p>客户端只连一个入口:官方服务端,或你自己的子服务端;子服务端再向上接官方,形成「客户端 → 子服 → 官服」的链路。</p>
+      <p>不用懂什么是「分布式」「三端」。只关心三件事:玩家体验、日常运维、社区氛围。</p>
     </div>
     <div class="sec-body">
       <div class="trio">
         <article>
-          <div class="idx">01 / CLIENT</div>
-          <h3>ZXMC</h3>
-          <div class="role">玩家与管理员的入口</div>
-          <p>双击即用的桌面客户端:登录、聊天、好友、经济、社区、组织、管理都在这里。</p>
+          <div class="idx">01</div>
+          <h3>你是服主</h3>
+          <div class="role">把服务器管顺</div>
+          <p>装一次,之后登录就能干这些:</p>
           <ul>
-            <li>单实例运行,重复连接有拦截</li>
-            <li>三种连接模式:OS / OOS / SAOS</li>
-            <li>会话全程加密</li>
+            <li>发全服公告,玩家客户端直接弹出来</li>
+            <li>管白名单、绑账号,谁进谁不进一句话</li>
+            <li>看在线玩家、封禁、日志</li>
+            <li>维护版本与数据源</li>
           </ul>
         </article>
         <article>
-          <div class="idx">02 / SUB-SERVER</div>
-          <h3>ZXMS</h3>
-          <div class="role">你自己的服务器</div>
-          <p>服主部署在自己的机器上,管理本服玩家、消息、经济与权限;向上与官方互通。</p>
+          <div class="idx">02</div>
+          <h3>你是管理员</h3>
+          <div class="role">把社区带起来</div>
+          <p>不写代码,也能把社区运营起来:</p>
           <ul>
-            <li>命令行运维:config / user / log / file</li>
-            <li>广场名称、消息保留天数可配</li>
-            <li>替玩家向官方转发请求</li>
+            <li>开服务器广场,发帖、回复、置顶</li>
+            <li>开商店与银行,做自己的经济</li>
+            <li>建组织:个人 / 团队 / 企业三级</li>
+            <li>给玩家分配权限,细到每个功能</li>
           </ul>
         </article>
         <article>
-          <div class="idx">03 / OFFICIAL</div>
-          <h3>ZXMOS</h3>
-          <div class="role">官方节点</div>
-          <p>官方运行的节点,负责账号、许可、社区广场与跨服数据;客户端也能直连它。</p>
+          <div class="idx">03</div>
+          <h3>你是玩家</h3>
+          <div class="role">打开就能玩</div>
+          <p>没有第二套系统的学习成本:</p>
           <ul>
-            <li>账号 / 许可 / 封禁</li>
-            <li>官方广场(锌源广场)</li>
-            <li>拒绝未加密的直连登录</li>
+            <li>一个客户端登录,自动连上你的服</li>
+            <li>加好友、私聊,消息带格式</li>
+            <li>逛广场、逛商店、看公告</li>
+            <li>一切都在同一个窗口里</li>
           </ul>
         </article>
       </div>
@@ -181,99 +121,128 @@
   </div>
 </section>
 
-<!-- 功能 -->
+<!-- 与众不同 -->
+<section class="sec" id="capabilities">
+  <div class="wrap">
+    <div class="sec-head">
+      <div>
+        <div class="k">Why this one</div>
+        <h2>和别的不<br>一样的地方</h2>
+      </div>
+      <p>这些不是「架构图上的功能」,是每天真的会省事的地方。</p>
+    </div>
+    <div class="sec-body">
+      <div class="row">
+        <div class="side"><h3>一个客户端<br>连两种服</h3><p>官方服和你自己的服,同一个客户端。选模式就行,不用装两份。</p></div>
+        <div class="items">
+          <div><h4>连官方,立刻能用</h4><p>不用先搭服务器:填官方地址就能进社区、逛广场。</p></div>
+          <div><h4>连自建,数据归你</h4><p>自己起子服务端,玩家、消息、经济全在你机器上。</p></div>
+          <div><h4>两种还能串起来</h4><p>自建服向上接官方,社区与账号互通。</p></div>
+          <div><h4>换服不用重装</h4><p>连接窗口里改地址就行,客户端还是那一个。</p></div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="side"><h3>重复连接<br>会被拦下</h3><p>不会因为多点几次,服务端里挂着一堆僵尸连接。</p></div>
+        <div class="items">
+          <div><h4>单实例运行</h4><p>客户端只允许开一个,第二个自己退出。</p></div>
+          <div><h4>同目标不重连</h4><p>已经连着再点连接,弹窗告诉你「已经连接」。</p></div>
+          <div><h4>换目标自动断开</h4><p>改了地址或模式,先断旧连接再连新的。</p></div>
+          <div><h4>连接全程加密</h4><p>握手完成后,登录与聊天都是密文。</p></div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="side"><h3>消息不是<br>一行纯文本</h3><p>公告能排版、能加链接、能贴代码 —— 玩家看得懂。</p></div>
+        <div class="items">
+          <div><h4>Markdown / HTML</h4><p>标题、列表、粗体、代码块、表格都能渲染。</p></div>
+          <div><h4>面板可全屏</h4><p>消息太多时一键铺满工作区,四边留白一致。</p></div>
+          <div><h4>四个页签</h4><p>消息 / 日志 / 更新日志 / 自定义网页分开看。</p></div>
+          <div><h4>网页也能内嵌</h4><p>自己的公告页直接读进来排版显示。</p></div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="side"><h3>装在 U 盘<br>也能跑</h3><p>没有安装向导、没有运行时、没有环境依赖。</p></div>
+        <div class="items">
+          <div><h4>单文件程序</h4><p>原生 AOT 编译,双击 exe 就启动。</p></div>
+          <div><h4>数据随身走</h4><p>配置、消息、日志都在 exe 同目录,拷走即搬家。</p></div>
+          <div><h4>启动快</h4><p>没有 JIT 预热,冷启动几百毫秒级。</p></div>
+          <div><h4>也能正规安装</h4><p>要开始菜单和桌面图标就用 MSI,一样干净。</p></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 功能清单 -->
 <section class="sec" id="features">
   <div class="wrap">
     <div class="sec-head">
       <div>
-        <div class="k">Features</div>
-        <h2>管理<br>与社区</h2>
+        <div class="k">Everything you get</div>
+        <h2>功能清单</h2>
       </div>
-      <p>左侧导航分成经济 / 社区 / 组织 / 管理四组子功能,消息面板常驻右侧,Markdown 与 HTML 都能直接渲染。</p>
+      <p>打开客户端,左侧就是这些;每个都是一件能立刻做的事。</p>
     </div>
     <div class="sec-body">
       <div class="row">
-        <div class="side">
-          <h3>管理</h3>
-          <p>服主与管理员的日常操作,按子功能拆开,点进去只看到这一件事。</p>
-        </div>
+        <div class="side"><h3>社区</h3><p>让玩家有地方待着。</p></div>
         <div class="items">
-          <div><h4>白名单管理</h4><p>维护玩家白名单,配合服务器注册、账号绑定一起用。</p></div>
-          <div><h4>账号绑定</h4><p>社区账号与游戏角色绑定,作为权限、经济、封禁的依据。</p></div>
-          <div><h4>版本管理</h4><p>客户端与服务端版本核对、升级提示。</p></div>
-          <div><h4>数据统计</h4><p>玩家、经济与消息的指标汇总。</p></div>
+          <div><h4>服务器广场</h4><p>你自己的社区板块,名字可改。</p></div>
+          <div><h4>官方广场</h4><p>连官方时自动出现,全服玩家都能看。</p></div>
+          <div><h4>好友与私聊</h4><p>独立好友条,双击开聊天窗。</p></div>
+          <div><h4>公告与消息</h4><p>系统、公告、私信分开,支持格式化。</p></div>
         </div>
       </div>
       <div class="row">
-        <div class="side">
-          <h3>社区</h3>
-          <p>服务器广场(子服社区)与锌源广场(官方社区)两个来源,按实际连接出现。</p>
-        </div>
+        <div class="side"><h3>经济</h3><p>让服务器有自己的循环。</p></div>
         <div class="items">
-          <div><h4>服务器广场</h4><p>子服务端的社区内容,名字由 ZXMS 配置决定。</p></div>
-          <div><h4>锌源广场</h4><p>官方服务端的社区内容,直连官方或经子服中转才显示。</p></div>
-          <div><h4>好友与私聊</h4><p>独立好友条,双击开聊天窗口,消息走加密会话。</p></div>
-          <div><h4>消息中心</h4><p>系统 / 公告 / 私信分类,Markdown 与 HTML 直接渲染。</p></div>
+          <div><h4>商店</h4><p>摆商品、定价、玩家下单。</p></div>
+          <div><h4>银行</h4><p>存取款、转账、利息。</p></div>
+          <div><h4>交易记录</h4><p>谁买了什么,查得到。</p></div>
+          <div><h4>权限挂钩</h4><p>不同等级看到不同商品。</p></div>
         </div>
       </div>
       <div class="row">
-        <div class="side">
-          <h3>经济与组织</h3>
-          <p>商店、银行,以及个人 / 团队 / 企业三级组织。</p>
-        </div>
+        <div class="side"><h3>管理</h3><p>日常运维不用折腾。</p></div>
         <div class="items">
-          <div><h4>商店</h4><p>与玩家或官方进行交易。</p></div>
-          <div><h4>银行</h4><p>存取款、转账与利息。</p></div>
-          <div><h4>组织</h4><p>个人组织、团队组织、企业组织三级结构。</p></div>
-          <div><h4>权限模式</h4><p>Player 与管理员分权,细到每个子功能。</p></div>
+          <div><h4>白名单 / 封禁</h4><p>按机器码或账号拦人。</p></div>
+          <div><h4>账号绑定</h4><p>社区账号绑游戏角色。</p></div>
+          <div><h4>版本与数据源</h4><p>客户端版本核对、数据源切换。</p></div>
+          <div><h4>数据统计</h4><p>玩家、经济、消息指标汇总。</p></div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="side"><h3>组织</h3><p>把玩家组织起来。</p></div>
+        <div class="items">
+          <div><h4>个人组织</h4><p>小队规模的协作。</p></div>
+          <div><h4>团队组织</h4><p>多人分工、共同目标。</p></div>
+          <div><h4>企业组织</h4><p>大型组织的层级管理。</p></div>
+          <div><h4>组织内消息</h4><p>只在组织内可见的公告与消息。</p></div>
         </div>
       </div>
     </div>
   </div>
 </section>
 
-
-<!-- 版本亮点 -->
-<section class="sec" id="release">
+<!-- 上手三步 -->
+<section class="sec" id="start">
   <div class="wrap">
     <div class="sec-head">
       <div>
-        <div class="k">Release a0.4.1</div>
-        <h2>这次<br>改了什么</h2>
+        <div class="k">Get started</div>
+        <h2>三步就能用</h2>
       </div>
-      <p>完整改动见更新日志;这里只挑三件最影响日常使用的事。</p>
+      <p>不用先看文档,跟着走一遍就会。</p>
     </div>
-    <div class="sec-body">
-      <div class="row">
-        <div class="side"><h3>不会再连出<br>一堆僵尸连接</h3><p>重复点「连接」会被拦下并提示;换目标才断开重连。</p></div>
-        <div class="items">
-          <div><h4>单实例运行</h4><p>同时只能开一个客户端,第二个自动退出。</p></div>
-          <div><h4>连接前先关旧连接</h4><p>开始新连接前会关闭上一条,服务端不再堆积。</p></div>
-          <div><h4>OOBE 按模式选目标</h4><p>选 OOS 就用官方地址,不再错连子服。</p></div>
-          <div><h4>换目标自动重连</h4><p>改了地址或模式,先断开再连新目标。</p></div>
-        </div>
+    <div class="sec-body" style="padding-bottom:56px">
+      <div class="trio">
+        <article><div class="idx">01</div><h3>下载</h3><div class="role">30 秒</div><p>拿免安装包,解压到任意文件夹;或装 MSI。</p></article>
+        <article><div class="idx">02</div><h3>选服</h3><div class="role">1 分钟</div><p>连官方直接进;有自己的服就填地址端口。</p></article>
+        <article><div class="idx">03</div><h3>开始用</h3><div class="role">立刻</div><p>登录后左侧点开就能发公告、开商店、管玩家。</p></article>
       </div>
-    </div>
-  </div>
-</section>
-
-<!-- 技术栈 -->
-<section class="sec" id="stack">
-  <div class="wrap">
-    <div class="sec-head">
-      <div>
-        <div class="k">Under the hood</div>
-        <h2>技术栈</h2>
-      </div>
-      <p>原生 AOT 单文件程序、跨平台 UI 框架、事件驱动网络层。</p>
-    </div>
-    <div class="sec-body">
-      <div class="trio" style="grid-template-columns:repeat(4,1fr)">
-        <article><div class="idx" style="font-size:28px">.NET 10</div><h3 style="font-size:18px;margin:10px 0 6px">运行时</h3><p style="font-size:13.5px">NativeAOT 发布为单文件,无需安装运行时。</p></article>
-        <article><div class="idx" style="font-size:28px">Avalonia</div><h3 style="font-size:18px;margin:10px 0 6px">界面</h3><p style="font-size:13.5px">XAML + 自绘控件,深色主题与自定义图标。</p></article>
-        <article><div class="idx" style="font-size:28px">ECDH</div><h3 style="font-size:18px;margin:10px 0 6px">加密</h3><p style="font-size:13.5px">P-256 密钥交换 + AES-256-GCM 会话。</p></article>
-        <article><div class="idx" style="font-size:28px">WiX 7</div><h3 style="font-size:18px;margin:10px 0 6px">安装包</h3><p style="font-size:13.5px">MSI 全机器安装 + 便携 ZIP 两种交付。</p></article>
-      </div>
+      <p style="margin-top:26px;display:flex;gap:12px;flex-wrap:wrap">
+        <a class="btn btn-primary" href="download.html">下载客户端</a>
+        <a class="btn" href="help.html">看文档</a>
+      </p>
     </div>
   </div>
 </section>
@@ -286,25 +255,25 @@
         <div class="k">FAQ</div>
         <h2>常见问题</h2>
       </div>
-      <p>更多内容在<a href="help.html">文档与帮助</a>里。</p>
+      <p>更多在 <a href="help.html">文档与帮助</a>。</p>
     </div>
     <div class="sec-body" style="padding-bottom:56px">
       <div class="doc-main">
         <details style="border:1px solid var(--line);padding:14px 18px;margin-bottom:10px">
-          <summary style="cursor:pointer;font-weight:700">客户端要装 .NET 吗?</summary>
-          <p style="margin-top:10px">不用。发布的是 NativeAOT 单文件,三个原生 dll 和 exe 放一起就能跑。</p>
+          <summary style="cursor:pointer;font-weight:700">我没有自己的服务器,能用吗?</summary>
+          <p style="margin-top:10px">能。连官方服务端就能用社区、广场、消息这些;商店与自建社区内容需要自己的子服务端。</p>
         </details>
         <details style="border:1px solid var(--line);padding:14px 18px;margin-bottom:10px">
-          <summary style="cursor:pointer;font-weight:700">OS / OOS / SAOS 有什么区别?</summary>
-          <p style="margin-top:10px">OS 只连子服务端;OOS 直连官方服务端;SAOS 先连子服务端、再由它转发官方。</p>
+          <summary style="cursor:pointer;font-weight:700">要装数据库或 .NET 吗?</summary>
+          <p style="margin-top:10px">不用。客户端是单文件程序;子服务端也是解压即用,数据就是同目录下的文件。</p>
         </details>
         <details style="border:1px solid var(--line);padding:14px 18px;margin-bottom:10px">
-          <summary style="cursor:pointer;font-weight:700">要自己开子服务端吗?</summary>
-          <p style="margin-top:10px">不强制。想有独立的广场、账号与数据就部署 ZXMS;只想用官方社区,选 OOS 直连即可。</p>
+          <summary style="cursor:pointer;font-weight:700">玩家会不会很难上手?</summary>
+          <p style="margin-top:10px">玩家只需要一个客户端。登录后看到的就是左侧几个入口,不需要再学第二套系统。</p>
         </details>
         <details style="border:1px solid var(--line);padding:14px 18px">
-          <summary style="cursor:pointer;font-weight:700">数据存哪?</summary>
-          <p style="margin-top:10px">配置、消息与日志都生成在 exe 同目录;换机整体拷走即可。</p>
+          <summary style="cursor:pointer;font-weight:700">换电脑或换服怎么办?</summary>
+          <p style="margin-top:10px">整个文件夹拷走即可;换服在连接窗口里改地址端口,不用重装。</p>
         </details>
       </div>
     </div>
@@ -316,7 +285,7 @@
   <div class="wrap" style="padding:76px 28px;display:flex;flex-wrap:wrap;gap:24px;align-items:center;justify-content:space-between">
     <div>
       <h2 style="font-size:clamp(30px,4vw,60px);font-weight:900;letter-spacing:-.04em;line-height:1">现在就开始</h2>
-      <p style="color:var(--fg-dim);margin-top:12px">下载客户端,连官方服务端或你自己的子服务端。</p>
+      <p style="color:var(--fg-dim);margin-top:12px">下载客户端,连你的服务器,几分钟后就能发第一条公告。</p>
     </div>
     <div style="display:flex;gap:12px">
       <a class="btn btn-primary" href="download.html">下载客户端</a>
