@@ -21,7 +21,7 @@
 
 .doc-hero p { margin: 0; color: var(--muted); font-size: 15.5px; max-width: 72ch; }
 
-.doc-body { padding: 48px 0 64px; }
+.doc-body { padding: 30px 0 64px; }
 
 .doc-grid { display: grid; grid-template-columns: 232px 1fr; gap: 44px; align-items: start; }
 
@@ -47,7 +47,7 @@
   padding-bottom: 10px; border-bottom: 1px solid var(--line);
 }
 .doc-main h2:first-child { margin-top: 0; }
-.doc-main h3 { font-size: 18px; margin: 28px 0 10px; }
+.doc-main h3 { font-size: 18px; margin: 24px 0 10px; color: var(--fg); }
 .doc-main h4 { font-size: 15.5px; margin: 22px 0 8px; color: var(--fg); }
 .doc-main p { color: #b9c6d6; font-size: 14.8px; line-height: 1.8; margin: 0 0 14px; }
 .doc-main ul, .doc-main ol { color: #b9c6d6; font-size: 14.8px; line-height: 1.8; padding-left: 22px; }
@@ -92,3 +92,24 @@
   .doc-nav .grp { display: none; }
   .doc-nav a { border-left: 0; border: 1px solid var(--line); margin: 3px; padding: 5px 10px; }
 }
+
+
+/* 更新日志:版本块 */
+.version-block { border-top: 1px solid var(--line); padding: 28px 0 8px; }
+.version-block:first-child { border-top: 0; padding-top: 0; }
+.version-block h3 {
+  font-size: 19px; margin: 0 0 12px; padding: 6px 0 6px 12px;
+  border-left: 3px solid var(--accent); letter-spacing: -.2px;
+}
+.version-block h4 { margin: 16px 0 6px; font-size: 14.5px; color: var(--accent-2); }
+.version-block ul { margin: 6px 0 10px; }
+.version-block li { margin: 5px 0; }
+.version-block .lead, .version-block > p { color: var(--muted); }
+
+
+/* 帮助/教程页的分块 */
+.card-block { border: 1px solid var(--line); background: var(--surface); padding: 18px 20px; margin: 14px 0; }
+.card-block h3 { margin: 0 0 8px; font-size: 16.5px; }
+.card-block p { margin: 0 0 8px; }
+.card-block ul, .card-block ol { margin: 6px 0; }
+.doc-main header.section-head h2 { margin-top: 34px; }

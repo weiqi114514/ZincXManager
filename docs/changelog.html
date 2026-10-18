@@ -46,14 +46,29 @@
   </symbol>
 </svg>
 
-<main id="top">
-  <section class="section">
+<main>
+  <section class="doc-hero">
     <div class="wrap">
-      <header class="section-head">
-        <h2>更新日志</h2>
-        <p>本页由发布日志自动生成(最后更新 2026-10-17);只列对使用者有影响的变化。</p>
-      </header>
-      <section class="card version">
+      <div class="kicker">Changelog</div>
+      <h1>更新日志</h1>
+      <p>每个版本的改动。最新的在最上面;当前版本 <b>a0.4.1</b>。</p>
+    </div>
+  </section>
+
+  <section class="doc-body">
+    <div class="wrap doc-grid">
+      <aside class="doc-nav">
+        <div class="grp">版本</div>
+        <a href="#v041">a0.4.1</a>
+        <a href="#v040">a0.4.0</a>
+        <a href="#v033">a0.3.3</a>
+        <a href="#changelog-full">更早版本</a>
+        <div class="grp">相关</div>
+        <a href="download.html">下载</a>
+        <a href="tech.html">技术文档</a>
+      </aside>
+      <div class="doc-main" id="changelog-full">
+        <section class="version-block">
                 <h3>[a0.4.1] - 2026-10-18</h3>
         <p class="lead"><b>连接可靠性</b>:修掉「重复连接 / 连错目标」这一组问题,避免服务端挂一堆僵尸连接。</p>
 
@@ -434,7 +449,7 @@
           <li>首次接入仍是「账号不存在即自动注册」,改密码现在是 <code>osuser &lt;同名&gt; &lt;新密码&gt;</code>。</li>
         </ul>
       </section>
-      <section class="card version">
+      <section class="version-block">
         <h3>[未发布] - 2026-10-10</h3>
         <h4>新增(续)</h4>
         <ul>
@@ -489,7 +504,7 @@
           <li><code>ThemeWindowVeil</code> 保留"透过窗口看桌面"。亚克力档的侧栏仍用 Fluent 的 80%。</li>
         </ul>
       </section>
-      <section class="card version">
+      <section class="version-block">
         <h3>[未发布] - 2026-10-07</h3>
         <h4>新增</h4>
         <ul>
@@ -578,7 +593,12 @@
       </section>
     </div>
   </section>
+
+      </div>
+    </div>
+  </section>
 </main>
+
 
 <footer class="foot">
   <div class="wrap">
