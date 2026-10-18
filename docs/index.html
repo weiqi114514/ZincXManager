@@ -69,44 +69,129 @@
   </div>
 </div>
 
-<!-- 谁能用 / 用来做什么 -->
-<section class="sec" id="who">
+<section class="sec" id="player">
   <div class="wrap">
     <div class="sec-head">
       <div>
-        <div class="k">Who &amp; What</div>
-        <h2>你拿它<br>能干什么</h2>
+        <div class="k">For players</div>
+        <h2>玩家能用<br>什么</h2>
       </div>
-      <p>只分两种人:管理者(服主与管理员做的是同一批事,只是权限高低不同)和玩家。当前版本先交付玩家侧的功能组。</p>
+      <p>从开发区到小功能组:日常经营、社区交流、蓝图与 mod,都在客户端里。</p>
     </div>
     <div class="sec-body">
-      <div class="trio" style="grid-template-columns:1fr 1fr">
-        <article>
-          <div class="idx">01</div>
-          <h3>管理者</h3>
-          <div class="role">服主与管理员:同一套事,不同权限上限</div>
-          <p style="margin:0 0 12px;color:#f5c451;font-size:13px">当前版本的功能组都是玩家侧(经济 / 社区 / 组织 / 好友),管理入口还在开发中。</p>
-          <p>能碰到的功能一样,区别在于能走多远:</p>
-          <ul>
-            <li><b>管人</b>:白名单、封禁(账号或机器码)、处罚记录</li>
-            <li><b>管内容</b>:广场(一个子服只有一个)、公告、置顶、删帖</li>
-            <li><b>管经济</b>:删除违规商店、手动替玩家添加、调整所属权</li>
-            <li><b>管配置</b>:版本、数据源、消息保留天数、广场名</li>
-          </ul>
-          <p style="margin:14px 0 0;color:var(--fg-dim);font-size:13px">服主在这之上还能配服务器本身;管理员在授权范围内操作。</p>
-        </article>
-        <article>
-          <div class="idx">02</div>
-          <h3>玩家</h3>
-          <div class="role">当前版本能用的就是这些</div>
-          <p>不只是被动接受管理:</p>
-          <ul>
-            <li><b>自己开店</b>:定价、上架、结算</li>
-            <li><b>自己开银行</b>:存取款、转账、利息</li>
-            <li><b>自己开组织</b>:个人 / 团队 / 企业</li>
-            <li><b>自己的社交</b>:好友、私聊、逛广场、看公告</li>
-          </ul>
-        </article>
+      <div class="row">
+        <div class="side"><h3>组织</h3><p>把玩家组织起来,也把地图上的东西登记清楚。</p></div>
+        <div class="items">
+          <div><h4>开发区</h4><p>登记注册开发区,只能在自己登记的区域开发,不乱占地方。</p></div>
+          <div><h4>基地</h4><p>登记基地,和开发区一个思路,但用途是基地不是开发。</p></div>
+          <div><h4>机器</h4><p>每台机器都要登记;没登记的会被警告甚至强制拆除,防卡顿。</p></div>
+          <div><h4>TODO</h4><p>内置待办,组织里的事有人跟。</p></div>
+          <div><h4>公共资源库</h4><p>组织内的共享库,文档、蓝图都放这。</p></div>
+          <div><h4>工资</h4><p>给成员发工资,一句话的事。</p></div>
+          <div><h4>公款</h4><p>拿组织的公款去买卖,账目清楚。</p></div>
+          <div><h4>特殊用途</h4><p>注册成金融类企业,就多出银行这类专用功能。</p></div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="side"><h3>社区 · 广场</h3><p>服务器广场(你自己)与锌源广场(官方),同一套结构。</p></div>
+        <div class="items">
+          <div><h4>资源库</h4><p>蓝图、地图、材质包上传与下载,玩家和管理者都能传。</p></div>
+          <div><h4>帖子</h4><p>发帖、回帖、置顶。</p></div>
+          <div><h4>聊天室</h4><p>公共聊天室,可以按主题开多个房间。</p></div>
+          <div><h4>投票</h4><p>发起投票;范围可以是个人、某个子服,或整个 ZXM。</p></div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="side"><h3>经济</h3><p>商店与银行,玩家自己也能开。</p></div>
+        <div class="items">
+          <div><h4>商店 · 店铺</h4><p>官方和玩家都能开店,定价上架。</p></div>
+          <div><h4>商店 · 拍卖</h4><p>竞价拍卖,到点成交。</p></div>
+          <div><h4>银行 · 转账</h4><p>账户之间转钱,货币全服相通。</p></div>
+          <div><h4>银行 · 存款 / 贷款 / 债券</h4><p>存钱、借钱、买债券;一个人可以开多个银行账户。</p></div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="side"><h3>管理(玩家侧)</h3><p>自己那份数据和版本,自己管。</p></div>
+        <div class="items">
+          <div><h4>版本管理</h4><p>管理 MC 版本,以及 mod、材质包、蓝图、光影。</p></div>
+          <div><h4>数据源</h4><p>存多个数据源,随时切换,不用每次手填。</p></div>
+          <div><h4>服务器</h4><p>一个子服可连多个 MC 服,玩家数据各不同,按服切换;哪些全局、哪些独立由服主定。</p></div>
+          <div><h4>数据统计</h4><p>在线、经济、消息等数据。</p></div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="side"><h3>小功能组</h3><p>零碎但每天都用得上的东西。</p></div>
+        <div class="items">
+          <div><h4>绑定 / 换绑</h4><p>跟 ZXM 账号绑定,不用第三方登录插件。</p></div>
+          <div><h4>在线查看</h4><p>现在谁在线,一眼看到。</p></div>
+          <div><h4>仓库</h4><p>买到的东西都在仓库里,可扩容。</p></div>
+          <div><h4>签到</h4><p>可选,签到拿奖励,奖励由管理者配。</p></div>
+          <div><h4>活动</h4><p>管理者发活动,玩家做任务领奖。</p></div>
+          <div><h4>成就</h4><p>ZXM 内的成就,比如第 100 次启动客户端。</p></div>
+          <div><h4>贴图解析</h4><p>把 mod 的 jar 丢进来,自动解析贴图,商店里的物品不再是无图方块。</p></div>
+          <div><h4>服板联登</h4><p>省掉登录插件,进服时在客户端确认一下就行。</p></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="sec" id="admin">
+  <div class="wrap">
+    <div class="sec-head">
+      <div>
+        <div class="k">For admins</div>
+        <h2>管理员能用<br>什么</h2>
+      </div>
+      <p>MC 服务器、跨服联动、平台运营、查询留痕 —— 四层都在同一套界面里。</p>
+    </div>
+    <div class="sec-body">
+      <div class="row">
+        <div class="side"><h3>MC 服务器管理</h3><p>直接动手的那一层。</p></div>
+        <div class="items">
+          <div><h4>RCON</h4><p>和 MC 服务端直连,执行命令。</p></div>
+          <div><h4>监听服务器</h4><p>实时看 MC 服输出。</p></div>
+          <div><h4>文件管理</h4><p>管理 MC 服或 ZXMS 所在机器的文件。</p></div>
+          <div><h4>Mod / 插件管理</h4><p>装、卸、换版本。</p></div>
+          <div><h4>地图管理 / 备份切换</h4><p>换图、回滚到某个备份。</p></div>
+          <div><h4>玩家数据管理</h4><p>直接改玩家 dat 等数据。</p></div>
+          <div><h4>OP 管理</h4><p>给权限、收权限。</p></div>
+          <div><h4>玩家背包管理</h4><p>查看与调整玩家背包。</p></div>
+          <div><h4>白名单</h4><p>MC 白名单管理,和 ZXM 绑定联动。</p></div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="side"><h3>功能类</h3><p>跨服、外部联动、批量动作。</p></div>
+        <div class="items">
+          <div><h4>地图备份</h4><p>一键备份,出事能回。</p></div>
+          <div><h4>多服玩家互通</h4><p>多区服之间自动同步玩家数据。</p></div>
+          <div><h4>与 MC 服的连接设置</h4><p>地址、端口、密钥,一处配好。</p></div>
+          <div><h4>QQ 机器人连接</h4><p>接 QQ 机器人框架,群里也能管。</p></div>
+          <div><h4>QQ 绑定</h4><p>把 ZXM 账号和 QQ 绑起来。</p></div>
+          <div><h4>联 ban</h4><p>在 ZXM 里封人,同时给被封玩家发消息、往群里同步。</p></div>
+          <div><h4>投票发布</h4><p>按范围发:特定人、整个子服、整个 ZXM。</p></div>
+          <div><h4>统计</h4><p>人数、经济、在线曲线。</p></div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="side"><h3>ZXM 自身的运营</h3><p>平台这一层也归你管。</p></div>
+        <div class="items">
+          <div><h4>账户管理</h4><p>ZXM 账号的增删改查。</p></div>
+          <div><h4>社区管理</h4><p>帖子、资源、聊天室分别管。</p></div>
+          <div><h4>组织管理</h4><p>个人 / 团队 / 企业组织分别管。</p></div>
+          <div><h4>官方商店</h4><p>上架、下架、改价。</p></div>
+          <div><h4>官方贷款 / 债券</h4><p>平台侧的金融产品。</p></div>
+          <div><h4>开发区 / 机器 / 基地管理</h4><p>审核、撤销、纠错。</p></div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="side"><h3>查询与留痕</h3><p>出了问题能查得到。</p></div>
+        <div class="items">
+          <div><h4>坐标校验</h4><p>自动核对登记的开发区 / 机器坐标是否真实存在。</p></div>
+          <div><h4>玩家出入记录</h4><p>谁什么时候进的哪个服。</p></div>
+          <div><h4>群聊天记录</h4><p>QQ 群聊天留档。</p></div>
+          <div><h4>服聊天记录</h4><p>游戏内聊天留档。</p></div>
+        </div>
       </div>
     </div>
   </div>
