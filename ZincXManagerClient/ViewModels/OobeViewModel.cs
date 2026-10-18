@@ -28,6 +28,11 @@ public partial class OobeViewModel : ViewModelBase
     /// <summary>OOBE 内部自己用的连接(负责 300 握手与收账号回复)。</summary>
     private readonly ConnectViewModel _connect = new();
 
+    // 上次连上的目标(用来判断要不要重连)
+    private string _connectedHost = "";
+    private string _connectedPort = "";
+    private string _connectedMode = "";
+
     private TaskCompletionSource<(bool Ok, string Text)>? _reply;
 
     [ObservableProperty]
@@ -170,9 +175,16 @@ public partial class OobeViewModel : ViewModelBase
     [NotifyPropertyChangedFor(nameof(IsSaos), nameof(IsOs), nameof(IsOos),
         nameof(ShowClientSource), nameof(ShowOfficialSource),
         nameof(Levels), nameof(LevelHint), nameof(AdminSideVisible))]
+    [CommunityToolkit.Mvvm.ComponentModel.NotifyPropertyChangedFor(nameof(IsSaos), nameof(IsOosMode), nameof(IsZxmsMode))]
     public partial string Mode { get; set; } = "SAOS";
 
     public bool IsSaos => Mode == "SAOS";
+
+    /// <summary>OOS 模式:数据源页要填官方服务端地址(ozip/ozport)。</summary>
+    public bool IsOosMode => Mode == "OOS";
+
+    /// <summary>非 OOS:数据源页填子服务端地址(czip/czport)。</summary>
+    public bool IsZxmsMode => Mode != "OOS";
     public bool IsOs => Mode == "OS";
     public bool IsOos => Mode == "OOS";
 
@@ -369,15 +381,24 @@ public partial class OobeViewModel : ViewModelBase
         Message = "正在连接数据源…";
 
         // 先把这步填的数据源写进配置,再按模式连
-        SaveDataSource();
+        ApplyConnectTarget();
 
-        _connect.Mode = Mode;
-        _connect.Host = Mode == "OOS" ? OzIp : CzIp;
-        _connect.Port = Mode == "OOS" ? OzPort : CzPort;
+        // 已经连着但目标/模式变了(比如先连了 ZXMS 又改选 OOS)→ 先断开重连,别复用错连接
+        var targetChanged = _connectedHost != _connect.Host
+                            || _connectedPort != _connect.Port
+                            || _connectedMode != _connect.Mode;
+        if (_connect.IsConnected && targetChanged)
+        {
+            await _connect.DisconnectAsync();
+        }
 
         if (!_connect.IsConnected)
         {
             await _connect.ConnectAsync();
+
+            _connectedHost = _connect.Host;
+            _connectedPort = _connect.Port;
+            _connectedMode = _connect.Mode;
 
             if (!await _connect.WaitConnectedAsync())
             {
@@ -461,6 +482,19 @@ public partial class OobeViewModel : ViewModelBase
     }
 
     /// <summary>把数据源那几项写进 config.ini。</summary>
+    /// <summary>
+    /// 按当前模式把连接目标设好(OS/SAOS → czip;OOS → ozip),并把填写写进 config。
+    /// 连接按钮和登录/注册都走这里,避免"选了 OOS 却按 czip 连"。
+    /// </summary>
+    public void ApplyConnectTarget()
+    {
+        SaveDataSource();
+
+        _connect.Mode = Mode;
+        _connect.Host = Mode == "OOS" ? OzIp : CzIp;
+        _connect.Port = Mode == "OOS" ? OzPort : CzPort;
+    }
+
     private void SaveDataSource()
     {
         ClientConfig.Set("mode", Mode);

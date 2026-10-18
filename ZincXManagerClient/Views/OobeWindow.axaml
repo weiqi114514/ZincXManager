@@ -313,11 +313,21 @@
             </Grid>
           </Border>
 
-          <TextBlock Classes="label" Text="连接端 IP" HorizontalAlignment="Center" Margin="0,8,0,0"/>
-          <TextBox Classes="field" Text="{Binding CzIp}" HorizontalAlignment="Center" Width="320"/>
+          <!-- 子服务端(OS / SAOS):填 czip / czport -->
+          <StackPanel Spacing="6" IsVisible="{Binding IsZxmsMode}">
+            <TextBlock Classes="label" Text="子服务端 IP" HorizontalAlignment="Center" Margin="0,8,0,0"/>
+            <TextBox Classes="field" Text="{Binding CzIp}" HorizontalAlignment="Center" Width="320"/>
+            <TextBlock Classes="label" Text="子服务端端口" HorizontalAlignment="Center"/>
+            <TextBox Classes="field" Text="{Binding CzPort}" HorizontalAlignment="Center" Width="320"/>
+          </StackPanel>
 
-          <TextBlock Classes="label" Text="连接端端口" HorizontalAlignment="Center"/>
-          <TextBox Classes="field" Text="{Binding CzPort}" HorizontalAlignment="Center" Width="320"/>
+          <!-- OOS:填官方服务端 ozip / ozport(默认 zxm.zincms.top:25000) -->
+          <StackPanel Spacing="6" IsVisible="{Binding IsOosMode}">
+            <TextBlock Classes="label" Text="官方服务端 IP" HorizontalAlignment="Center" Margin="0,8,0,0"/>
+            <TextBox Classes="field" Text="{Binding OzIp}" HorizontalAlignment="Center" Width="320"/>
+            <TextBlock Classes="label" Text="官方服务端端口" HorizontalAlignment="Center"/>
+            <TextBox Classes="field" Text="{Binding OzPort}" HorizontalAlignment="Center" Width="320"/>
+          </StackPanel>
 
           <StackPanel Orientation="Horizontal" Spacing="12" HorizontalAlignment="Center" Margin="0,6,0,0">
             <Button Classes="primary" Content="连接" Click="OnConnectSourceClick"/>

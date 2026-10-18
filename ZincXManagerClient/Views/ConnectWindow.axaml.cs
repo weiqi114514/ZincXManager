@@ -99,7 +99,22 @@ public partial class ConnectWindow : Window
 
     private async void OnConnectClick(object? sender, RoutedEventArgs e)
     {
-        if (Vm is not null) await Vm.ConnectAsync();
+        if (Vm is null)
+        {
+            return;
+        }
+
+        // 已经连在这个目标上:不重复连,弹窗提醒
+        if (Vm.IsConnectedToSameTarget)
+        {
+            await MessageDialog.InfoAsync(this, "已经连接",
+                $"当前已经连在 {Vm.ConnectedHost}:{Vm.ConnectedPort},不用重复连接。\n要换目标请先断开,或直接改地址后再点连接。",
+                hint: "同一目标不会重复建立连接");
+            return;
+        }
+
+        // 连在别的目标上:ConnectAsync 会先断开旧连接再连新目标
+        await Vm.ConnectAsync();
     }
 
     private async void OnDisconnectClick(object? sender, RoutedEventArgs e)

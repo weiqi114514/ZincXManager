@@ -195,6 +195,19 @@ public partial class OobeWindow : Window
         try
         {
             Vm.Connect.ErrorRaised += OnConnectError;
+
+            // 按当前模式设目标(OS/SAOS → czip,OOS → ozip),否则会用 config 里的旧地址
+            Vm.ApplyConnectTarget();
+
+            // 已经连在同一目标上:不重复连,弹窗提醒
+            if (Vm.Connect.IsConnectedToSameTarget)
+            {
+                await MessageDialog.InfoAsync(this, "已经连接",
+                    $"当前已经连在 {Vm.Connect.ConnectedHost}:{Vm.Connect.ConnectedPort},不用重复连接。",
+                    hint: "换目标会先断开再连");
+                return;
+            }
+
             await Vm.Connect.ConnectAsync();
             var ok = await Vm.Connect.WaitConnectedAsync();
             Vm.IsSourceConnected = ok;

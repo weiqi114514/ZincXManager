@@ -50,6 +50,20 @@ public partial class ConnectViewModel : ViewModelBase, IDisposable
     // 从 config.ini 读到的两组目标(切模式时自动填进输入框,仍可手动改)
     private readonly string _czip;
     private readonly string _czport;
+    /// <summary>上一次成功连上的目标(用来判断重复点连接)。</summary>
+    public string ConnectedHost { get; private set; } = string.Empty;
+
+    public string ConnectedPort { get; private set; } = string.Empty;
+
+    public string ConnectedMode { get; private set; } = string.Empty;
+
+    /// <summary>已经连着且地址/端口/模式都没变 —— 这时再点连接就是重复。</summary>
+    public bool IsConnectedToSameTarget =>
+        IsConnected
+        && ConnectedHost == Host.Trim()
+        && ConnectedPort == Port.Trim()
+        && ConnectedMode == Mode;
+
     /// <summary>当前官方服务端地址(读 config 的 ozip/ozport),连接窗口里只读显示。</summary>
     public string OfficialAddress => $"{ClientConfig.Get(KeyOzip, OfficialServer.Host)}:{ClientConfig.Get(KeyOzport, OfficialServer.PortText)}";
 
@@ -230,6 +244,22 @@ public partial class ConnectViewModel : ViewModelBase, IDisposable
         _rejected = false;
         IsBusy = true;
         SetState("连接中…", "#F0A020");
+
+        // 重复点「连接」时先把旧连接关掉,否则服务端会挂着一堆僵尸连接
+        if (_client is { } stale)
+        {
+            _client = null;
+            try
+            {
+                await stale.CloseAsync();
+                Logger.Log(LogLevel.Info, "[ZXMC] 开始新连接前,已关闭上一条连接");
+            }
+            catch (Exception ex)
+            {
+                Logger.Log(LogLevel.Warning, "[ZXMC] 关闭旧连接失败: " + ex.Message);
+            }
+        }
+        IsConnected = false;
         Logger.Log(LogLevel.Info, $"[ZXMC] 模式 {Mode}(要求 {ExpectRole}),连接 {host}:{port}");
         AddLogOnly($"本轮要求对方身份:{ExpectRole}");
 
@@ -282,6 +312,9 @@ public partial class ConnectViewModel : ViewModelBase, IDisposable
                         Logger.Log(LogLevel.Info, $"[ZXMC] 收到上线确认:{text}");
                         if (!_rejected)
                         {
+                            ConnectedHost = host;
+                            ConnectedPort = port.ToString();
+                            ConnectedMode = Mode;
                             IsConnected = true;
                             SetState($"已连接 {ExpectRole} {host}:{port}", "#22A05A");
                         }

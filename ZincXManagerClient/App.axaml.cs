@@ -20,8 +20,19 @@ public partial class App : Application
         AvaloniaXamlLoader.Load(this);
     }
 
+    /// <summary>单实例互斥:避免开两个客户端各连一条,服务端里出现重复连接。</summary>
+    private static readonly System.Threading.Mutex SingleInstanceMutex =
+        new(false, @"Local\ZincXManagerClient.SingleInstance");
+
     public override void OnFrameworkInitializationCompleted()
     {
+        // 已经有一个在跑 → 直接退出(新开的这个不留)
+        if (!SingleInstanceMutex.WaitOne(0))
+        {
+            System.Console.WriteLine("[ZXMC] 已有一个客户端在运行,本次启动退出");
+            Environment.Exit(0);
+            return;
+        }
         // 先把 config 里存的配色 / 透明样式应用一次,否则所有窗口都是写死的默认蓝
         ThemeManager.ApplySaved();
 

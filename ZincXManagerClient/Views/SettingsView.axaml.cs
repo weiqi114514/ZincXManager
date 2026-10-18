@@ -30,6 +30,9 @@ public partial class SettingsView : UserControl
 
     private SettingsViewModel? Vm => DataContext as SettingsViewModel;
 
+    /// <summary>当前打开着的连接流程窗口(防止重复点出多个)。</summary>
+    private static ConnectWindow? _flowWindow;
+
     /// <summary>切换连接方式(SAOS / OS / OOS);这项就是 ZXMC 模式,与连接界面共用同一配置。</summary>
     private void OnModeClick(object? sender, RoutedEventArgs e)
     {
@@ -275,6 +278,13 @@ public partial class SettingsView : UserControl
 
         var owner = TopLevel.GetTopLevel(this) as Window;
 
+        // 已经开着连接窗口就把它叫到前面,别每点一次都新建一个(会留下多条僵尸连接)
+        if (_flowWindow is { IsVisible: true } existing)
+        {
+            existing.Activate();
+            return;
+        }
+
         // 会话持有这条连接:否则连接窗口一关,OnClosed 会把它当"临时连接"Dispose 掉(断线)
         var connect = new ConnectViewModel();
         ClientSession.Connect = connect;
@@ -284,6 +294,15 @@ public partial class SettingsView : UserControl
         {
             WindowPlacement.PlaceAt(window, owner);
         }
+
+        _flowWindow = window;
+        window.Closed += (_, _) =>
+        {
+            if (ReferenceEquals(_flowWindow, window))
+            {
+                _flowWindow = null;
+            }
+        };
 
         window.Show();
 
