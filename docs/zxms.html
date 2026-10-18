@@ -6,30 +6,25 @@
 <title>子服务端 ZXMS 部署教程 · ZincXManager</title>
 <meta name="description" content="ZincXManager 子服务端(ZXMS)部署教程:配置 config.ini、首次启动自动注册官方账号、让客户端接入、常用控制台命令与常见问题。">
 <link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="assets/css/style.css">
+<link rel="stylesheet" href="assets/css/flat.css">
 </head>
 <body>
 
-<header class="site-header" id="header">
-  <div class="wrap header-inner">
-    <a class="brand" href="index.html" aria-label="ZincXManager 首页">
+<header class="nav">
+  <div class="wrap nav-in">
+    <a class="brand" href="index.html">
       <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 36 9" width="104" height="26" role="img"><svg x="0" y="0" width="36" height="7" viewBox="0.756 0.541 36.472 7.899" preserveAspectRatio="none"><path d="M10.788,0.7l-9.788,0v0.6h8.134l-8.378,7h10.992l6.2,-6.864l6.983,7.004l6.079,-6.981l5.762,6.736l0.456,-0.39l-6.214,-7.264l-6.113,7.019l-6.975,-6.996l-6.445,7.136h-9.072z" fill="currentColor"/></svg><svg x="10" y="0" width="8" height="7" viewBox="0.803 0.773 8.402 7.445" preserveAspectRatio="none"><path d="M4.045,4.058l-3.242,-2.833l0.395,-0.452l3.242,2.833zM8.794,8.218c-0.782,-0.736 -1.934,-1.769 -3.456,-3.101l0.395,-0.452c1.528,1.336 2.685,2.375 3.472,3.116z" fill="currentColor" opacity="0.62"/></svg></svg></span>
-      <span class="brand-text">ZincXManager<em>ZXM</em></span>
+      <span>ZincXManager</span>
     </a>
-    <button class="nav-toggle" id="navToggle" aria-expanded="false" aria-controls="siteNav" aria-label="打开导航">
-      <span></span><span></span><span></span>
-    </button>
-        <nav class="site-nav" id="siteNav">
-      <a href="index.html#features">功能</a>
-      <a href="index.html#arch">架构</a>
-      <a href="index.html#modes">模式</a>
+    <nav class="nav-links">
+      <a href="#arch">架构</a>
+      <a href="#features">功能</a>
       <a href="download.html">下载</a>
-      <a href="zxms.html" class="active">子服教程</a>
-      <a href="help.html" class="active">文档</a>
+      <a href="help.html">文档</a>
       <a href="changelog.html">更新日志</a>
-      <a href="index.html#about">关于</a>
-      <a class="btn btn-ghost" href="https://github.com/weiqi114514/ZincXManager" target="_blank" rel="noopener">GitHub</a>
+      <a href="tech.html">技术文档</a>
     </nav>
+    <a class="nav-cta" href="download.html">下载客户端</a>
   </div>
 </header>
 
@@ -219,23 +214,41 @@ ban list / ban del 编号       查看 / 解封</pre>
   </section>
 </main>
 
-<footer class="site-footer">
-  <div class="wrap footer-inner">
-    <div class="footer-brand">
-      <strong>ZincXManager</strong>
-      <span>锌X管理面板 · ZXM</span>
+<footer class="foot">
+  <div class="wrap">
+    <div class="foot-grid">
+      <div>
+        <a class="brand" href="index.html" style="margin-bottom:14px">
+          <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 36 9" width="104" height="26" role="img"><svg x="0" y="0" width="36" height="7" viewBox="0.756 0.541 36.472 7.899" preserveAspectRatio="none"><path d="M10.788,0.7l-9.788,0v0.6h8.134l-8.378,7h10.992l6.2,-6.864l6.983,7.004l6.079,-6.981l5.762,6.736l0.456,-0.39l-6.214,-7.264l-6.113,7.019l-6.975,-6.996l-6.445,7.136h-9.072z" fill="currentColor"/></svg><svg x="10" y="0" width="8" height="7" viewBox="0.803 0.773 8.402 7.445" preserveAspectRatio="none"><path d="M4.045,4.058l-3.242,-2.833l0.395,-0.452l3.242,2.833zM8.794,8.218c-0.782,-0.736 -1.934,-1.769 -3.456,-3.101l0.395,-0.452c1.528,1.336 2.685,2.375 3.472,3.116z" fill="currentColor" opacity="0.62"/></svg></svg></span>
+        </a>
+        <p style="color:var(--fg-dim);font-size:13.5px;max-width:34ch">面向 Minecraft 服主与社区管理员的一体化管理面板。</p>
+      </div>
+      <div>
+        <h5>产品</h5>
+        <a href="#arch">架构</a>
+        <a href="#features">功能</a>
+        <a href="download.html">下载</a>
+        <a href="changelog.html">更新日志</a>
+      </div>
+      <div>
+        <h5>文档</h5>
+        <a href="help.html">文档与帮助</a>
+        <a href="tech.html">技术文档</a>
+        <a href="zxms.html">子服务端教程</a>
+        <a href="arch.html">类与协议表</a>
+      </div>
+      <div>
+        <h5>其他</h5>
+        <a href="https://github.com/weiqi114514/ZincXManager" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://github.com/weiqi114514/ZincXManager/releases" target="_blank" rel="noopener">Releases</a>
+        <a href="seq.html">时序图</a>
+        <a href="deploy.html">部署</a>
+      </div>
     </div>
-    <nav class="footer-links">
-      <a href="index.html#features">功能</a>
-      <a href="index.html#arch">架构</a>
-      <a href="index.html#modes">模式</a>
-      <a href="download.html">下载</a>
-      <a href="zxms.html">子服教程</a>
-      <a href="help.html">文档与帮助</a>
-      <a href="changelog.html">更新日志</a>
-      <a href="https://github.com/weiqi114514/ZincXManager" target="_blank" rel="noopener">GitHub</a>
-    </nav>
-    <p class="copyright">© <span id="year">2026</span> ZincXManager · zxm.zincms.top</p>
+    <div class="foot-bot">
+      <span>© 2026 ZincXManager · 锌X管理面板</span>
+      <span>交流群 (QQ) 1129776132</span>
+    </div>
   </div>
 </footer>
 
