@@ -1,22 +1,10 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-<meta charset="UTF-8">
+<html lang="zh-CN"><head><meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>更新日志 · ZincXManager</title>
-<meta name="description" content="ZincXManager(ZXM)更新日志:每个版本新增了什么、改了什么、修了什么。">
+<title>更新日志 — ZincXManager</title>
 <link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
-<style>
-  .version { margin-bottom: 18px; }
-  .version h3 { margin: 0 0 6px; font-size: 19px; }
-  .version h4 { margin: 14px 0 6px; font-size: 15px; color: var(--accent); }
-  .version ul { margin: 0; padding-left: 20px; display: grid; gap: 6px; color: var(--muted); }
-  .version li { line-height: 1.75; }
-</style>
 <link rel="stylesheet" href="assets/css/flat.css">
-</head>
-<body>
-
+</head><body>
 <header class="nav">
   <div class="wrap nav-in">
     <a class="brand" href="index.html">
@@ -34,150 +22,38 @@
     <a class="nav-cta" href="download.html">下载客户端</a>
   </div>
 </header>
-
 <main>
   <section class="doc-hero grid-bg"><div class="wrap">
     <div class="k">Changelog</div><h1>更新日志</h1>
-    <p>左侧选版本,右侧看这个版本改了什么。当前版本 <b>a0.4.1</b>。</p>
+    <p>每个版本单独一页,点进去看这一版的改动。</p>
   </div></section>
-  <section class="doc-body"><div class="wrap doc-grid">
-    <aside class="doc-nav" id="verlist"><div class="grp">Versions</div>
-        <a href="#" data-i="0">[a0.4.0] - 2026-10-18</a>
-        <a href="#" data-i="1">[未发布] - 2026-10-10</a>
-        <a href="#" data-i="2">[未发布] - 2026-10-07</a>
-      <div class="grp">Links</div>
-      <a href="download.html">下载</a>
-      <a href="tech.html">技术文档</a>
-    </aside>
-    <div class="doc-main" id="verbody">
-<section class="version-block">
-                <h3>[a0.4.0] - 2026-10-18</h3>
-        <p class="lead"><b>子功能页 + 消息渲染 + 广场</b>:经济/社区/组织/管理四页都改成子功能卡片;消息面板支持 Markdown 与 HTML;服务器广场与锌源广场按实际连接区分数据来源;ZXMOS 补上加密协商。</p>
-
-        <h4>新增</h4>
-        <ul>
-          <li><b>子功能页</b>:经济(商店/银行)、社区(服务器广场/锌源广场)、组织(个人/团队/企业组织)、管理(版本/数据源/服务器/数据统计),统一卡片模板 + 设计稿描边图标</li>
-          <li><b>好友独立窗体</b>:点「好友」打开条状好友条,双击好友再开聊天窗体</li>
-          <li><b>消息面板支持 Markdown / HTML</b>:消息卡片、日志、更新日志、自定义网页都按格式渲染,自动识别</li>
-          <li><b>消息面板全屏按钮</b>:左下角,在工作区内 500ms 滑动展开(四周留 10px),图标随状态切换</li>
-          <li><b>服务器广场名称可自定义</b>:ZXMS 的 config 新增 squarename,下发给客户端当标题</li>
-          <li><b>锌源广场按实际连接显示</b>:直连 ZXMOS 或经子服连官方才显示</li>
-          <li><b>「在浏览器打开」可选浏览器</b>:Edge / Chrome / Firefox(火狐) / 360</li>
-          <li><b>ZXMOS 加密协商</b>:补 380/381 会话握手,并拒绝未加密的直连登录</li>
-          <li><b>ZXMS 连 ZXMOS 先握手</b>:先协商密钥再上线登录</li>
-          <li>主界面默认页;点左上 Logo 回默认页;启动连接流程时关闭主界面</li>
-        </ul>
-
-        <h4>修复</h4>
-        <ul>
-          <li><b>Toast 长文本显示不全</b>:改成图标/文字两列,文字按剩余宽度换行</li>
-          <li><b>OOS 官方服务端地址</b>:从设置页搬到连接流程窗口(5 秒风险说明 + 填 IP:端口)</li>
-          <li><b>设置页不再能改模式和 IP</b>:只显示当前值</li>
-          <li><b>消息窗口收起规则</b>:只有默认页显示消息面板</li>
-          <li>子功能卡片高度 140 → 126</li>
-        </ul>
-
-        <h3>[a0.3.2] - 2026-10-17</h3>
-        <p class="lead"><b>启动流程与外观修复</b>:打开客户端先测数据源,连不上直接弹窗并停在连接界面;同时修掉「配色永远默认蓝」「亚克力透明度调不动」「半透明档还是亚克力」。含 a0.3.1 的加密会话与登录挑战-响应。</p>
-
-        <h4>安全</h4>
-        <ul>
-          <li><b>会话加密</b>:握手 380 / 381 交换 ECDH(P-256)公钥,HKDF-SHA256 派生两把 AES-256-GCM 密钥,之后所有报文加密(包头 Flags 0x0001)</li>
-          <li><b>登录挑战-响应</b>:nonce(秒 + 32 位随机)每次不同,proof = SHA256(密码密文 : nonce);服务端按存的密文重算,nonce 一次性 + 5 分钟窗口</li>
-          <li>服务端拒绝未加密的明文登录(返回 err|客户端版本过旧)</li>
-        </ul>
-
-        <h4>新增</h4>
-        <ul>
-          <li><b>启动数据源自检</b>:等待窗 → 连上才进登录(或免登录主界面);连不上弹「连接 ZXMS 失败 / 连接 ZXMOS 失败」并停在连接窗口</li>
-          <li><b>连接窗口「去登录」</b>:连接成功后进登录界面,不再直进主界面</li>
-          <li>OOBE 第 5 步连接失败会弹窗</li>
-          <li>ZXMOS 新增 <code>config</code> 配置模式(name / port / msgdays);ZXMS 配置表补齐 oshash / configver</li>
-          <li>配置模式拒绝其它命令(提示先 exitc);启动横幅带版本号 <code>-a0.3.2</code></li>
-        </ul>
-
-        <h4>修复</h4>
-        <ul>
-          <li><b>配色从未应用</b>:<code>ThemeManager.ApplySaved()</code> 无人调用,永远默认蓝;现在启动即按 config.ini 的 theme / glass / alpha 生效</li>
-          <li><b>OOBE 模式选择高亮写死</b>:改用 ThemeLight / ThemeMuted / ThemeSecondary / ThemePrimaryDark</li>
-          <li><b>亚克力档透明度固定</b>:所有表面按「设计基准 × 滑杆比例」整体缩放(80/90/36/36/40/60%)</li>
-          <li><b>半透明档仍是亚克力</b>:切档时重新套窗口材质(半透明 → Transparent)</li>
-        </ul>
-
-<h3>[未发布] - 2026-10-11</h3>
-        <h4>新增(续 8)</h4>
-        <ul>
-          <li><strong>全量测试合并成一个入口</strong> <code>_run-all.ps1</code>:一条命令跑完 21 个套件(单元 + 场景 ①~⑫ + 身份码 + 官方验证 + GUI 类),</li>
-          <li>自带端口预检、每个套件明细落盘(<code>_回归明细\*.txt</code>)、末尾总表,退出码 = 失败套件数;</li>
-          <li>另带 <code>-Only</code> / <code>-Skip</code> / <code>-List</code>。旧的 <code>_run-full.ps1</code> / <code>_run-core.ps1</code> / <code>_run-all-tests.ps1</code> 退役。</li>
-          <li><strong>官网重写</strong>(<code>zxm-website\</code>):去掉源码构建步骤与源码仓库/开源协议链接;新增</li>
-          <li><strong>下载页</strong>(<code>download.html</code>,由打包产物自动生成版本/大小/SHA256)、<strong>子服务端 ZXMS 部署教程页</strong>(<code>zxms.html</code>)、</li>
-          <li><strong>更新日志页</strong>(<code>changelog.html</code>,由本文件自动生成)、sitemap 更新。</li>
-          <li><strong>客户端安装包</strong>:<code>ZincXManagerClient-&lt;版本&gt;-x64.msi</code>(全机器安装,自动建开始菜单 + 桌面快捷方式,可在「应用和功能」卸载)</li>
-          <li>+ <code>ZincXManagerClient-&lt;版本&gt;-win-x64-portable.zip</code>(免安装);</li>
-          <li><strong>子服务端</strong>:<code>ZincXManagerServer-&lt;版本&gt;-win-x64.zip</code>(含 <code>config.ini</code> 模板)。</li>
-          <li>一键出包脚本 <code>_build-installer.ps1</code>,产物与 SHA256 落到桌面测试包。</li>
-          <li><strong>安装图标</strong> <code>zxm.ico</code>:6 个尺寸(16~256),按官网配色(深蓝底 + 绿色描边 + 绿 Z)现画现生成(<code>_make-icon.ps1</code>)。</li>
-        </ul>
-      </section>
-<section class="version-block">
-        <h3>[未发布] - 2026-10-10</h3>
-        <h4>新增(续)</h4>
-        <ul>
-          <li><strong>缺口③修复:经 ZXMS 中转的玩家 / 管理账号登录</strong></li>
-          <li>ZXMS 转发登录时也追加 <code>|relay</code> 标记(此前只有注册带);ZXMOS 认出标记后改查<strong>用户账号表</strong>,</li>
-          <li>并且不再把 ZXMS 这条连接登记成玩家、也不把 ZXMS 的 IP 记到玩家头上(机器码照记,连坐可用)。</li>
-          <li>测试③ <strong>13/13</strong>:中转玩家注册 → 登录成功 → 机器码落表 → 走用户表,全部通过。</li>
-          <li><strong>弹窗形态落地(填空 / 选择 / 双按钮)</strong></li>
-          <li>设置 → 模式与数据源:「改数据源地址…」= <strong>填空弹窗</strong>(预填当前地址,打开即全选;校验 <code>IP:端口</code> 且只能一个冒号);</li>
-          <li>「切换连接方式…」= <strong>选择弹窗</strong>(SAOS / OS / OOS,选完立即写 <code>config.ini</code>)。</li>
-          <li>设置 → 账户与安全:「清除本地登录记录…」= <strong>双按钮确认</strong>(清掉记住的密文与免登录设置,服务端账号不受影响)。</li>
-          <li>弹窗按钮支持 <strong>回车 = 主按钮</strong>、<strong>Esc = 取消</strong>。</li>
-        </ul>
-      </section>
-<section class="version-block">
-        <h3>[未发布] - 2026-10-07</h3>
-        <h4>新增</h4>
-        <ul>
-          <li><strong>ZXMOS · 黑名单(srv ban)与账号归档</strong></li>
-          <li>新文件 <code>ZincXManagerOServer/Blacklist.cs</code>:归档实现,把被拉黑 ZXMS 名下的玩家账号连同拉黑信息一起挪到</li>
-          <li><code>blacklist/zxms/&lt;名称&gt;/</code>:</li>
-          <li><code>accounts.json</code>:名下账号(字段与账号表一致,解封时能原样读回)</li>
-          <li><code>info.json</code>:拉黑时间 / 到期时间 / 原因 / 来源 IP / 账号数</li>
-          <li>ZXMOS 新增命令:</li>
-          <li><code>srv ban &lt;名称或ID&gt; [perm|30d|12h] [原因]</code> —— ① 归档该 ZXMS 名下账号 → ② 按「账号名 + 它的 IP」封禁 → ③ 断开它已连上的连接</li>
-          <li><code>srv unban &lt;名称或ID&gt;</code> —— 解封,并从 <code>blacklist/zxms/&lt;名称&gt;/accounts.json</code> 把账号读回账号表(保留 owner / 最后登录 IP / 机器码)</li>
-          <li><code>srv blacklist</code> —— 列出已归档的 ZXMS 与拉黑信息</li>
-          <li><code>ban user &lt;名称或ID&gt; [时长] [原因] [--ip] [--machine]</code> —— 与 ZXMS 侧对齐,支持连坐最后登录 IP / 机器码</li>
-          <li><strong>协议</strong></li>
-          <li><code>Protocol.ServerName = 201</code>:服务端 → 对方,负载为服务端显示名。</li>
-          <li><strong>客户端 · 个性化</strong></li>
-          <li>新增配色 <strong>巨硬蓝</strong>(微软 Fluent 蓝):<code>#0078D4 / #005A9E / #2899F5 / #A9D3F2 / #DEECF9 / #7FA8C9</code>。</li>
-          <li>新增 <strong>毛玻璃(亚克力)</strong> 开关(设置 → 个性化,以及 OOBE 第 2 步「个性化」):</li>
-          <li>开 = 亚克力:背景按 Fluent 亚克力模糊(半径 30)、表面着色 80%</li>
-          <li>关 = 半透明:背景不模糊、表面着色 60%</li>
-          <li>默认开,记在 <code>config.ini</code> 的 <code>glass=1/0</code></li>
-        </ul>
-      </section>
-    </div>
+  <section class="doc-body"><div class="wrap">
+        <a class="card-block" href="changelog-a0.4.1.html" style="display:block;text-decoration:none;color:inherit">
+          <h3 style="margin:0 0 8px">[a0.4.1] - 2026-10-18</h3>
+          <p style="margin:0;color:var(--fg-dim);font-size:13.5px">[a0.4.1] - 2026-10-18 连接可靠性 :修掉「重复连接 / 连错目标」这一组问题,避免服务端挂一堆僵尸连接。 修复 重复点「连接」不再叠加连接 :同一目标已经连着时改为弹窗提示「已经连接」;换了地址/端口/模式才先断开再连新目标 连接前先关旧…</p>
+        </a>
+        <a class="card-block" href="changelog-a0.4.0.html" style="display:block;text-decoration:none;color:inherit">
+          <h3 style="margin:0 0 8px">[a0.4.0] - 2026-10-18</h3>
+          <p style="margin:0;color:var(--fg-dim);font-size:13.5px">[a0.4.0] - 2026-10-18 子功能页 + 消息渲染 + 广场 :经济/社区/组织/管理四页都改成子功能卡片;消息面板支持 Markdown 与 HTML;服务器广场与锌源广场按实际连接区分数据来源;ZXMOS 补上加密协商。 新增 子功能页 :…</p>
+        </a>
+        <a class="card-block" href="changelog-a0.3.2.html" style="display:block;text-decoration:none;color:inherit">
+          <h3 style="margin:0 0 8px">[a0.3.2] - 2026-10-17</h3>
+          <p style="margin:0;color:var(--fg-dim);font-size:13.5px">[a0.3.2] - 2026-10-17 启动流程与外观修复 :打开客户端先测数据源,连不上直接弹窗并停在连接界面;同时修掉「配色永远默认蓝」「亚克力透明度调不动」「半透明档还是亚克力」。含 a0.3.1 的加密会话与登录挑战-响应。 安全 会话加密 :握手…</p>
+        </a>
+        <a class="card-block" href="changelog-unreleased-2026-10-11.html" style="display:block;text-decoration:none;color:inherit">
+          <h3 style="margin:0 0 8px">[未发布] - 2026-10-11</h3>
+          <p style="margin:0;color:var(--fg-dim);font-size:13.5px">[未发布] - 2026-10-11 新增(续 8) 全量测试合并成一个入口 _run-all.ps1 :一条命令跑完 21 个套件(单元 + 场景 ①~⑫ + 身份码 + 官方验证 + GUI 类), 自带端口预检、每个套件明细落盘( _回归明细\*.txt…</p>
+        </a>
+        <a class="card-block" href="changelog-unreleased-2026-10-10.html" style="display:block;text-decoration:none;color:inherit">
+          <h3 style="margin:0 0 8px">[未发布] - 2026-10-10</h3>
+          <p style="margin:0;color:var(--fg-dim);font-size:13.5px">[未发布] - 2026-10-10 新增(续) 缺口③修复:经 ZXMS 中转的玩家 / 管理账号登录 ZXMS 转发登录时也追加 |relay 标记(此前只有注册带);ZXMOS 认出标记后改查 用户账号表 , 并且不再把 ZXMS 这条连接登记成玩家、也…</p>
+        </a>
+        <a class="card-block" href="changelog-unreleased-2026-10-07.html" style="display:block;text-decoration:none;color:inherit">
+          <h3 style="margin:0 0 8px">[未发布] - 2026-10-07</h3>
+          <p style="margin:0;color:var(--fg-dim);font-size:13.5px">[未发布] - 2026-10-07 新增 ZXMOS · 黑名单(srv ban)与账号归档 新文件 ZincXManagerOServer/Blacklist.cs :归档实现,把被拉黑 ZXMS 名下的玩家账号连同拉黑信息一起挪到 blacklist/z…</p>
+        </a>
   </div></section>
-</main><script>
-(function(){
-  var l=document.getElementById('verlist'), b=document.getElementById('verbody');
-  if(!l||!b) return;
-  var bs=[].slice.call(b.querySelectorAll('.version-block'));
-  var as=[].slice.call(l.querySelectorAll('a[data-i]'));
-  function show(i){
-    bs.forEach(function(x,k){ x.style.display = (k===i)?'':'none'; });
-    as.forEach(function(a){ a.classList.toggle('on', Number(a.dataset.i)===i); });
-  }
-  as.forEach(function(a){
-    a.addEventListener('click', function(e){ e.preventDefault(); show(Number(a.dataset.i)); window.scrollTo({top:0,behavior:'smooth'}); });
-  });
-  show(0);
-})();
-</script>
-
+</main>
 <footer class="foot">
   <div class="wrap">
     <div class="foot-grid">
@@ -215,8 +91,4 @@
     </div>
   </div>
 </footer>
-
-<script src="assets/js/main.js" defer></script>
-<script src="assets/js/release.js" defer></script>
-</body>
-</html>
+</body></html>

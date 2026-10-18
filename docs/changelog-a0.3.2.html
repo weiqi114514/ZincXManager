@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>更新日志 a0.3.2 — ZincXManager</title>
+<link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="assets/css/flat.css">
+</head><body>
+<header class="nav">
+  <div class="wrap nav-in">
+    <a class="brand" href="index.html">
+      <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 36 9" width="104" height="26" role="img"><svg x="0" y="0" width="36" height="7" viewBox="0.756 0.541 36.472 7.899" preserveAspectRatio="none"><path d="M10.788,0.7l-9.788,0v0.6h8.134l-8.378,7h10.992l6.2,-6.864l6.983,7.004l6.079,-6.981l5.762,6.736l0.456,-0.39l-6.214,-7.264l-6.113,7.019l-6.975,-6.996l-6.445,7.136h-9.072z" fill="currentColor"/></svg><svg x="10" y="0" width="8" height="7" viewBox="0.803 0.773 8.402 7.445" preserveAspectRatio="none"><path d="M4.045,4.058l-3.242,-2.833l0.395,-0.452l3.242,2.833zM8.794,8.218c-0.782,-0.736 -1.934,-1.769 -3.456,-3.101l0.395,-0.452c1.528,1.336 2.685,2.375 3.472,3.116z" fill="currentColor" opacity="0.62"/></svg></svg></span>
+      <span>ZincXManager</span>
+    </a>
+    <nav class="nav-links">
+      <a href="#arch">架构</a>
+      <a href="#features">功能</a>
+      <a href="download.html">下载</a>
+      <a href="help.html">文档</a>
+      <a href="changelog.html">更新日志</a>
+      <a href="tech.html">技术文档</a>
+    </nav>
+    <a class="nav-cta" href="download.html">下载客户端</a>
+  </div>
+</header>
+<main>
+  <section class="doc-hero grid-bg"><div class="wrap">
+    <div class="k">Changelog · a0.3.2</div>
+    <h1>[a0.3.2] - 2026-10-17</h1>
+    <p>这一版改了什么;左侧可切换到其它版本。</p>
+  </div></section>
+  <section class="doc-body"><div class="wrap doc-grid">
+    <aside class="doc-nav"><div class="grp">Versions</div>
+        <a href="changelog-a0.4.1.html">[a0.4.1] - 2026-10-18</a>
+        <a href="changelog-a0.4.0.html">[a0.4.0] - 2026-10-18</a>
+        <a href="changelog-a0.3.2.html" class="on">[a0.3.2] - 2026-10-17</a>
+        <a href="changelog-unreleased-2026-10-11.html">[未发布] - 2026-10-11</a>
+        <a href="changelog-unreleased-2026-10-10.html">[未发布] - 2026-10-10</a>
+        <a href="changelog-unreleased-2026-10-07.html">[未发布] - 2026-10-07</a>
+      <div class="grp">Links</div>
+      <a href="changelog.html">全部版本</a>
+      <a href="download.html">下载</a>
+    </aside>
+    <div class="doc-main">
+<h3>[a0.3.2] - 2026-10-17</h3>
+        <p class="lead"><b>启动流程与外观修复</b>:打开客户端先测数据源,连不上直接弹窗并停在连接界面;同时修掉「配色永远默认蓝」「亚克力透明度调不动」「半透明档还是亚克力」。含 a0.3.1 的加密会话与登录挑战-响应。</p>
+
+        <h4>安全</h4>
+        <ul>
+          <li><b>会话加密</b>:握手 380 / 381 交换 ECDH(P-256)公钥,HKDF-SHA256 派生两把 AES-256-GCM 密钥,之后所有报文加密(包头 Flags 0x0001)</li>
+          <li><b>登录挑战-响应</b>:nonce(秒 + 32 位随机)每次不同,proof = SHA256(密码密文 : nonce);服务端按存的密文重算,nonce 一次性 + 5 分钟窗口</li>
+          <li>服务端拒绝未加密的明文登录(返回 err|客户端版本过旧)</li>
+        </ul>
+
+        <h4>新增</h4>
+        <ul>
+          <li><b>启动数据源自检</b>:等待窗 → 连上才进登录(或免登录主界面);连不上弹「连接 ZXMS 失败 / 连接 ZXMOS 失败」并停在连接窗口</li>
+          <li><b>连接窗口「去登录」</b>:连接成功后进登录界面,不再直进主界面</li>
+          <li>OOBE 第 5 步连接失败会弹窗</li>
+          <li>ZXMOS 新增 <code>config</code> 配置模式(name / port / msgdays);ZXMS 配置表补齐 oshash / configver</li>
+          <li>配置模式拒绝其它命令(提示先 exitc);启动横幅带版本号 <code>-a0.3.2</code></li>
+        </ul>
+
+        <h4>修复</h4>
+        <ul>
+          <li><b>配色从未应用</b>:<code>ThemeManager.ApplySaved()</code> 无人调用,永远默认蓝;现在启动即按 config.ini 的 theme / glass / alpha 生效</li>
+          <li><b>OOBE 模式选择高亮写死</b>:改用 ThemeLight / ThemeMuted / ThemeSecondary / ThemePrimaryDark</li>
+          <li><b>亚克力档透明度固定</b>:所有表面按「设计基准 × 滑杆比例」整体缩放(80/90/36/36/40/60%)</li>
+          <li><b>半透明档仍是亚克力</b>:切档时重新套窗口材质(半透明 → Transparent)</li>
+        </ul>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:34px;padding-top:22px;border-top:1px solid var(--line)">
+        <a class="btn" href="changelog-a0.4.0.html">← [a0.4.0] - 2026-10-18</a>
+        <a class="btn" href="changelog-unreleased-2026-10-11.html">[未发布] - 2026-10-11 →</a>
+        <a class="btn" href="changelog.html">全部版本</a>
+      </div>
+    </div>
+  </div></section>
+</main>
+<footer class="foot">
+  <div class="wrap">
+    <div class="foot-grid">
+      <div>
+        <a class="brand" href="index.html" style="margin-bottom:14px">
+          <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 36 9" width="104" height="26" role="img"><svg x="0" y="0" width="36" height="7" viewBox="0.756 0.541 36.472 7.899" preserveAspectRatio="none"><path d="M10.788,0.7l-9.788,0v0.6h8.134l-8.378,7h10.992l6.2,-6.864l6.983,7.004l6.079,-6.981l5.762,6.736l0.456,-0.39l-6.214,-7.264l-6.113,7.019l-6.975,-6.996l-6.445,7.136h-9.072z" fill="currentColor"/></svg><svg x="10" y="0" width="8" height="7" viewBox="0.803 0.773 8.402 7.445" preserveAspectRatio="none"><path d="M4.045,4.058l-3.242,-2.833l0.395,-0.452l3.242,2.833zM8.794,8.218c-0.782,-0.736 -1.934,-1.769 -3.456,-3.101l0.395,-0.452c1.528,1.336 2.685,2.375 3.472,3.116z" fill="currentColor" opacity="0.62"/></svg></svg></span>
+        </a>
+        <p style="color:var(--fg-dim);font-size:13.5px;max-width:34ch">面向 Minecraft 服主与社区管理员的一体化管理面板。</p>
+      </div>
+      <div>
+        <h5>产品</h5>
+        <a href="#arch">架构</a>
+        <a href="#features">功能</a>
+        <a href="download.html">下载</a>
+        <a href="changelog.html">更新日志</a>
+      </div>
+      <div>
+        <h5>文档</h5>
+        <a href="help.html">文档与帮助</a>
+        <a href="tech.html">技术文档</a>
+        <a href="zxms.html">子服务端教程</a>
+        <a href="arch.html">类与协议表</a>
+      </div>
+      <div>
+        <h5>其他</h5>
+        <a href="https://github.com/weiqi114514/ZincXManager" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://github.com/weiqi114514/ZincXManager/releases" target="_blank" rel="noopener">Releases</a>
+        <a href="seq.html">时序图</a>
+        <a href="deploy.html">部署</a>
+      </div>
+    </div>
+    <div class="foot-bot">
+      <span>© 2026 ZincXManager · 锌X管理面板</span>
+      <span>交流群 (QQ) 1129776132</span>
+    </div>
+  </div>
+</footer>
+</body></html>

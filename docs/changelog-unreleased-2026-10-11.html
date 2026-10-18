@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>更新日志 unreleased-2026-10-11 — ZincXManager</title>
+<link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="assets/css/flat.css">
+</head><body>
+<header class="nav">
+  <div class="wrap nav-in">
+    <a class="brand" href="index.html">
+      <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 36 9" width="104" height="26" role="img"><svg x="0" y="0" width="36" height="7" viewBox="0.756 0.541 36.472 7.899" preserveAspectRatio="none"><path d="M10.788,0.7l-9.788,0v0.6h8.134l-8.378,7h10.992l6.2,-6.864l6.983,7.004l6.079,-6.981l5.762,6.736l0.456,-0.39l-6.214,-7.264l-6.113,7.019l-6.975,-6.996l-6.445,7.136h-9.072z" fill="currentColor"/></svg><svg x="10" y="0" width="8" height="7" viewBox="0.803 0.773 8.402 7.445" preserveAspectRatio="none"><path d="M4.045,4.058l-3.242,-2.833l0.395,-0.452l3.242,2.833zM8.794,8.218c-0.782,-0.736 -1.934,-1.769 -3.456,-3.101l0.395,-0.452c1.528,1.336 2.685,2.375 3.472,3.116z" fill="currentColor" opacity="0.62"/></svg></svg></span>
+      <span>ZincXManager</span>
+    </a>
+    <nav class="nav-links">
+      <a href="#arch">架构</a>
+      <a href="#features">功能</a>
+      <a href="download.html">下载</a>
+      <a href="help.html">文档</a>
+      <a href="changelog.html">更新日志</a>
+      <a href="tech.html">技术文档</a>
+    </nav>
+    <a class="nav-cta" href="download.html">下载客户端</a>
+  </div>
+</header>
+<main>
+  <section class="doc-hero grid-bg"><div class="wrap">
+    <div class="k">Changelog · unreleased-2026-10-11</div>
+    <h1>[未发布] - 2026-10-11</h1>
+    <p>这一版改了什么;左侧可切换到其它版本。</p>
+  </div></section>
+  <section class="doc-body"><div class="wrap doc-grid">
+    <aside class="doc-nav"><div class="grp">Versions</div>
+        <a href="changelog-a0.4.1.html">[a0.4.1] - 2026-10-18</a>
+        <a href="changelog-a0.4.0.html">[a0.4.0] - 2026-10-18</a>
+        <a href="changelog-a0.3.2.html">[a0.3.2] - 2026-10-17</a>
+        <a href="changelog-unreleased-2026-10-11.html" class="on">[未发布] - 2026-10-11</a>
+        <a href="changelog-unreleased-2026-10-10.html">[未发布] - 2026-10-10</a>
+        <a href="changelog-unreleased-2026-10-07.html">[未发布] - 2026-10-07</a>
+      <div class="grp">Links</div>
+      <a href="changelog.html">全部版本</a>
+      <a href="download.html">下载</a>
+    </aside>
+    <div class="doc-main">
+<h3>[未发布] - 2026-10-11</h3>
+        <h4>新增(续 8)</h4>
+        <ul>
+          <li><strong>全量测试合并成一个入口</strong> <code>_run-all.ps1</code>:一条命令跑完 21 个套件(单元 + 场景 ①~⑫ + 身份码 + 官方验证 + GUI 类),</li>
+          <li>自带端口预检、每个套件明细落盘(<code>_回归明细\*.txt</code>)、末尾总表,退出码 = 失败套件数;</li>
+          <li>另带 <code>-Only</code> / <code>-Skip</code> / <code>-List</code>。旧的 <code>_run-full.ps1</code> / <code>_run-core.ps1</code> / <code>_run-all-tests.ps1</code> 退役。</li>
+          <li><strong>官网重写</strong>(<code>zxm-website\</code>):去掉源码构建步骤与源码仓库/开源协议链接;新增</li>
+          <li><strong>下载页</strong>(<code>download.html</code>,由打包产物自动生成版本/大小/SHA256)、<strong>子服务端 ZXMS 部署教程页</strong>(<code>zxms.html</code>)、</li>
+          <li><strong>更新日志页</strong>(<code>changelog.html</code>,由本文件自动生成)、sitemap 更新。</li>
+          <li><strong>客户端安装包</strong>:<code>ZincXManagerClient-&lt;版本&gt;-x64.msi</code>(全机器安装,自动建开始菜单 + 桌面快捷方式,可在「应用和功能」卸载)</li>
+          <li>+ <code>ZincXManagerClient-&lt;版本&gt;-win-x64-portable.zip</code>(免安装);</li>
+          <li><strong>子服务端</strong>:<code>ZincXManagerServer-&lt;版本&gt;-win-x64.zip</code>(含 <code>config.ini</code> 模板)。</li>
+          <li>一键出包脚本 <code>_build-installer.ps1</code>,产物与 SHA256 落到桌面测试包。</li>
+          <li><strong>安装图标</strong> <code>zxm.ico</code>:6 个尺寸(16~256),按官网配色(深蓝底 + 绿色描边 + 绿 Z)现画现生成(<code>_make-icon.ps1</code>)。</li>
+        </ul>
+      </section>
+<section class="version-block">
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:34px;padding-top:22px;border-top:1px solid var(--line)">
+        <a class="btn" href="changelog-a0.3.2.html">← [a0.3.2] - 2026-10-17</a>
+        <a class="btn" href="changelog-unreleased-2026-10-10.html">[未发布] - 2026-10-10 →</a>
+        <a class="btn" href="changelog.html">全部版本</a>
+      </div>
+    </div>
+  </div></section>
+</main>
+<footer class="foot">
+  <div class="wrap">
+    <div class="foot-grid">
+      <div>
+        <a class="brand" href="index.html" style="margin-bottom:14px">
+          <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 36 9" width="104" height="26" role="img"><svg x="0" y="0" width="36" height="7" viewBox="0.756 0.541 36.472 7.899" preserveAspectRatio="none"><path d="M10.788,0.7l-9.788,0v0.6h8.134l-8.378,7h10.992l6.2,-6.864l6.983,7.004l6.079,-6.981l5.762,6.736l0.456,-0.39l-6.214,-7.264l-6.113,7.019l-6.975,-6.996l-6.445,7.136h-9.072z" fill="currentColor"/></svg><svg x="10" y="0" width="8" height="7" viewBox="0.803 0.773 8.402 7.445" preserveAspectRatio="none"><path d="M4.045,4.058l-3.242,-2.833l0.395,-0.452l3.242,2.833zM8.794,8.218c-0.782,-0.736 -1.934,-1.769 -3.456,-3.101l0.395,-0.452c1.528,1.336 2.685,2.375 3.472,3.116z" fill="currentColor" opacity="0.62"/></svg></svg></span>
+        </a>
+        <p style="color:var(--fg-dim);font-size:13.5px;max-width:34ch">面向 Minecraft 服主与社区管理员的一体化管理面板。</p>
+      </div>
+      <div>
+        <h5>产品</h5>
+        <a href="#arch">架构</a>
+        <a href="#features">功能</a>
+        <a href="download.html">下载</a>
+        <a href="changelog.html">更新日志</a>
+      </div>
+      <div>
+        <h5>文档</h5>
+        <a href="help.html">文档与帮助</a>
+        <a href="tech.html">技术文档</a>
+        <a href="zxms.html">子服务端教程</a>
+        <a href="arch.html">类与协议表</a>
+      </div>
+      <div>
+        <h5>其他</h5>
+        <a href="https://github.com/weiqi114514/ZincXManager" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://github.com/weiqi114514/ZincXManager/releases" target="_blank" rel="noopener">Releases</a>
+        <a href="seq.html">时序图</a>
+        <a href="deploy.html">部署</a>
+      </div>
+    </div>
+    <div class="foot-bot">
+      <span>© 2026 ZincXManager · 锌X管理面板</span>
+      <span>交流群 (QQ) 1129776132</span>
+    </div>
+  </div>
+</footer>
+</body></html>
