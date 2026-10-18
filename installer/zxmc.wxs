@@ -35,6 +35,7 @@
           <File Id="GlesDll" Source="$(var.StageDir)\av_libglesv2.dll" />
           <File Id="HarfBuzzDll" Source="$(var.StageDir)\libHarfBuzzSharp.dll" />
           <File Id="ReadmeTxt" Source="$(var.StageDir)\说明.txt" />
+        <File Id="UpdateLogMd" Source="$(var.StageDir)\UpdateLog.MD" />
         </Component>
 
         <!-- 快捷方式单独一个组件:KeyPath 用 HKLM 下的标记键,不用"广告式"快捷方式(更稳) -->
