@@ -281,3 +281,22 @@ img,svg{max-width:100%}
 .hero p.lead{animation:zxIn .8s .12s cubic-bezier(.22,.61,.36,1) both}
 .hero-actions{animation:zxIn .8s .2s cubic-bezier(.22,.61,.36,1) both}
 @media (prefers-reduced-motion:reduce){.hero h1,.hero-tag,.hero p.lead,.hero-actions{animation:none}}
+
+
+/* 首屏右侧:亮眼指标块 */
+.hero-side .stat{
+  flex:1;display:flex;align-items:center;gap:20px;
+  padding:26px 30px;border-bottom:1px solid var(--line);
+  transition:background .14s linear;
+}
+.hero-side .stat:last-child{border-bottom:0}
+.hero-side .stat:hover{background:#0f1a12}
+.hero-side .stat .big{
+  font-family:Consolas,"Cascadia Mono",monospace;
+  font-size:clamp(44px,4.4vw,68px);font-weight:900;line-height:.9;
+  color:var(--green);letter-spacing:-.05em;min-width:1.1em;
+}
+.hero-side .stat .big.enc{font-size:clamp(30px,3vw,44px);filter:saturate(1.2)}
+.hero-side .stat .txt{display:flex;flex-direction:column;gap:4px}
+.hero-side .stat .txt b{font-size:17px;font-weight:800;letter-spacing:-.01em}
+.hero-side .stat .txt span{font-size:12.5px;color:var(--fg-dim);letter-spacing:.02em}
