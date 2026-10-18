@@ -300,3 +300,73 @@ img,svg{max-width:100%}
 .hero-side .stat .txt{display:flex;flex-direction:column;gap:4px}
 .hero-side .stat .txt b{font-size:17px;font-weight:800;letter-spacing:-.01em}
 .hero-side .stat .txt span{font-size:12.5px;color:var(--fg-dim);letter-spacing:.02em}
+
+/* ===== ZXMC 主界面复刻(尺寸/配色取自客户端 XAML) ===== */
+.zxm-win{
+  --rail:#2662A7; --rail-d:#1F5292; --light:#E9F5FF; --muted:#8FCBDF;
+  --win:#F2F5F8; --panel:rgba(255,255,255,.72); --line2:rgba(140,154,165,.35);
+  background:var(--win);
+  font-family:"Microsoft YaHei","PingFang SC",system-ui,sans-serif;
+  color:#1b2733;
+  width:100%;
+}
+.zxm-bar{
+  height:44px;display:flex;align-items:center;gap:14px;padding:0 14px;
+  background:var(--rail);color:#fff;font-size:13px;
+}
+.zxm-brand{display:flex;align-items:center;gap:10px;font-size:13.5px;letter-spacing:.6px}
+.zxm-bar-right{margin-left:auto;display:flex;align-items:center;gap:16px;font-size:12.5px;color:rgba(255,255,255,.92)}
+.zxm-min,.zxm-close{width:26px;height:24px;display:inline-flex;align-items:center;justify-content:center}
+.zxm-close{background:#E81123;color:#fff;font-size:15px}
+
+.zxm-body{display:grid;grid-template-columns:236px 1fr 312px;min-height:560px}
+
+/* 左栏 */
+.zxm-rail{background:var(--rail);padding:26px 0 18px;display:flex;flex-direction:column;position:relative}
+.zxm-nav{
+  min-height:40px;display:flex;align-items:center;gap:10px;
+  padding:0 18px;font-size:14px;color:rgba(255,255,255,.86);
+  border-left:3px solid transparent;cursor:default;
+}
+.zxm-nav i{width:16px;height:16px;border:1.5px solid rgba(255,255,255,.7);display:inline-block;border-radius:50%}
+.zxm-nav.on{background:rgba(255,255,255,.12);border-left-color:#fff;color:#fff;font-weight:600}
+.zxm-nav.on i{border-color:#fff}
+.zxm-user{
+  margin-top:auto;display:flex;align-items:center;gap:10px;padding:14px 18px;
+  color:#fff;font-size:12.5px;
+}
+.zxm-avatar{width:34px;height:34px;background:rgba(255,255,255,.75);border-radius:50%;display:inline-block}
+.zxm-user b{display:block;font-size:13px;font-weight:600}
+.zxm-user span{color:rgba(255,255,255,.7);font-size:11.5px}
+
+/* 工作区 */
+.zxm-main{padding:26px 28px;background:rgba(255,255,255,.82)}
+.zxm-page{font-size:22px;font-weight:600;color:#1F5292;margin:0 0 22px;letter-spacing:.02em}
+.zxm-cards{display:flex;flex-direction:column;gap:14px}
+.zxm-card{
+  width:420px;max-width:100%;height:126px;
+  background:#E9F5FF;border:1px solid rgba(31,82,146,.28);
+  display:flex;align-items:center;gap:18px;padding:0 20px;
+}
+.zxm-ico{display:inline-flex;width:52px;height:44px;align-items:center;justify-content:center;flex:0 0 auto}
+.zxm-txt{display:flex;flex-direction:column;gap:5px;min-width:0}
+.zxm-txt b{font-size:16px;font-weight:600;color:#16222e}
+.zxm-txt span{font-size:12.5px;color:#5b6b7a}
+.zxm-enter{
+  margin-left:auto;flex:0 0 auto;
+  background:#1F5292;color:#fff;font-size:12.5px;padding:7px 18px;
+}
+
+/* 消息面板 */
+.zxm-msgpane{background:var(--panel);border-left:1px solid var(--line2);display:flex;flex-direction:column;position:relative}
+.zxm-tabs{display:flex;gap:14px;padding:16px 18px 12px;border-bottom:1px solid var(--line2);font-size:13px;color:#5b6b7a}
+.zxm-tabs span.on{color:#1F5292;font-weight:600;position:relative}
+.zxm-tabs span.on::after{content:"";position:absolute;left:0;right:0;bottom:-13px;height:2px;background:#1F5292}
+.zxm-empty{flex:1;display:flex;align-items:center;justify-content:center;color:#7d8b99;font-size:12.5px}
+.zxm-toggle{padding:10px 14px;color:#4a5a68;font-size:12px;border-top:1px solid var(--line2)}
+
+@media (max-width:1080px){
+  .zxm-body{grid-template-columns:180px 1fr}
+  .zxm-msgpane{display:none}
+  .zxm-card{width:100%}
+}
