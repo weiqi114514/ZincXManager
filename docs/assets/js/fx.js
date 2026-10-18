@@ -57,6 +57,17 @@
       el.style.transform = "translateY(26px)";
       io.observe(el);
     });
+
+    // 兜底:2.2 秒后无论是否触发,都保证内容可见(避免观察器失灵时页面空白)
+    setTimeout(function () {
+      targets.forEach(function (el) {
+        if (getComputedStyle(el).opacity === "0") {
+          el.style.transition = "opacity .5s linear";
+          el.style.opacity = "1";
+          el.style.transform = "none";
+        }
+      });
+    }, 2200);
   }
 
   /* ---------- 5. 数字滚动 ---------- */

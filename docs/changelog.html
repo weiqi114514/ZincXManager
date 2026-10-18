@@ -6,7 +6,6 @@
 <title>更新日志 · ZincXManager</title>
 <meta name="description" content="ZincXManager(ZXM)更新日志:每个版本新增了什么、改了什么、修了什么。">
 <link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="assets/css/style.css">
 <style>
   .version { margin-bottom: 18px; }
   .version h3 { margin: 0 0 6px; font-size: 19px; }
@@ -14,40 +13,44 @@
   .version ul { margin: 0; padding-left: 20px; display: grid; gap: 6px; color: var(--muted); }
   .version li { line-height: 1.75; }
 </style>
+<link rel="stylesheet" href="assets/css/flat.css">
 </head>
 <body>
 
-<header class="site-header" id="header">
-  <div class="wrap header-inner">
-    <a class="brand" href="index.html" aria-label="ZincXManager 首页">
+<header class="nav">
+  <div class="wrap nav-in">
+    <a class="brand" href="index.html">
       <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 36 9" width="104" height="26" role="img"><svg x="0" y="0" width="36" height="7" viewBox="0.756 0.541 36.472 7.899" preserveAspectRatio="none"><path d="M10.788,0.7l-9.788,0v0.6h8.134l-8.378,7h10.992l6.2,-6.864l6.983,7.004l6.079,-6.981l5.762,6.736l0.456,-0.39l-6.214,-7.264l-6.113,7.019l-6.975,-6.996l-6.445,7.136h-9.072z" fill="currentColor"/></svg><svg x="10" y="0" width="8" height="7" viewBox="0.803 0.773 8.402 7.445" preserveAspectRatio="none"><path d="M4.045,4.058l-3.242,-2.833l0.395,-0.452l3.242,2.833zM8.794,8.218c-0.782,-0.736 -1.934,-1.769 -3.456,-3.101l0.395,-0.452c1.528,1.336 2.685,2.375 3.472,3.116z" fill="currentColor" opacity="0.62"/></svg></svg></span>
-      <span class="brand-text">ZincXManager<em>ZXM</em></span>
+      <span>ZincXManager</span>
     </a>
-    <button class="nav-toggle" id="navToggle" aria-expanded="false" aria-controls="siteNav" aria-label="打开导航">
-      <span></span><span></span><span></span>
-    </button>
-    <nav class="site-nav" id="siteNav">
-      <a href="index.html#features">功能</a>
-      <a href="index.html#arch">架构</a>
-      <a href="index.html#modes">模式</a>
+    <nav class="nav-links">
+      <a href="#arch">架构</a>
+      <a href="#features">功能</a>
       <a href="download.html">下载</a>
-      <a href="zxms.html">子服教程</a>
-      <a href="help.html">文档与帮助</a>
-      <a href="changelog.html" class="active">更新日志</a>
-      <a href="index.html#about">关于</a>
-      <a class="btn btn-ghost" href="https://github.com/weiqi114514/ZincXManager" target="_blank" rel="noopener">GitHub</a>
+      <a href="help.html">文档</a>
+      <a href="changelog.html">更新日志</a>
+      <a href="tech.html">技术文档</a>
     </nav>
+    <a class="nav-cta" href="download.html">下载客户端</a>
   </div>
 </header>
 
-<main id="top">
-  <section class="section">
-    <div class="wrap">
-      <header class="section-head">
-        <h2>更新日志</h2>
-        <p>本页由发布日志自动生成(最后更新 2026-10-17);只列对使用者有影响的变化。</p>
-      </header>
-      <section class="card version">
+<main>
+  <section class="doc-hero grid-bg"><div class="wrap">
+    <div class="k">Changelog</div><h1>更新日志</h1>
+    <p>左侧选版本,右侧看这个版本改了什么。当前版本 <b>a0.4.1</b>。</p>
+  </div></section>
+  <section class="doc-body"><div class="wrap doc-grid">
+    <aside class="doc-nav" id="verlist"><div class="grp">Versions</div>
+        <a href="#" data-i="0">[a0.4.0] - 2026-10-18</a>
+        <a href="#" data-i="1">[未发布] - 2026-10-10</a>
+        <a href="#" data-i="2">[未发布] - 2026-10-07</a>
+      <div class="grp">Links</div>
+      <a href="download.html">下载</a>
+      <a href="tech.html">技术文档</a>
+    </aside>
+    <div class="doc-main" id="verbody">
+<section class="version-block">
                 <h3>[a0.4.0] - 2026-10-18</h3>
         <p class="lead"><b>子功能页 + 消息渲染 + 广场</b>:经济/社区/组织/管理四页都改成子功能卡片;消息面板支持 Markdown 与 HTML;服务器广场与锌源广场按实际连接区分数据来源;ZXMOS 补上加密协商。</p>
 
@@ -117,299 +120,7 @@
           <li><strong>安装图标</strong> <code>zxm.ico</code>:6 个尺寸(16~256),按官网配色(深蓝底 + 绿色描边 + 绿 Z)现画现生成(<code>_make-icon.ps1</code>)。</li>
         </ul>
       </section>
-        <h4>修复(续 8)</h4>
-        <ul>
-          <li><strong>官方服务端地址单选框回弹</strong>:在「自定义 IP:端口」的警告弹窗上点「算了,保持官方」时,</li>
-          <li>地址已经回到官方默认,但单选框还停在「自定义」(看着自相矛盾)。原因是取消时 <code>UseCustomAddress</code></li>
-          <li>本来就是 <code>false</code>,属性没变化就不发通知;现在强制通知一次。</li>
-          <li><strong>测试脚本里因提示文案改动而失效的断言</strong>:身份不一致提示与 <code>servercode</code> 缺失提示今天改过措辞,</li>
-          <li>③(注册机器码)与 ⑦(身份与两码)里还在匹配旧文案。改后 ③ <strong>13/13</strong>、⑦ <strong>24/24</strong>。</li>
-          <li><strong>全量测试输出中文乱码</strong>:runner 用管道抓子进程输出时按控制台代码页解码,而子进程(.NET/pwsh)写的是 UTF-8;</li>
-          <li>现在统一 <code>[Console]::OutputEncoding = UTF-8</code>。</li>
-          <li><strong>地址只认 IP、不认域名</strong>(覆盖面比想象的大):ZXMS 初始化时 <code>ozip</code> 用 <code>IPAddress.TryParse</code> 校验,</li>
-          <li>而官方服务端对外就是域名 <code>zxm.zincms.top</code> —— 等于把最常见的情况挡在门外;</li>
-          <li>客户端的连接校验同样是 <code>IPAddress.TryParse</code>,<strong>发行版客户端因此根本连不上默认的官方域名</strong>。</li>
-          <li>现在三端统一走新增的 <code>ZincXManagerShared/Network/HostText.IsHost</code>(IP 或合法域名都行),</li>
-          <li>共享 <code>TcpClient</code> 增加"主机名"构造,连接时才做 DNS,并<strong>依次尝试多个解析结果</strong></li>
-          <li>(localhost 常先给出 <code>::1</code>,而服务端只监听 IPv4 —— 不会因此判死);</li>
-          <li>设置页与弹窗文案改为"IP 或域名"。覆盖:<code>_ver-msgstore.ps1</code> 改用 <code>czip=localhost</code> 常驻跑这条路。</li>
-        </ul>
-      </section>
-        <h4>变更(续 8)</h4>
-        <ul>
-          <li><strong>软件里显示的官网改到 GitHub 镜像,旧站保留</strong>:客户端「帮助」按钮现在打开</li>
-          <li>&lt;https://weiqi114514.github.io/ZincXManager/help.html&gt;;ZXMS / ZXMOS 控制台欢迎横幅两条都列</li>
-          <li>(新站 + 旧站 &lt;http://zxm.zincms.top:10/&gt;)。README 里旧站链接也恢复成带 :10 的写法</li>
-          <li>(之前我误当成笔误删掉了,抱歉)。</li>
-          <li><strong>完整文档 + 官网帮助页</strong>:新增官网 <code>help.html</code>(全站导航有入口),正文做成官网静态页(已弃用腾讯文档版):</li>
-          <li>&lt;https://weiqi114514.github.io/ZincXManager/guide/&gt; —— 分<strong>使用篇</strong>(客户端与子服务端全流程、</li>
-          <li>控制台命令逐条带示例与正常输出、常见问题)与<strong>技术篇</strong>(架构总览、协议类型编号表、身份与账号、</li>
-          <li>数据文件、构建发布、测试入口、官方验证机制、部署运维、已知限制)。源文件随仓库走:</li>
-          <li><code>docs/ZXM-使用文档.md</code>、<code>docs/ZXM-技术文档.md</code>。README 也补了文档入口(顺手修掉 5 处</li>
-          <li><code>zxm.zincms.top:10</code> 的错误链接)。</li>
-          <li><strong>默认端口统一成 25000</strong>:官方服务端(ZXMOS)监听端口的兜底值、子服(ZXMS)的 <code>ozport</code> 默认值,</li>
-          <li>都从 <code>25565</code> 改成 <code>25000</code> —— 和客户端内置的官方地址 <code>zxm.zincms.top:25000</code> 对齐。</li>
-          <li>实测:config.ini 不写 <code>port</code> 直接回车 → 写回 <code>port=25000</code>,日志 <code>监听 0.0.0.0:25000</code>。</li>
-          <li>地址/域名部分不变(客户端默认仍是 <code>zxm.zincms.top</code>;ZXMOS 仍然绑 <code>0.0.0.0</code>)。</li>
-          <li><strong>官方验证不再有编译开关</strong>:去掉 <code>-p:OfficialBuild</code> / <code>OFFICIAL_BUILD</code> 条件编译 ——</li>
-          <li>三端<strong>所有构建一律强制</strong>官方验证:ZXMOS 没有合法 <code>official.lic</code> 直接退出(退出码 2)、端口都不开,</li>
-          <li>每条连接还要再验一次;ZXMS / ZXMC 连到非官方服务端会<strong>断开</strong>。</li>
-          <li>也就是说"自己编一个不验的版本"这条路没有了(谁都能编,那就等于没验证)。</li>
-          <li>运行期只剩三个明确的口子,而且都会大声记日志:</li>
-          <li>子服运维:<code>officialcheck=0</code>(config.ini)</li>
-          <li>客户端用户:<code>allowunverified=1</code>(config.ini)</li>
-          <li><strong>只给自动化测试</strong>:环境变量 <code>ZXM_ALLOW_UNOFFICIAL=1</code>(由 <code>_run-all.ps1</code> 给所有套件设上;正式部署千万别设)</li>
-          <li>顺带:三个 csproj 里的条件块、<code>_publish-aot.ps1</code> 的 <code>-Official</code> 开关、官方服务端部署包里的</li>
-          <li>"正式版 / 测试版"两份,全部去掉 —— 现在只有一种构建。</li>
-          <li><strong>彻底停用 <code>zxm-shot</code></strong>(按窗口标题截图的自制测试小工具):所有脚本里的调用改为空操作、编译产物删除;</li>
-          <li>GUI 核验改用 DSH 电脑操控插件(<code>computer</code> / <code>computer_batch</code> / <code>ui_elements</code>)。</li>
-          <li>GUI 类套件不再依赖截图文件:窗口存在性改用 Win32 枚举窗口标题断言,AOT 冒烟的两项也改成"窗口标题起来了"。</li>
-        </ul>
-      </section>
-        <h4>新增(续 5)</h4>
-        <ul>
-          <li><strong>提示条(toast):左上角滑出来的一条提示</strong></li>
-          <li>主界面左上角新增提示条:从窗口外<strong>滑进来</strong>(260ms 过渡),停留 <strong>3.6 秒</strong>后自己滑回去;</li>
-          <li>一次最多留 <strong>4 条</strong>,多了挤掉最老的;左边一条颜色代表口气 —— 普通(主题色)/ 成功(绿)/ 提醒(橙)/ 失败(红)。</li>
-          <li>已经接上的提示:补发完成「<strong>已加载 N 条历史消息</strong>」、实时收到消息「收到新消息:标题」、</li>
-          <li>卡片动作回执(服务端的 ok / err 原话)、删除消息「已删除这条消息」。</li>
-          <li>落点(<code>_gui-shots/</code>):<code>ui-12-toast-history.png</code>(补发完成 + 滑动到位)、<code>ui-13-toast-live.png</code>(实时消息)、</li>
-          <li><code>ui-14-toast-gone.png</code>(3.6 秒后自己收回去)。</li>
-          <li><strong>服务端消息存档 + 补发(第一步 / 第二步)</strong></li>
-          <li>卡片线格式固定 7 段之外,新增<strong>可选第 8 段 = 消息号</strong>(<code>种类|标题|正文|来源|主动作|次动作|选项|消息号</code>);</li>
-          <li>老客户端只读 7 段照样能用,解析不到消息号时按 0 处理(不参与补发去重)。</li>
-          <li><strong>ZXMOS 服务端消息存档</strong> <code>messages.json</code>:每条公告 / 推送分配一个消息号(从 1 递增)并落盘;</li>
-          <li>保留天数 = <code>config.ini</code> 的 <strong><code>msgdays</code>(默认 50,范围 1-3650)</strong>,控制台 <code>msgdays &lt;天数&gt;</code> 可改,过期即清。</li>
-          <li>存档里存的那张卡片和发出去的<strong>是同一张</strong>(都带消息号)—— 这一步最早漏了,补发去重会失效,已修。</li>
-          <li><strong>两种新定向形态</strong>(<code>push</code> 的目标段):</li>
-          <li><code>push @server:&lt;子服务端账号&gt;</code> —— 只投给<strong>那台 ZXMS 自己</strong>,它<strong>自己消费</strong>(控制台带边框醒目打印 + 记日志),</li>
-          <li><strong>不下发</strong>给它名下的客户端;</li>
-          <li><code>push @clients:&lt;子服务端账号&gt;</code> —— 只投给那台 ZXMS,由它<strong>转发给自己名下所有客户端</strong>。</li>
-          <li><strong>补发链路</strong>(新增三个协议包,登录后自动补齐"还没收到过的消息"):</li>
-          <li><code>MessageHistoryReq = 505</code>(客户端 → 服务端,登录成功后发一次):负载 <code>client</code>(替玩家要)/ <code>self</code>(子服自己来要);</li>
-          <li><code>MessageHistory = 504</code>(服务端 → 客户端):<strong>一条消息一个包</strong>,负载就是那张卡片(第 8 段带消息号),</li>
-          <li>正文里有换行也不会坏,不用按行切分;</li>
-          <li><code>MessageHistoryDone = 506</code>(服务端 → 客户端):负载 = 补发条数,收尾用。</li>
-          <li><strong>补发按请求者身份过滤</strong>(ZXMOS 侧):公告 / <code>@all</code> 谁都能收;<code>@server:&lt;子服&gt;</code> 只在<strong>那台子服自己</strong>来要时给,</li>
-          <li>而且<strong>绝不转给玩家</strong>;<code>@clients:&lt;子服&gt;</code> 只在<strong>那台子服替它名下的客户端</strong>来要时给;</li>
-          <li>点名叫玩家的,直连客户端只认自己的名字,经子服的就全给它(它按自己的在线名单过滤)。没通过账号认证的子服不给补发。</li>
-          <li><strong>ZXMS 中转</strong>:收到客户端的 505 → 分配一个中转包 Id(与账号中转同一套计数器,保证唯一)转给 ZXMOS;</li>
-          <li>ZXMOS 回的 504 逐条、506 收尾都按包 Id 找到"是哪条客户端连接要的"再原样转回去,收到 506 就清掉记录;</li>
-          <li>官方服务端没连上 / 转发失败时<strong>立刻回一条 506</strong> 让客户端收尾,不干等。</li>
-          <li><strong>客户端去重</strong>:本地 <code>messages.json</code> 每条消息新增 <code>serverId</code> 字段,按「<strong>来源 + 消息号</strong>」去重 ——</li>
-          <li>补发重复收到的不再重复显示,所以<strong>老客户端不会重复弹、新客户端一条不落</strong>。</li>
-          <li><strong>升级前存的老存档</strong>(没有 <code>serverId</code> 字段)会从卡片第 8 段把消息号补回来,一样能去重,不需要迁移数据。</li>
-          <li>请求时机:登录成功时发一次 + 主窗口开起来(收包事件挂好)再发一次,两条路径互为兜底,重复的部分由去重吃掉。</li>
-          <li><strong>新增(续 7)</strong></li>
-          <li><strong>官方服务端地址:默认官方,改动要过"读满 5 秒"的警示</strong></li>
-          <li>客户端写死官方地址 <code>zxm.zincms.top:25000</code>(<code>OfficialServer</code>):连接窗 / OOBE / 设置页的<strong>默认值</strong>就是它,</li>
-          <li>config.ini 里没配 <code>ozip</code>/<code>ozport</code> 时自动落到它。(服务端 ZXMOS / ZXMS 的配置不受影响,仍以各自 config.ini 为准。)</li>
-          <li>设置 → 模式与数据源 → 官方数据源改成<strong>两个单选框</strong>:「官方服务端(默认)」随时可点回来;</li>
-          <li>「自定义 IP:端口」会弹<strong>风险说明</strong>,主按钮<strong>先禁用并倒计时 5 秒</strong>,读满才能确认,确认后才允许填地址;</li>
-          <li>取消则自动勾回官方(配置不动)。</li>
-          <li>说明里写清:账号名与密码凭据(密文也可能被离线破解/撞库)、机器码与 IP 会被对方拿到;对方可发假更新/假通知、</li>
-          <li>踢人封号;第三方服务端可能被私下修改,<strong>无法保证隐私安全</strong>;<strong>ZXMOS 专有的跨子服务端功能与其他社区功能可能用不了</strong>;</li>
-          <li>并强调<strong>官方服务端(ZXMOS)≠ 子服务端(ZXMS)</strong>。</li>
-          <li>新增调试开关 <code>testaction=customaddress</code>(与 <code>skipauth</code> / <code>startpage</code> 同一路子)用于自动化验证这条流程。</li>
-          <li><strong>工程:exe 数字签名(自签)</strong></li>
-          <li>新增 <code>_sign.ps1</code>:建自签代码签名证书(<code>CN=ZincXManager 开发签名</code>,10 年)→ 装进<strong>当前用户 + 本机</strong>的</li>
-          <li>受信任根 / 受信任发布者 → 给工作区工具与交付包 exe 签名(<code>Set-AuthenticodeSignature</code>,SHA-256)+ <code>Unblock-File</code>;</li>
-          <li><code>_publish-aot.ps1</code> 末尾自动调用,交付包出门就带签名。</li>
-          <li>自签只在本机(装过证书的机器)有效;发给别人仍需要 CA 签发的正式代码签名证书。</li>
-          <li><strong>验证(续 7)</strong></li>
-          <li>| 套件 | 覆盖 | 结果 |</li>
-          <li>|---|---|---|</li>
-          <li>| <code>_ver-official3.ps1</code>(新) | 默认地址=官方 / 点自定义弹出风险说明 / <strong>读满 5 秒前回车无效</strong> / 5 秒后确认生效 / 取消保持官方 / 自定义地址能保存 | 见测试日志 |</li>
-          <li><strong>新增(续 6)</strong></li>
-          <li><strong>ZXMOS 官方(正版)验证 —— 只有官方签发的许可证才能跑</strong></li>
-          <li>新增共享库 <code>ZincXManagerShared/Verify/</code>:</li>
-          <li><code>OfficialLicense</code>:一张纯文本 <code>official.lic</code>(<code>键=值</code>),RSA-2048/SHA-256 验签,<strong>绑定机器码</strong>、带<strong>有效期</strong>;</li>
-          <li>签名盖在规范化负载 <code>产品|名称|机器码|签发日|到期日|序列号</code> 上,手改任何字段都会验签失败;</li>
-          <li><code>OfficialGuard</code>:<strong>拆成多处的闸门</strong> —— 启动时(<code>RequireOfficial()</code>,不过就退出码 2,端口都不开)+</li>
-          <li>每条连接接入时(<code>Allow()</code>,不过就断开);校验通过才有的 32 字节 <code>Pepper</code>(第二层用,没通过时返回随机值);</li>
-          <li><code>OfficialKey</code>:内置<strong>公钥</strong>(只能验签、签不出新证),<strong>打散存放</strong>(模数与一段链式 SHA-256 密钥流异或后以字节数组存),</li>
-          <li>二进制里搜不到明文模数。</li>
-          <li>ZXMOS:官方构建(<code>-p:OfficialBuild=true</code>)启动即强制校验;开发/测试构建<strong>完全不受影响</strong>(校验代码根本不编译进去)。</li>
-          <li>两种构建都会在日志里打<strong>本机机器码</strong>,方便客户发回来换证。</li>
-          <li>新增签发工具 <code>E:\REP\ZincXManagerLicTool</code>(<code>keygen</code> / <code>sign</code> / <code>verify</code> / <code>machine</code>)——</li>
-          <li><strong>私钥只在你手里,不进仓库、不外发</strong>;<code>keygen</code> 顺手生成内置公钥源码。</li>
-          <li><code>_publish-aot.ps1</code> 新增 <code>-Official</code> 开关:正式包三端都用官方构建(ZXMOS 校验许可证、ZXMS / ZXMC 拒绝非官方服务端),</li>
-          <li>并加上去符号/去堆栈/去框架字符串的发布参数;不带开关仍是<strong>测试包</strong>(不需要证)。交付包里<strong>不放</strong> <code>official.lic</code>(一台机器一张,由你发)。</li>
-          <li><strong>ZXMOS 官方验证第二层(对端验证 520 / 521)</strong></li>
-          <li>新增协议 <code>OfficialChallenge = 520</code>(验证方 → 服务端:一次性 nonce)/ <code>OfficialProof = 521</code></li>
-          <li>(服务端 → 验证方:<code>Base64(许可证原文)|nonce|HMAC-SHA256(pepper, nonce)</code>)。</li>
-          <li>新增共享库 <code>ZincXManagerShared/Verify/OfficialHandshake.cs</code>:拼证明 / 验证明。</li>
-          <li>验证方三步:① 用<strong>内置公钥验签</strong>(证必须是官方私钥签的,伪造不出来)② 校 nonce(挡重放)③ 校 HMAC(证明对方真过了第一层)。</li>
-          <li><strong>ZXMOS</strong>:收到 520 才出示证明,而且<strong>只应答已经登录成功的连接</strong>(<code>err|not-authenticated</code>),免得谁都能连上来收集许可证;</li>
-          <li>开发构建老实回 <code>err|development</code>,不装。</li>
-          <li><strong>ZXMS</strong>:自己账号登录成功后要证明并校验;<strong>官方发行版</strong>验不过就<strong>断开</strong>与那个服务端的连接(不再中转);</li>
-          <li>开发构建只警告、照常干活(现有测试套件全不受影响);运维让步 = <code>config.ini</code> 的 <code>officialcheck=0</code>(只警告)。</li>
-          <li><strong>ZXMC</strong>:直连官方服(模式 OOS)登录成功后要证明并校验;验过 → 提示条「已确认对方是官方服务端:&lt;名称&gt;」,</li>
-          <li>验不过 → 橙色提示条「注意:对方不是官方服务端」(官方发行版还会断开,<code>allowunverified=1</code> 可放行)。</li>
-          <li><code>ZincXManagerServer</code> / <code>ZincXManagerClient</code> 的 csproj 也加了 <code>OfficialBuild=true</code> → <code>OFFICIAL_BUILD</code> 开关(默认关,开发/测试构建行为不变)。</li>
-          <li>探针新增 <code>official</code> / <code>official-early</code> 两种模式(登录后要证明 / 未登录就要),方便脚本化验证。</li>
-          <li><strong>验证(续 6)</strong></li>
-          <li>| 套件 | 覆盖 | 结果 |</li>
-          <li>|---|---|---|</li>
-          <li>| <code>_ver-official.ps1</code>(新) | 现场编译"开发构建 / 官方构建"两套:开发构建没证照跑(现有测试不受影响)/ 官方构建没证退出码 2 且端口不开 / 官方签发的证能跑 / 别的机器码的证、改过字段的证、过期的证都拒绝 / 换回正确证又能跑 / 二进制里搜不到明文公钥模数 | 10 / 10 |</li>
-          <li>| <code>_ver-official2.ps1</code>(新) | <strong>第二层对端验证</strong>:官方服的证明可验签 / 未登录要证明被拒 / 开发服老实回 development / 官方子服连官方服记通过、连非官方服<strong>记警告并断开</strong>且不再中转 / <code>officialcheck=0</code> 放行 / 开发构建只警告照常干活 / 客户端直连两种情形的日志与提示条 | 13 / 13 |</li>
-          <li>| AOT 三端发布告警自检 | ZXMOS / ZXMS / ZXMC 各 0 告警(AOT 下 RSA 验签无裁剪告警) | 0 / 0 / 0 |</li>
-          <li>| <code>_test8-aot-smoke.ps1</code>(回归) | 交付包冒烟(测试包不受官方验证影响) | 19 / 19 |</li>
-          <li><strong>修复(续 5)</strong></li>
-          <li><strong><code>push @all</code> 其实是坏的</strong>(帮助里写了、代码里没实现):官方服按账号名过滤 → 没人匹配;子服也当玩家名去过滤 → 谁都收不到。</li>
-          <li>三处补齐:<code>@all</code> 在官方服 = 直连客户端不做账号核对、在子服 = 转给本服所有客户端、在客户端 = 不再按账号丢掉。</li>
-          <li><strong>存档里的卡片没带消息号</strong>:原先先落盘再拿消息号,存档里那张缺第 8 段 → 补发去重整个失效(测试⑪抓出来的)。</li>
-          <li>现在 <code>MessageArchive.Add</code> 收的是"拿到号之后再拼卡片"的写法,存档与发出去的是同一张。</li>
-          <li><strong>老存档不认识消息号</strong>:升级前存的 <code>messages.json</code> 没有 <code>serverId</code> 字段 → 现在读存档时从卡片第 8 段补回来,不用迁移数据。</li>
-          <li><strong>子服 config.ini 被整体覆盖会"认证失败"</strong>:覆盖后 <code>servercode</code> 丢了,子服会重新生成一个新码,</li>
-          <li>而官方服务端记的还是当初那个 → 接入被判「身份不一致」。三处改进:</li>
-          <li>子服生成新 <code>servercode</code> 时,如果本端<strong>已经配过 <code>osuser</code></strong>(说明登记过),启动日志醒目提示后果与两条处理办法;</li>
-          <li>官方服务端的失败回执改成说清是<strong>服务端码</strong>不一致,不再叫人去用 <code>osuser</code>(那条路会同样失败,改名也要校验两码);</li>
-          <li>新增 <code>_refresh-desktop.ps1</code>:刷新桌面测试包只换程序,<strong>绝不覆盖已有的 <code>config.ini</code></strong>(这个坑的根源就是打包刷新时照抄干净 config)。</li>
-        </ul>
-      </section>
-        <h4>新增(续 4)</h4>
-        <ul>
-          <li><strong>消息本地化(存档 / 置顶 / 来源时间 / 删除 / 三档保留期)</strong></li>
-          <li>客户端新增 <code>MessageStore</code>(<code>messages.json</code>,与 <code>config.ini</code> 同目录):收到的公告 / 推送落盘,<strong>关掉客户端再开还在</strong>。</li>
-          <li><strong>新消息排在最上面</strong>(以前是往下追加);卡片底部显示 <strong>来源 + 收到时间</strong>(如 <code>源:ZXMS-xxx  10-11 11:55</code>);</li>
-          <li>卡片<strong>右上角「删除」</strong>可单条删除(同时从存档去掉)。</li>
-          <li><strong>保留期按来源分三档</strong>(过期消息在开客户端时自动清理,并立刻写回存档):</li>
-          <li><code>ZXMOS-…</code>(官方服务端)消息:固定最多 <strong>20 天</strong>,客户端不可改;</li>
-          <li><code>ZXMS-…</code>(子服务端)消息:按子服务端设置保留,<strong>默认 7 天</strong>(ZXMS 的 <code>config.ini</code> 的 <code>msgdays</code>,</li>
-          <li>控制台 <code>msgdays &lt;天数&gt;</code> 也能改,改完立刻用新协议包通知在线客户端);</li>
-          <li><code>ZXMC</code>(客户端本地产)消息:按客户端保留天数,<strong>默认 60 天</strong>,在<strong>设置 → 高级 → 消息保留</strong>里改(1-3650)。</li>
-          <li>新增协议 <code>ServerConfig = 202</code>(服务端 → 客户端,负载按行 <code>键=值</code>):子服务端连上就下发 <code>msgdays=N</code>,</li>
-          <li>客户端据此决定本地留多久(不认识的行忽略,便于以后加别的配置)。</li>
-        </ul>
-      </section>
-        <h4>新增(续 3)</h4>
-        <ul>
-          <li><strong>卡片动作回传(502 / 503)</strong></li>
-          <li><code>CardAction = 502</code>(ZXMC → 服务端):负载 <code>动作|输入|原卡片</code> —— 动作 = 按钮文案(下拉框固定"选择"),</li>
-          <li>输入 = 填空卡片里填的内容,原卡片 = 收到的那张 7 段卡片原文(服务端凭它认是哪张卡片,不用再加"卡片序号")。</li>
-          <li><code>CardActionAck = 503</code>(服务端 → ZXMC):<code>ok|提示文本</code> / <code>err|原因</code>,客户端显示在状态栏。</li>
-          <li>路由:卡片来源是 <code>ZXMS-…</code>(本服)时子服务端自己记日志 + 回执;来源是 <code>ZXMOS-…</code> 时<strong>转交官方服务端</strong></li>
-          <li>(转发负载前面多一段账号),官方端日志记 <code>(经子服务端转交)</code>,直连客户端上报的记 <code>(直连)</code>。</li>
-          <li>客户端:卡片按钮点击即上报;<strong>选择卡片 = 下拉框 + 「确认」按钮</strong>(点确认才上报,免得滚轮滚过就改掉选择);</li>
-          <li>填空卡片 = 输入框 + 确认,输入内容一起上报。</li>
-          <li><strong>界面(按设计稿)</strong></li>
-          <li><strong>毛玻璃(亚克力)</strong>:内容区与消息面板<strong>各留一层白</strong>(各约 55%,内容区再压一层 40% 磨砂),卡片 90% 白 ——</li>
-          <li>既透出模糊的壁纸,又不会"没颜色"。</li>
-          <li><strong>半透明</strong>:只有侧边栏半透明(不透明度 = 个性化滑杆),内容区 / 面板 / 卡片一律不透明。</li>
-          <li>消息内容区那层磨砂从写死颜色改成资源 <code>ThemeContentVeil</code>,跟着毛玻璃开关走。</li>
-          <li><strong>弹窗居中</strong>:<code>MessageDialog</code> 加 <code>WindowStartupLocation="CenterOwner"</code> —— 弹窗永远在宿主窗口</li>
-          <li>(主窗口 / 登录窗 / 连接窗)正中间。实测:宿主中心 (960,552)、弹窗中心 (960,551.5),偏差 <strong>0px</strong>。</li>
-        </ul>
-      </section>
-        <h4>新增(续 2)</h4>
-        <ul>
-          <li><strong>业务协议填实(阶段 A):服务端消息 —— 公告 500 / 定向推送 501</strong></li>
-          <li>协议定死(编号不变):<code>Notice = 500</code> 负载 = 消息卡片;<code>Push = 501</code> 负载 = <code>目标账号|卡片</code>。</li>
-          <li>卡片线格式固定 <strong>7 段</strong> <code>种类|标题|正文|来源|主动作|次动作|选项</code>,实现在共享库 <code>Network/MessageCard.cs</code></li>
-          <li>(拼接 / 解析 / 校验,字段里的 <code>|</code> 会被换成全角"／",选项里的逗号换成"、",所以解析回来一定还是 7 段)。</li>
-          <li><code>FriendMsg = 400</code> / <code>FriendMsgAck = 401</code> 明确标注为<strong>未实施</strong>(好友功能没有要求,编号继续占着)。</li>
-          <li>控制台命令(ZXMOS 与 ZXMS 都有,写法就是卡片段本身):</li>
-          <li><code>notice &lt;标题&gt;|&lt;正文&gt;[|种类|主动作|次动作|选项]</code> —— ZXMOS 群发:直连客户端 + 所有已认证子服务端</li>
-          <li>(子服务端再转给自己名下的客户端);ZXMS 的 <code>notice</code> 只发本服、不经官方服务端。</li>
-          <li><code>push &lt;账号&gt; &lt;标题&gt;|&lt;正文&gt;[|…]</code> —— 定向推送:直连客户端按账号过滤;</li>
-          <li><strong>每台子服务端各自按本服在线名单过滤</strong>,命中才投、不命中静默丢弃。</li>
-          <li>这样就不需要维护"玩家挂在哪个连接上"的全局目录(那是好友消息才需要的东西)。</li>
-          <li><strong>五种卡片形态全部可用</strong>(客户端模板本来就按 Kind 切换,这次补上入口):</li>
-          <li><code>text</code> 纯文本 / <code>update</code> 一个链接按钮 / <code>choice</code> 两个按钮(是·否) / <code>input</code> 输入框 + 确认 /</li>
-          <li><code>select</code> 下拉框(选项逗号分隔,单个参数)。</li>
-          <li><strong>来源标签三种形态</strong>:<code>ZXMOS-&lt;官方服务端名称&gt;</code> / <code>ZXMS-&lt;服务端名称&gt;</code> / <code>ZXMC</code>(客户端本地消息);</li>
-          <li>名称<strong>每次发消息现读 <code>config.ini</code> 的 name</strong>,改完 <code>name</code> 之后发的消息来源立刻跟着变。</li>
-        </ul>
-      </section>
-        <h4>变更(续 2)</h4>
-        <ul>
-          <li>ZXMS 收到 ZXMOS 的公告 / 推送后转给本服 ZXMC;两端都加了闸门:<strong>客户端发 500 / 501 一律记警告并忽略</strong>。</li>
-          <li>ZXMS 替客户端中转的账号现在会登记进<strong>本服在线名单</strong>(<code>net clients</code> 能看到账号名,按账号定向推送也才有依据)。</li>
-        </ul>
-      </section>
-        <h4>修复(续 2)</h4>
-        <ul>
-          <li><strong>中转登录没进子服在线名单</strong>:SAOS 下玩家的登录由 ZXMS 转发给 ZXMOS,ZXMS 原来不登记账号</li>
-          <li>(<code>net clients</code> 里显示 <code>-</code>,定向推送按账号匹配不到人)。现在拿到 <code>ok|名称|ID|等级</code> 回执时顺手登记。</li>
-          <li><strong>ZXMOS 的 <code>push</code> 提示文案不实</strong>:原来"直连命中 0 个 + 转给 2 台子服务端"也会说"已推给 X";</li>
-          <li>现在如实说明"不在本端直连:已转给 N 台子服务端,由它们各自按在线名单判断(看各子服务端日志)"。</li>
-        </ul>
-      </section>
-        <h4>新增</h4>
-        <ul>
-          <li><strong>协议 <code>AccountRename = 611</code> / <code>AccountRenameAck = 612</code></strong></li>
-          <li>611(ZXMS → ZXMOS):负载 <code>旧名|新名|新密文|机器码|服务端码</code>。ZXMOS 校验「这条连接登记的就是旧名」</li>
-          <li>且机器码 / 服务端码与登记一致,才改名;</li>
-          <li>612(ZXMOS → ZXMS):<code>ok|新名</code> 或 <code>err|原因</code>;</li>
-          <li>改名成功后 ZXMOS 一并处理两件连带事:① 在线连接的登记名换成新名(<code>net clients</code> 与拉黑认的都是登记名);</li>
-          <li>② 经它中转注册的玩家账号 <code>owner</code> 跟着换(否则 <code>srv ban &lt;新名&gt;</code> 归档不到名下账号)。</li>
-          <li><strong>ZXMS 控制台命令</strong></li>
-          <li><code>osuser &lt;新名&gt; &lt;新密码&gt;</code>:改本端在官方服务端的账号名与密码。先发 611 等 612,拿到 <code>ok</code> 才写本地</li>
-          <li><code>config.ini</code> 的 <code>osuser</code> / <code>oshash</code>(顺序不能反:服务器一旦拒绝,config 里就留下一个对不上的账号,</li>
-          <li>下次接入就认证不过去);名字写成一样的就是「只改密码」。</li>
-          <li><code>info</code>:一行一项列出本端身份 —— 名称 / 账号 / 服务端码 / 机器码 / 官方服务端连接状态。</li>
-          <li><code>name &lt;新名称&gt;</code>:改本端显示名;<strong>新接入的客户端立刻收到新名称</strong>(201 现在每次接入现读 config)。</li>
-          <li><strong>身份与两码</strong></li>
-          <li>ZXMS 首次启动生成 32 位十六进制<strong>服务端码</strong>(<code>config.ini</code> 的 <code>servercode</code>)并落盘,同机器多实例各自不同;</li>
-          <li>登录 / 注册都上报<strong>机器码(设备)</strong>+<strong>服务端码(实例)</strong>,ZXMOS 存进账号(<code>Account.ServerCode</code>);</li>
-          <li>登录时两码与登记不符 → 拒连,并提示「请不要直接改 config.ini,请在控制台用 osuser / name 命令修改」;</li>
-          <li>ZXMS 的 <code>info</code> 与这一套提示让管理员不用去翻 config 也能看清自己是哪一个实例。</li>
-          <li><strong>工程 / 交付</strong></li>
-          <li><strong>AOT 交付包重打(2026-10-11)</strong>:三端 <code>dotnet publish -c Release -r win-x64</code> 全部 exit 0 ——</li>
-          <li>ZXMOS 单文件 <strong>2.7 MB</strong>、ZXMS <strong>2.9 MB</strong>、客户端 <strong>20.0 MB</strong> + 3 个折不进 AOT 的原生 dll</li>
-          <li>(<code>libSkiaSharp.dll</code> / <code>av_libglesv2.dll</code> / <code>libHarfBuzzSharp.dll</code>,必须与主程序同目录;<code>.pdb</code> 可删,约 180 MB)。</li>
-          <li>交付包 <code>G:\桌面\ZXM-AOT-测试</code> 已刷新(<strong>43.5 MB / 10 个文件</strong>):清掉上一版冒烟留下的 <code>logs/</code>、<code>clients.log</code>、<code>zxms.json</code>,</li>
-          <li>ZXMS 的 <code>config.ini</code> 预置 <code>ZXMS-Test / 123456</code>(与 <code>说明.txt</code> 一致),<code>说明.txt</code> 重写(启动顺序 / 账号 / 可测点 / 端口 / 数据文件)。</li>
-          <li>配套脚本:一键 <code>_publish-aot.ps1</code>(发布 + 组装 + 清单),冒烟 <code>_test8-aot-smoke.ps1</code>(<strong>16/16</strong>,直接跑交付包里的单文件产物)。</li>
-          <li>客户端 <code>ZincXManagerClient.csproj</code> 增 <code>&lt;PublishAot&gt;true&lt;/PublishAot&gt;</code>:交付形态就是 AOT 单文件,</li>
-          <li><code>dotnet publish -c Release -r win-x64</code> 直接走 AOT,不必再手加 <code>-p:PublishAot=true</code>;</li>
-          <li><code>AvaloniaUI.DiagnosticsSupport</code> 改为<strong>整条 PackageReference 只在 Debug 引用</strong>(Release / AOT 包里不带它)。</li>
-          <li><code>ViewLocator</code> 去掉反射:原来按名字 <code>Type.GetType</code> + <code>Activator</code> 找视图,开了 <code>PublishAot</code> 之后</li>
-          <li>发布时会报 <strong>IL2026</strong>(裁剪警告)、真裁剪后也会失效。对应关系只有 5 个且固定,改为<strong>显式映射</strong>,</li>
-          <li>行为不变、告警清零、裁剪也漏不掉。</li>
-          <li>新增测试:⑥ <code>_test6-osuser.ps1</code>(<code>osuser</code> 改名协议 22 项)、⑦ <code>_test7-identity.ps1</code>(身份与两码 24 项)、</li>
-          <li><code>_run-all-tests.ps1</code>(一条命令跑完全部套件,开跑前先 <code>netstat</code> 查端口占用并打印总表)。</li>
-        </ul>
-      </section>
-        <h4>变更</h4>
-        <ul>
-          <li><strong>ZXMS 删除 <code>srv reg</code></strong>:服务端账号的注册只剩一条路 —— 连上官方服务端时账号不存在就自动注册;</li>
-          <li>改名 / 改密码用 <code>osuser</code>。<code>srv show</code> 保留(看当前用的是哪个账号名),文案改为指向自动注册与 <code>osuser</code>。</li>
-          <li>回执认领方式:ZXMS 自己发给 ZXMOS 的账号请求(601 登录 / 603 注册 / 612 改名)改成<strong>按包 Id 认领</strong></li>
-          <li>(原来是单个等待者字段),登录与改名可以同时各等各的,不会互相顶掉。</li>
-          <li>黑名单归档 <code>info.json</code> 增记 <code>machine</code> / <code>serverCode</code>,并新增 <code>Blacklist.ReadInfo</code>:</li>
-          <li>解封按当初封的值解,账号行被删也能从归档取回。</li>
-          <li>客户端 UI 文案「去底层化」:界面不再出现 <code>config.ini</code> / 密文 / <code>user reg</code> / 协议 等实现细节(约 55 处),</li>
-          <li>只写用户能懂的话;<strong>只有侧边栏半透明</strong>、其余表面不透明(10-10 批次已落地,本批次未回退)。</li>
-          <li><strong>连接窗口(<code>ConnectWindow</code>)横版化</strong>:窗口 880×660 → <strong>940×560</strong>(宽高比 1.68,与横版登录窗口一致),</li>
-          <li>左栏 320 → 360;「地址 / 端口」并排成一行、「连接 / 断开 / 进入主界面」三个按钮横排,</li>
-          <li>一屏排完不用滚动(左栏仍保留滚动兜底)。</li>
-          <li>编译警告清零:清掉 CS0108 / CS0618 / CS0105 / CS8602 等既有警告,四端 <strong>0 警告 0 错误</strong>。</li>
-          <li><code>srv ban</code> 连坐<strong>四样</strong>:账号名 + IP + 机器码 + 服务端码;登录查封禁时两个码都查。</li>
-        </ul>
-      </section>
-        <h4>修复</h4>
-        <ul>
-          <li><strong><code>srv unban</code> 只解账号名与 IP,漏解机器码 / 服务端码</strong>:<code>srv ban</code> 连坐四样而解封只解两样,</li>
-          <li>于是「解封后重连」仍被机器码 / 服务端码拦住(日志显示 <code>已被封禁</code>)。现在四样一起解,</li>
-          <li>并补测测试② 的 ㉒a / ㉒b / ㉒c(测试② 由 24 项增至 27 项)。</li>
-          <li><strong><code>name</code> 改了 config,运行中的服务端还在发旧名称</strong>:两端原来都在「有人接进来」的回调里用启动时读到的</li>
-          <li>局部变量发 201,所以 <code>name</code> / 手改 config 要重启才生效,与命令提示不符。改为<strong>每次接入现读 config</strong></li>
-          <li>(读不到再退回启动值)。</li>
-          <li>ZXMS 用户账号重名守卫失效:<code>_serverAccountName</code> 一直是空串,「用户账号不能与服务端账号重名」从未生效;</li>
-          <li>现在挂载命令时从 config 同步服务端账号名。</li>
-        </ul>
-      </section>
-        <h4>兼容性注意</h4>
-        <ul>
-          <li>新增 611 / 612 两个包:老版本对端收到会记一条「未处理的包」日志,不影响连接与登录;</li>
-          <li>老版本 ZXMS 没有 <code>osuser</code>,改名只能靠直接改两端 config(不推荐 —— 会被身份校验拦下)。</li>
-          <li>删除 ZXMS 的 <code>srv reg</code> 不影响已有 <code>config.ini</code>(<code>osuser</code> / <code>oshash</code> 照旧使用):</li>
-          <li>首次接入仍是「账号不存在即自动注册」,改密码现在是 <code>osuser &lt;同名&gt; &lt;新密码&gt;</code>。</li>
-        </ul>
-      </section>
-      <section class="card version">
+<section class="version-block">
         <h3>[未发布] - 2026-10-10</h3>
         <h4>新增(续)</h4>
         <ul>
@@ -424,47 +135,7 @@
           <li>弹窗按钮支持 <strong>回车 = 主按钮</strong>、<strong>Esc = 取消</strong>。</li>
         </ul>
       </section>
-        <h4>修复(续)</h4>
-        <ul>
-          <li>选择弹窗的说明文本里 <code>\n</code> 显示成字面量,改用真实换行。</li>
-          <li>「清除本地登录记录」的说明与实际行为对齐(账号名会保留,方便下次输入)。</li>
-        </ul>
-      </section>
-        <h4>新增</h4>
-        <ul>
-          <li><strong>通用弹窗</strong> <code>Views/MessageDialog.axaml(.cs)</code></li>
-          <li>按设计稿用一套窗口覆盖四种形态:单按钮(提示 / 报错)、双按钮(是 / 否)、填空(输入框 + 确认)、选择(下拉 + 确认)。</li>
-          <li>结构:蓝色标题栏(左侧白色小条 + 弹窗名 + 红色关闭)、大标题、说明文本、可选输入框 / 下拉、</li>
-          <li>左下淡色提示、右下按钮(主按钮 = 主题色,次按钮 = 浅色);窗口同样支持半透明 / 亚克力。</li>
-          <li>便捷入口:<code>MessageDialog.InfoAsync</code> / <code>ConfirmAsync</code> / <code>AskAsync</code> / <code>ChooseAsync</code>。</li>
-          <li><strong>客户端错误反馈</strong></li>
-          <li>封禁(登录 / 注册被拒)、无法连接服务器、发送失败、服务端无回应、连接被拒绝(模式与目标不匹配)都会弹窗告知用户,</li>
-          <li>不再只写一行状态文字;视图模型新增 <code>ErrorRaised</code> 事件,窗口在 <code>DataContextChanged</code> 里接线。</li>
-        </ul>
-      </section>
-        <h4>变更</h4>
-        <ul>
-          <li><strong>登录窗口改为横版</strong>(780×470):左侧品牌栏(毛玻璃,logo + 模块说明 + 找回密码提示),</li>
-          <li>右侧表单两列排布(账号 / 密码、登录管理账号 / 权限等级、两个勾选、登录 + 注册按钮并排)。</li>
-          <li>此前竖版 440×560 放不下全部按钮与提示,现在一屏可见、无需滚动。</li>
-        </ul>
-      </section>
-        <h4>修复</h4>
-        <ul>
-          <li>错误文案不再自我重复:<code>连接失败:连接失败</code> → <code>连不上 &lt;地址&gt;:&lt;端口&gt;,请检查数据源地址与端口后重试。</code>;</li>
-          <li>服务端回执的 <code>失败:</code> 前缀与弹窗标题重复,已去掉。</li>
-        </ul>
-      </section>
-        <h4>说明</h4>
-        <ul>
-          <li>「半透明」指<strong>窗口本身半透明</strong>:可以直接透过窗口看到桌面,与壁纸无关;壁纸只是主窗口的可选背景,不参与材质。</li>
-          <li>毛玻璃(亚克力)开 = 系统亚克力模糊(半径 30);关 = 不模糊的半透明。</li>
-          <li>表面布置(最终形态)<strong>只有侧边栏半透明</strong>:侧栏用个性化滑杆的不透明度(50-100%,默认 <strong>85%</strong>,存 <code>config.ini</code> 的 <code>alpha</code>),</li>
-          <li>其余表面(面板 / 卡片 / 页面底)一律不透明(主窗口内容区也补了不透明底,否则内容会透出桌面),内容不再被背景干扰;入口窗口(登录 / OOBE / 连接 / 弹窗)另用</li>
-          <li><code>ThemeWindowVeil</code> 保留"透过窗口看桌面"。亚克力档的侧栏仍用 Fluent 的 80%。</li>
-        </ul>
-      </section>
-      <section class="card version">
+<section class="version-block">
         <h3>[未发布] - 2026-10-07</h3>
         <h4>新增</h4>
         <ul>
@@ -488,90 +159,60 @@
           <li>默认开,记在 <code>config.ini</code> 的 <code>glass=1/0</code></li>
         </ul>
       </section>
-        <h4>变更</h4>
-        <ul>
-          <li><strong>服务端名称不再由用户填写</strong>,改为连接时由服务端下发:</li>
-          <li>ZXMOS 读 <code>config.ini</code> 的 <code>name</code>(缺省自动写入「锌能源官方服务端」),连接时随身份包(200)发出 201;</li>
-          <li>ZXMS 同样发自己的 <code>name</code>(缺省「锌能源服务器」);收到 ZXMOS 的 201 后写入本端 <code>ozname</code>,并在 <code>net status</code> 里显示「名称:…」;</li>
-          <li>ZXMC 收到 201 后写入 <code>czname</code> / <code>ozname</code>,设置 → 模式与数据源显示的就是服务端给的名称;</li>
-          <li>OOBE 第 3 步的「子服务端名称 / 官方服务端名称」输入框删除,改为提示「连接后由服务端提供」。</li>
-          <li>登录 / OOBE / 连接 三个入口窗口的底由不透明(<code>ThemeWindow</code>)改为半透明 veil(<code>ThemePage</code>),</li>
-          <li>并声明窗口材质:毛玻璃开 = 要系统 <code>AcrylicBlur</code>,关 = 只要 <code>Transparent</code> —— 窗口本身就是半透明/亚克力,</li>
-          <li>不再是一大块白底;材质与「壁纸」解耦(不设壁纸就是直接透出桌面)。</li>
-          <li>窗口材质统一到 <code>ThemeManager.ApplyWindowMaterial(window)</code>,且<strong>只在开窗时定一次</strong>:</li>
-          <li>运行中切换开关只改表面不透明度,不再改 <code>TransparencyLevelHint</code>(避免 Windows 重建窗口、屏幕上闪出「像多了一个窗口」)。</li>
-          <li>ZXMS <code>net status</code> 输出增加官方服务端名称。</li>
-        </ul>
-      </section>
-        <h4>修复</h4>
-        <ul>
-          <li><strong>ZXMOS 拉黑整台 ZXMS 时取不到 IP、也踢不掉在线连接</strong>:首次接入走的是「注册」路径,而 <code>LastIp</code> 与连接登记</li>
-          <li>只在「登录」成功时才写。现在注册成功后同样登记连接账号并记录 IP / 机器码(替玩家注册的中转连接不登记,避免把 ZXMS 的连接记成玩家)。</li>
-          <li><strong>注册阶段不做机器码封禁检查</strong>:ZXMS / ZXMOS 注册分支原来按 <code>machine: null</code> 查封禁,现在按注册载荷第 3 段的机器码查;</li>
-          <li>客户端注册载荷相应改为 <code>名称|密文|机器码</code>(登录载荷不变)。</li>
-          <li><strong>OOBE / 登录窗口的「权限等级」列表错误</strong>:</li>
-          <li>「哪一端的管理账号」下拉原本把 <code>SelectedItem</code> 绑在 <code>ComboBoxItem</code> 对象上,选 ZXMOS 静默失效 → 列表一直是 ZXMS 的 <code>LAdmin/HAdmin/System</code>。</li>
-          <li>改为绑 <code>SelectedIndex</code>(0=ZXMS,1=ZXMOS)再由视图模型折算;</li>
-          <li><code>Mode</code>(SAOS/OS/OOS)变化不通知等级列表 → OOS 下列表不刷新。补上通知并复位;</li>
-          <li>等级复位发生在列表通知之前,ComboBox 会把选择当「不在列表里」清空(勾上「登录管理账号」后等级框空白)。改为 UI 线程延后一拍复位。</li>
-          <li>现在:SAOS + ZXMS 侧 = <code>LAdmin…</code>;SAOS + ZXMOS 侧 / OOS = <strong>只有 <code>Admin</code>、<code>System</code></strong>。</li>
-          <li>ZXMOS <code>Program.cs</code> 中被封禁表插入挤错位的账号表 XML 注释归位。</li>
-          <li>协议注释修正:<code>AccountMigrate</code>(610)的文档注释不再张冠李戴。</li>
-        </ul>
-      </section>
-        <h4>已知问题(未修,已记录)</h4>
-        <ul>
-          <li>1. <strong>经 ZXMS 中转的玩家登录会被按「服务端账号」查表</strong>:ZXMOS 登录分支用连接身份判断账号表,中转登录没有 <code>|relay</code> 标记,</li>
-          <li>于是去 <code>zxms.json</code> 找玩家账号 → 回 <code>err|账号不存在</code>。注册路径已有 <code>|relay</code> 标记,登录路径还没有。</li>
-          <li>2. 中转注册成功时 ZXMOS 的日志标签显示为 <code>[子服务端账号]</code>(应为玩家账号),仅文案问题。</li>
-          <li>3. 注册阶段的机器码封禁依赖客户端新载荷:老客户端(第 3 段不带机器码)在注册这一步仍不会被机器码拦。</li>
-        </ul>
-      </section>
-        <h4>兼容性注意</h4>
-        <ul>
-          <li>新增 201 包:老客户端会把它当作未知包记一条日志,不影响连接与登录;老服务端不发 201,新客户端只是拿不到名称。</li>
-          <li>注册载荷新增第 3 段(机器码):服务端按「第 3 段是否为 <code>relay</code>」兼容老式 <code>名称|密文|relay</code> 写法。</li>
-          <li>数据文件除 <code>config.ini</code> 外一律 JSON(<code>osusers.json</code> / <code>zxms.json</code> / <code>users.json</code> / <code>bans.json</code> / <code>blacklist/**</code>),老 <code>.ini</code> 会自动迁移。</li>
-        </ul>
-      </section>
-        <h4>本批次涉及文件</h4>
-        <ul>
-          <li>```</li>
-          <li>ZincXManagerShared/Network/Protocol.cs              + ServerName = 201</li>
-          <li>ZincXManagerOServer/Blacklist.cs                    新增:黑名单归档</li>
-          <li>ZincXManagerOServer/Program.cs                      srv ban/unban/blacklist 落地、注册补 IP/机器码、名称下发</li>
-          <li>ZincXManagerOServer/Command/ZxmosCommands.cs        srv ban/unban/blacklist、ban user、黑名单钩子</li>
-          <li>ZincXManagerServer/Program.cs                       注册按机器码查封禁、名称发/收</li>
-          <li>ZincXManagerServer/Command/ZxmsCommands.cs          net status 显示服务端名称</li>
-          <li>ZincXManagerClient/Models/ThemeOption.cs            + 巨硬蓝</li>
-          <li>ZincXManagerClient/ThemeManager.cs                  毛玻璃开关、表面不透明度、窗口材质</li>
-          <li>ZincXManagerClient/ViewModels/{Connect,Oobe,Login,Settings}ViewModel.cs   201 处理、等级列表修复、名称显示</li>
-          <li>ZincXManagerClient/Views/{Main,Login,Oobe,Connect}Window.axaml(.cs)        半透明/亚克力窗口、删除名称输入框</li>
-          <li>ZincXManagerClient/Views/SettingsView.axaml         个性化:毛玻璃开关</li>
-          <li>```</li>
-        </ul>
-      </section>
     </div>
-  </section>
-</main>
+  </div></section>
+</main><script>
+(function(){
+  var l=document.getElementById('verlist'), b=document.getElementById('verbody');
+  if(!l||!b) return;
+  var bs=[].slice.call(b.querySelectorAll('.version-block'));
+  var as=[].slice.call(l.querySelectorAll('a[data-i]'));
+  function show(i){
+    bs.forEach(function(x,k){ x.style.display = (k===i)?'':'none'; });
+    as.forEach(function(a){ a.classList.toggle('on', Number(a.dataset.i)===i); });
+  }
+  as.forEach(function(a){
+    a.addEventListener('click', function(e){ e.preventDefault(); show(Number(a.dataset.i)); window.scrollTo({top:0,behavior:'smooth'}); });
+  });
+  show(0);
+})();
+</script>
 
-<footer class="site-footer">
-  <div class="wrap footer-inner">
-    <div class="footer-brand">
-      <strong>ZincXManager</strong>
-      <span>锌X管理面板 · ZXM</span>
+<footer class="foot">
+  <div class="wrap">
+    <div class="foot-grid">
+      <div>
+        <a class="brand" href="index.html" style="margin-bottom:14px">
+          <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 36 9" width="104" height="26" role="img"><svg x="0" y="0" width="36" height="7" viewBox="0.756 0.541 36.472 7.899" preserveAspectRatio="none"><path d="M10.788,0.7l-9.788,0v0.6h8.134l-8.378,7h10.992l6.2,-6.864l6.983,7.004l6.079,-6.981l5.762,6.736l0.456,-0.39l-6.214,-7.264l-6.113,7.019l-6.975,-6.996l-6.445,7.136h-9.072z" fill="currentColor"/></svg><svg x="10" y="0" width="8" height="7" viewBox="0.803 0.773 8.402 7.445" preserveAspectRatio="none"><path d="M4.045,4.058l-3.242,-2.833l0.395,-0.452l3.242,2.833zM8.794,8.218c-0.782,-0.736 -1.934,-1.769 -3.456,-3.101l0.395,-0.452c1.528,1.336 2.685,2.375 3.472,3.116z" fill="currentColor" opacity="0.62"/></svg></svg></span>
+        </a>
+        <p style="color:var(--fg-dim);font-size:13.5px;max-width:34ch">面向 Minecraft 服主与社区管理员的一体化管理面板。</p>
+      </div>
+      <div>
+        <h5>产品</h5>
+        <a href="#arch">架构</a>
+        <a href="#features">功能</a>
+        <a href="download.html">下载</a>
+        <a href="changelog.html">更新日志</a>
+      </div>
+      <div>
+        <h5>文档</h5>
+        <a href="help.html">文档与帮助</a>
+        <a href="tech.html">技术文档</a>
+        <a href="zxms.html">子服务端教程</a>
+        <a href="arch.html">类与协议表</a>
+      </div>
+      <div>
+        <h5>其他</h5>
+        <a href="https://github.com/weiqi114514/ZincXManager" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://github.com/weiqi114514/ZincXManager/releases" target="_blank" rel="noopener">Releases</a>
+        <a href="seq.html">时序图</a>
+        <a href="deploy.html">部署</a>
+      </div>
     </div>
-    <nav class="footer-links">
-      <a href="index.html#features">功能</a>
-      <a href="index.html#arch">架构</a>
-      <a href="index.html#modes">模式</a>
-      <a href="download.html">下载</a>
-      <a href="zxms.html">子服教程</a>
-      <a href="help.html">文档与帮助</a>
-      <a href="changelog.html">更新日志</a>
-      <a href="https://github.com/weiqi114514/ZincXManager" target="_blank" rel="noopener">GitHub</a>
-    </nav>
-    <p class="copyright">© <span id="year">2026</span> ZincXManager · zxm.zincms.top</p>
+    <div class="foot-bot">
+      <span>© 2026 ZincXManager · 锌X管理面板</span>
+      <span>交流群 (QQ) 1129776132</span>
+    </div>
   </div>
 </footer>
 

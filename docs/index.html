@@ -52,10 +52,10 @@
       </div>
     </div>
     <div class="hero-side">
-      <div class="stat"><b>3</b><span>Ends</span></div>
-      <div class="stat"><b>3</b><span>Modes</span></div>
-      <div class="stat"><b>AES-256</b><span>Crypto</span></div>
-      <div class="stat"><b>a0.4.1</b><span>Version</span></div>
+      <div class="stat"><b>3 个端</b><span>客户端 · 子服 · 官服</span></div>
+      <div class="stat"><b>4 组功能</b><span>经济 · 社区 · 组织 · 管理</span></div>
+      <div class="stat"><b>3 种连接</b><span>OS · OOS · SAOS</span></div>
+      <div class="stat"><b>全链路加密</b><span>ECDH + AES-256-GCM</span></div>
     </div>
   </div>
 </section>
@@ -166,6 +166,159 @@
           <div><h4>权限模式</h4><p>Player 与管理员分权,细到每个子功能。</p></div>
         </div>
       </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- 客户端预览 -->
+<section class="sec" id="preview">
+  <div class="wrap">
+    <div class="sec-head">
+      <div>
+        <div class="k">Product</div>
+        <h2>它就是<br>这个样</h2>
+      </div>
+      <p>左侧导航是功能分区,中间是工作区,右侧是消息面板 —— 消息走 Markdown / HTML 渲染,还可以展开成全宽。</p>
+    </div>
+    <div class="sec-body">
+      <div class="trio" style="grid-template-columns:1fr">
+        <article style="padding:0;border-right:0">
+          <div style="display:grid;grid-template-columns:220px 1fr 300px;min-height:360px">
+            <div style="border-right:1px solid var(--line);padding:22px 18px;background:var(--ink-2)">
+              <div style="font-family:Consolas,monospace;font-size:11px;color:var(--fg-dim);letter-spacing:.18em;margin-bottom:14px">ZXMC</div>
+              <div style="display:grid;gap:2px;font-size:13.5px;color:#cfd8e3">
+                <div style="padding:7px 10px;border-left:2px solid var(--green);background:var(--ink-3)">经济</div>
+                <div style="padding:7px 10px">社区</div>
+                <div style="padding:7px 10px">组织</div>
+                <div style="padding:7px 10px">好友</div>
+                <div style="padding:7px 10px">小功能组</div>
+                <div style="padding:7px 10px">管理</div>
+                <div style="padding:7px 10px">设置</div>
+              </div>
+            </div>
+            <div style="padding:26px 26px">
+              <div style="display:grid;gap:12px">
+                <div style="border:1px solid var(--line);padding:16px 18px;display:flex;justify-content:space-between;align-items:center">
+                  <div><b style="font-size:15px">商店</b><div style="color:var(--fg-dim);font-size:13px">与玩家 / 官方进行交易</div></div>
+                  <span class="btn btn-sm" style="padding:6px 12px;font-size:12.5px">进入</span>
+                </div>
+                <div style="border:1px solid var(--line);padding:16px 18px;display:flex;justify-content:space-between;align-items:center">
+                  <div><b style="font-size:15px">银行</b><div style="color:var(--fg-dim);font-size:13px">存取款 / 转账与利息</div></div>
+                  <span class="btn btn-sm" style="padding:6px 12px;font-size:12.5px">进入</span>
+                </div>
+                <div style="border:1px solid var(--line);padding:16px 18px;display:flex;justify-content:space-between;align-items:center">
+                  <div><b style="font-size:15px">服务器广场</b><div style="color:var(--fg-dim);font-size:13px">子服务端的社区内容</div></div>
+                  <span class="btn btn-sm" style="padding:6px 12px;font-size:12.5px">进入</span>
+                </div>
+              </div>
+            </div>
+            <div style="border-left:1px solid var(--line);padding:22px 18px;background:var(--ink-2)">
+              <div style="font-family:Consolas,monospace;font-size:11px;color:var(--fg-dim);letter-spacing:.18em;margin-bottom:12px">MESSAGES</div>
+              <div style="border:1px solid var(--line);padding:12px;margin-bottom:10px">
+                <div style="font-size:12px;color:var(--green);margin-bottom:6px">系统 · 刚刚</div>
+                <div style="font-size:13px;color:#cfd8e3">欢迎使用 ZincXManager,当前版本 a0.4.1</div>
+              </div>
+              <div style="border:1px solid var(--line);padding:12px">
+                <div style="font-size:12px;color:var(--green);margin-bottom:6px">公告 · 2 分钟前</div>
+                <div style="font-size:13px;color:#cfd8e3">服务器广场已开启,可在社区里发帖</div>
+              </div>
+            </div>
+          </div>
+        </article>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 版本亮点 -->
+<section class="sec" id="release">
+  <div class="wrap">
+    <div class="sec-head">
+      <div>
+        <div class="k">Release a0.4.1</div>
+        <h2>这次<br>改了什么</h2>
+      </div>
+      <p>完整改动见更新日志;这里只挑三件最影响日常使用的事。</p>
+    </div>
+    <div class="sec-body">
+      <div class="row">
+        <div class="side"><h3>不会再连出<br>一堆僵尸连接</h3><p>重复点「连接」会被拦下并提示;换目标才断开重连。</p></div>
+        <div class="items">
+          <div><h4>单实例运行</h4><p>同时只能开一个客户端,第二个自动退出。</p></div>
+          <div><h4>连接前先关旧连接</h4><p>开始新连接前会关闭上一条,服务端不再堆积。</p></div>
+          <div><h4>OOBE 按模式选目标</h4><p>选 OOS 就用官方地址,不再错连子服。</p></div>
+          <div><h4>换目标自动重连</h4><p>改了地址或模式,先断开再连新目标。</p></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 技术栈 -->
+<section class="sec" id="stack">
+  <div class="wrap">
+    <div class="sec-head">
+      <div>
+        <div class="k">Under the hood</div>
+        <h2>技术栈</h2>
+      </div>
+      <p>原生 AOT 单文件程序、跨平台 UI 框架、事件驱动网络层。</p>
+    </div>
+    <div class="sec-body">
+      <div class="trio" style="grid-template-columns:repeat(4,1fr)">
+        <article><div class="idx" style="font-size:28px">.NET 10</div><h3 style="font-size:18px;margin:10px 0 6px">运行时</h3><p style="font-size:13.5px">NativeAOT 发布为单文件,无需安装运行时。</p></article>
+        <article><div class="idx" style="font-size:28px">Avalonia</div><h3 style="font-size:18px;margin:10px 0 6px">界面</h3><p style="font-size:13.5px">XAML + 自绘控件,深色主题与自定义图标。</p></article>
+        <article><div class="idx" style="font-size:28px">ECDH</div><h3 style="font-size:18px;margin:10px 0 6px">加密</h3><p style="font-size:13.5px">P-256 密钥交换 + AES-256-GCM 会话。</p></article>
+        <article><div class="idx" style="font-size:28px">WiX 7</div><h3 style="font-size:18px;margin:10px 0 6px">安装包</h3><p style="font-size:13.5px">MSI 全机器安装 + 便携 ZIP 两种交付。</p></article>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section class="sec" id="faq">
+  <div class="wrap">
+    <div class="sec-head">
+      <div>
+        <div class="k">FAQ</div>
+        <h2>常见问题</h2>
+      </div>
+      <p>更多内容在<a href="help.html">文档与帮助</a>里。</p>
+    </div>
+    <div class="sec-body" style="padding-bottom:56px">
+      <div class="doc-main">
+        <details style="border:1px solid var(--line);padding:14px 18px;margin-bottom:10px">
+          <summary style="cursor:pointer;font-weight:700">客户端要装 .NET 吗?</summary>
+          <p style="margin-top:10px">不用。发布的是 NativeAOT 单文件,三个原生 dll 和 exe 放一起就能跑。</p>
+        </details>
+        <details style="border:1px solid var(--line);padding:14px 18px;margin-bottom:10px">
+          <summary style="cursor:pointer;font-weight:700">OS / OOS / SAOS 有什么区别?</summary>
+          <p style="margin-top:10px">OS 只连子服务端;OOS 直连官方服务端;SAOS 先连子服务端、再由它转发官方。</p>
+        </details>
+        <details style="border:1px solid var(--line);padding:14px 18px;margin-bottom:10px">
+          <summary style="cursor:pointer;font-weight:700">要自己开子服务端吗?</summary>
+          <p style="margin-top:10px">不强制。想有独立的广场、账号与数据就部署 ZXMS;只想用官方社区,选 OOS 直连即可。</p>
+        </details>
+        <details style="border:1px solid var(--line);padding:14px 18px">
+          <summary style="cursor:pointer;font-weight:700">数据存哪?</summary>
+          <p style="margin-top:10px">配置、消息与日志都生成在 exe 同目录;换机整体拷走即可。</p>
+        </details>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="sec" style="border-bottom:1px solid var(--line)">
+  <div class="wrap" style="padding:76px 28px;display:flex;flex-wrap:wrap;gap:24px;align-items:center;justify-content:space-between">
+    <div>
+      <h2 style="font-size:clamp(30px,4vw,60px);font-weight:900;letter-spacing:-.04em;line-height:1">现在就开始</h2>
+      <p style="color:var(--fg-dim);margin-top:12px">下载客户端,连官方服务端或你自己的子服务端。</p>
+    </div>
+    <div style="display:flex;gap:12px">
+      <a class="btn btn-primary" href="download.html">下载客户端</a>
+      <a class="btn" href="help.html">看文档</a>
     </div>
   </div>
 </section>
