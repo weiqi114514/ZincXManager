@@ -77,51 +77,36 @@
         <div class="k">Who &amp; What</div>
         <h2>你拿它<br>能干什么</h2>
       </div>
-      <p>功能组按账号角色划分:玩家是用户,用的是经济、社区、组织;管理员才多出「管理」那一组,等级越高能碰的越多。</p>
+      <p>只分两种人:管理者(服主与管理员做的是同一批事,只是权限高低不同)和玩家。</p>
     </div>
     <div class="sec-body">
-      <div class="trio">
+      <div class="trio" style="grid-template-columns:1fr 1fr">
         <article>
           <div class="idx">01</div>
-          <h3>你是服主</h3>
-          <div class="role">服务器本身归你管</div>
-          <p>装一次子服务端,之后在客户端里就能:</p>
+          <h3>管理者</h3>
+          <div class="role">服主与管理员:同一套事,不同权限上限</div>
+          <p>能碰到的功能一样,区别在于能走多远:</p>
           <ul>
-            <li>管白名单、封禁,谁进谁不进</li>
-            <li>看在线玩家、查日志</li>
-            <li>维护客户端与服务端版本</li>
-            <li>改广场名、消息保留天数等配置</li>
+            <li><b>管人</b>:白名单、封禁(账号或机器码)、处罚记录</li>
+            <li><b>管内容</b>:广场(一个子服只有一个)、公告、置顶、删帖</li>
+            <li><b>管经济</b>:删除违规商店、手动替玩家添加、调整所属权</li>
+            <li><b>管配置</b>:版本、数据源、消息保留天数、广场名</li>
           </ul>
+          <p style="margin:14px 0 0;color:var(--fg-dim);font-size:13px">服主在这之上还能配服务器本身;管理员在授权范围内操作。</p>
         </article>
         <article>
           <div class="idx">02</div>
-          <h3>你是管理员</h3>
-          <div class="role">玩家与内容归你管</div>
-          <p>不只是看板 —— 你能直接动手:</p>
+          <h3>玩家</h3>
+          <div class="role">用户:自己的空间自己经营</div>
+          <p>不只是被动接受管理:</p>
           <ul>
-            <li><b>封禁玩家</b>:按账号或机器码,连处罚一起记</li>
-            <li><b>管商店</b>:删除违规的,也能手动替玩家添加</li>
-            <li><b>调整所属权</b>:把商店 / 组织转到另一个账号名下</li>
-            <li>管这个子服的广场(一个子服只有一个广场),发公告、置顶、删帖</li>
-          </ul>
-        </article>
-        <article>
-          <div class="idx">03</div>
-          <h3>你是玩家</h3>
-          <div class="role">自己的事自己搞</div>
-          <p>不只是被动接受管理,玩家也有自己的空间:</p>
-          <ul>
-            <li>自己开店、自己经营银行</li>
-            <li>加好友、私聊,消息带格式</li>
-            <li>自己开组织:个人 / 团队 / 企业都能建</li>
-            <li>逛广场、看公告、参加别人的组织</li>
-            <li>一个客户端登录,自动连上你的服</li>
+            <li><b>自己开店</b>:定价、上架、结算</li>
+            <li><b>自己开银行</b>:存取款、转账、利息</li>
+            <li><b>自己开组织</b>:个人 / 团队 / 企业</li>
+            <li><b>自己的社交</b>:好友、私聊、逛广场、看公告</li>
           </ul>
         </article>
       </div>
-      <p style="margin-top:20px;color:var(--fg-dim);font-size:13.5px;border-left:3px solid var(--green);padding-left:14px">
-        同一个客户端,角色不同左侧就不一样:玩家看不到「管理」;「管理」里也按等级再分,低等级管理员碰不到服务器与统计。
-      </p>
     </div>
   </div>
 </section>
