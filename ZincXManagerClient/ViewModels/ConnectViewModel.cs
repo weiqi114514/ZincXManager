@@ -58,6 +58,12 @@ public partial class ConnectViewModel : ViewModelBase, IDisposable
     public string ConnectedMode { get; private set; } = string.Empty;
 
     /// <summary>已经连着且地址/端口/模式都没变 —— 这时再点连接就是重复。</summary>
+    /// <summary>
+    /// 底层连接是否真的还活着(心跳用)。
+    /// IsConnected 是界面状态,断线时不一定立刻变;这里直接问 TCP 层。
+    /// </summary>
+    public bool LinkAlive => _client?.IsConnected == true;
+
     public bool IsConnectedToSameTarget =>
         IsConnected
         && ConnectedHost == Host.Trim()

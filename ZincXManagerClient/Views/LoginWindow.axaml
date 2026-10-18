@@ -226,7 +226,7 @@
 
           <!-- 按钮并排:都一屏看得见 -->
           <StackPanel Orientation="Horizontal" Spacing="10">
-            <Button Classes="primary" Content="登录" Width="160" Click="OnLoginClick" IsEnabled="{Binding !IsBusy}"/>
+            <Button Classes="primary" Content="登录" Width="160" Click="OnLoginClick" IsDefault="True" IsEnabled="{Binding !IsBusy}"/>
             <!-- 管理账号不给注册:只能在 ZXMS / ZXMOS 端上用 user reg 创建 -->
             <Button Classes="secondary" Content="注册(只能是 Player)" Width="190" Click="OnRegisterClick"
                     IsVisible="{Binding CanRegister}" IsEnabled="{Binding !IsBusy}"/>

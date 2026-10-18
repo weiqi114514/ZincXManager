@@ -24,6 +24,12 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         Opened += (_, _) => ScrollDrag.AttachAll(this);
+        // 右下角拖拽手柄:窗口没有系统边框,靠它拉大小
+        ResizeGrip.PointerPressed += OnGripPressed;
+        ResizeGrip.PointerMoved += OnGripMoved;
+        ResizeGrip.PointerReleased += OnGripReleased;
+        // 心跳:每 5 秒看一次连接还在不在;断了就用红色提示条告知并自动重连(最多 5 次)
+        Opened += (_, _) => StartHeartbeat();
         Opened += (_, _) => RefreshFunctionPages();
 
         // 调试用:config 里写 testmsg=1 就塞两条消息(Markdown / HTML),看渲染效果
@@ -571,4 +577,112 @@ public partial class MainWindow : Window
             Logger.Log(LogLevel.Error, $"[ZXMC] 打开{what}失败 {url}: {ex.Message}");
         }
     }
+    /// <summary>
+    /// 心跳 + 自动重连。
+    /// 每 5 秒查一次连接:掉线先弹红色提示「与服务端的连接已断开,尝试重连」,
+    /// 之后每 5 秒重连一次,提示「正在重连 N/5」;连上了弹绿色提示并清零计数。
+    /// </summary>
+    private Avalonia.Threading.DispatcherTimer? _heartbeat;
+    private int _reconnectAttempt;
+    private bool _reconnecting;
+    private string _lastReconnectError = "";
+
+    private void StartHeartbeat()
+    {
+        if (_heartbeat is not null) { return; }
+        _heartbeat = new Avalonia.Threading.DispatcherTimer { Interval = System.TimeSpan.FromSeconds(5) };
+        _heartbeat.Tick += async (_, _) => await HeartbeatAsync();
+        _heartbeat.Start();
+    }
+
+    private async Task HeartbeatAsync()
+    {
+        var connect = ClientSession.Connect;
+        if (connect is null) { return; }
+
+        // 还连着:如果之前断过,提示已恢复
+        if (connect.LinkAlive)
+        {
+            if (_reconnectAttempt > 0)
+            {
+                _reconnectAttempt = 0;
+                Vm?.ShowToast("已重新连接服务端", ToastKind.Success);
+            }
+            return;
+        }
+
+        if (_reconnecting) { return; }
+
+        // 第一次发现断线:先明确告诉用户
+        if (_reconnectAttempt == 0)
+        {
+            Vm?.ShowToast("与服务端的连接已断开,尝试重连", ToastKind.Error, 5000);
+        }
+
+        if (_reconnectAttempt >= 5)
+        {
+            // 5 次都没连上:关掉主界面,切回连接流程窗体,并把失败原因弹给用户
+            var reason = string.IsNullOrWhiteSpace(_lastReconnectError)
+                ? "与服务端的连接已断开,自动重连 5 次均未成功。"
+                : ("与服务端的连接已断开,自动重连 5 次均未成功。\n\n最近一次错误:" + _lastReconnectError);
+            _heartbeat?.Stop();
+            AppWindows.ShowConnectWithError(reason);
+            return;
+        }
+
+        _reconnectAttempt++;
+        Vm?.ShowToast($"正在重连 {_reconnectAttempt}/5", ToastKind.Error, 5000);
+
+        _reconnecting = true;
+        try
+        {
+            await connect.ConnectAsync();
+            if (connect.LinkAlive)
+            {
+                _reconnectAttempt = 0;
+                Vm?.ShowToast("已重新连接服务端", ToastKind.Success);
+            }
+        }
+        catch (Exception ex)
+        {
+            _lastReconnectError = ex.Message;
+            Logger.Log(LogLevel.Warning, "[ZXMC] 自动重连失败:" + ex.Message);
+        }
+        finally
+        {
+            _reconnecting = false;
+        }
+    }
+
+
+    // ---- 右下角手柄拖拽 ----
+    private Point _gripStart;
+    private Size _gripStartSize;
+    private bool _gripDragging;
+
+    private void OnGripPressed(object? sender, PointerPressedEventArgs e)
+    {
+        _gripDragging = true;
+        _gripStart = e.GetPosition(this);
+        _gripStartSize = new Size(Width, Height);
+        e.Pointer.Capture((IInputElement?)sender);
+        e.Handled = true;
+    }
+
+    private void OnGripMoved(object? sender, PointerEventArgs e)
+    {
+        if (!_gripDragging) { return; }
+        var p = e.GetPosition(this);
+        Width = Math.Max(MinWidth, _gripStartSize.Width + (p.X - _gripStart.X));
+        Height = Math.Max(MinHeight, _gripStartSize.Height + (p.Y - _gripStart.Y));
+        e.Handled = true;
+    }
+
+    private void OnGripReleased(object? sender, PointerReleasedEventArgs e)
+    {
+        _gripDragging = false;
+        e.Pointer.Capture(null);
+        e.Handled = true;
+    }
+
 }

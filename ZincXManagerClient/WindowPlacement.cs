@@ -41,9 +41,17 @@ internal static class WindowPlacement
         }
 
         var scaling = screen.Scaling <= 0 ? 1.0 : screen.Scaling;
+        var work = screen.WorkingArea;
+
+        // 自适应:窗口比屏幕工作区还大就先缩到放得下(留 40px 边距),
+        // 否则高 DPI 小屏(比如 1366x768@125%)上右侧面板会跑到屏幕外面去。
+        var maxW = Math.Max(640, (int)(work.Width / scaling) - 40);
+        var maxH = Math.Max(480, (int)(work.Height / scaling) - 40);
+        if (window.Width > maxW) { window.Width = maxW; }
+        if (window.Height > maxH) { window.Height = maxH; }
+
         var width = (int)(window.Width * scaling);
         var height = (int)(window.Height * scaling);
-        var work = screen.WorkingArea;
 
         window.Position = new PixelPoint(
             work.X + Math.Max(0, (work.Width - width) / 2),

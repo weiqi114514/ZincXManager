@@ -7,7 +7,7 @@
         x:DataType="vm:MainViewModel"
         Title="ZincXManagerClient"
         Width="1100" Height="700"
-        MinWidth="960" MinHeight="620"
+        MinWidth="720" MinHeight="480"
         Background="Transparent"
         TransparencyLevelHint="AcrylicBlur,Blur,Transparent"
         FontFamily="Microsoft YaHei UI, Microsoft YaHei, Segoe UI"
@@ -546,5 +546,15 @@
         </DataTemplate>
       </ItemsControl.ItemTemplate>
     </ItemsControl>
-  </Grid>
+  
+    <!-- 右下角拖拽手柄:窗口 WindowDecorations=None(无系统边框),靠这个提示"这里能拉伸" -->
+    <Canvas x:Name="ResizeGrip" Width="16" Height="16" Panel.ZIndex="999"
+            HorizontalAlignment="Right" VerticalAlignment="Bottom"
+            Background="Transparent" Cursor="BottomRightCorner"
+            ToolTip.Tip="拖动这里可以调整窗口大小">
+      <Path Stroke="#5A6B7A" StrokeThickness="1.4" Data="M15,5 L5,15" />
+      <Path Stroke="#5A6B7A" StrokeThickness="1.4" Data="M15,10 L10,15" />
+    </Canvas>
+
+</Grid>
 </Window>

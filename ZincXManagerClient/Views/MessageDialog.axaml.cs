@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
@@ -59,6 +60,13 @@ public partial class MessageDialog : Window
     {
         InitializeComponent();
         ThemeManager.ApplyWindowMaterial(this);   // 半透明 / 亚克力:开窗时定一次
+
+        // Esc = 不确认(和点右上角关闭同一个语义):一律按"取消"收尾,
+        // 这样"读满 5 秒才能确认"的守门弹窗也能被随手关掉,不会卡住用户。
+        KeyDown += (_, e) =>
+        {
+            if (e.Key == Avalonia.Input.Key.Escape) { e.Handled = true; Finish("cancel"); }
+        };
     }
 
     /// <summary>单按钮:提示 / 报错。</summary>
@@ -145,6 +153,17 @@ public partial class MessageDialog : Window
     {
         var dialog = new MessageDialog();
         dialog.Configure(options);
+
+        // 显式按宿主窗口居中:CenterOwner 在某些环境下会退化成“屏幕居中”,
+        // 这里用 owner 的屏幕位置 + 尺寸自己算一遍,保证弹窗压在宿主正中。
+        dialog.WindowStartupLocation = WindowStartupLocation.Manual;
+        var ow = owner.Bounds.Width;
+        var oh = owner.Bounds.Height;
+        var dw = dialog.Width;
+        var dh = 216;   // 弹窗高度(SizeToContent=Height,先按设计稿估值;显示后 Avalonia 会自己收)
+        dialog.Position = new PixelPoint(
+            (int)Math.Round(owner.Position.X + (ow - dw) / 2),
+            (int)Math.Round(owner.Position.Y + (oh - dh) / 2));
 
         await dialog.ShowDialog(owner);
         return dialog._result;

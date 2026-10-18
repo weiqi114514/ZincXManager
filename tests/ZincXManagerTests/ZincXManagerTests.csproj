@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+
+    <!-- 正式名:ZincXManager 全量测试(命令行跑,出总表) -->
+    <AssemblyName>ZincXManagerTests</AssemblyName>
+    <RootNamespace>ZincXManagerTests</RootNamespace>
+
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <Version>$(ZxmVersion)</Version>
+    <AssemblyVersion>$(ZxmVersion)</AssemblyVersion>
+  </PropertyGroup>
+
+  <!-- 共享协议/加密/账号/验证:直接引用同仓的 Shared 项目,不复制源码 -->
+  <ItemGroup>
+    <ProjectReference Include="..\..\ZincXManagerShared\ZincXManagerShared.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.Text.Encoding.CodePages" Version="10.0.0" />
+    <PackageReference Include="System.ServiceProcess.ServiceController" Version="10.0.0" />
+  </ItemGroup>
+
+</Project>

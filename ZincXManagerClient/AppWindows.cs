@@ -81,4 +81,28 @@ internal static class AppWindows
 
         next.Position = new PixelPoint(x, y);
     }
+
+    /// <summary>
+    /// 重连彻底失败:关掉主界面,切回连接流程窗体,并弹窗把失败原因告诉用户。
+    /// </summary>
+    public static void ShowConnectWithError(string error)
+    {
+        var vm = ClientSession.Connect ?? new ViewModels.ConnectViewModel();
+        ClientSession.Connect = vm;
+
+        var from = _main;
+        var connect = new ConnectWindow { DataContext = vm };
+        PlaceAtTopLeft(connect, from);
+        connect.Show();
+
+        if (from is not null)
+        {
+            from.Close();
+        }
+
+        _ = Views.MessageDialog.InfoAsync(connect, "连接失败",
+            string.IsNullOrWhiteSpace(error) ? "与服务端的连接已断开,自动重连 5 次均未成功。" : error,
+            "知道了", "检查服务端是否在运行,或地址/端口是否变化");
+    }
+
 }
