@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>认识与安装 — ZincXManager</title>
+<link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="assets/css/flat.css">
+</head><body>
+<header class="nav">
+  <div class="wrap nav-in">
+    <a class="brand" href="index.html">
+      <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 36 9" width="104" height="26" role="img"><svg x="0" y="0" width="36" height="7" viewBox="0.756 0.541 36.472 7.899" preserveAspectRatio="none"><path d="M10.788,0.7l-9.788,0v0.6h8.134l-8.378,7h10.992l6.2,-6.864l6.983,7.004l6.079,-6.981l5.762,6.736l0.456,-0.39l-6.214,-7.264l-6.113,7.019l-6.975,-6.996l-6.445,7.136h-9.072z" fill="currentColor"/></svg><svg x="10" y="0" width="8" height="7" viewBox="0.803 0.773 8.402 7.445" preserveAspectRatio="none"><path d="M4.045,4.058l-3.242,-2.833l0.395,-0.452l3.242,2.833zM8.794,8.218c-0.782,-0.736 -1.934,-1.769 -3.456,-3.101l0.395,-0.452c1.528,1.336 2.685,2.375 3.472,3.116z" fill="currentColor" opacity="0.62"/></svg></svg></span>
+      <span>ZincXManager</span>
+    </a>
+    <nav class="nav-links">
+      <a href="#arch">架构</a>
+      <a href="#features">功能</a>
+      <a href="download.html">下载</a>
+      <a href="help.html">文档</a>
+      <a href="changelog.html">更新日志</a>
+      <a href="tech.html">技术文档</a>
+    </nav>
+    <a class="nav-cta" href="download.html">下载客户端</a>
+  </div>
+</header>
+<main>
+  <section class="doc-hero grid-bg"><div class="wrap">
+    <div class="k">Guide 01</div>
+    <h1>认识与安装</h1>
+    <p>这是什么、三端关系、装客户端、首次向导、连接方式与权限等级。</p>
+  </div></section>
+  <section class="doc-body"><div class="wrap doc-main">
+<h2>ZXM ① 认识与安装</h2>
+<p>&gt; 分类导航:① 认识与安装 · ② 客户端使用手册 · ③ 子服务端部署手册</p>
+<p>&gt; 官网 &lt;http://zxm.zincms.top/&gt; · 帮助页 &lt;http://zxm.zincms.top/help.html&gt; · 交流群 QQ <code>1129776132</code></p>
+<p>---</p>
+<h2>一、这套东西是什么</h2>
+<p>ZincXManager(锌X管理面板,简称 ZXM)是给 Minecraft 服主、社区管理员和玩家用的一体化管理面板:既能管 MC 服务端,也能做社区运营(账号与权限、白名单、经济与商店、蓝图、公告与消息推送)。</p>
+<p><b>你只需要装两个东西里的一个或两个:</b></p>
+<p>| 端 | 谁装 | 干什么 |</p>
+<p>| --- | --- | --- |</p>
+<p>| 客户端 ZXMC | 每个玩家 / 管理员 | 你操作的面板(桌面程序,Windows) |</p>
+<p>| 子服务端 ZXMS | 想自己开一台子服的服主 | 替你的玩家做中转,管本服账号、封禁、消息 |</p>
+<p><b>官方服务端</b>由官方运行,提供官方社区与官方蓝图库,并负责给子服和客户端登记身份 —— 它是"官方提供的一项服务",<b>不用你搭建</b>。</p>
+<p>&gt; ⚠️ 最容易搞混的一点:<b>官方服务端 ≠ 子服务端</b>。</p>
+<p>&gt; 官方服务端是官方那一台(所有人共用,默认地址 <code>zxm.zincms.top:25000</code>);子服务端是<b>你自己那台</b>(你自己部署,玩家连你的地址)。</p>
+<p>---</p>
+<h2>二、安装客户端(ZXMC)</h2>
+<ul>
+<li>打开官网<b>下载页</b> &lt;http://zxm.zincms.top/download.html&gt;,取其中一个:</li>
+<li><b>安装包(推荐)</b>:<code>ZincXManagerClient-0.1.1-x64.msi</code>,双击安装,自动建开始菜单与桌面快捷方式;卸载在「应用和功能」里;</li>
+<li><b>免安装压缩包</b>:解压到任意文件夹,双击 <code>ZincXManagerClient.exe</code> 即可。</li>
+<li>系统要求:64 位 Windows 10 / 11。单文件程序,<b>不需要装 .NET 运行时</b>;首次运行可能提示"未知发布者"(用的是开发签名证书),点「仍要运行」即可。</li>
+<li>首次启动会走一遍<b>使用向导</b>:</li>
+<li>选连接方式(见下一节,新手用默认即可)</li>
+<li>官方服务端地址<b>已经默认填好</b> <code>zxm.zincms.top:25000</code>,不用改</li>
+<li>注册或登录账号(等级默认 Player)</li>
+<li>登录成功后进入主界面。</li>
+</ul>
+<p>---</p>
+<h2>三、连接方式与权限等级</h2>
+<h3>3.1 三种连接方式(设置 → 模式与数据源)</h3>
+<p>| 方式 | 含义 | 什么时候用 |</p>
+<p>| --- | --- | --- |</p>
+<p>| <b>OOS</b> | 只连官方服务端 | 普通玩家:只上官方社区 |</p>
+<p>| <b>OS</b> | 只连子服务端 | 你有自己的子服,只用子服的功能 |</p>
+<p>| <b>SAOS</b> | 同时连子服务端与官方服务端 | 最常见的玩法:连自己子服,同时享受官方社区;此时客户端<b>经由子服中转</b>与官方端通信 |</p>
+<p>&gt; 只有在 SAOS 且已连上子服时,客户端才走中转;否则直连官方端。</p>
+<h3>3.2 四种权限等级</h3>
+<p>| 等级 | 说明 |</p>
+<p>| --- | --- |</p>
+<p>| <b>Player</b> | 玩家:社区、经济、商店等玩家功能 |</p>
+<p>| <b>LAdmin</b> | 低管:发公告、处理玩家申请等低权限管理 |</p>
+<p>| <b>HAdmin</b> | 高管:可管 MC 服务端等高权限操作 |</p>
+<p>| <b>System</b> | 系统:最高权限(文件操作、重启软件等),不兼容低/高管功能 |</p>
+<p>---</p>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:36px;padding-top:22px;border-top:1px solid var(--line)">
+        <a class="btn" href="guide-02.html">下一章:客户端使用手册</a>
+        <a class="btn" href="help.html">文档中心</a>
+      </div>
+    </div></section>
+</main>
+<footer class="foot">
+  <div class="wrap">
+    <div class="foot-grid">
+      <div>
+        <a class="brand" href="index.html" style="margin-bottom:14px">
+          <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 36 9" width="104" height="26" role="img"><svg x="0" y="0" width="36" height="7" viewBox="0.756 0.541 36.472 7.899" preserveAspectRatio="none"><path d="M10.788,0.7l-9.788,0v0.6h8.134l-8.378,7h10.992l6.2,-6.864l6.983,7.004l6.079,-6.981l5.762,6.736l0.456,-0.39l-6.214,-7.264l-6.113,7.019l-6.975,-6.996l-6.445,7.136h-9.072z" fill="currentColor"/></svg><svg x="10" y="0" width="8" height="7" viewBox="0.803 0.773 8.402 7.445" preserveAspectRatio="none"><path d="M4.045,4.058l-3.242,-2.833l0.395,-0.452l3.242,2.833zM8.794,8.218c-0.782,-0.736 -1.934,-1.769 -3.456,-3.101l0.395,-0.452c1.528,1.336 2.685,2.375 3.472,3.116z" fill="currentColor" opacity="0.62"/></svg></svg></span>
+        </a>
+        <p style="color:var(--fg-dim);font-size:13.5px;max-width:34ch">面向 Minecraft 服主与社区管理员的一体化管理面板。</p>
+      </div>
+      <div>
+        <h5>产品</h5>
+        <a href="#arch">架构</a>
+        <a href="#features">功能</a>
+        <a href="download.html">下载</a>
+        <a href="changelog.html">更新日志</a>
+      </div>
+      <div>
+        <h5>文档</h5>
+        <a href="help.html">文档与帮助</a>
+        <a href="tech.html">技术文档</a>
+        <a href="zxms.html">子服务端教程</a>
+        <a href="arch.html">类与协议表</a>
+      </div>
+      <div>
+        <h5>其他</h5>
+        <a href="https://github.com/weiqi114514/ZincXManager" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://github.com/weiqi114514/ZincXManager/releases" target="_blank" rel="noopener">Releases</a>
+        <a href="seq.html">时序图</a>
+        <a href="deploy.html">部署</a>
+      </div>
+    </div>
+    <div class="foot-bot">
+      <span>© 2026 ZincXManager · 锌X管理面板</span>
+      <span>交流群 (QQ) 1129776132</span>
+    </div>
+  </div>
+</footer>
+</body></html>

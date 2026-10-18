@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>文档与帮助 — ZincXManager</title>
-<meta name="description" content="ZincXManager 文档与帮助:认识与安装、客户端使用手册、子服务端部署手册,以及技术文档入口。">
+<title>文档中心 — ZincXManager</title>
+<meta name="description" content="ZincXManager 文档中心:认识与安装、客户端使用手册、子服务端部署手册、技术文档。">
 <link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="assets/css/flat.css">
 </head>
@@ -32,61 +32,65 @@
   <section class="doc-hero grid-bg">
     <div class="wrap">
       <div class="k">Docs</div>
-      <h1>文档与帮助</h1>
-      <p>文档和帮助合并在一页:3 篇分类文档 + 常用入口与常见问题。不依赖第三方源,官网与 GitHub Pages 同步发布。</p>
+      <h1>文档中心</h1>
+      <p>三篇上手文档 + 一篇技术文档。第一次用,从「认识与安装」开始。</p>
+      <p style="margin-top:22px;display:flex;gap:12px;flex-wrap:wrap">
+        <a class="btn btn-primary" href="guide-01.html">从第一章开始</a>
+        <a class="btn" href="zxms.html">直接看部署教程</a>
+        <a class="btn" href="tech.html">技术文档</a>
+      </p>
     </div>
   </section>
 
   <section class="doc-body">
     <div class="wrap">
-      <h2>分类文档</h2>
-
-      <div class="card-block">
-        <h3>技术文档(开发者)</h3>
-        <p>协议码、各端命令、全部类 / 属性 / 函数,以及架构与模块划分。需要口令。</p>
-        <p style="display:flex;flex-wrap:wrap;gap:10px;margin:16px 0 0">
-          <a class="btn btn-primary" href="tech.html">第 1 页:协议码 / 命令 / 类与函数</a>
-          <a class="btn" href="tech.html#classes">第 2 页:架构与模块</a>
-          <a class="btn" href="seq.html">第 3 页:协议时序</a>
-        </p>
+      <h2>上手文档</h2>
+      <div class="trio" style="grid-template-columns:repeat(3,1fr);margin-bottom:26px">
+        <article>
+          <div class="idx">01</div>
+          <h3>认识与安装</h3>
+          <div class="role">10 分钟</div>
+          <p>这是什么、三端关系、下载安装、首次向导、连接方式与权限等级。</p>
+          <p style="margin-top:16px"><a class="btn btn-primary" href="guide-01.html" style="width:100%">开始阅读</a></p>
+        </article>
+        <article>
+          <div class="idx">02</div>
+          <h3>客户端使用手册</h3>
+          <div class="role">20 分钟</div>
+          <p>界面分区、消息面板、存档规则、提示条、设置页、连接设置、常见问题。</p>
+          <p style="margin-top:16px"><a class="btn btn-primary" href="guide-02.html" style="width:100%">开始阅读</a></p>
+        </article>
+        <article>
+          <div class="idx">03</div>
+          <h3>子服务端部署</h3>
+          <div class="role">30 分钟</div>
+          <p>config.ini 逐项、首次启动自动注册、让玩家连上、控制台命令、常见问题。</p>
+          <p style="margin-top:16px"><a class="btn btn-primary" href="guide-03.html" style="width:100%">开始阅读</a></p>
+        </article>
       </div>
 
-      <div class="card-block">
-        <h3>① 认识与安装</h3>
-        <p>这是什么、三端关系、装客户端、首次向导、连接方式与权限等级。</p>
-        <div class="tips">第一次用建议从「认识与安装」开始,再按需看后两篇。</div>
+      <h2>其它</h2>
+      <div class="row">
+        <div class="side"><h3>技术文档</h3><p>给开发者:协议码、各端命令、类与函数表、协议时序。</p></div>
+        <div class="items">
+          <div><h4>协议码 / 命令 / 类与函数</h4><p>全部常量、各端命令、类的属性与方法。<br><a class="btn" style="margin-top:10px;padding:6px 12px;font-size:12.5px" href="tech.html">打开</a></p></div>
+          <div><h4>协议时序</h4><p>握手、登录、消息、加密的逐步图解。<br><a class="btn" style="margin-top:10px;padding:6px 12px;font-size:12.5px" href="seq.html">打开</a></p></div>
+        </div>
       </div>
-
-      <div class="card-block">
-        <h3>② 客户端使用手册</h3>
-        <p>界面分区、消息面板与五种卡片、存档规则、提示条、设置页、连接设置、常见问题。</p>
+      <div class="row">
+        <div class="side"><h3>常用入口</h3><p>直接从这去。</p></div>
+        <div class="items">
+          <div><h4>下载客户端</h4><p>MSI 与免安装 ZIP。<br><a class="btn" style="margin-top:10px;padding:6px 12px;font-size:12.5px" href="download.html">去下载</a></p></div>
+          <div><h4>更新日志</h4><p>每个版本改了什么。<br><a class="btn" style="margin-top:10px;padding:6px 12px;font-size:12.5px" href="changelog.html">查看</a></p></div>
+        </div>
       </div>
-
-      <div class="card-block">
-        <h3>③ 子服务端部署手册</h3>
-        <p>config.ini 逐项、首次启动自动注册、让玩家连上、控制台命令逐条带示例、常见问题。</p>
-        <p style="margin-bottom:0"><a class="btn" href="zxms.html">看子服务端部署教程</a></p>
+      <div class="row">
+        <div class="side"><h3>遇到问题</h3><p>先看常见问题,再来群里问。</p></div>
+        <div class="items">
+          <div><h4>QQ 群</h4><p>1129776132</p></div>
+          <div><h4>Issues</h4><p><a href="https://github.com/weiqi114514/ZincXManager/issues" target="_blank" rel="noopener">GitHub Issues</a></p></div>
+        </div>
       </div>
-
-      <div class="card-block">
-        <h3>子服教程(网页版)</h3>
-        <p>不想读长文档?这一页是 ZXMS 部署的最短路径。</p>
-      </div>
-
-      <h2>常用入口</h2>
-      <h3>下载</h3>
-      <ul>
-        <li>客户端 ZXMC:<a href="download.html">安装包(MSI)/ 免安装 ZIP</a></li>
-        <li>子服务端 ZXMS:<a href="download.html#server">压缩包</a></li>
-        <li>GitHub Releases:<a href="https://github.com/weiqi114514/ZincXManager/releases" target="_blank" rel="noopener">最新发布页</a></li>
-      </ul>
-
-      <h3>其它</h3>
-      <ul>
-        <li>更新日志:<a href="changelog.html">版本记录</a></li>
-        <li>反馈:QQ 群 1129776132 · <a href="https://github.com/weiqi114514/ZincXManager/issues" target="_blank" rel="noopener">issues</a></li>
-        <li>入门:从「认识与安装」开始</li>
-      </ul>
     </div>
   </section>
 </main>
