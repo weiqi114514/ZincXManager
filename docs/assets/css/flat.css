@@ -1,0 +1,283 @@
+/* =====================================================================
+   ZincXManager 官网 · 重写版样式(flat.css)
+   设计:极致扁平 + 强对比 + 超大字号 + 网格线 + 块面分区
+   ===================================================================== */
+:root{
+  --ink:#07090c;
+  --ink-2:#0b0e13;
+  --ink-3:#11151b;
+  --paper:#f4f6f8;
+  --line:#1c222b;
+  --line-2:#2a323d;
+  --fg:#ffffff;
+  --fg-dim:#9aa6b5;
+  --green:#22c55e;
+  --green-2:#4ade80;
+  --max:1280px;
+}
+*{box-sizing:border-box;margin:0;border-radius:0!important;box-shadow:none!important}
+html{-webkit-text-size-adjust:100%}
+body{
+  background:var(--ink);color:var(--fg);
+  font:16px/1.65 "Inter","PingFang SC","Microsoft YaHei","Noto Sans SC",system-ui,-apple-system,"Segoe UI",sans-serif;
+  -webkit-font-smoothing:antialiased;
+  overflow-x:hidden;
+}
+a{color:inherit;text-decoration:none}
+a:hover{color:var(--green-2)}
+img,svg{max-width:100%}
+.wrap{width:100%;max-width:var(--max);margin:0 auto;padding:0 28px}
+.mono{font-family:Consolas,"Cascadia Mono",ui-monospace,monospace}
+
+/* 网格背景:让版面有工程感 */
+.grid-bg{
+  background-image:linear-gradient(to right,rgba(255,255,255,.045) 1px,transparent 1px),
+                   linear-gradient(to bottom,rgba(255,255,255,.045) 1px,transparent 1px);
+  background-size:64px 64px;
+}
+
+/* ---------- 顶栏 ---------- */
+.nav{
+  position:sticky;top:0;z-index:50;
+  background:rgba(7,9,12,.92);
+  border-bottom:1px solid var(--line);
+  backdrop-filter:blur(0);
+}
+.nav-in{
+  display:flex;align-items:center;gap:30px;
+  height:66px;
+}
+.brand{display:flex;align-items:center;gap:12px;font-weight:800;font-size:16px;letter-spacing:.2px}
+.brand-mark{display:inline-flex;line-height:0}
+.brand-mark svg{height:22px;width:auto}
+.nav-links{display:flex;gap:4px;margin-left:auto}
+.nav-links a{
+  font-size:13.5px;color:var(--fg-dim);padding:8px 13px;
+  border:1px solid transparent;letter-spacing:.02em;
+}
+.nav-links a:hover{color:#fff;border-color:var(--line-2);background:var(--ink-3)}
+.nav-cta{
+  margin-left:10px;padding:10px 20px;font-size:13.5px;font-weight:700;
+  background:var(--green);color:#04130a;border:1px solid var(--green);
+}
+.nav-cta:hover{background:var(--green-2);border-color:var(--green-2);color:#04130a}
+
+/* ---------- 首屏:巨型字 + 块面 ---------- */
+.hero{
+  border-bottom:1px solid var(--line);
+  position:relative;
+  overflow:hidden;
+}
+.hero-in{
+  display:grid;grid-template-columns:1.15fr .85fr;gap:0;
+  border-left:1px solid var(--line);border-right:1px solid var(--line);
+}
+.hero-copy{padding:96px 48px 88px;border-right:1px solid var(--line)}
+.hero-tag{
+  display:inline-block;font-family:Consolas,"Cascadia Mono",monospace;
+  font-size:12px;letter-spacing:.22em;text-transform:uppercase;
+  color:var(--green);border:1px solid var(--line-2);padding:6px 12px;
+}
+.hero h1{
+  font-size:clamp(46px,7.4vw,108px);
+  line-height:.94;letter-spacing:-.045em;font-weight:900;
+  margin:26px 0 26px;
+  white-space:nowrap;
+}
+.hero h1 .dim{color:var(--fg-dim)}
+.hero h1 .br{color:var(--green)}
+.hero p.lead{
+  font-size:17px;line-height:1.8;color:var(--fg-dim);max-width:46ch;
+  margin-bottom:36px;
+}
+.hero-actions{display:flex;flex-wrap:wrap;gap:14px}
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:10px;
+  padding:15px 26px;font-size:14.5px;font-weight:700;letter-spacing:.02em;
+  border:1px solid var(--line-2);color:#fff;background:transparent;
+  transition:background .12s linear,border-color .12s linear,color .12s linear;
+}
+.btn:hover{background:var(--ink-3);border-color:var(--green);color:#fff}
+.btn-primary{background:var(--green);border-color:var(--green);color:#04130a}
+.btn-primary:hover{background:var(--green-2);border-color:var(--green-2);color:#04130a}
+
+.hero-side{
+  background:var(--ink-2);
+  display:flex;flex-direction:column;
+}
+.hero-side .stat{
+  padding:26px 30px;border-bottom:1px solid var(--line);
+  display:flex;align-items:baseline;justify-content:space-between;gap:16px;
+}
+.hero-side .stat:last-child{border-bottom:0}
+.hero-side .stat b{font-size:clamp(26px,2.6vw,40px);font-weight:900;letter-spacing:-.03em;line-height:1}
+.hero-side .stat span{font-size:12px;color:var(--fg-dim);letter-spacing:.14em;text-transform:uppercase;font-family:Consolas,monospace}
+
+/* 词条切换(沿用旧实现,仅在此处提供所需样式) */
+.zxm-hero{display:flex;align-items:baseline;flex-wrap:nowrap}
+.zxm-hero>span,.zxm-hero .bm-slot{display:inline-block;flex:0 0 auto}
+.zxm-hero .bm-slot{position:relative;overflow:hidden;line-height:1.16;vertical-align:baseline;transition:width .44s cubic-bezier(.22,.61,.36,1)}
+.zxm-hero .bm-cur{position:static;display:block;white-space:nowrap;line-height:1.16}
+.zxm-hero .bm-next{position:absolute;left:0;top:0;display:block;white-space:nowrap;line-height:1.16}
+
+/* ---------- 通用区段 ---------- */
+.sec{border-bottom:1px solid var(--line);padding:0}
+.sec-head{
+  padding:64px 0 40px;display:grid;grid-template-columns:1fr auto;gap:24px;align-items:end;
+  border-bottom:1px solid var(--line);
+}
+.sec-head .k{font-family:Consolas,monospace;font-size:12px;letter-spacing:.22em;color:var(--green);text-transform:uppercase;margin-bottom:14px}
+.sec-head h2{font-size:clamp(30px,3.6vw,54px);line-height:1.02;letter-spacing:-.035em;font-weight:900}
+.sec-head p{color:var(--fg-dim);font-size:16px;max-width:62ch;margin-top:14px}
+.sec-body{padding:0 0 8px}
+
+/* 三端:块面网格 */
+.trio{display:grid;grid-template-columns:repeat(3,1fr);border-left:1px solid var(--line);border-right:1px solid var(--line)}
+.trio article{padding:40px 34px;border-right:1px solid var(--line)}
+.trio article:last-child{border-right:0}
+.trio .idx{font-family:Consolas,monospace;font-size:12px;letter-spacing:.2em;color:var(--fg-dim)}
+.trio h3{font-size:clamp(26px,2.4vw,38px);font-weight:900;letter-spacing:-.03em;margin:16px 0 8px}
+.trio .role{color:var(--green);font-size:13px;margin-bottom:18px;letter-spacing:.04em}
+.trio p{color:var(--fg-dim);font-size:14.5px;margin-bottom:18px}
+.trio ul{list-style:none;padding:0;display:grid;gap:8px}
+.trio li{position:relative;padding-left:18px;font-size:13.5px;color:#cfd8e3}
+.trio li:before{content:"";position:absolute;left:0;top:.62em;width:7px;height:1px;background:var(--green)}
+
+/* 功能:横向大行 */
+.row{
+  display:grid;grid-template-columns:320px 1fr;gap:0;
+  border-top:1px solid var(--line);
+}
+.row:first-child{border-top:0}
+.row .side{padding:36px 30px 36px 0;border-right:1px solid var(--line)}
+.row .side h3{font-size:clamp(22px,2.2vw,32px);font-weight:900;letter-spacing:-.03em}
+.row .side p{color:var(--fg-dim);font-size:14px;margin-top:10px}
+.row .items{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line)}
+.row .items div{background:var(--ink-2);padding:24px 26px}
+.row .items h4{font-size:15px;font-weight:800;margin-bottom:6px}
+.row .items p{font-size:13.5px;color:var(--fg-dim);line-height:1.7}
+
+/* 页脚 */
+.foot{background:var(--ink-2);border-top:1px solid var(--line);padding:64px 0 44px}
+.foot-grid{display:grid;grid-template-columns:1.6fr repeat(3,1fr);gap:40px}
+.foot h5{font-family:Consolas,monospace;font-size:11.5px;letter-spacing:.2em;color:var(--fg-dim);text-transform:uppercase;margin-bottom:16px}
+.foot a{display:block;font-size:13.5px;color:#cfd8e3;padding:5px 0}
+.foot a:hover{color:var(--green-2)}
+.foot-bot{
+  margin-top:52px;padding-top:22px;border-top:1px solid var(--line);
+  display:flex;flex-wrap:wrap;gap:14px;justify-content:space-between;
+  font-size:12.5px;color:var(--fg-dim);
+}
+
+/* 内容页(doc) */
+.doc-hero{border-bottom:1px solid var(--line);padding:78px 0 54px;background:var(--ink-2)}
+.doc-hero .k{font-family:Consolas,monospace;font-size:12px;letter-spacing:.22em;color:var(--green);text-transform:uppercase;margin-bottom:16px}
+.doc-hero h1{font-size:clamp(34px,5vw,72px);line-height:1;letter-spacing:-.04em;font-weight:900}
+.doc-hero p{color:var(--fg-dim);font-size:16px;margin-top:18px;max-width:64ch}
+.doc-body{padding:56px 0 72px}
+.doc-grid{display:grid;grid-template-columns:250px 1fr;gap:48px;align-items:start}
+.doc-nav{border:1px solid var(--line);background:var(--ink-2);padding:12px 0;position:sticky;top:82px}
+.doc-nav a{display:block;padding:8px 18px;font-size:13.5px;color:var(--fg-dim);border-left:2px solid transparent}
+.doc-nav a:hover,.doc-nav a.on{color:#fff;background:var(--ink-3);border-left-color:var(--green)}
+.doc-nav .grp{padding:12px 18px 4px;font-family:Consolas,monospace;font-size:10.5px;letter-spacing:.18em;color:#5f6c7d;text-transform:uppercase}
+.doc-main{min-width:0}
+.doc-main h2{font-size:clamp(24px,2.6vw,34px);font-weight:900;letter-spacing:-.03em;margin:44px 0 16px;padding-bottom:12px;border-bottom:1px solid var(--line)}
+.doc-main h2:first-child{margin-top:0}
+.doc-main h3{font-size:18px;font-weight:800;margin:28px 0 10px}
+.doc-main h4{font-size:15px;font-weight:800;margin:22px 0 8px;color:var(--green)}
+.doc-main p{color:#b9c4d2;font-size:14.8px;line-height:1.85;margin:0 0 14px}
+.doc-main ul,.doc-main ol{color:#b9c4d2;font-size:14.8px;line-height:1.85;padding-left:22px;margin:0 0 14px}
+.doc-main li{margin:5px 0}
+.doc-main table{width:100%;border-collapse:collapse;margin:18px 0 24px;font-size:13.6px;table-layout:fixed}
+.doc-main th,.doc-main td{border:1px solid var(--line);padding:10px 12px;text-align:left;vertical-align:top;word-break:break-word}
+.doc-main th{background:var(--ink-3);font-weight:700}
+.doc-main pre{background:#05070a;border:1px solid var(--line);padding:15px 17px;overflow-x:auto;font-size:12.8px;line-height:1.7}
+.doc-main code,.doc-main .mono{font-family:Consolas,"Cascadia Mono",ui-monospace,monospace;font-size:.92em;background:#0a0e13;border:1px solid var(--line);padding:1px 5px}
+.doc-main pre code{background:none;border:0;padding:0}
+.doc-main .tips{border-left:3px solid var(--green);background:var(--ink-2);padding:12px 16px;margin:18px 0;color:#c3cedb;font-size:14px}
+
+/* 卡片块 */
+.card-block{border:1px solid var(--line);background:var(--ink-2);padding:22px 24px;margin:16px 0}
+.card-block h3{margin:0 0 8px;font-size:17px}
+
+/* 分页/版本块 */
+.version-block{border-top:1px solid var(--line);padding:30px 0 10px}
+.version-block:first-child{border-top:0;padding-top:0}
+.version-block h3{font-size:clamp(20px,2.2vw,28px);font-weight:900;letter-spacing:-.02em;margin:0 0 14px;padding-left:14px;border-left:4px solid var(--green)}
+
+@media (max-width:1080px){
+  .hero-in{grid-template-columns:1fr}
+  .hero-copy{border-right:0;border-bottom:1px solid var(--line);padding:64px 28px}
+  .trio{grid-template-columns:1fr}
+  .trio article{border-right:0;border-bottom:1px solid var(--line)}
+  .row{grid-template-columns:1fr}
+  .row .side{border-right:0;padding:28px 0}
+  .row .items{grid-template-columns:1fr}
+  .foot-grid{grid-template-columns:1fr 1fr}
+  .doc-grid{grid-template-columns:1fr;gap:24px}
+  .doc-nav{position:static;display:flex;flex-wrap:wrap;padding:8px}
+  .doc-nav .grp{display:none}
+  .doc-nav a{border-left:0;border:1px solid var(--line);margin:3px;padding:6px 12px}
+  .nav-links{display:none}
+  .hero h1{font-size:clamp(30px,7vw,58px)}
+}
+@media (max-width:640px){
+  .foot-grid{grid-template-columns:1fr}
+  .hero h1{font-size:clamp(24px,7vw,40px)}
+  .sec-head{grid-template-columns:1fr}
+}
+
+/* ===== 动效相关样式(fx.js 配套) ===== */
+.fx-progress{
+  position:fixed;left:0;top:0;height:2px;width:100%;z-index:100;
+  background:var(--green);transform-origin:0 50%;transform:scaleX(0);
+  transition:transform .1s linear;
+}
+.trio article,.row .items div,.card-block{position:relative;overflow:hidden}
+.trio article::after,.row .items div::after,.card-block::after{
+  content:"";position:absolute;inset:0;pointer-events:none;
+  background:radial-gradient(320px 160px at var(--mx,50%) var(--my,50%),rgba(34,197,94,.14),transparent 70%);
+  opacity:0;transition:opacity .25s linear;
+}
+.trio article:hover::after,.row .items div:hover::after,.card-block:hover::after{opacity:1}
+
+/* ===== 冲击力加强:巨字 / 跑马灯 / 大编号 ===== */
+.hero h1{font-size:clamp(32px,5.4vw,88px);letter-spacing:-.045em;line-height:.92;white-space:nowrap}
+.hero-copy{padding:110px 48px 96px;overflow:hidden;min-width:0}
+.hero p.lead{font-size:18px;max-width:52ch}
+
+/* 跑马灯 */
+.marquee{
+  border-top:1px solid var(--line);border-bottom:1px solid var(--line);
+  overflow:hidden;background:var(--ink-2);
+}
+.marquee-track{
+  display:flex;gap:0;white-space:nowrap;will-change:transform;
+  animation:zmmq 26s linear infinite;
+}
+.marquee-track span{
+  font-family:Consolas,"Cascadia Mono",monospace;
+  font-size:clamp(20px,3.2vw,46px);font-weight:900;letter-spacing:-.02em;
+  padding:18px 30px;color:#fff;text-transform:uppercase;
+}
+.marquee-track span em{color:var(--green);font-style:normal}
+@keyframes zmmq{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+@media (prefers-reduced-motion:reduce){.marquee-track{animation:none}}
+
+/* 三端大编号 */
+.trio .idx{font-size:clamp(40px,5vw,84px);font-weight:900;letter-spacing:-.05em;color:#fff;line-height:1;opacity:.14}
+.trio article{position:relative}
+.trio article h3{position:relative;z-index:1}
+
+/* 区段标题更大 */
+.sec-head h2{font-size:clamp(34px,4.6vw,72px)}
+
+
+/* 首屏标题入场(纯 CSS,失败也不影响可见性) */
+.hero h1{z-index:1}
+@keyframes zxIn{from{opacity:0;transform:translateY(24px);filter:blur(10px)}to{opacity:1;transform:none;filter:blur(0)}}
+.hero h1{animation:zxIn .85s cubic-bezier(.22,.61,.36,1) both}
+.hero-tag{animation:zxIn .7s cubic-bezier(.22,.61,.36,1) both}
+.hero p.lead{animation:zxIn .8s .12s cubic-bezier(.22,.61,.36,1) both}
+.hero-actions{animation:zxIn .8s .2s cubic-bezier(.22,.61,.36,1) both}
+@media (prefers-reduced-motion:reduce){.hero h1,.hero-tag,.hero p.lead,.hero-actions{animation:none}}
