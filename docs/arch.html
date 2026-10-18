@@ -29,7 +29,9 @@ details>summary{cursor:pointer;font-weight:600;padding:6px 0}
 .count{color:var(--muted);font-weight:400;font-size:12px}
 .hidden{display:none!important}
 footer{color:var(--muted);border-top:1px solid var(--line);margin-top:30px;padding:16px 18px;font-size:12px}
-</style></head><body>
+</style><link rel="stylesheet" href="assets/css/flat.css">
+<link rel="stylesheet" href="assets/css/style.css">
+</head><body>
 
 <div id="lock" style="min-height:100vh;display:flex;align-items:center;justify-content:center">
   <div style="background:#151b23;border:1px solid #232c38;border-radius:14px;padding:28px 32px;min-width:320px;text-align:center">
@@ -167,7 +169,43 @@ footer{color:var(--muted);border-top:1px solid var(--line);margin-top:30px;paddi
 <tr><td class="">服务端码</td><td class="mono">servercode</td><td class="mono">只读</td><td class="">本实例的身份证(只读)</td></tr>
 </tbody></table>
 </main>
-<footer>技术文档 · 由源码扫描生成,改动代码后重跑生成脚本即可刷新</footer>
+<footer class="foot">
+  <div class="wrap">
+    <div class="foot-grid">
+      <div>
+        <a class="brand" href="index.html" style="margin-bottom:14px">
+          <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 36 9" width="104" height="26" role="img"><svg x="0" y="0" width="36" height="7" viewBox="0.756 0.541 36.472 7.899" preserveAspectRatio="none"><path d="M10.788,0.7l-9.788,0v0.6h8.134l-8.378,7h10.992l6.2,-6.864l6.983,7.004l6.079,-6.981l5.762,6.736l0.456,-0.39l-6.214,-7.264l-6.113,7.019l-6.975,-6.996l-6.445,7.136h-9.072z" fill="currentColor"/></svg><svg x="10" y="0" width="8" height="7" viewBox="0.803 0.773 8.402 7.445" preserveAspectRatio="none"><path d="M4.045,4.058l-3.242,-2.833l0.395,-0.452l3.242,2.833zM8.794,8.218c-0.782,-0.736 -1.934,-1.769 -3.456,-3.101l0.395,-0.452c1.528,1.336 2.685,2.375 3.472,3.116z" fill="currentColor" opacity="0.62"/></svg></svg></span>
+        </a>
+        <p style="color:var(--fg-dim);font-size:13.5px;max-width:34ch">面向 Minecraft 服主与社区管理员的一体化管理面板。</p>
+      </div>
+      <div>
+        <h5>产品</h5>
+        <a href="#arch">架构</a>
+        <a href="#features">功能</a>
+        <a href="download.html">下载</a>
+        <a href="changelog.html">更新日志</a>
+      </div>
+      <div>
+        <h5>文档</h5>
+        <a href="help.html">文档与帮助</a>
+        <a href="tech.html">技术文档</a>
+        <a href="zxms.html">子服务端教程</a>
+        <a href="arch.html">类与协议表</a>
+      </div>
+      <div>
+        <h5>其他</h5>
+        <a href="https://github.com/weiqi114514/ZincXManager" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://github.com/weiqi114514/ZincXManager/releases" target="_blank" rel="noopener">Releases</a>
+        <a href="seq.html">时序图</a>
+        <a href="deploy.html">部署</a>
+      </div>
+    </div>
+    <div class="foot-bot">
+      <span>© 2026 ZincXManager · 锌X管理面板</span>
+      <span>交流群 (QQ) 1129776132</span>
+    </div>
+  </div>
+</footer>
 </div>
 <script>
 const q=document.getElementById('q');
