@@ -35,7 +35,9 @@ footer{color:var(--muted);border-top:1px solid var(--line);margin-top:30px;paddi
 tr:nth-child(even) td { background: transparent !important; }
 header { background: #0e1116 !important; }
 details { border-radius: 0 !important; }
-</style></head><body>
+</style><link rel="stylesheet" href="assets/css/product.css">
+<link rel="stylesheet" href="assets/css/doc.css">
+</head><body>
 
 <div id="lock" style="min-height:100vh;display:flex;align-items:center;justify-content:center">
   <div style="background:#151b23;border:1px solid #232c38;border-radius:14px;padding:28px 32px;min-width:320px;text-align:center">
@@ -173,7 +175,43 @@ details { border-radius: 0 !important; }
 <tr><td class="">服务端码</td><td class="mono">servercode</td><td class="mono">只读</td><td class="">本实例的身份证(只读)</td></tr>
 </tbody></table>
 </main>
-<footer>技术文档 · 由源码扫描生成,改动代码后重跑生成脚本即可刷新</footer>
+<footer class="foot">
+  <div class="wrap">
+    <div class="foot-grid">
+      <div>
+        <a class="brand" href="index.html" style="margin-bottom:10px">
+          <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 36 9" width="92" height="22"><use href="#zxm-logo"/></svg></span>
+        </a>
+        <p style="color:var(--muted);font-size:13.5px;margin:6px 0 0">面向 Minecraft 社区的一体化管理面板。</p>
+      </div>
+      <div>
+        <h5>产品</h5>
+        <a href="index.html#arch">架构</a>
+        <a href="index.html#features">功能</a>
+        <a href="download.html">下载</a>
+        <a href="changelog.html">更新日志</a>
+      </div>
+      <div>
+        <h5>文档</h5>
+        <a href="help.html">文档与帮助</a>
+        <a href="tech.html">技术文档</a>
+        <a href="zxms.html">子服务端教程</a>
+        <a href="arch.html">类与协议表</a>
+      </div>
+      <div>
+        <h5>其他</h5>
+        <a href="https://github.com/weiqi114514/ZincXManager" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://github.com/weiqi114514/ZincXManager/releases" target="_blank" rel="noopener">Releases</a>
+        <a href="seq.html">时序图</a>
+        <a href="deploy.html">部署</a>
+      </div>
+    </div>
+    <div class="foot-bottom">
+      <span>© 2026 ZincXManager · 锌X管理面板</span>
+      <span>交流群 (QQ) 1129776132</span>
+    </div>
+  </div>
+</footer>
 </div>
 <script>
 const q=document.getElementById('q');

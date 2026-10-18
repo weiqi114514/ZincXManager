@@ -1,0 +1,94 @@
+/* ===========================================================
+   内容页排版(doc.css):配合 product.css 使用
+   给 download / changelog / help / zxms / arch / seq / deploy / 404 / tech
+   =========================================================== */
+
+.doc-hero {
+  border-bottom: 1px solid var(--line);
+  background: var(--bg-soft);
+  padding: 54px 0 42px;
+}
+
+.doc-hero .kicker {
+  font-size: 12.5px; letter-spacing: .16em; text-transform: uppercase;
+  color: var(--accent); margin-bottom: 10px;
+}
+
+.doc-hero h1 {
+  font-size: clamp(28px, 3.4vw, 42px); line-height: 1.15;
+  margin: 0 0 12px; letter-spacing: -.4px;
+}
+
+.doc-hero p { margin: 0; color: var(--muted); font-size: 15.5px; max-width: 72ch; }
+
+.doc-body { padding: 48px 0 64px; }
+
+.doc-grid { display: grid; grid-template-columns: 232px 1fr; gap: 44px; align-items: start; }
+
+.doc-nav {
+  position: sticky; top: 78px;
+  border: 1px solid var(--line); background: var(--surface);
+  padding: 14px 0;
+}
+
+.doc-nav a {
+  display: block; padding: 7px 16px; font-size: 13.5px; color: var(--muted);
+  border-left: 2px solid transparent;
+}
+
+.doc-nav a:hover { color: var(--fg); background: var(--surface-2); text-decoration: none; border-left-color: var(--accent); }
+
+.doc-nav .grp { padding: 10px 16px 4px; font-size: 11.5px; letter-spacing: .12em; color: #6f7d90; text-transform: uppercase; }
+
+.doc-main { min-width: 0; }
+
+.doc-main h2 {
+  font-size: clamp(22px, 2.4vw, 30px); margin: 40px 0 14px; letter-spacing: -.2px;
+  padding-bottom: 10px; border-bottom: 1px solid var(--line);
+}
+.doc-main h2:first-child { margin-top: 0; }
+.doc-main h3 { font-size: 18px; margin: 28px 0 10px; }
+.doc-main h4 { font-size: 15.5px; margin: 22px 0 8px; color: var(--fg); }
+.doc-main p { color: #b9c6d6; font-size: 14.8px; line-height: 1.8; margin: 0 0 14px; }
+.doc-main ul, .doc-main ol { color: #b9c6d6; font-size: 14.8px; line-height: 1.8; padding-left: 22px; }
+.doc-main li { margin: 4px 0; }
+
+.doc-main table { width: 100%; border-collapse: collapse; margin: 16px 0 22px; font-size: 13.8px; table-layout: fixed; }
+.doc-main th, .doc-main td { border: 1px solid var(--line); padding: 9px 11px; text-align: left; vertical-align: top; word-break: break-word; }
+.doc-main th { background: var(--surface); font-weight: 600; }
+.doc-main tr:nth-child(even) td { background: transparent; }
+
+.doc-main pre {
+  background: #080b10; border: 1px solid var(--line);
+  padding: 14px 16px; overflow-x: auto; font-size: 13px; line-height: 1.7;
+  font-family: Consolas, "Cascadia Mono", ui-monospace, monospace;
+}
+
+.doc-main code {
+  background: var(--surface-2); border: 1px solid var(--line);
+  padding: 1px 5px; font-size: .92em;
+  font-family: Consolas, "Cascadia Mono", ui-monospace, monospace;
+}
+
+.doc-main pre code { background: none; border: 0; padding: 0; }
+
+.doc-main .lead { font-size: 16px; color: #cbd6e4; }
+.doc-main .tips {
+  border-left: 3px solid var(--accent); background: var(--surface);
+  padding: 11px 16px; margin: 16px 0; color: #c2cddb; font-size: 14.2px;
+}
+.doc-main .warn { border-left-color: var(--warn); }
+
+.doc-main .mono, .doc-main span.mono {
+  font-family: Consolas, "Cascadia Mono", ui-monospace, monospace;
+  font-size: .92em; background: var(--surface-2); border: 1px solid var(--line); padding: 1px 5px;
+}
+
+.doc-main img, .doc-main svg { max-width: 100%; }
+
+@media (max-width: 980px) {
+  .doc-grid { grid-template-columns: 1fr; gap: 22px; }
+  .doc-nav { position: static; display: flex; flex-wrap: wrap; padding: 8px; }
+  .doc-nav .grp { display: none; }
+  .doc-nav a { border-left: 0; border: 1px solid var(--line); margin: 3px; padding: 5px 10px; }
+}
