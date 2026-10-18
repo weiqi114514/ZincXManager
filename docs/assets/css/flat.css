@@ -370,3 +370,26 @@ img,svg{max-width:100%}
   .zxm-msgpane{display:none}
   .zxm-card{width:100%}
 }
+
+/* 客户端界面(深色演示版) */
+.mock-bar{display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid var(--line);font-family:Consolas,monospace;font-size:11.5px;color:var(--fg-dim)}
+.mock-bar .d{width:9px;height:9px;background:#3b4552;display:inline-block}
+.mock-bar .t{margin-left:10px}
+.mock-body{display:grid;grid-template-columns:210px 1fr 290px;min-height:330px}
+.mock-rail{border-right:1px solid var(--line);padding:18px 12px}
+.mock-rail .brand{font-weight:900;font-size:14.5px;margin-bottom:16px}
+.mock-rail .nav{padding:7px 9px;font-size:13px;color:#cfd8e3}
+.mock-rail .nav.on{border-left:2px solid var(--green);background:var(--ink-3)}
+.mock-rail .who{margin-top:24px;font-size:12px;color:var(--fg-dim)}
+.mock-main{padding:20px}
+.mock-main .cards{display:grid;gap:10px}
+.mock-main .card{border:1px solid var(--line);padding:14px 16px;display:flex;justify-content:space-between;align-items:center}
+.mock-main .card b{font-size:14.5px;display:block}
+.mock-main .card span{color:var(--fg-dim);font-size:12.5px}
+.mock-main .btn-s{font-style:normal;border:1px solid var(--green);color:var(--green);padding:5px 11px;font-size:12px}
+.mock-msg{border-left:1px solid var(--line);padding:18px 14px}
+.mock-msg .mt{font-family:Consolas,monospace;font-size:11px;color:var(--fg-dim);letter-spacing:.16em;margin-bottom:12px}
+.mock-msg .msg{border:1px solid var(--line);padding:11px;margin-bottom:9px}
+.mock-msg .msg em{font-style:normal;font-size:11.5px;color:var(--green);display:block;margin-bottom:5px}
+.mock-msg .msg p{margin:0;font-size:12.5px;color:#cfd8e3}
+@media (max-width:1080px){.mock-body{grid-template-columns:180px 1fr}.mock-msg{display:none}}
