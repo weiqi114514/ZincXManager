@@ -8,17 +8,64 @@
 <link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="assets/css/product.css">
 <link rel="stylesheet" href="assets/css/doc.css">
-<link rel="stylesheet" href="assets/css/style.css">
 </head>
 <body>
-<main class="section" style="min-height:70vh;display:flex;align-items:center">
-  <div class="wrap" style="text-align:center">
-    <p class="badge" style="margin-bottom:14px"><span class="dot"></span> 404</p>
-    <h1 style="margin:0 0 12px;font-size:clamp(26px,4vw,40px)">这个页面走丢了</h1>
-    <p class="lead" style="margin:0 auto 26px">你访问的地址不存在，或者已经被移动。</p>
-    <p><a class="btn btn-primary" href="index.html">返回首页</a></p>
+
+<header class="nav">
+  <div class="wrap nav-inner">
+    <a class="brand" href="index.html">
+      <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 36 9" width="104" height="26"><use href="#zxm-logo"/></svg></span>
+      <span>ZincXManager</span>
+    </a>
+    <nav class="nav-links">
+      <a href="index.html#arch">架构</a>
+      <a href="index.html#features">功能</a>
+      <a href="download.html">下载</a>
+      <a href="help.html">文档</a>
+      <a href="changelog.html">更新日志</a>
+      <a href="tech.html">技术文档</a>
+    </nav>
+    <a class="nav-cta" href="download.html">下载客户端</a>
   </div>
+</header>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="zxm-logo" viewBox="0 0 36 9">
+    <path d="M0 8.4 L4.6 0.6 L9.2 8.4" fill="none" stroke="#22c55e" stroke-width="1.6"/>
+    <path d="M11.4 0.6 L13.4 8.4 L18 0.6 L20 8.4" fill="none" stroke="#e8eef7" stroke-width="1.6"/>
+    <path d="M22.4 8.4 L24.8 0.6 L27.2 8.4" fill="none" stroke="#22c55e" stroke-width="1.6"/>
+  </symbol>
+</svg>
+
+<main>
+  <section class="doc-hero">
+    <div class="wrap">
+      <div class="kicker">404</div>
+      <h1>这个页面不存在</h1>
+      <p>地址可能写错了,或者内容已经搬走。下面这几处大概率能找到你要的。</p>
+    </div>
+  </section>
+
+  <section class="doc-body">
+    <div class="wrap">
+      <div class="cards2" style="gap:16px">
+        <div class="card-block"><h3>下载客户端</h3><p>最新版本 MSI 与免安装 ZIP。</p><a class="btn btn-sm" href="download.html">去下载</a></div>
+        <div class="card-block"><h3>文档与帮助</h3><p>使用、部署与排错入口。</p><a class="btn btn-sm" href="help.html">看文档</a></div>
+        <div class="card-block"><h3>更新日志</h3><p>每个版本改了什么。</p><a class="btn btn-sm" href="changelog.html">看日志</a></div>
+        <div class="card-block"><h3>技术文档</h3><p>协议、命令、类与函数表。</p><a class="btn btn-sm" href="tech.html">看技术文档</a></div>
+      </div>
+    </div>
+  </section>
 </main>
-<script src="assets/js/release.js" defer></script>
+
+<footer class="foot">
+  <div class="wrap">
+    <div class="foot-bottom">
+      <span>© 2026 ZincXManager · 锌X管理面板</span>
+      <span><a href="index.html">返回首页</a></span>
+    </div>
+  </div>
+</footer>
+
 </body>
 </html>
