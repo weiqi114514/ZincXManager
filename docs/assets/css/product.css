@@ -103,9 +103,11 @@ img, svg { max-width: 100%; }
 /* ---------- 首屏 ---------- */
 .hero { border-bottom: 1px solid var(--line); background: var(--bg-soft); }
 
+.hero-inner > div { min-width: 0; }
+
 .hero-inner {
   display: grid; grid-template-columns: 1.02fr .98fr; gap: 56px;
-  align-items: center; padding: 72px 0 64px;
+  align-items: center; padding: 72px 24px 64px;
 }
 
 .eyebrow {
@@ -118,7 +120,7 @@ img, svg { max-width: 100%; }
 .eyebrow i { width: 7px; height: 7px; background: var(--accent); display: inline-block; }
 
 .hero h1 {
-  font-size: clamp(34px, 4vw, 52px);
+  font-size: clamp(24px, 3vw, 46px);
   line-height: 1.08; letter-spacing: -.5px;
   margin: 20px 0 18px; font-weight: 800;
   white-space: nowrap;   /* 标题不换行:切换词变宽时靠字号兜住 */
@@ -274,4 +276,14 @@ img, svg { max-width: 100%; }
   .stats div { border-right: 0; border-bottom: 1px solid var(--line); }
   .foot-grid { grid-template-columns: 1fr; }
   .hero h1 { font-size: 34px; }
+}
+
+
+/* 切换后词变长也不换行:整行不折、子项不缩,靠字号兜住 */
+.hero h1.zxm-hero { flex-wrap: nowrap; white-space: nowrap; }
+.hero h1.zxm-hero > span { flex: 0 0 auto; }
+.hero h1.zxm-hero .bm-slot { flex: 0 0 auto; }
+
+@media (max-width: 1024px) {
+  .hero h1 { font-size: clamp(22px, 3vw, 32px); }
 }

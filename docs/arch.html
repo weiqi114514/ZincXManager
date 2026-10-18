@@ -35,6 +35,27 @@ footer{color:var(--muted);border-top:1px solid var(--line);margin-top:30px;paddi
 tr:nth-child(even) td { background: transparent !important; }
 header { background: #0e1116 !important; }
 details { border-radius: 0 !important; }
+
+/* ===== 与产品站统一(doc 化补丁):只改外观,正文不�� ===== */
+:root {
+  --bg: #0b0e13; --panel: #12161d; --line: #232a35;
+  --fg: #e8eef7; --muted: #93a1b5;
+  --accent: #22c55e; --accent2: #4ade80;
+}
+body {
+  background: var(--bg) !important;
+  color: var(--fg) !important;
+  font: 15px/1.75 "Inter", "PingFang SC", "Microsoft YaHei", "Noto Sans SC", system-ui, -apple-system, "Segoe UI", sans-serif !important;
+}
+header { position: static !important; background: var(--bg-soft, #0f131a) !important; }
+main { max-width: 1200px !important; padding: 40px 24px 64px !important; }
+h1 { font-size: clamp(26px, 3vw, 36px) !important; letter-spacing: -.3px !important; font-weight: 800 !important; }
+h2 { font-size: 20px !important; border-left: 3px solid var(--accent) !important; padding-left: 12px !important; }
+h3 { font-size: 16px !important; color: var(--fg) !important; }
+table { background: var(--panel) !important; }
+th { background: var(--surface, #161b24) !important; }
+th, td { border-color: var(--line) !important; }
+code, span.mono, td.mono { background: #0d1117 !important; border: 1px solid var(--line) !important; }
 </style><link rel="stylesheet" href="assets/css/product.css">
 <link rel="stylesheet" href="assets/css/doc.css">
 </head><body>
