@@ -179,7 +179,15 @@
 
           <TextBlock Classes="section" Text="目标服务端"/>
 
-          <StackPanel Spacing="8">
+          <!-- OOS:官方服务端地址只读显示,要改从这里进(原来在设置页里) -->
+          <StackPanel Spacing="8" IsVisible="{Binding IsOos}">
+            <TextBlock Classes="label" Text="当前官方服务端"/>
+            <TextBlock Classes="value" Text="{Binding OfficialAddress}" TextWrapping="Wrap"/>
+            <Button Classes="secondary" Content="调整官方服务端连接…" Click="OnAdjustOfficialClick"
+                    HorizontalAlignment="Left" Padding="14,6"/>
+          </StackPanel>
+
+          <StackPanel Spacing="8" IsVisible="{Binding !IsOos}">
             <!-- 地址与端口并排:横版窗口里一行摆得下,不用上下堆 -->
             <Grid ColumnDefinitions="*,100">
               <StackPanel Grid.Column="0" Spacing="4">
@@ -227,8 +235,9 @@
         </Grid>
 
         <Border Grid.Row="1" Margin="14,0,14,14" Background="#0F1A24" BorderBrush="#1E3244" BorderThickness="1">
-          <ScrollViewer x:Name="LogScroll" VerticalScrollBarVisibility="Auto" Padding="0,6">
-            <ItemsControl ItemsSource="{Binding Logs}">
+          <ScrollViewer x:Name="LogScroll" VerticalScrollBarVisibility="Auto"
+                          HorizontalScrollBarVisibility="Auto" Padding="0,6">
+            <ItemsControl ItemsSource="{Binding Logs}" HorizontalAlignment="Left">
               <ItemsControl.ItemTemplate>
                 <DataTemplate x:DataType="models:LogEntry">
                   <TextBlock Text="{Binding Display}"

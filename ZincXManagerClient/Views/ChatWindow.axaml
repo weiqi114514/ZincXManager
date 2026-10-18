@@ -1,0 +1,40 @@
+﻿<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="ZincXManagerClient.Views.ChatWindow"
+        Title="ZincXManagerClient · 聊天"
+        Width="560" Height="440" MinWidth="420" MinHeight="320"
+        Background="{DynamicResource ThemeWindowVeil}"
+        TransparencyLevelHint="AcrylicBlur,Blur,Transparent"
+        FontFamily="Microsoft YaHei UI, Microsoft YaHei, Segoe UI"
+        WindowDecorations="None">
+
+  <Grid RowDefinitions="33,*,Auto">
+    <Border Grid.Row="0" Background="{DynamicResource ThemePrimary}" PointerPressed="OnTitleBarPointerPressed">
+      <Grid ColumnDefinitions="Auto,*,Auto,Auto">
+        <Rectangle Grid.Column="0" Width="1.5" Height="16" Fill="#80FFFFFF" Margin="16,0,0,0" VerticalAlignment="Center"/>
+        <TextBlock x:Name="TitleText" Grid.Column="1" Text="与好友聊天" Foreground="White" FontSize="13"
+                   Margin="14,0,0,0" VerticalAlignment="Center"/>
+        <Button Grid.Column="2" Classes="chrome" Width="40" Click="OnMinimizeClick">
+          <Rectangle Width="12" Height="1.5" Fill="White"/>
+        </Button>
+        <Button Grid.Column="3" Classes="chrome close" Width="44" Click="OnCloseClick">
+          <Path Data="M0,0 L11,11 M11,0 L0,11" Stroke="White" StrokeThickness="1.6"/>
+        </Button>
+      </Grid>
+    </Border>
+
+    <ScrollViewer Grid.Row="1" Margin="14,12,14,10" VerticalScrollBarVisibility="Auto">
+      <StackPanel Spacing="10">
+        <TextBlock Text="聊天记录(预留)" FontSize="12" HorizontalAlignment="Center" Margin="0,40,0,0"
+                   Foreground="{DynamicResource ThemeMuted}"/>
+      </StackPanel>
+    </ScrollViewer>
+
+    <Border Grid.Row="2" BorderBrush="{DynamicResource ThemePanelBorder}" BorderThickness="0,1,0,0" Padding="12,10">
+      <Grid ColumnDefinitions="*,Auto">
+        <TextBox Grid.Column="0" Watermark="输入消息…" FontSize="12.5"/>
+        <Button Grid.Column="1" Classes="small" Content="发送" Margin="8,0,0,0"/>
+      </Grid>
+    </Border>
+  </Grid>
+</Window>

@@ -231,8 +231,11 @@
 
         <Grid RowDefinitions="Auto,*,Auto" Margin="0,22,0,20">
 
-          <!-- LOGO -->
-          <StackPanel Grid.Row="0" Margin="28,0,0,0" Spacing="7">
+          <!-- LOGO:点它回到主界面并取消左侧选中 -->
+          <Button Grid.Row="0" Classes="chrome" Margin="28,0,0,0" Padding="0"
+                  HorizontalAlignment="Left" HorizontalContentAlignment="Left" Click="OnLogoClick"
+                  ToolTip.Tip="回到主界面">
+          <StackPanel Spacing="7">
             <Viewbox Width="122" Height="30" HorizontalAlignment="Left">
               <Canvas Width="36" Height="9">
                 <Path Data="{x:Static models:Icons.LogoMark}" Fill="{DynamicResource ThemeOnRail}"
@@ -244,6 +247,7 @@
             </Viewbox>
             <TextBlock Text="ZincXManagerClient" FontSize="13.5" Foreground="{DynamicResource ThemeOnRail}" LetterSpacing="0.6"/>
           </StackPanel>
+          </Button>
 
           <!-- 导航:整行通到侧栏左边缘,每行左侧都带小条 -->
           <ItemsControl Grid.Row="1" Margin="0,34,0,0" ItemsSource="{Binding NavItems}">
@@ -346,18 +350,26 @@
           <!-- 经济:小功能选择(独立视图) -->
           <views:EconomyView Grid.Row="0" Grid.RowSpan="2" IsVisible="{Binding IsEconomy}"/>
 
+          <!-- 社区 / 组织 / 管理:子功能选择(与经济页同一模板) -->
+          <views:FunctionPickerView x:Name="CommunityPage" Grid.Row="0" Grid.RowSpan="2" IsVisible="{Binding IsCommunity}"/>
+          <views:FunctionPickerView x:Name="OrganizationPage" Grid.Row="0" Grid.RowSpan="2" IsVisible="{Binding IsOrganization}"/>
+          <views:FunctionPickerView x:Name="ManagePage" Grid.Row="0" Grid.RowSpan="2" IsVisible="{Binding IsManage}"/>
+
+          <!-- 好友:预留两栏好友窗口 -->
+          <views:FriendsView Grid.Row="0" Grid.RowSpan="2" IsVisible="{Binding IsFriends}"/>
+
           <!-- 其它页面:占位 -->
           <StackPanel Grid.Row="0" Grid.RowSpan="2" VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="6"
-                      IsVisible="{Binding !IsEconomy}">
+                      IsVisible="{Binding IsPlaceholder}">
             <TextBlock Text="{Binding CurrentPage}" FontSize="16" Foreground="{DynamicResource ThemePrimaryDark}" HorizontalAlignment="Center"/>
             <TextBlock Text="该页面还没做" FontSize="12.5" Foreground="{DynamicResource ThemeMuted}" HorizontalAlignment="Center"/>
           </StackPanel>
         </Grid>
 
         <!-- 消息面板:半透明亚克力;进「经济」页时向右收起(Width 过渡) -->
-        <Border x:Name="MessagesPanel" Grid.Column="1" Width="312" Margin="0,8,10,10" IsVisible="{Binding !IsEconomy}"
+        <Border x:Name="MessagesPanel" Grid.Column="1" Width="312" Margin="0,8,10,10" IsVisible="{Binding ShowMessages}"
                 Background="{DynamicResource ThemePanel}" BorderBrush="{DynamicResource ThemePanelBorder}" BorderThickness="1">
-          <Grid RowDefinitions="Auto,*" Margin="14,12,14,10">
+          <Grid RowDefinitions="Auto,*,Auto" Margin="14,12,14,10">
             <StackPanel Grid.Row="0" Spacing="2">
               <!-- 页签多 / 名字长的时候横向滚动,别把后面的挤没 -->
               <ScrollViewer HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Disabled">
@@ -405,7 +417,7 @@
                             <Button Grid.Column="2" Classes="link" Content="删除" Click="OnDeleteMessageClick"
                                     Foreground="#B25555" VerticalAlignment="Center" Margin="10,0,0,0"/>
                           </Grid>
-                          <TextBlock Classes="cardBody" Text="{Binding Body}"/>
+                          <ContentControl Content="{Binding Body, Converter={x:Static models:MessageBodyConverter.Instance}}"/>
                           <Rectangle Height="1" Fill="#66E3EEF4"/>
 
                           <Grid ColumnDefinitions="*,Auto">
@@ -461,8 +473,7 @@
                 <Button Grid.Column="1" Classes="link" Content="刷新" Click="OnRefreshLogClick"/>
               </Grid>
               <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
-                <SelectableTextBlock Text="{Binding LogText}" FontFamily="Consolas, Microsoft YaHei UI" FontSize="11.5"
-                                     Foreground="#31505F" TextWrapping="Wrap"/>
+                <ContentControl Content="{Binding LogText, Converter={x:Static models:MessageBodyConverter.Instance}}"/>
               </ScrollViewer>
             </Grid>
 
@@ -473,7 +484,7 @@
                 <Button Grid.Column="1" Classes="link" Content="刷新" Click="OnRefreshChangelogClick"/>
               </Grid>
               <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
-                <SelectableTextBlock Text="{Binding ChangelogText}" FontSize="12.5" Foreground="#31505F" TextWrapping="Wrap"/>
+                <ContentControl Content="{Binding ChangelogText, Converter={x:Static models:MessageBodyConverter.Instance}}"/>
               </ScrollViewer>
             </Grid>
 
@@ -487,9 +498,19 @@
                 </StackPanel>
               </StackPanel>
               <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
-                <SelectableTextBlock Text="{Binding WebText}" FontSize="12" Foreground="#31505F" TextWrapping="Wrap"/>
+                <ContentControl Content="{Binding WebText, Converter={x:Static models:MessageBodyConverter.Instance}}"/>
               </ScrollViewer>
             </Grid>
+            <!-- 左下角:全屏消息窗口(图标暂用占位) -->
+            <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,8,0,0" Spacing="6">
+              <Button Classes="chrome" Width="26" Height="24" Padding="0" Cursor="Hand"
+                      Background="{DynamicResource ThemeLight}" BorderBrush="{DynamicResource ThemePanelBorder}"
+                      BorderThickness="1" Click="OnOpenMessagesFullClick" ToolTip.Tip="全屏查看消息">
+                <Path x:Name="PanelToggleIcon" Data="{x:Static models:Icons.PanelCollapse}" Width="14" Height="14"
+                      Stretch="Uniform" Stroke="{DynamicResource ThemePrimaryDark}" StrokeThickness="1.8"
+                      Fill="Transparent"/>
+              </Button>
+            </StackPanel>
           </Grid>
         </Border>
         </Grid>
@@ -497,7 +518,7 @@
     </Grid>
 
     <!-- ================= 提示条(最上层):从左上角滑出来,几秒后自己收回去 ================= -->
-    <ItemsControl ItemsSource="{Binding Toasts}" Width="330" Margin="16,58,0,0"
+    <ItemsControl ItemsSource="{Binding Toasts}" MinWidth="280" MaxWidth="440" Margin="16,58,0,0"
                   HorizontalAlignment="Left" VerticalAlignment="Top" IsHitTestVisible="False">
       <ItemsControl.ItemsPanel>
         <ItemsPanelTemplate>
@@ -511,11 +532,13 @@
             <Grid ColumnDefinitions="4,*">
               <Rectangle Grid.Column="0" Classes="toastBar"/>
               <StackPanel Grid.Column="1" Margin="11,9,13,9" Spacing="4">
-                <StackPanel Orientation="Horizontal" Spacing="7">
-                  <Path Classes="toastIcon" Data="{x:Static models:Icons.Help}" Width="14" Height="14"
+                <!-- 图标一列、文字一列:文字在剩余宽度里换行,长提示不会被裁掉,提示条高度随行数长 -->
+                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="7">
+                  <Path Grid.Column="0" Classes="toastIcon" Data="{x:Static models:Icons.Help}" Width="14" Height="14"
                         Stretch="Uniform" VerticalAlignment="Center"/>
-                  <TextBlock Classes="toastText" Text="{Binding Text}" VerticalAlignment="Center"/>
-                </StackPanel>
+                  <TextBlock Grid.Column="1" Classes="toastText" Text="{Binding Text}" TextWrapping="Wrap"
+                             VerticalAlignment="Center"/>
+                </Grid>
                 <TextBlock Classes="toastFoot" Text="{Binding FootText}"/>
               </StackPanel>
             </Grid>

@@ -202,28 +202,13 @@
                 <TextBlock Grid.Column="1" Classes="value" Text="{Binding OfficialDataSourceName}"/>
               </Grid>
 
-              <!-- 官方地址:默认用代码里写死的那个;要改必须勾"自定义"并读完 5 秒警告 -->
+              <!-- 官方地址改成在连接流程里调整(原来那两个单选框已经搬过去了) -->
               <Grid ColumnDefinitions="190,*">
                 <TextBlock Grid.Column="0" Classes="label" Text="官方数据源IP/域名" VerticalAlignment="Top" Margin="0,4,0,0"/>
                 <StackPanel Grid.Column="1" Spacing="7">
-                  <RadioButton GroupName="ozsource" Content="官方服务端(默认)"
-                               IsChecked="{Binding !UseCustomAddress, Mode=OneWay}" Click="OnOfficialAddressClick"/>
-                  <TextBlock Classes="value" Text="{Binding OfficialAddress}" Margin="24,0,0,0"/>
-
-                  <RadioButton GroupName="ozsource" Content="自定义 IP/域名:端口"
-                               IsChecked="{Binding UseCustomAddress, Mode=OneWay}" Click="OnCustomAddressClick"/>
-                  <TextBlock Classes="value" Text="官方服务端 ≠ 子服务端:这里只改「直连哪台官方服」;连别人搭的官方服有风险,改之前请先读完弹窗里的说明"
-                             Margin="24,0,0,0" Foreground="#B25555"/>
+                  <TextBlock Classes="value" Text="{Binding OfficialAddress}"/>
                 </StackPanel>
               </Grid>
-            </StackPanel>
-
-            <Rectangle Height="1" Fill="#66E3EEF4"/>
-
-            <!-- 弹窗形态落地:填空(改地址)+ 选择(连接方式) -->
-            <StackPanel Orientation="Horizontal" Spacing="10">
-              <Button Classes="small" Content="改数据源地址…" Click="OnEditAddressClick"/>
-              <Button Classes="small" Content="切换连接方式…" Click="OnSelectModeClick"/>
             </StackPanel>
           </StackPanel>
         </ScrollViewer>

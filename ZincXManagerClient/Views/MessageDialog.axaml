@@ -3,7 +3,7 @@
         x:Class="ZincXManagerClient.Views.MessageDialog"
         Title="ZincXManagerClient 弹窗"
         Width="420" SizeToContent="Height" MaxHeight="620"
-        Background="{DynamicResource ThemeWindowVeil}"
+        Background="#CCFFFFFF"
         TransparencyLevelHint="AcrylicBlur,Blur,Transparent"
         FontFamily="Microsoft YaHei UI, Microsoft YaHei, Segoe UI"
         WindowDecorations="None"

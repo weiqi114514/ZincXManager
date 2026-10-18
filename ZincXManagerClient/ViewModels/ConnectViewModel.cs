@@ -50,6 +50,21 @@ public partial class ConnectViewModel : ViewModelBase, IDisposable
     // 从 config.ini 读到的两组目标(切模式时自动填进输入框,仍可手动改)
     private readonly string _czip;
     private readonly string _czport;
+    /// <summary>当前官方服务端地址(读 config 的 ozip/ozport),连接窗口里只读显示。</summary>
+    public string OfficialAddress => $"{ClientConfig.Get(KeyOzip, OfficialServer.Host)}:{ClientConfig.Get(KeyOzport, OfficialServer.PortText)}";
+
+    /// <summary>改完官方服务端地址后刷新:OOS 模式下顺便把连接目标换成新地址。</summary>
+    public void ReloadOfficialTarget()
+    {
+        OnPropertyChanged(nameof(OfficialAddress));
+
+        if (IsOos)
+        {
+            Host = ClientConfig.Get(KeyOzip, OfficialServer.Host);
+            Port = ClientConfig.Get(KeyOzport, OfficialServer.PortText);
+        }
+    }
+
     private readonly string _ozip;
     private readonly string _ozport;
 
@@ -425,6 +440,9 @@ public partial class ConnectViewModel : ViewModelBase, IDisposable
 
     /// <summary>对方自报的端类型(200 包里来的):只有官方服务端才需要出示官方证明。</summary>
     private string _serverRole = "";
+
+    /// <summary>对方自报的端类型:ZXMOS(官方)/ ZXMS(子服)。</summary>
+    public string ServerRole => _serverRole;
 
     /// <summary>等对方证明的等待者。</summary>
     private TaskCompletionSource<string>? _officialWait;

@@ -120,6 +120,32 @@ footer{color:var(--muted);border-top:1px solid var(--line);margin-top:30px;paddi
 <li>nonce 还带时间戳,超过 5 分钟自动失效。</li>
 </ul>
 
+<h3 id="subfunc">子功能页(a0.4.0)</h3>
+<p class="lead">经济 / 社区 / 组织 / 管理四页统一成「子功能卡片」:一张卡片 = 一个入口,左边描边图标、中间名称+说明、右下「进入」。</p>
+<table><thead><tr><th>页面</th><th>子功能</th><th>数据来源 / 说明</th></tr></thead><tbody>
+<tr><td>经济</td><td>商店、银行</td><td>商店 = 与玩家/官方交易;银行 = 存取款/转账</td></tr>
+<tr><td>社区</td><td>服务器广场、锌源广场</td><td>服务器广场走 ZXMS(名字由 ZXMS 的 <span class="mono">squarename</span> 决定);锌源广场走官方 ZXMOS,只有实际连上官方才显示</td></tr>
+<tr><td>组织</td><td>个人组织、团队组织、企业组织</td><td>按组织规模分类</td></tr>
+<tr><td>管理</td><td>版本管理、数据源管理、服务器管理、数据统计</td><td>运维相关</td></tr>
+</tbody></table>
+<p class="tips">好友不再是页面:点左侧「好友」弹出 <b>好友条窗体</b>(240×560),双击好友再单独开 <b>聊天窗体</b>(560×440)。</p>
+
+<h3 id="render">消息渲染(Markdown / HTML)</h3>
+<p class="lead">消息卡片、运行日志、更新日志、自定义网页共用一套轻量渲染器 <span class="mono">MessageFormat</span>,按内容自动识别格式。</p>
+<table><thead><tr><th>格式</th><th>识别</th><th>支持</th></tr></thead><tbody>
+<tr><td>Markdown</td><td>含 <span class="mono">#</span> / <span class="mono">- </span> / <span class="mono">**</span> / 代码块</td><td>标题(1-3 级)、列表、粗体、行内代码、代码块、段落</td></tr>
+<tr><td>HTML</td><td>含 <span class="mono">&lt;h1&gt;</span> <span class="mono">&lt;p&gt;</span> <span class="mono">&lt;li&gt;</span> 等标签</td><td>h1-h3、p、b/strong、i、ul/li、br、code(不执行 JS、不加载图片)</td></tr>
+<tr><td>纯文本</td><td>其它</td><td>按段落换行显示</td></tr>
+</tbody></table>
+<p class="tips">自定义网页还支持「在浏览器打开」并选择浏览器(Edge / Chrome / Firefox / 360)。真正内嵌浏览器(WebView2)试过:NativeAOT 单文件下加载器不可用,已放弃,只保留排版渲染。</p>
+
+<h3 id="secure040">加密协商(a0.4.0 补齐 ZXMOS)</h3>
+<table><thead><tr><th>链路</th><th>握手</th><th>说明</th></tr></thead><tbody>
+<tr><td>ZXMC ↔ ZXMS</td><td>380 / 381</td><td>ECDH P-256 换公钥,HKDF 派生两把 AES-256-GCM 密钥,之后所有报文加密</td></tr>
+<tr><td>ZXMC ↔ ZXMOS(OOS 直连)</td><td>380 / 381</td><td>a0.4.0 补上;未加密的直连登录会被拒绝(<span class="mono">err|客户端版本过旧</span>)</td></tr>
+<tr><td>ZXMS ↔ ZXMOS</td><td>380 / 381</td><td>a0.4.0 起 ZXMS 连上官方端先握手再上线,否则官方端会拒绝其服务端账号登录</td></tr>
+</tbody></table>
+
 <h3 id="startup">启动流程(ZXMC,启动自检)</h3>
 <p class="lead">打开客户端不再直接进登录界面:先按配置测一次数据源,连不上就停在连接窗口并弹窗说明原因。</p>
 <table><thead><tr><th>阶段</th><th>动作</th><th>失败/结果</th></tr></thead><tbody>

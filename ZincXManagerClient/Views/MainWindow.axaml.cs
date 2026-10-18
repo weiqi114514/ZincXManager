@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Avalonia;
@@ -23,6 +24,48 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         Opened += (_, _) => ScrollDrag.AttachAll(this);
+        Opened += (_, _) => RefreshFunctionPages();
+
+        // 调试用:config 里写 testmsg=1 就塞两条消息(Markdown / HTML),看渲染效果
+        Opened += (_, _) =>
+        {
+            if (ClientConfig.GetOrEmpty("testmsg") == "1")
+            {
+                Vm?.AddMessage(new Models.MessageItem
+                {
+                    Title = "Markdown 测试",
+                    Body = "# 大标题\n## 小标题\n这是 **粗体** 和反引号代码的段落。\n- 列表项一\n- 列表项二",
+                });
+                Vm?.AddMessage(new Models.MessageItem
+                {
+                    Title = "HTML 测试",
+                    Body = "<h2>HTML 标题</h2><p>带粗体和斜体的段落。</p><ul><li>第一项</li><li>第二项</li></ul>",
+                });
+            }
+        };
+
+        // 调试用:config 里写 testtoast=1 就弹一条长提示,看换行/高度对不对
+        Opened += (_, _) =>
+        {
+            if (ClientConfig.GetOrEmpty("testtoast") == "1")
+            {
+                // 测试用:隔两秒弹一次,方便截图
+                var left = 8;
+                var timer = new Avalonia.Threading.DispatcherTimer { Interval = System.TimeSpan.FromSeconds(2) };
+                timer.Tick += (_, _) =>
+                {
+                    Vm?.ShowToast("已确认对方是官方服务端:锌能源ZXMOS官方服务器(序列号 ZXM-2026-0002),欢迎回来", ToastKind.Success);
+                    if (--left <= 0)
+                    {
+                        timer.Stop();
+                    }
+                };
+                timer.Start();
+            }
+        };
+
+        // 登录后才建立连接:前几秒每秒核对一次"官方社区"该不该显示(连上就显示,断开就收)
+        Opened += (_, _) => StartOfficialWatch();
 
         // 窗口材质只在这里定一次:运行中改 TransparencyLevelHint 会让 Windows 重建窗口,
         // 屏幕上会闪出"像多了一个窗口"的东西,所以开关只换材料、不动材质
@@ -58,6 +101,10 @@ public partial class MainWindow : Window
         {
             connect.PacketReceived += OnServerPacket;
             connect.OfficialChecked += OnOfficialChecked;
+            connect.PropertyChanged += OnConnectChanged;
+
+            // 官方社区卡片按实际连接状态显示(直连 ZXMOS / 经子服连官方都算)
+            Vm?.RefreshOfficialVisibility();
         }
 
         // 窗口开起来再要一次历史消息(504 补发):这一刻收包事件才挂上,不然补发的包没人接。
@@ -86,6 +133,7 @@ public partial class MainWindow : Window
 
         Logger.Log(LogLevel.Info, $"[ZXMC] 切到页签:{tab.Label}(index={index})");
         Vm.SelectTab(index);
+
         AnimateUnderline(Vm.UnderlineOffset);
     }
 
@@ -141,7 +189,7 @@ public partial class MainWindow : Window
     }
 
     /// <summary>用系统默认浏览器打开自定义网页。</summary>
-    private void OnOpenWebClick(object? sender, RoutedEventArgs e)
+    private async void OnOpenWebClick(object? sender, RoutedEventArgs e)
     {
         var url = Vm?.WebUrl ?? "";
         if (url.Length == 0)
@@ -149,8 +197,35 @@ public partial class MainWindow : Window
             return;
         }
 
+        // 有多个浏览器时让用户选(火狐 / Chrome / Edge / 360…),只有一个就直接用
+        var browsers = Models.BrowserLauncher.List();
+
         try
         {
+            if (browsers.Count > 1)
+            {
+                var names = browsers.Select(b => b.Name).ToArray();
+                var picked = await MessageDialog.ChooseAsync(this, "用浏览器打开",
+                    "想在哪个浏览器里看这个页面?", names, "打开", "选一个就行");
+
+                if (picked is null)
+                {
+                    return;
+                }
+
+                var target = browsers.FirstOrDefault(b => b.Name == picked);
+                if (target.Path is null)
+                {
+                    return;
+                }
+
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(target.Path, url)
+                {
+                    UseShellExecute = true,
+                });
+                return;
+            }
+
             System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(url) { UseShellExecute = true });
         }
         catch (Exception ex)
@@ -172,6 +247,32 @@ public partial class MainWindow : Window
     /// <summary>
     /// 官方验证第二层的结果:通过就轻描淡写提一句;不是官方服务端就明确警告(官方构建会直接断开)。
     /// </summary>
+    private Avalonia.Threading.DispatcherTimer? _officialTimer;
+
+    private void StartOfficialWatch()
+    {
+        _officialTimer?.Stop();
+        var ticks = 0;
+        _officialTimer = new Avalonia.Threading.DispatcherTimer { Interval = System.TimeSpan.FromSeconds(1) };
+        _officialTimer.Tick += (_, _) =>
+        {
+            Vm?.RefreshOfficialVisibility();
+            if (++ticks >= 10)
+            {
+                _officialTimer?.Stop();
+            }
+        };
+        _officialTimer.Start();
+    }
+
+    private void OnConnectChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(ConnectViewModel.IsConnected))
+        {
+            Vm?.RefreshOfficialVisibility();
+        }
+    }
+
     private void OnOfficialChecked(bool ok, string detail)
     {
         if (Vm is not { } vm)
@@ -325,15 +426,102 @@ public partial class MainWindow : Window
 
     private void OnCloseClick(object? sender, RoutedEventArgs e) => Close();
 
+    /// <summary>点左上 Logo:回到主界面(不选任何页面)。</summary>
+    /// <summary>把各页的子功能清单交给通用子功能页。</summary>
+    private void RefreshFunctionPages()
+    {
+        if (Vm is null)
+        {
+            return;
+        }
+
+        this.FindControl<FunctionPickerView>("CommunityPage")?.SetContent("社区", Vm.CommunityItems);
+        this.FindControl<FunctionPickerView>("OrganizationPage")?.SetContent("组织", Vm.OrganizationItems);
+        this.FindControl<FunctionPickerView>("ManagePage")?.SetContent("管理", Vm.ManageItems);
+    }
+
+    private void OnLogoClick(object? sender, RoutedEventArgs e) => Vm?.ClearSelection();
+
     private void OnNavItemClick(object? sender, RoutedEventArgs e)
     {
         if (sender is not Button { DataContext: NavItem item }) return;
 
-        // 只切页面;背景图在 设置 → 个性化 里选(以前那段"借设置入口挑背景图"的临时代码已删)
+        // 好友是独立窗体(好友条 + 聊天窗),不进主界面内容区
+        if (item.Label == "好友")
+        {
+            ShowFriendsWindow();
+            return;
+        }
+
         Vm?.SelectNav(item);
     }
 
+    private FriendsWindow? _friendsWindow;
+
+    /// <summary>打开(或激活)好友条窗体。</summary>
+    private void ShowFriendsWindow()
+    {
+        if (_friendsWindow is { IsVisible: true })
+        {
+            _friendsWindow.Activate();
+            return;
+        }
+
+        _friendsWindow = new FriendsWindow();
+        WindowPlacement.PlaceAt(_friendsWindow, this);
+        _friendsWindow.Closed += (_, _) => _friendsWindow = null;
+        _friendsWindow.Show();
+    }
+
     /// <summary>删掉这条消息(界面上的「删除」,同时从本地存档里去掉)。</summary>
+    /// <summary>
+    /// 左下角按钮:消息面板在 500ms 内从右往左滑开铺满工作区(左留 18、右留 10),再点收回 312。
+    /// </summary>
+    private void OnOpenMessagesFullClick(object? sender, RoutedEventArgs e)
+    {
+        if (this.FindControl<Border>("MessagesPanel") is not { } panel)
+        {
+            return;
+        }
+
+        var full = Math.Abs(panel.Width - 312) < 1;
+
+        // 宽度过渡:0.5 秒缓出,看着是平滑滑开
+        panel.Transitions = new Avalonia.Animation.Transitions
+        {
+            new Avalonia.Animation.DoubleTransition
+            {
+                Property = Border.WidthProperty,
+                Duration = System.TimeSpan.FromMilliseconds(500),
+                Easing = new Avalonia.Animation.Easings.CubicEaseOut(),
+            },
+        };
+
+        // 图标跟着换状态:展开后显示「收起」,收回后显示「展开」
+        if (this.FindControl<Avalonia.Controls.Shapes.Path>("PanelToggleIcon") is { } toggleIcon)
+        {
+            toggleIcon.Data = Avalonia.Media.Geometry.Parse(full ? Models.Icons.PanelExpand : Models.Icons.PanelCollapse);
+        }
+
+        if (full)
+        {
+            var hostWidth = (panel.Parent as Control)?.Bounds.Width ?? 1000;
+            Grid.SetColumn(panel, 0);
+            Grid.SetColumnSpan(panel, 2);
+            panel.HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Right;
+            panel.ZIndex = 10;
+            panel.Margin = new Avalonia.Thickness(10);   // 四边都留 10,与右侧一致
+            panel.Width = System.Math.Max(320, hostWidth - 20);   // 左 10 + 右 10
+        }
+        else
+        {
+            Grid.SetColumn(panel, 1);
+            Grid.SetColumnSpan(panel, 1);
+            panel.Width = 312;
+            panel.ZIndex = 0;
+        }
+    }
+
     private void OnDeleteMessageClick(object? sender, RoutedEventArgs e)
     {
         if (sender is Button { DataContext: MessageItem item } && Vm is { } vm)

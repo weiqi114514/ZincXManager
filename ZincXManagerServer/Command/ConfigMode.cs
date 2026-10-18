@@ -35,6 +35,7 @@ internal static class ConfigMode
         new() { Key = "ozip",          Cn = "官方端地址",   Description = "ZXMOS 的 IP 或域名",                     Type = "IP 或域名" },
         new() { Key = "ozport",        Cn = "官方端端口",   Description = "ZXMOS 的端口",                           Type = "1-65535" },
         new() { Key = "osuser",        Cn = "官方账号名",   Description = "本端在 ZXMOS 上注册的账号(改名请用 osuser)", Type = "文本 2-32 字符" },
+        new() { Key = "squarename",    Cn = "广场名称",     Description = "客户端「服务器广场」卡片上显示的名字",     Type = "文本 1-24 字符" },
         new() { Key = "msgdays",       Cn = "消息保留天数", Description = "下发给客户端:本地留多久",                Type = "1-365" },
         new() { Key = "srvmsgdays",    Cn = "存档保留天数", Description = "本服存档留多久(补发用)",                 Type = "1-365" },
         new() { Key = "officialcheck", Cn = "对端校验",     Description = "1 = 对端不是官方就断开,0 = 只警告",       Type = "1/0" },

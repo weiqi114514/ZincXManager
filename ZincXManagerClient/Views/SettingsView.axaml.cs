@@ -273,9 +273,25 @@ public partial class SettingsView : UserControl
     {
         Vm?.StartDataSourceFlow();
 
-        var window = new ConnectWindow { DataContext = new ConnectViewModel() };
-        WindowPlacement.PlaceAt(window, TopLevel.GetTopLevel(this) as Window);
+        var owner = TopLevel.GetTopLevel(this) as Window;
+
+        // 会话持有这条连接:否则连接窗口一关,OnClosed 会把它当"临时连接"Dispose 掉(断线)
+        var connect = new ConnectViewModel();
+        ClientSession.Connect = connect;
+
+        var window = new ConnectWindow { DataContext = connect };
+        if (owner is not null)
+        {
+            WindowPlacement.PlaceAt(window, owner);
+        }
+
         window.Show();
+
+        // 只留连接流程:主界面窗口关掉(否则两个窗口叠在一起)
+        if (owner is MainWindow)
+        {
+            owner.Close();
+        }
     }
 
     /// <summary>个性化 → 选择背景壁纸。</summary>

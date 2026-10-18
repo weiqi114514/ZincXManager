@@ -41,6 +41,9 @@ internal static class Program
     /// <summary>本服消息保留天数(config.ini 的 msgdays,默认 7):下发给客户端,决定客户端本地留多久。</summary>
     private const string KeyMsgDays = "msgdays";
 
+    /// <summary>服务器广场在客户端显示的名字(config.ini 的 squarename,默认"服务器广场")。</summary>
+    private const string KeySquareName = "squarename";
+
     /// <summary>消息保留天数默认值(天)。</summary>
     private const int DefaultMsgDays = 7;
 
@@ -332,8 +335,14 @@ internal static class Program
 
                 await conn.WriteAsync(new Packet(0, ServerIdent, Encoding.UTF8.GetBytes("ZXMS")));
                 await conn.WriteAsync(new Packet(0, Protocol.ServerName, Encoding.UTF8.GetBytes(liveName)));
+                var squareName = config.MapGet(KeySquareName).Trim();
+                if (squareName.Length == 0)
+                {
+                    squareName = "服务器广场";
+                }
+
                 await conn.WriteAsync(new Packet(0, Protocol.ServerConfig,
-                    Encoding.UTF8.GetBytes($"msgdays={_msgDays}")));
+                    Encoding.UTF8.GetBytes($"msgdays={_msgDays}\nsquarename={squareName}")));
                 Logger.Log(LogLevel.Info,
                     $"[ZXMS] 已发送身份包(200):ZXMS,名称(201):{liveName},消息保留(202):{_msgDays} 天");
             }
@@ -1034,6 +1043,9 @@ internal static class Program
     /// </summary>
     private static TaskCompletionSource<string>? _officialWait;
 
+    /// <summary>和 ZXMOS 协商密钥时等 381 用。</summary>
+    private static TaskCompletionSource<byte[]>? _osSessionWait;
+
     private static string _officialNonce = "";
 
     private static ulong _relayId = 1000;
@@ -1354,6 +1366,16 @@ internal static class Program
                 Logger.Log(LogLevel.Info, "[配置] 官方账号密文已写入,下次连接 ZXMOS 时生效");
                 return "";
 
+            case "squarename":
+                if (value.Length < 1 || value.Length > 24)
+                {
+                    return "广场名称要 1-24 个字符";
+                }
+
+                config.WriteFileMap(KeySquareName, value);
+                Logger.Log(LogLevel.Info, "[配置] 服务器广场名称已改为 " + value + "(新接入的客户端立刻生效)");
+                return "";
+
             case "msgdays":
                 if (!int.TryParse(value, out var days) || days is < 1 or > 365)
                 {
@@ -1501,6 +1523,11 @@ internal static class Program
                     break;
 
                 // ZXMOS 确认握手
+                // 会话加密:ZXMOS 回的公钥(381)
+                case Protocol.SessionHelloAck:
+                    _osSessionWait?.TrySetResult(packet.Data);
+                    break;
+
                 case SBack:
                     Logger.Log(LogLevel.Info, "[ZXMOS] 握手成功: " + Encoding.UTF8.GetString(packet.Data));
                     break;
@@ -1709,6 +1736,34 @@ internal static class Program
         {
             await client.ConnectAsync();
             _os = client;
+
+            // 先和 ZXMOS 协商会话密钥:官方端会拒绝明文链路(包括本端自己的账号登录)
+            try
+            {
+                var hs = new ZincXManagerShared.Security.SessionHandshake();
+                _osSessionWait = new TaskCompletionSource<byte[]>(TaskCreationOptions.RunContinuationsAsynchronously);
+                await client.WriteAsync(new Packet(0, Protocol.SessionHello, hs.PublicKey));
+
+                var done = await Task.WhenAny(_osSessionWait.Task, Task.Delay(5000));
+                if (done == _osSessionWait.Task)
+                {
+                    client.Crypto = hs.Complete(_osSessionWait.Task.Result, isServer: false);
+                    Logger.Log(LogLevel.Info, "[ZXMOS] 已建立加密会话(ECDH P-256 + AES-256-GCM)");
+                }
+                else
+                {
+                    Logger.Log(LogLevel.Warning, "[ZXMOS] 加密协商超时,官方端可能拒绝明文登录");
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Log(LogLevel.Warning, "[ZXMOS] 加密协商失败: " + ex.Message);
+            }
+            finally
+            {
+                _osSessionWait = null;
+            }
+
             await client.WriteAsync(new Packet(1, SOnline, Encoding.UTF8.GetBytes("ZXMS online")));
             Logger.Log(LogLevel.Info, $"[ZXMOS] 已连接 {ozip}:{osPort}");
 

@@ -23,13 +23,39 @@ public partial class MainViewModel : ViewModelBase
 {
     public MainViewModel()
     {
-        NavItems.Add(new NavItem("经济", Icons.Economy) { IsSelected = true });
+        // 子功能清单(图标先占位,后面替换)
+        var isOos = ClientConfig.GetOrEmpty("mode") == "OOS";
+        var officialOn = ClientConfig.GetOrEmpty("connectOS") == "1";
+
+        // 两个广场功能一样(看社区内容),区别是数据来源:服务器广场走 ZXMS,锌源广场走官方 ZXMOS
+        CommunityItems.Add(new Models.FunctionItem
+        {
+            Key = "srv-square", Title = "服务器广场", Description = "子服务端的社区内容",
+            IconSvg = "avares://ZincXManagerClient/Assets/icons/server-square.svg", Icon = Models.Icons.ServerSquare, IconStroke = true, IsVisible = !isOos,
+        });
+        CommunityItems.Add(new Models.FunctionItem
+        {
+            Key = "zinc-square", Title = "锌源广场", Description = "官方服务端的社区内容",
+            IconSvg = "avares://ZincXManagerClient/Assets/icons/official-square.svg", Icon = Models.Icons.OfficialSquare, IconStroke = true, IsVisible = false,
+        });
+
+        OrganizationItems.Add(new Models.FunctionItem { Key = "org-personal", Title = "个人组织", Description = "个人小组 / 小团队", Icon = Models.Icons.PersonalOrg, IconStroke = true });
+        OrganizationItems.Add(new Models.FunctionItem { Key = "org-team", Title = "团队组织", Description = "多人协作的团队", Icon = Models.Icons.TeamOrg, IconStroke = true });
+        OrganizationItems.Add(new Models.FunctionItem { Key = "org-company", Title = "企业组织", Description = "企业 / 大型组织", Icon = Models.Icons.CompanyOrg, IconStroke = true });
+
+        ManageItems.Add(new Models.FunctionItem { Key = "mg-version", Title = "版本管理", Description = "服务端 / 客户端版本", Icon = Models.Icons.VersionManage, IconStroke = true });
+        ManageItems.Add(new Models.FunctionItem { Key = "mg-source", Title = "数据源管理", Description = "数据源与连接配置", Icon = Models.Icons.SourceManage, IconStroke = true });
+        ManageItems.Add(new Models.FunctionItem { Key = "mg-server", Title = "服务器管理", Description = "开服 / 重启 / 备份", Icon = Models.Icons.ServerManage, IconStroke = true });
+        ManageItems.Add(new Models.FunctionItem { Key = "mg-stats", Title = "数据统计", Description = "在线 / 活跃 / 经济数据", Icon = Models.Icons.StatsManage, IconStroke = true });
+
+        // 顺序:设置沉到功能列表最底下,小功能组顶替它原来的位置
+        NavItems.Add(new NavItem("经济", Icons.Economy));
         NavItems.Add(new NavItem("社区", Icons.Community));
         NavItems.Add(new NavItem("组织", Icons.Organization));
         NavItems.Add(new NavItem("好友", Icons.Friends, 5, 3));
-        NavItems.Add(new NavItem("设置", Icons.Settings));
-        NavItems.Add(new NavItem("管理", Icons.Manage, 5, 4));
         NavItems.Add(new NavItem("小功能组", Icons.Widgets));
+        NavItems.Add(new NavItem("管理", Icons.Manage, 5, 4));
+        NavItems.Add(new NavItem("设置", Icons.Settings));
 
         // 设置页里改了权限等级 / 连接方式,标题栏那句要跟着变
         Settings.PropertyChanged += OnSettingsChanged;
@@ -85,14 +111,63 @@ public partial class MainViewModel : ViewModelBase
 
     /// <summary>当前一级导航(决定右侧显示哪个页面)。</summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsSettings), nameof(IsEconomy))]
-    public partial string CurrentPage { get; set; } = "经济";
+    [NotifyPropertyChangedFor(nameof(IsSettings), nameof(IsEconomy), nameof(IsPlaceholder), nameof(IsCommunity), nameof(IsOrganization), nameof(IsFriends), nameof(IsManage), nameof(ShowMessages))]
+    public partial string CurrentPage { get; set; } = "";
 
     /// <summary>是否正在显示设置页。</summary>
     public bool IsSettings => CurrentPage == "设置";
 
     /// <summary>经济页(小功能选择:商店 / 银行)。</summary>
     public bool IsEconomy => CurrentPage == "经济";
+
+    /// <summary>
+    /// 锌源广场(官方社区)是否显示:按实际连接状态判断 ——
+    /// OOS 直连 ZXMOS,或 SAOS 经子服连官方(连上即认为有官方社区);OS(纯子服)不显示。
+    /// </summary>
+    public void RefreshOfficialVisibility()
+    {
+        var connect = ClientSession.Connect;
+        var connected = connect?.IsConnected == true;
+        var official = connected && Settings.Mode != "OS";
+
+        // 调试开关:config 写 showsquare=1 时强制显示锌源广场(方便看图标/排版)
+        if (ClientConfig.GetOrEmpty("showsquare") == "1")
+        {
+            official = true;
+        }
+
+        foreach (var item in CommunityItems)
+        {
+            if (item.Key == "zinc-square")
+            {
+                item.IsVisible = official;
+            }
+        }
+    }
+
+    /// <summary>消息窗口只在默认页(没选任何功能页)显示;进功能页就收起来。</summary>
+    public bool ShowMessages => CurrentPage.Length == 0;
+
+    /// <summary>没选任何页面(点了 Logo)时不显示"该页面还没做"。</summary>
+    public bool IsPlaceholder => CurrentPage.Length > 0 && !IsEconomy
+        && CurrentPage != "社区" && CurrentPage != "组织" && CurrentPage != "好友" && CurrentPage != "管理";
+
+    public bool IsCommunity => CurrentPage == "社区";
+
+    public bool IsOrganization => CurrentPage == "组织";
+
+    public bool IsFriends => CurrentPage == "好友";
+
+    public bool IsManage => CurrentPage == "管理";
+
+    /// <summary>社区页的子功能(按模式 / 是否连官方决定显示)。</summary>
+    public System.Collections.ObjectModel.ObservableCollection<Models.FunctionItem> CommunityItems { get; } = new();
+
+    /// <summary>组织页的子功能。</summary>
+    public System.Collections.ObjectModel.ObservableCollection<Models.FunctionItem> OrganizationItems { get; } = new();
+
+    /// <summary>管理页的子功能。</summary>
+    public System.Collections.ObjectModel.ObservableCollection<Models.FunctionItem> ManageItems { get; } = new();
 
     /// <summary>顶部那句:权限等级 - 连接方式(如 Player - SAOS),两段都来自设置页。</summary>
     public string ModeText => $"{Settings.Role} - {Settings.Mode}";
@@ -265,10 +340,14 @@ public partial class MainViewModel : ViewModelBase
         {
             using var http = new System.Net.Http.HttpClient { Timeout = TimeSpan.FromSeconds(8) };
             var html = await http.GetStringAsync(WebUrl);
-            var text = System.Text.RegularExpressions.Regex.Replace(html, @"<script[\s\S]*?</script>|<style[\s\S]*?</style>", " ");
-            text = System.Text.RegularExpressions.Regex.Replace(text, "<[^>]+>", " ");
-            text = System.Text.RegularExpressions.Regex.Replace(text, @"\s+", " ").Trim();
-            WebText = text.Length > 20000 ? text[..20000] + "…" : text;
+
+            // 保留 HTML 结构给渲染器(以前这里把所有标签剥成纯文本,标题/列表全丢了);
+            // 只去掉脚本和样式,避免把代码当正文显示。
+            var body = System.Text.RegularExpressions.Regex.Replace(html,
+                @"<(script|style)[\s\S]*?</\1>", " ",
+                System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+            WebText = body.Length > 20000 ? body[..20000] + "…" : body;
         }
         catch (Exception ex)
         {
@@ -455,6 +534,21 @@ public partial class MainViewModel : ViewModelBase
 
             var key = parts[0].Trim().ToLowerInvariant();
             var value = parts[1].Trim();
+
+            // 服务器广场的名称由 ZXMS 自己定(config 的 squarename),客户端照它改卡片标题
+            if (key == "squarename" && value.Length > 0)
+            {
+                foreach (var item in CommunityItems)
+                {
+                    if (item.Key == "srv-square")
+                    {
+                        item.Title = value;
+                    }
+                }
+
+                Logger.Log(LogLevel.Info, $"[ZXMC] 服务器广场名称:{value}");
+                continue;
+            }
 
             if (key == "msgdays" && int.TryParse(value, out var days))
             {
@@ -664,6 +758,17 @@ public partial class MainViewModel : ViewModelBase
     // ---------- 交互 ----------
 
     /// <summary>切换左侧导航选中项;选到"设置"时右侧换成设置页。</summary>
+    /// <summary>点 Logo:取消左侧所有选中,回到"没选页面"的主界面状态。</summary>
+    public void ClearSelection()
+    {
+        foreach (var nav in NavItems)
+        {
+            nav.IsSelected = false;
+        }
+
+        CurrentPage = "";
+    }
+
     public void SelectNav(NavItem item)
     {
         foreach (var nav in NavItems)

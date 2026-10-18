@@ -156,6 +156,7 @@ public partial class MessageDialog : Window
         BodyText.Text = options.Text;
         HintText.Text = options.Hint;
 
+
         if (options.Input is { } placeholder)
         {
             InputBox.IsVisible = true;
