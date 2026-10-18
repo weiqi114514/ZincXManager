@@ -124,9 +124,15 @@ img, svg { max-width: 100%; }
   white-space: nowrap;   /* 标题不换行:切换词变宽时靠字号兜住 */
 }
 
-.bm-slot { display: inline-block; position: relative; overflow: hidden; vertical-align: bottom; height: 1.08em; max-width: 9.5em; }
-.bm-cur, .bm-next { display: block; white-space: nowrap; }
-.bm-next { position: absolute; left: 0; top: 100%; }
+/* 品牌词条切换(完全沿用旧 style.css,不改) */
+.bm-slot{position:relative;display:inline-block;overflow:hidden;height:1.05em;vertical-align:-0.12em;transition:width .42s cubic-bezier(.22,.61,.36,1)}
+.bm-cur,.bm-next{display:block;white-space:nowrap;transition:transform .42s cubic-bezier(.22,.61,.36,1)}
+.bm-next{position:absolute;left:0;top:-100%}
+.zxm-hero{display:flex;align-items:baseline;flex-wrap:wrap}
+.zxm-hero>span{display:inline-block}
+.zxm-hero .bm-slot{position:relative;display:inline-block;overflow:hidden;line-height:1.16;vertical-align:baseline}
+.zxm-hero .bm-cur{position:static;display:block;white-space:nowrap;line-height:1.16}
+.zxm-hero .bm-next{position:absolute;left:0;top:0;display:block;white-space:nowrap;line-height:1.16}
 
 .hero h1 .bracket { color: var(--accent); font-weight: 800; }
 
