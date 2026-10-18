@@ -310,3 +310,154 @@ code.sha { display: block; word-break: break-all; font-size: 12px; color: var(--
 .zxm-hero .bm-slot{position:relative;display:inline-block;overflow:hidden;line-height:1.16;vertical-align:baseline}
 .zxm-hero .bm-cur{position:static;display:block;white-space:nowrap;line-height:1.16}
 .zxm-hero .bm-next{position:absolute;left:0;top:0;display:block;white-space:nowrap;line-height:1.16}
+
+/* ===========================================================
+   a0.4.0 官网翻新:扁平化 + 简洁
+   —— 去掉圆角、阴影、毛玻璃、渐变,统一纯色块 + 1px 线
+   =========================================================== */
+:root {
+  --radius: 0px;
+  --shadow: none;
+  --bg: #0d1117;
+  --bg-alt: #11161d;
+  --panel: #161b22;
+  --panel-2: #1b222c;
+  --line: #2a3341;
+  --text: #e6edf3;
+  --muted: #8b949e;
+  --accent: #2ea043;
+  --accent-2: #3fb950;
+  --accent-dim: rgba(46, 160, 67, .12);
+  --max: 1080px;
+}
+
+* {
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+body { background: var(--bg); }
+
+/* 顶栏:纯色 + 一条底边 */
+.site-header {
+  background: var(--bg-alt) !important;
+  border-bottom: 1px solid var(--line);
+}
+
+/* 英雄区:去掉径向/线性渐变,只用纯色 */
+.hero {
+  background: var(--bg-alt) !important;
+  background-image: none !important;
+  border-bottom: 1px solid var(--line);
+}
+
+/* 卡片 / 面板:纯色 + 1px 线 */
+.card,
+.card-accent,
+.warn-card,
+.facts li,
+.console,
+.console-bar,
+.panel,
+aside,
+details,
+pre,
+code,
+blockquote,
+table,
+th,
+td {
+  background-image: none !important;
+}
+
+.card-accent { border-color: var(--line) !important; }
+.warn-card { border-color: var(--line) !important; }
+
+/* 按钮:方块 + 1px 线,悬停只换底色 */
+.btn,
+.btn-mini {
+  border: 1px solid var(--line) !important;
+  background: var(--panel) !important;
+  color: var(--text) !important;
+  transition: background .12s linear, border-color .12s linear;
+}
+
+.btn:hover,
+.btn-mini:hover {
+  background: var(--panel-2) !important;
+  border-color: var(--accent) !important;
+  color: var(--text) !important;
+}
+
+.btn-primary,
+.btn.primary {
+  background: var(--accent) !important;
+  border-color: var(--accent) !important;
+  color: #fff !important;
+}
+
+.btn-primary:hover,
+.btn.primary:hover {
+  background: var(--accent-2) !important;
+  border-color: var(--accent-2) !important;
+}
+
+/* 徽标 / 小标签:小方块 */
+.badge,
+.chip,
+.tag {
+  background: var(--panel) !important;
+  border: 1px solid var(--line) !important;
+}
+
+.badge .dot {
+  box-shadow: none !important;
+  background: var(--accent-2) !important;
+}
+
+/* 表格:横线划分,去掉斑马纹与内阴影 */
+table { border-collapse: collapse !important; }
+th, td { border: 1px solid var(--line) !important; }
+th { background: var(--panel) !important; }
+
+/* 代码块:纯色 */
+pre, code {
+  background: #0b0f14 !important;
+  border: 1px solid var(--line) !important;
+}
+
+/* 链接:下划线提示,不用发光 */
+a { color: var(--accent-2); text-decoration: none; }
+a:hover { color: #fff; text-decoration: underline; }
+
+/* 导航项悬停:只换底色 */
+.site-nav a,
+.nav a {
+  transition: background .12s linear, color .12s linear;
+}
+
+.site-nav a:hover,
+.nav a:hover {
+  background: var(--panel) !important;
+}
+
+/* 去掉装饰性动画与光晕 */
+.glow,
+.blob,
+.noise { display: none !important; }
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; animation: none !important; }
+}
+
+
+/* 长内容不撑破布局(下载页文件名/哈希/表格) */
+body { overflow-x: hidden; }
+pre, code, table, .file, .hash, td, th, p, li {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+pre { max-width: 100%; overflow-x: auto; }
+table { max-width: 100%; width: 100%; table-layout: fixed; }
