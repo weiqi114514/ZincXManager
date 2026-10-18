@@ -257,6 +257,8 @@ var results = new List<SuiteResult>();
 {
     var r = new SuiteResult { Name = "5 官方验证(证书/证明)" };
     results.Add(r);
+    // 这个套件专门验"强制验证",必须去掉测试放行口(打包脚本会带着它进来)
+    Environment.SetEnvironmentVariable("ZXM_ALLOW_UNOFFICIAL", null, EnvironmentVariableTarget.Process);
     var dir = Svc.PrepareBin(DebugOs, Path.Combine(Ws, "_zxt", "official"));
     try
     {
