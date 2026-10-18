@@ -85,11 +85,14 @@ public partial class MainViewModel : ViewModelBase
 
     /// <summary>当前一级导航(决定右侧显示哪个页面)。</summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsSettings))]
+    [NotifyPropertyChangedFor(nameof(IsSettings), nameof(IsEconomy))]
     public partial string CurrentPage { get; set; } = "经济";
 
     /// <summary>是否正在显示设置页。</summary>
     public bool IsSettings => CurrentPage == "设置";
+
+    /// <summary>经济页(小功能选择:商店 / 银行)。</summary>
+    public bool IsEconomy => CurrentPage == "经济";
 
     /// <summary>顶部那句:权限等级 - 连接方式(如 Player - SAOS),两段都来自设置页。</summary>
     public string ModeText => $"{Settings.Role} - {Settings.Mode}";

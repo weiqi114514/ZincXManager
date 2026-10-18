@@ -1,4 +1,4 @@
-<Window Icon="/Assets/zxm-window.png" xmlns="https://github.com/avaloniaui"
+﻿<Window Icon="/Assets/zxm-window.png" xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:ZincXManagerClient.ViewModels"
         xmlns:models="using:ZincXManagerClient.Models"
@@ -339,14 +339,23 @@
         </Grid>
 
         <!-- 内容区 + 消息面板 -->
-        <Grid ColumnDefinitions="*,312" IsVisible="{Binding !IsSettings}">
+        <Grid ColumnDefinitions="*,Auto" IsVisible="{Binding !IsSettings}">
 
-        <!-- 内容区:设计稿此处留空,让背景透出 -->
-        <TextBlock Grid.Column="0" Text="{Binding StatusText}" Foreground="#8AA6B8" FontSize="13"
-                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+        <!-- ================= 内容区 ================= -->
+        <Grid Grid.Column="0" RowDefinitions="Auto,*">
+          <!-- 经济:小功能选择(独立视图) -->
+          <views:EconomyView Grid.Row="0" Grid.RowSpan="2" IsVisible="{Binding IsEconomy}"/>
 
-        <!-- 消息面板:半透明亚克力 -->
-        <Border Grid.Column="1" Margin="0,8,10,10"
+          <!-- 其它页面:占位 -->
+          <StackPanel Grid.Row="0" Grid.RowSpan="2" VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="6"
+                      IsVisible="{Binding !IsEconomy}">
+            <TextBlock Text="{Binding CurrentPage}" FontSize="16" Foreground="{DynamicResource ThemePrimaryDark}" HorizontalAlignment="Center"/>
+            <TextBlock Text="该页面还没做" FontSize="12.5" Foreground="{DynamicResource ThemeMuted}" HorizontalAlignment="Center"/>
+          </StackPanel>
+        </Grid>
+
+        <!-- 消息面板:半透明亚克力;进「经济」页时向右收起(Width 过渡) -->
+        <Border x:Name="MessagesPanel" Grid.Column="1" Width="312" Margin="0,8,10,10" IsVisible="{Binding !IsEconomy}"
                 Background="{DynamicResource ThemePanel}" BorderBrush="{DynamicResource ThemePanelBorder}" BorderThickness="1">
           <Grid RowDefinitions="Auto,*" Margin="14,12,14,10">
             <StackPanel Grid.Row="0" Spacing="2">
