@@ -28,13 +28,17 @@ public static class MachineCode
     {
         try
         {
-            foreach (var nic in System.Net.NetworkInformation.NetworkInterface.GetAllNetworkInterfaces())
+            // 网卡要按名字排序再取第一块 —— 多网卡(Docker/虚拟网卡/RDP)时
+            // GetAllNetworkInterfaces 的顺序在不同进程间可能不一样,
+            // 会导致同一台机器算出不同机器码(许可证忽有效忽无效)。
+            var list = System.Net.NetworkInformation.NetworkInterface.GetAllNetworkInterfaces()
+                .Select(nic => new { nic.Name, Mac = nic.GetPhysicalAddress().ToString() })
+                .Where(x => x.Mac.Length >= 12)
+                .OrderBy(x => x.Mac, StringComparer.OrdinalIgnoreCase)   // 用 MAC 排序:网卡名可能重名(以太网1/2/Docker),MAC 才是唯一的
+                .ToList();
+            if (list.Count > 0)
             {
-                var mac = nic.GetPhysicalAddress().ToString();
-                if (mac.Length >= 12)
-                {
-                    return mac;
-                }
+                return list[0].Mac;
             }
         }
         catch
