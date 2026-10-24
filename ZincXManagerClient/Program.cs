@@ -1,7 +1,8 @@
 // Avalonia:提供 AppBuilder / StartWithClassicDesktopLifetime 这套桌面启动入口
 using Avalonia;  // 界面框架入口
 // System:STAThread 特性、异常处理都要它
-using System;  // 基础类型 / 常用静态方法
+using System;
+using System.Threading;  // 线程名(日志标签用)  // 基础类型 / 常用静态方法
 // ZincXManagerShared.Logging:统一日志(落文件、带端类型前缀)
 using ZincXManagerShared.Logging;  // 共享库
 // ZincXManagerShared.Network:协议常量与网络层(客户端启动时会用到,保留引用方便排查)
@@ -25,6 +26,8 @@ sealed class Program
     [STAThread]
     public static void Main(string[] args)
     {
+        // 主线程起名 Main:日志里才会显示 [Program/Main] 这种标签
+        Thread.CurrentThread.Name ??= "Main";
         // 日志文件路径:打开成功时返回 true,路径写进 logFile(失败时也写,方便排查)
         var logReady = OpenLog();
 

@@ -1,6 +1,8 @@
 using System;  // 基础类型 / 常用静态方法
 using System.Collections.Generic;  // 泛型集合
 using System.IO;  // 文件与目录读写
+using System.Runtime.CompilerServices;  // CallerFilePath:拿到调用方所在的类
+using System.Threading;  // 线程名/编号,日志里标出是哪条线程
 using ZincXManagerShared.FileIO;  // 共享库
 
 namespace ZincXManagerShared.Logging;
@@ -96,8 +98,10 @@ public static class Logger
     /// <summary>解析等级名。</summary>
     public static bool TryParseLevel(string? text, out LogLevel level) => LogLevelExtensions.TryParse(text, out level);
 
-    /// <summary>写一条日志。</summary>
-    public static void Log(LogLevel level, string message)
+    /// <summary>写一条日志。调用方不用传任何额外参数 —— 类名与线程标签在这里自动取。</summary>
+    public static void Log(LogLevel level, string message,
+        [CallerFilePath] string callerFile = "",
+        [CallerLineNumber] int callerLine = 0)
     {
         ILogger[] sinks;
         lock (_lock)
@@ -106,7 +110,8 @@ public static class Logger
             sinks = _sinks.Count == 0 ? Array.Empty<ILogger>() : _sinks.ToArray();
         }
 
-        var line = $"[{level.GetName()}] [{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {message}";
+        // 形如 [Info] [2026-10-24 14:30:00] [Program/Main] 消息
+        var line = $"[{level.GetName()}] [{DateTime.Now:yyyy-MM-dd HH:mm:ss}] [{ClassOf(callerFile)}/{ThreadOf()}] {message}";
 
         // 锁外做实际 I/O:Logger 与 ZFile 各自持锁,错开可以彻底避免互锁
         if (EchoToConsole) Console.WriteLine(line);
@@ -133,5 +138,22 @@ public static class Logger
         {
             _inSink = false;
         }
+    }
+
+    /// <summary>调用方文件名 → 类名(Program.cs → Program;App.axaml.cs → App)。</summary>
+    private static string ClassOf(string callerFile)
+    {
+        if (string.IsNullOrEmpty(callerFile)) return "?";
+        var name = Path.GetFileNameWithoutExtension(callerFile);
+        if (name.EndsWith(".axaml", StringComparison.OrdinalIgnoreCase)) name = name[..^6];
+        return string.IsNullOrEmpty(name) ? "?" : name;
+    }
+
+    /// <summary>当前线程标签:起过名字用名字(主线程统一叫 Main),没名字用 T+线程号。</summary>
+    private static string ThreadOf()
+    {
+        var thread = Thread.CurrentThread;
+        var name = thread.Name;
+        return string.IsNullOrEmpty(name) ? "T" + thread.ManagedThreadId : name;
     }
 }

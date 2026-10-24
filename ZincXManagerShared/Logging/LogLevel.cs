@@ -1,3 +1,5 @@
+using System;  // StringComparison
+
 namespace ZincXManagerShared.Logging;
 
 /// <summary>
@@ -25,7 +27,7 @@ public static class LogLevelExtensions
         LogLevel.Debug => "Debug",
         LogLevel.Trace => "Trace",
         LogLevel.Info => "Info",
-        LogLevel.Warning => "Warning",
+        LogLevel.Warning => "Warn",
         LogLevel.Error => "Error",
         LogLevel.Fatal => "Fatal",
         _ => "Unknown"
@@ -36,6 +38,13 @@ public static class LogLevelExtensions
     {
         level = LogLevel.Info;
         if (string.IsNullOrWhiteSpace(text)) return false;
+
+        // 日志里写 Warn,枚举名是 Warning:两种写法都认
+        if (string.Equals(text, "Warn", StringComparison.OrdinalIgnoreCase))
+        {
+            level = LogLevel.Warning;
+            return true;
+        }
 
         if (Enum.TryParse(text, ignoreCase: true, out LogLevel parsed)
             && Enum.IsDefined(typeof(LogLevel), parsed))

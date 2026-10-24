@@ -612,6 +612,8 @@ internal static class Program
     /// <summary>子服务端入口:banner → 读配置 → 起监听 → 挂连接事件 → 连官方 → 起命令线程。</summary>
     static async Task Main(string[] args)
     {
+        // 主线程起名 Main:日志里才会显示 [Program/Main] 这种标签
+        Thread.CurrentThread.Name ??= "Main";
         // 先打 banner 和版本,再干活
         PrintBanner();
         Console.ForegroundColor = ConsoleColor.Green;
