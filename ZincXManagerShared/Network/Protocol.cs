@@ -106,6 +106,12 @@ public static class Protocol
     public const ushort MessageHistoryDone = 506;
 
     /// <summary>
+    /// 507 客户端回执:告诉服务端"这几条我已经收下并落盘了"。
+    /// 负载 = 消息号,空格分隔(可一次回多条)。服务端收到才把消息记进已发清单,以后补发不再给。
+    /// </summary>
+    public const ushort MessageAck = 507;
+
+    /// <summary>
     /// 服务端 → 客户端:服务端配置(客户端连上后下发一次),负载按行 <c>键=值</c>。
     /// 目前只有 <c>msgdays</c> = 这个子服务端的消息保留天数(客户端据此决定本地留多久;不认识的行忽略)。
     /// </summary>

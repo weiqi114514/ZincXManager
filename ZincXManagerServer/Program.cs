@@ -491,6 +491,22 @@ internal static class Program
                 break;
             }
 
+            // ---- 客户端回执(507):这几条它已经收下了,记进已发清单 ----
+            case Protocol.MessageAck:
+            {
+                var ackWho = _server?.Registry.Find(packet.Connection.Id)?.User ?? "";
+                var ackId = Accounts.Find(ackWho)?.Id ?? 0;
+                var ackText = Encoding.UTF8.GetString(packet.Data).Trim();
+                var ackIds = ackText.Split(' ', StringSplitOptions.RemoveEmptyEntries)
+                    .Select(t => int.TryParse(t, out var v) ? v : 0).Where(v => v > 0).ToArray();
+                if (ackId > 0 && ackIds.Length > 0)
+                {
+                    SentMessages.Add(ackId, ackIds);
+                    Logger.Log(LogLevel.Info, $"[消息] {ackWho} 回执:已收 {ackIds.Length} 条");
+                }
+                break;
+            }
+
             // ---- 服务端消息:公告(500)/ 定向推送(501)只有服务端能发,客户端发来一律忽略 ----
             case Protocol.Notice:
             case Protocol.Push:
@@ -1156,13 +1172,12 @@ internal static class Program
     {
         var sent = 0;
 
-        // 这个账号已经补发到哪条了:比它旧的不再发(客户端删过的消息不会又冒出来)
-        var cursorKey = "ZXMC:" + who;
-        var cursor = HistoryCursor.Get(cursorKey);
+        // 这个用户已经收过的不再补发(客户端回执 507 之后才记进已发清单)
+        var userId = Accounts.Find(who)?.Id ?? 0;
 
         foreach (var entry in MessageArchive.Recent())
         {
-            if (entry.Id <= cursor)
+            if (userId > 0 && SentMessages.Contains(userId, entry.Id))
             {
                 continue;
             }
@@ -1197,7 +1212,6 @@ internal static class Program
             {
                 await packet.SendAsync(Protocol.MessageHistory, entry.Card, packet.Id);
                 sent++;
-                HistoryCursor.Advance(cursorKey, entry.Id);
             }
             catch (Exception ex)
             {

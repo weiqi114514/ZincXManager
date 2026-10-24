@@ -320,11 +320,13 @@ public partial class MainWindow : Window
         {
             case Protocol.Notice:
                 vm.ReceiveCard(text);
+                _ = vm.AckMessageAsync(text);
                 Logger.Log(LogLevel.Info, "[ZXMC] 收到公告:" + MessageCard.Summary(text));
                 break;
 
             // 补发的一条历史消息(504):本地已经有的会自己跳过
             case Protocol.MessageHistory:
+                _ = vm.AckMessageAsync(text);
                 Logger.Log(LogLevel.Info, vm.AddHistoryCard(text)
                     ? "[ZXMC] 补齐一条历史消息:" + MessageCard.Summary(text)
                     : "[ZXMC] 这条历史消息本地已经有了,跳过");
@@ -361,6 +363,7 @@ public partial class MainWindow : Window
                 }
 
                 vm.ReceiveCard(cardText);
+                _ = vm.AckMessageAsync(cardText);
                 Logger.Log(LogLevel.Info, "[ZXMC] 收到定向推送:" + MessageCard.Summary(cardText));
                 break;
         }

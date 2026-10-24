@@ -642,6 +642,33 @@ public partial class MainViewModel : ViewModelBase
         return true;
     }
 
+    /// <summary>
+    /// 告诉服务端"这条我确实收到了"(507)。服务端收到回执才记进已发清单,
+    /// 以后补发不会再给同一条;删掉后重开也不会再冒出来。
+    /// </summary>
+    public async Task AckMessageAsync(string rawCard)
+    {
+        var connect = ClientSession.Connect;
+        if (connect is null)
+        {
+            return;
+        }
+
+        if (!MessageCard.TryParse(rawCard, out var card) || card.Id <= 0)
+        {
+            return;
+        }
+
+        try
+        {
+            await connect.SendAsync(Protocol.MessageAck, card.Id.ToString());
+        }
+        catch (Exception ex)
+        {
+            Logger.Log(LogLevel.Warning, "[ZXMC] 回执失败: " + ex.Message);
+        }
+    }
+
     // ---------- 补发(504 / 505 / 506) ----------
     /// <summary>本轮补发里真正新收到的条数(506 收尾时用来报提示)。</summary>
     private int _historyReceived;
