@@ -1,0 +1,135 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="ZincXManagerClient.Views.LoginRequestWindow"
+        Title="ZincXManagerClient 登录请求"
+        Width="440" SizeToContent="Height" MaxHeight="620"
+        Background="#CCFFFFFF"
+        TransparencyLevelHint="AcrylicBlur,Blur,Transparent"
+        FontFamily="Microsoft YaHei UI, Microsoft YaHei, Segoe UI"
+        WindowDecorations="None"
+        CanResize="False"
+        ShowInTaskbar="False"
+        WindowStartupLocation="CenterOwner">
+
+  <Window.Styles>
+    <Style Selector="Button.chrome">
+      <Setter Property="Background" Value="Transparent"/>
+      <Setter Property="BorderThickness" Value="0"/>
+      <Setter Property="CornerRadius" Value="0"/>
+      <Setter Property="Padding" Value="0"/>
+      <Setter Property="Margin" Value="0"/>
+      <Setter Property="MinWidth" Value="0"/>
+      <Setter Property="MinHeight" Value="0"/>
+      <Setter Property="HorizontalAlignment" Value="Stretch"/>
+      <Setter Property="VerticalAlignment" Value="Stretch"/>
+      <Setter Property="HorizontalContentAlignment" Value="Center"/>
+      <Setter Property="VerticalContentAlignment" Value="Center"/>
+      <Setter Property="Cursor" Value="Hand"/>
+    </Style>
+    <Style Selector="Button.chrome /template/ ContentPresenter">
+      <Setter Property="Background" Value="Transparent"/>
+      <Setter Property="BorderThickness" Value="0"/>
+      <Setter Property="CornerRadius" Value="0"/>
+      <Setter Property="Padding" Value="0"/>
+    </Style>
+    <Style Selector="Button.chrome:pointerover /template/ ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource ThemePrimaryHover}"/>
+    </Style>
+    <Style Selector="Button.close /template/ ContentPresenter">
+      <Setter Property="Background" Value="#E81123"/>
+    </Style>
+    <Style Selector="Button.close:pointerover /template/ ContentPresenter">
+      <Setter Property="Background" Value="#F1707A"/>
+    </Style>
+
+    <Style Selector="TextBlock.rowLabel">
+      <Setter Property="FontSize" Value="12.5"/>
+      <Setter Property="Foreground" Value="#7A8F99"/>
+      <Setter Property="Width" Value="58"/>
+      <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+    <Style Selector="TextBlock.rowValue">
+      <Setter Property="FontSize" Value="13.5"/>
+      <Setter Property="Foreground" Value="#1F3B3A"/>
+      <Setter Property="TextWrapping" Value="Wrap"/>
+      <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+
+    <Style Selector="Button.act">
+      <Setter Property="Height" Value="34"/>
+      <Setter Property="MinWidth" Value="96"/>
+      <Setter Property="CornerRadius" Value="0"/>
+      <Setter Property="BorderThickness" Value="0"/>
+      <Setter Property="FontSize" Value="13"/>
+      <Setter Property="Padding" Value="18,0"/>
+      <Setter Property="Cursor" Value="Hand"/>
+      <Setter Property="HorizontalContentAlignment" Value="Center"/>
+      <Setter Property="VerticalContentAlignment" Value="Center"/>
+    </Style>
+    <Style Selector="Button.act.deny">
+      <Setter Property="Background" Value="{DynamicResource ThemeLight}"/>
+      <Setter Property="Foreground" Value="#1F3B3A"/>
+    </Style>
+    <Style Selector="Button.act.allow">
+      <Setter Property="Background" Value="{DynamicResource ThemePrimary}"/>
+      <Setter Property="Foreground" Value="White"/>
+    </Style>
+    <Style Selector="Button.act.allow /template/ ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource ThemePrimary}"/>
+      <Setter Property="CornerRadius" Value="0"/>
+    </Style>
+    <Style Selector="Button.act.allow:pointerover /template/ ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource ThemePrimaryHover}"/>
+    </Style>
+    <Style Selector="Button.act.deny /template/ ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource ThemeLight}"/>
+      <Setter Property="CornerRadius" Value="0"/>
+    </Style>
+    <Style Selector="Button.act.deny:pointerover /template/ ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource ThemeSecondary}"/>
+    </Style>
+  </Window.Styles>
+
+  <Border Background="#F7FFFFFF" BorderBrush="{DynamicResource ThemeMuted}" BorderThickness="1" Margin="1">
+    <Grid RowDefinitions="40,Auto,Auto">
+
+      <!-- 标题栏:和 MessageDialog 同一套(没有左侧小条) -->
+      <Border x:Name="TitleBar" Grid.Row="0" Background="{DynamicResource ThemePrimary}"
+              PointerPressed="OnTitleBarPointerPressed">
+        <Grid ColumnDefinitions="Auto,*,Auto">
+          <TextBlock Grid.Column="0" Text="登录请求" Foreground="White" FontSize="13"
+                     Margin="16,0,0,0" VerticalAlignment="Center"/>
+          <Button Grid.Column="2" Classes="chrome close" Width="52" Click="OnDenyClick">
+            <Path Data="M0,0 L12,12 M12,0 L0,12" Stroke="White" StrokeThickness="1.7"/>
+          </Button>
+        </Grid>
+      </Border>
+
+      <!-- 正文:谁要进服 -->
+      <StackPanel Grid.Row="1" Margin="24,22,24,6" Spacing="10">
+        <TextBlock Text="有玩家请求进入服务器,是否放行?"
+                   FontSize="13.5" Foreground="#4A6B78" TextWrapping="Wrap" Margin="0,0,0,6"/>
+
+        <StackPanel Orientation="Horizontal">
+          <TextBlock Classes="rowLabel" Text="登录账号"/>
+          <TextBlock x:Name="PlayerText" Classes="rowValue" Text=""/>
+        </StackPanel>
+        <StackPanel Orientation="Horizontal">
+          <TextBlock Classes="rowLabel" Text="登录 IP"/>
+          <TextBlock x:Name="IpText" Classes="rowValue" Text=""/>
+        </StackPanel>
+        <StackPanel Orientation="Horizontal">
+          <TextBlock Classes="rowLabel" Text="所属地"/>
+          <TextBlock x:Name="GeoText" Classes="rowValue" Text=""/>
+        </StackPanel>
+      </StackPanel>
+
+      <!-- 按钮:拒绝 / 允许 -->
+      <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right"
+                  Spacing="10" Margin="24,14,24,20">
+        <Button Classes="act deny" Content="拒绝" Click="OnDenyClick"/>
+        <Button Classes="act allow" Content="允许进服" Click="OnAgreeClick"/>
+      </StackPanel>
+    </Grid>
+  </Border>
+</Window>

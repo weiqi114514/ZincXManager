@@ -5,7 +5,7 @@ using System.Linq;  // 查询
 using System.Text;  // UTF-8
 using ZincXManagerShared.Logging;  // 共享库
 
-namespace ZincXManagerServer.Login;
+namespace ZincXManagerShared.Login;
 
 /// <summary>
 /// 登录/绑定相关的东西都存在这里:
