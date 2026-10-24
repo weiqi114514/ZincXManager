@@ -120,10 +120,10 @@
   <Grid RowDefinitions="40,*,Auto">
 
     <!-- 标题栏:左侧白色小条 + 弹窗名 + 红色关闭(和设计稿一致) -->
-    <Border Grid.Row="0" Background="{DynamicResource ThemePrimary}" PointerPressed="OnTitleBarPointerPressed">
+    <Border x:Name="TitleBar" Grid.Row="0" Background="{DynamicResource ThemePrimary}" PointerPressed="OnTitleBarPointerPressed">
       <Grid ColumnDefinitions="Auto,*,Auto">
-        <Rectangle Grid.Column="0" Width="1.5" Height="16" Fill="#80FFFFFF" Margin="16,0,0,0" VerticalAlignment="Center"/>
-        <TextBlock Grid.Column="1" Text="ZincXManagerClient弹窗" Foreground="White" FontSize="13"
+        <Rectangle x:Name="TitleMark" Grid.Column="0" Width="1.5" Height="16" Fill="#80FFFFFF" Margin="16,0,0,0" VerticalAlignment="Center"/>
+        <TextBlock x:Name="BarTitle" Grid.Column="1" Text="ZincXManagerClient弹窗" Foreground="White" FontSize="13"
                    Margin="14,0,0,0" VerticalAlignment="Center"/>
         <Button Grid.Column="2" Classes="chrome close" Width="54" Click="OnCloseClick">
           <Path Data="M0,0 L12,12 M12,0 L0,12" Stroke="White" StrokeThickness="1.7"/>

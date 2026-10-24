@@ -111,7 +111,7 @@ public partial class MainViewModel : ViewModelBase
 
     /// <summary>当前一级导航(决定右侧显示哪个页面)。</summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsSettings), nameof(IsEconomy), nameof(IsPlaceholder), nameof(IsCommunity), nameof(IsOrganization), nameof(IsManage), nameof(ShowMessages))]
+    [NotifyPropertyChangedFor(nameof(IsSettings), nameof(IsEconomy), nameof(IsWidgets), nameof(IsPlaceholder), nameof(IsCommunity), nameof(IsOrganization), nameof(IsManage), nameof(ShowMessages))]
     public partial string CurrentPage { get; set; } = "";
 
     /// <summary>是否正在显示设置页。</summary>
@@ -119,6 +119,9 @@ public partial class MainViewModel : ViewModelBase
 
     /// <summary>经济页(小功能选择:商店 / 银行)。</summary>
     public bool IsEconomy => CurrentPage == "经济";
+
+    /// <summary>小功能组(搜索 + 两栏功能列表)。</summary>
+    public bool IsWidgets => CurrentPage == "小功能组";
 
     /// <summary>
     /// 锌源广场(官方社区)是否显示:按实际连接状态判断 ——
@@ -149,7 +152,7 @@ public partial class MainViewModel : ViewModelBase
     public bool ShowMessages => CurrentPage.Length == 0;
 
     /// <summary>没选任何页面(点了 Logo)时不显示"该页面还没做"。</summary>
-    public bool IsPlaceholder => CurrentPage.Length > 0 && !IsEconomy
+    public bool IsPlaceholder => CurrentPage.Length > 0 && !IsEconomy && !IsWidgets
         && CurrentPage != "社区" && CurrentPage != "组织" && CurrentPage != "管理";
 
     public bool IsCommunity => CurrentPage == "社区";
@@ -666,6 +669,48 @@ public partial class MainViewModel : ViewModelBase
         catch (Exception ex)
         {
             Logger.Log(LogLevel.Warning, "[ZXMC] 回执失败: " + ex.Message);
+        }
+    }
+
+    /// <summary>用绑定码绑定当前账号(626)。</summary>
+    public async Task<bool> SendBindAsync(string code)
+    {
+        var connect = ClientSession.Connect;
+        if (connect is null || code.Trim().Length == 0)
+        {
+            return false;
+        }
+
+        try
+        {
+            await connect.SendAsync(Protocol.BindApply, code.Trim().ToUpperInvariant());
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Logger.Log(LogLevel.Warning, "[绑定] 发送失败: " + ex.Message);
+            return false;
+        }
+    }
+
+    /// <summary>解绑当前账号(628)。</summary>
+    public async Task<bool> SendUnbindAsync()
+    {
+        var connect = ClientSession.Connect;
+        if (connect is null)
+        {
+            return false;
+        }
+
+        try
+        {
+            await connect.SendAsync(Protocol.Unbind, string.Empty);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Logger.Log(LogLevel.Warning, "[解绑] 发送失败: " + ex.Message);
+            return false;
         }
     }
 

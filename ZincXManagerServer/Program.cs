@@ -18,6 +18,8 @@ using ZincXManagerServer.Command;  // 子服自身
 // 与 BCL 的 TcpClient 同名,起个别名
 using TcpClient = ZincXManagerShared.Network.TcpClient;
 
+using ZincXManagerServer.Login;  // 登录/绑定存储与归属地
+
 namespace ZincXManagerServer;
 
 internal static class Program
@@ -68,6 +70,15 @@ internal static class Program
 
     // 玩家返回查询默认条数(config 的 backgetcount)
     private static int _backgetCount = DefaultBackgetCount;
+
+    // 登录确认:正在处理数组(请求ID → 这一条)
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<int, PendingLogin> PendingLogins = new();
+
+    // 绑定码 → (玩家名, 生成时间)
+    private static readonly Dictionary<string, (string Player, DateTime At)> BindCodes = new();
+
+    // 登录请求序号
+    private static int _loginSeq;
 
     // -os 查询:等官方端回包的待决表(包 id → 结果)
     private static readonly System.Collections.Concurrent.ConcurrentDictionary<int, TaskCompletionSource<string>> MegBackWaits = new();
@@ -278,6 +289,54 @@ internal static class Program
         {
             MegBackWaits.TryRemove(id, out _);
         }
+    }
+
+    /// <summary>一条等待客户端确认的登录请求。</summary>
+    private sealed record PendingLogin(string Player, string Ip, int AccountId, Guid OriginConnId, DateTime At);
+
+    /// <summary>给指定账号的 ZXMC 连接发一条包(不在线返回 false)。</summary>
+    private static async Task<bool> SendToAccountAsync(int accountId, ushort type, string payload)
+    {
+        var server = _server;
+        var account = Accounts.FindById(accountId);
+        if (server is null || account is null)
+        {
+            return false;
+        }
+
+        foreach (var conn in server.Connections)
+        {
+            var info = server.Registry.Find(conn.Id);
+            if (info is null || !string.Equals(info.User, account.Name, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            try
+            {
+                await conn.SendAsync(type, payload, 0, "ZXMC");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Logger.Log(LogLevel.Warning, "[登录] 发给 " + account.Name + " 失败: " + ex.Message);
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>生成六位绑定码(去掉容易看错的 0/O/1/I)。</summary>
+    private static string NewBindCode()
+    {
+        const string alphabet = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ";
+        var code = new char[6];
+        for (var i = 0; i < code.Length; i++)
+        {
+            code[i] = alphabet[Random.Shared.Next(alphabet.Length)];
+        }
+
+        return new string(code);
     }
 
     private static async Task HandlePacketAsync(ServerboundPacket packet)
@@ -559,6 +618,157 @@ internal static class Program
                 break;
             }
 
+            // ---- 登录请求(620,来自 ZXMM):有绑定就问客户端,没绑定就发绑定码 ----
+            case Protocol.LoginRequest:
+            {
+                var loginText = Encoding.UTF8.GetString(packet.Data).Trim();
+                var loginParts = loginText.Split('|');
+                var player = loginParts.Length > 0 ? loginParts[0].Trim() : "";
+                var ip = loginParts.Length > 1 ? loginParts[1].Trim() : "";
+
+                if (player.Length == 0)
+                {
+                    await packet.SendAsync(Protocol.LoginResult, "err|玩家名为空", packet.Id);
+                    break;
+                }
+
+                var boundAccount = LoginStore.AccountOf(player);
+                if (boundAccount <= 0)
+                {
+                    // 没绑定:发一个绑定码,让玩家去 ZXMC 的绑定功能里绑
+                    var code = NewBindCode();
+                    lock (BindCodes)
+                    {
+                        BindCodes[code] = (player, DateTime.Now);
+                    }
+
+                    LoginStore.Log($"[未绑定] 玩家 {player}({ip}) 拿到绑定码 {code}");
+                    await packet.SendAsync(Protocol.LoginResult, $"nobind|{code}|{player}", packet.Id);
+                    break;
+                }
+
+                var requestId = Interlocked.Increment(ref _loginSeq);
+                PendingLogins[requestId] = new PendingLogin(player, ip, boundAccount, packet.Connection.Id, DateTime.Now);
+                LoginStore.Log($"[登录请求] {player}({ip}) → 账号 {boundAccount},请求 {requestId}");
+
+                var geo = GeoLookup.Lookup(ip);
+                if (!await SendToAccountAsync(boundAccount, Protocol.LoginAsk,
+                        $"{requestId}|{player}|{ip}|{geo}"))
+                {
+                    PendingLogins.TryRemove(requestId, out _);
+                    await packet.SendAsync(Protocol.LoginResult, $"err|绑定的账号不在线|{player}", packet.Id);
+                }
+                break;
+            }
+
+            // ---- 客户端回答(622):同意 / 拒绝 ----
+            case Protocol.LoginAnswer:
+            {
+                var answerText = Encoding.UTF8.GetString(packet.Data).Trim();
+                var answerParts = answerText.Split('|');
+                if (answerParts.Length < 2 || !int.TryParse(answerParts[0], out var requestId) ||
+                    !PendingLogins.TryRemove(requestId, out var pending))
+                {
+                    break;
+                }
+
+                var agree = string.Equals(answerParts[1], "yes", StringComparison.OrdinalIgnoreCase);
+                var answerInfo = _server?.Registry.Find(packet.Connection.Id);
+                var answerIp = answerInfo?.Address ?? "?";
+
+                LoginStore.Log(agree
+                    ? $"[登录通过] 玩家 {pending.Player},账号 {pending.AccountId},发起 IP {pending.Ip},同意 IP {answerIp}"
+                    : $"[登录拒绝] 玩家 {pending.Player},账号 {pending.AccountId},发起 IP {pending.Ip},拒绝 IP {answerIp}");
+
+                var origin = _server?.Connections.FirstOrDefault(c => c.Id == pending.OriginConnId);
+                if (origin is not null)
+                {
+                    var accountName = Accounts.FindById(pending.AccountId)?.Name ?? "";
+                    await origin.SendAsync(Protocol.LoginResult,
+                        $"{(agree ? "ok" : "no")}|{pending.Player}|{accountName}|{pending.AccountId}", 0, "ZXMM");
+                }
+
+                if (agree)
+                {
+                    LoginStore.AddPersistentLogin(pending.Player, pending.Ip);
+                }
+                break;
+            }
+
+            // ---- 绑定码转交(625):ZXMM 把玩家手里的码转给服务端 ----
+            case Protocol.BindNotice:
+            {
+                var noticeText = Encoding.UTF8.GetString(packet.Data).Trim();
+                var noticeParts = noticeText.Split('|');
+                if (noticeParts.Length >= 2 && noticeParts[0].Trim().Length > 0)
+                {
+                    lock (BindCodes)
+                    {
+                        BindCodes[noticeParts[0].Trim().ToUpperInvariant()] = (noticeParts[1].Trim(), DateTime.Now);
+                    }
+                }
+                break;
+            }
+
+            // ---- 绑定(626):客户端用绑定码绑定 ----
+            case Protocol.BindApply:
+            {
+                var code = Encoding.UTF8.GetString(packet.Data).Trim().ToUpperInvariant();
+                var bindWho = _server?.Registry.Find(packet.Connection.Id)?.User ?? "";
+                var bindAccount = Accounts.Find(bindWho)?.Id ?? 0;
+                if (bindAccount <= 0)
+                {
+                    await packet.SendAsync(Protocol.BindAck, "err|请先登录", packet.Id);
+                    break;
+                }
+
+                var bindPlayer = "";
+                lock (BindCodes)
+                {
+                    if (BindCodes.TryGetValue(code, out var entry) && (DateTime.Now - entry.At).TotalMinutes <= 30)
+                    {
+                        bindPlayer = entry.Player;
+                        BindCodes.Remove(code);
+                    }
+                }
+
+                if (bindPlayer.Length == 0)
+                {
+                    await packet.SendAsync(Protocol.BindAck, "err|绑定码无效或已过期", packet.Id);
+                    break;
+                }
+
+                await packet.SendAsync(Protocol.BindAck,
+                    LoginStore.Bind(bindAccount, bindPlayer, out var bindError) ? $"ok|{bindPlayer}" : "err|" + bindError,
+                    packet.Id);
+                break;
+            }
+
+            // ---- 解绑(628) ----
+            case Protocol.Unbind:
+            {
+                var unbindWho = _server?.Registry.Find(packet.Connection.Id)?.User ?? "";
+                var unbindAccount = Accounts.Find(unbindWho)?.Id ?? 0;
+                if (unbindAccount > 0 && LoginStore.Unbind(unbindAccount, out var removed))
+                {
+                    await packet.SendAsync(Protocol.BindAck, $"ok|{removed}", packet.Id);
+                }
+                else
+                {
+                    await packet.SendAsync(Protocol.BindAck, "err|没有绑定记录", packet.Id);
+                }
+                break;
+            }
+
+            // ---- 查绑定(629,给 ZXMM 用):回列表,一行一条 玩家名=账号名 ----
+            case Protocol.BindQuery:
+            {
+                var lines = LoginStore.AllBinds()
+                    .Select(pair => $"{pair.Value}={Accounts.FindById(pair.Key)?.Name ?? "?"}");
+                await packet.SendAsync(Protocol.BindList, string.Join("\n", lines), packet.Id);
+                break;
+            }
+
             // ---- 客户端回执(507):这几条它已经收下了,记进已发清单 ----
             case Protocol.MessageAck:
             {
@@ -800,6 +1010,32 @@ internal static class Program
         {
             await ConnectOServerAsync(config);
         }
+
+        // 登录确认超时:五分钟没人点就回 ZXMM timeout,并提醒客户端
+        _ = Task.Run(async () =>
+        {
+            while (true)
+            {
+                await Task.Delay(TimeSpan.FromSeconds(30));
+                foreach (var pair in PendingLogins.ToArray())
+                {
+                    if ((DateTime.Now - pair.Value.At).TotalMinutes < 5 || !PendingLogins.TryRemove(pair.Key, out var late))
+                    {
+                        continue;
+                    }
+
+                    LoginStore.Log($"[登录超时] 玩家 {late.Player},请求 {pair.Key},超过 5 分钟未确认");
+                    var origin = _server?.Connections.FirstOrDefault(c => c.Id == late.OriginConnId);
+                    if (origin is not null)
+                    {
+                        try { await origin.SendAsync(Protocol.LoginResult, $"timeout|{late.Player}", 0, "ZXMM"); }
+                        catch { }
+                    }
+
+                    await SendToAccountAsync(late.AccountId, Protocol.LoginTimeout, $"{pair.Key}|{late.Player}");
+                }
+            }
+        });
 
         var cmd = new CommandHandler();//命令线程
 

@@ -14,6 +14,9 @@ public sealed class DialogOptions
     /// <summary>大标题(设计稿里的"请输入标题")。</summary>
     public string Title { get; init; } = "提示";
 
+    /// <summary>警告 / 错误类弹窗:标题栏变红,标题前加感叹号。</summary>
+    public bool Warning { get; init; }
+
     /// <summary>说明文本。</summary>
     public string Text { get; init; } = "";
 
@@ -76,6 +79,17 @@ public partial class MessageDialog : Window
             Title = title,
             Text = text,
             Hint = hint,
+            Buttons = [(ok, true, "ok")],
+        });
+
+    /// <summary>警告弹窗:标题栏红色 + 感叹号,单个「确认」按钮。</summary>
+    public static async Task WarnAsync(Window owner, string title, string text, string ok = "确认", string hint = "")
+        => await ShowAsync(owner, new DialogOptions
+        {
+            Title = title,
+            Text = text,
+            Hint = hint,
+            Warning = true,
             Buttons = [(ok, true, "ok")],
         });
 
@@ -175,6 +189,17 @@ public partial class MessageDialog : Window
         TitleText.Text = options.Title;
         BodyText.Text = options.Text;
         HintText.Text = options.Hint;
+
+        // 警告 / 错误类:标题栏换成红色,标题前加感叹号
+        if (options.Warning)
+        {
+            TitleBar.Background = new SolidColorBrush(Color.Parse("#C62828"));
+            BarTitle.Text = "⚠ " + options.Title;
+        }
+        else
+        {
+            BarTitle.Text = options.Title;
+        }
 
 
         if (options.Input is { } placeholder)

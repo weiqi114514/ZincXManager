@@ -25,6 +25,36 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         Opened += (_, _) => ScrollDrag.AttachAll(this);
+
+        // 小功能组:点条目 → 主窗口决定打开什么
+        WidgetsPage.WidgetActivated += OnWidgetActivated;
+
+        // 绑定码 6 格:填满一格自动跳下一格
+        var codeBoxes = new[] { Code0, Code1, Code2, Code3, Code4, Code5 };
+        for (var i = 0; i < codeBoxes.Length; i++)
+        {
+            var index = i;
+            codeBoxes[i].PropertyChanged += (_, args) =>
+            {
+                if (args.Property != TextBox.TextProperty)
+                {
+                    return;
+                }
+
+                if (codeBoxes[index].Text is { Length: >= 1 } && index < codeBoxes.Length - 1)
+                {
+                    codeBoxes[index + 1].Focus();
+                }
+            };
+        }
+
+        // 绑定 / 解绑回执:关掉覆盖层并告诉用户结果
+        BindAckArrived += (ok, detail) =>
+        {
+            BindOverlay.IsVisible = false;
+            _ = ok ? MessageDialog.InfoAsync(this, "绑定成功", detail)
+                   : MessageDialog.WarnAsync(this, "操作失败", detail);
+        };
         // 右下角拖拽手柄:窗口没有系统边框,靠它拉大小
         ResizeGrip.PointerPressed += OnGripPressed;
         ResizeGrip.PointerMoved += OnGripMoved;
@@ -307,6 +337,132 @@ public partial class MainWindow : Window
     /// (服务端已经按账号过滤过,这里只是多一层保险);
     /// 补发(504 / 506)进同一条显示路径,只是要按「来源 + 消息号」去重。
     /// </summary>
+    /// <summary>绑定 / 解绑回执到了(绑定窗口在时订阅它显示结果;没人订阅就弹对话框)。</summary>
+    public event Action<bool, string>? BindAckArrived;
+
+    /// <summary>
+    /// 收到登录请求(621):弹窗问玩家,回答发回服务端(622)。
+    /// 绑定码窗口做好之前先用通用对话框顶着。
+    /// </summary>
+    private async Task HandleLoginAskAsync(string requestId, string player, string ip, string geo)
+    {
+        var connect = ClientSession.Connect;
+        if (connect is null || requestId.Length == 0)
+        {
+            return;
+        }
+
+        var askText = "来自服务器的登录请求\n\n登录账号:" + player + "\n登录IP:" + ip + "\n所属地:" + geo + "\n\n是否允许他进入服务器?";
+        var agree = await MessageDialog.ConfirmAsync(this, "登录请求", askText, yes: "是", no: "否");
+
+        try
+        {
+            await connect.SendAsync(Protocol.LoginAnswer, $"{requestId}|{(agree ? "yes" : "no")}");
+            Logger.Log(LogLevel.Info, $"[登录] 已回服务端:请求 {requestId} → {(agree ? "同意" : "拒绝")}");
+        }
+        catch (Exception ex)
+        {
+            Logger.Log(LogLevel.Warning, "[登录] 回执发送失败: " + ex.Message);
+        }
+    }
+
+
+    /// <summary>小功能组点了某个功能:绑定走覆盖层,好友开独立窗,其余先提示。</summary>
+    private void OnWidgetActivated(string key)
+    {
+        switch (key)
+        {
+            case "bind":
+                ShowBindOverlay();
+                break;
+
+            case "friends":
+                ShowFriendsWindow();
+                break;
+
+            default:
+                _ = MessageDialog.InfoAsync(this, "还没接", $"「{key}」这个功能还没接上,先把绑定/解绑做完。");
+                break;
+        }
+    }
+
+    /// <summary>打开绑定 / 解绑覆盖层(灰色遮罩 + 无边框面板),先显示两个大选项。</summary>
+    private void ShowBindOverlay()
+    {
+        BindHeader.Text = "绑定 / 解绑";
+        BindChoicePanel.IsVisible = true;
+        BindInputPanel.IsVisible = false;
+        UnbindPanel.IsVisible = false;
+        BindHint.Text = "";
+        foreach (var box in new[] { Code0, Code1, Code2, Code3, Code4, Code5 })
+        {
+            box.Text = "";
+        }
+
+        BindOverlay.IsVisible = true;
+    }
+
+    /// <summary>关掉覆盖层。</summary>
+    private void OnBindCloseClick(object? sender, RoutedEventArgs e)
+    {
+        BindOverlay.IsVisible = false;
+    }
+
+    /// <summary>选"绑定"或"解绑"。</summary>
+    private void OnBindChoiceClick(object? sender, RoutedEventArgs e)
+    {
+        var tag = (sender as Button)?.Tag as string ?? "";
+        BindChoicePanel.IsVisible = false;
+
+        if (tag == "bind")
+        {
+            BindHeader.Text = "绑定";
+            BindInputPanel.IsVisible = true;
+            Code0.Focus();
+        }
+        else
+        {
+            BindHeader.Text = "解绑";
+            UnbindPanel.IsVisible = true;
+        }
+    }
+
+    /// <summary>提交绑定码(626)。</summary>
+    private async void OnBindSubmitClick(object? sender, RoutedEventArgs e)
+    {
+        var code = string.Concat(Code0.Text, Code1.Text, Code2.Text, Code3.Text, Code4.Text, Code5.Text)
+            .Trim().ToUpperInvariant();
+
+        if (code.Length != 6)
+        {
+            BindHint.Text = "6 位都要填满";
+            return;
+        }
+
+        if (Vm is not { } vm)
+        {
+            BindHint.Text = "界面还没准备好";
+            return;
+        }
+
+        BindHint.Text = "正在提交…";
+        BindHint.Foreground = Avalonia.Media.Brush.Parse("#4A6B78");
+        if (!await vm.SendBindAsync(code))
+        {
+            BindHint.Text = "发送失败,检查连接";
+            BindHint.Foreground = Avalonia.Media.Brush.Parse("#C62828");
+        }
+    }
+
+    /// <summary>确认解绑(628)。</summary>
+    private async void OnUnbindSubmitClick(object? sender, RoutedEventArgs e)
+    {
+        if (Vm is { } vm)
+        {
+            await vm.SendUnbindAsync();
+        }
+    }
+
     private void OnServerPacket(Packet packet)
     {
         if (Vm is not { } vm)
@@ -341,6 +497,53 @@ public partial class MainWindow : Window
             case Protocol.CardActionAck:
                 vm.ShowCardReply(text);
                 break;
+
+            // ---- 登录请求(621):问玩家是/否,回答回 622 ----
+            case Protocol.LoginAsk:
+            {
+                var askParts = text.Split('|');
+                var askId = askParts.Length > 0 ? askParts[0].Trim() : "";
+                var askPlayer = askParts.Length > 1 ? askParts[1].Trim() : "";
+                var askIp = askParts.Length > 2 ? askParts[2].Trim() : "";
+                var askGeo = askParts.Length > 3 ? askParts[3].Trim() : "";
+                _ = HandleLoginAskAsync(askId, askPlayer, askIp, askGeo);
+                break;
+            }
+
+            // ---- 登录超时(624):五分钟没人点 ----
+            case Protocol.LoginTimeout:
+            {
+                var lateParts = text.Split('|');
+                var latePlayer = lateParts.Length > 1 ? lateParts[1].Trim() : "";
+                _ = MessageDialog.WarnAsync(this, "登录超时",
+                    $"玩家 {latePlayer} 的登录请求超过 5 分钟未确认,已作废。\n让他重新进服即可重新发起。");
+                break;
+            }
+
+            // ---- 绑定/解绑回执(627) ----
+            case Protocol.BindAck:
+            {
+                var bindOk = text.StartsWith("ok|", StringComparison.OrdinalIgnoreCase);
+                var bindDetail = text.Length > 3 ? text[3..] : text;
+                Logger.Log(LogLevel.Info, $"[绑定] 服务端回执:{(bindOk ? "成功" : "失败")} {bindDetail}");
+
+                if (BindAckArrived is { } handler)
+                {
+                    handler(bindOk, bindDetail);
+                }
+                else
+                {
+                    if (bindOk)
+                    {
+                        _ = MessageDialog.InfoAsync(this, "绑定成功", bindDetail);
+                    }
+                    else
+                    {
+                        _ = MessageDialog.WarnAsync(this, "操作失败", bindDetail);
+                    }
+                }
+                break;
+            }
 
             // 服务端配置(202):目前是子服务端的消息保留天数
             case Protocol.ServerConfig:

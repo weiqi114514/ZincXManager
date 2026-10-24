@@ -117,6 +117,53 @@ public static class Protocol
     /// <summary>509 ZXMOS → ZXMS:玩家返回记录的查询结果(纯文本,一行一条;err| 开头表示失败)。</summary>
     public const ushort MegBackAck = 509;
 
+    // ---------- 62x:登录确认与账号绑定(ZXMM ↔ ZXMS ↔ ZXMC) ----------
+
+    /// <summary>
+    /// 620 LoginRequest:ZXMM → ZXMS。有玩家要进服,问一句"这个号绑了谁、要不要放行"。
+    /// 负载 <c>玩家名|玩家IP</c>。
+    /// </summary>
+    public const ushort LoginRequest = 620;
+
+    /// <summary>
+    /// 621 LoginAsk:ZXMS → ZXMC。把登录请求弹给绑定的客户端账号。
+    /// 负载 <c>请求ID|玩家名|玩家IP|归属地</c>(归属地是服务端查好的,查不到写"未知")。
+    /// </summary>
+    public const ushort LoginAsk = 621;
+
+    /// <summary>622 LoginAnswer:ZXMC → ZXMS。负载 <c>请求ID|yes</c> 或 <c>请求ID|no</c>。</summary>
+    public const ushort LoginAnswer = 622;
+
+    /// <summary>
+    /// 623 LoginResult:ZXMS → ZXMM。负载 <c>请求ID|ok|no|timeout|玩家名|ZXM账号名|ZXM账号ID</c>。
+    /// </summary>
+    public const ushort LoginResult = 623;
+
+    /// <summary>624 LoginTimeout:ZXMS → ZXMC。五分钟没人点,告诉客户端一次。负载 <c>请求ID|玩家名</c>。</summary>
+    public const ushort LoginTimeout = 624;
+
+    /// <summary>625 BindNotice:ZXMM → ZXMS。没绑定的玩家拿到的绑定码转给服务端。负载 <c>绑定码|玩家名</c>。</summary>
+    public const ushort BindNotice = 625;
+
+    /// <summary>626 BindApply:ZXMC → ZXMS。客户端用绑定码绑定。负载 <c>绑定码</c>。</summary>
+    public const ushort BindApply = 626;
+
+    /// <summary>627 BindAck:ZXMS → ZXMC。绑定回执 <c>ok|玩家名</c> 或 <c>err|原因</c>。</summary>
+    public const ushort BindAck = 627;
+
+    /// <summary>628 Unbind:ZXMC → ZXMS。解绑当前账号。负载 <c>账号ID</c> 或空(空 = 按连接账号)。</summary>
+    public const ushort Unbind = 628;
+
+    /// <summary>
+    /// 629 BindQuery:ZXMM → ZXMS。查绑定关系(谁绑了谁)。
+    /// 负载 <c>玩家名</c> 或 <c>ZXM账号名</c>;回 630 BindList。
+    /// </summary>
+    public const ushort BindQuery = 629;
+
+    /// <summary>630 BindList:ZXMS → ZXMM。绑定关系列表,一行一条 <c>玩家名=ZXM账号名</c>,没有就是空负载。</summary>
+    public const ushort BindList = 630;
+
+
     /// <summary>
     /// 服务端 → 客户端:服务端配置(客户端连上后下发一次),负载按行 <c>键=值</c>。
     /// 目前只有 <c>msgdays</c> = 这个子服务端的消息保留天数(客户端据此决定本地留多久;不认识的行忽略)。

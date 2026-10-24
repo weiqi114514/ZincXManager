@@ -210,6 +210,24 @@
       <Setter Property="FontSize" Value="11"/>
       <Setter Property="Foreground" Value="#7C99A6"/>
     </Style>
+    <!-- 绑定码:6 个方块(Steam 那种一格一个字符) -->
+    <Style Selector="TextBox.codebox">
+      <Setter Property="Height" Value="54"/>
+      <Setter Property="FontSize" Value="24"/>
+      <Setter Property="FontWeight" Value="SemiBold"/>
+      <Setter Property="HorizontalContentAlignment" Value="Center"/>
+      <Setter Property="VerticalContentAlignment" Value="Center"/>
+      <Setter Property="CornerRadius" Value="0"/>
+      <Setter Property="Background" Value="#FFFFFF"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource ThemePanelBorder}"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="Padding" Value="0"/>
+      <Setter Property="MaxLength" Value="1"/>
+    </Style>
+    <Style Selector="TextBox.codebox:focus">
+      <Setter Property="BorderBrush" Value="{DynamicResource ThemePrimary}"/>
+    </Style>
+
   </Window.Styles>
 
   <Grid>
@@ -354,6 +372,9 @@
           <views:FunctionPickerView x:Name="CommunityPage" Grid.Row="0" Grid.RowSpan="2" IsVisible="{Binding IsCommunity}"/>
           <views:FunctionPickerView x:Name="OrganizationPage" Grid.Row="0" Grid.RowSpan="2" IsVisible="{Binding IsOrganization}"/>
           <views:FunctionPickerView x:Name="ManagePage" Grid.Row="0" Grid.RowSpan="2" IsVisible="{Binding IsManage}"/>
+
+          <!-- 小功能组:搜索 + 左右两栏细条列表 -->
+          <views:WidgetsView x:Name="WidgetsPage" Grid.Row="0" Grid.RowSpan="2" IsVisible="{Binding IsWidgets}"/>
 
           <!-- 其它页面:占位 -->
           <StackPanel Grid.Row="0" Grid.RowSpan="2" VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="6"
@@ -552,6 +573,91 @@
       <Path Stroke="#5A6B7A" StrokeThickness="1.4" Data="M15,5 L5,15" />
       <Path Stroke="#5A6B7A" StrokeThickness="1.4" Data="M15,10 L10,15" />
     </Canvas>
+
+    <!-- ================= 绑定 / 解绑 覆盖层(灰色遮罩 + 无边框面板) ================= -->
+    <Grid x:Name="BindOverlay" Panel.ZIndex="900" IsVisible="False" Background="#8C0B0E13">
+      <Border Width="440" Padding="26,22" HorizontalAlignment="Center" VerticalAlignment="Center"
+              Background="#F7FFFFFF" BorderBrush="{DynamicResource ThemePanelBorder}" BorderThickness="1">
+        <Grid RowDefinitions="Auto,Auto" RowSpacing="16">
+
+          <TextBlock x:Name="BindHeader" Grid.Row="0" Text="绑定 / 解绑" FontSize="18" FontWeight="SemiBold"
+                     Foreground="#1F3B3A"/>
+
+          <!-- ① 选功能:两个大选项 -->
+          <StackPanel x:Name="BindChoicePanel" Grid.Row="1" Spacing="12">
+            <Button Height="74" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
+                    Tag="bind" Click="OnBindChoiceClick"
+                    Background="#F2FFFFFF" BorderBrush="{DynamicResource ThemePanelBorder}" BorderThickness="1"
+                    CornerRadius="0" Padding="16,0" Cursor="Hand">
+              <StackPanel Orientation="Horizontal" Spacing="14" VerticalAlignment="Center">
+                <Path Width="26" Height="26" Stretch="Uniform" VerticalAlignment="Center"
+                      Fill="{DynamicResource ThemePrimaryDark}" Data="M10,2 L14,6 L9,11 L5,7 Z M1,9 L7,15 L1,21 L1,9 Z"/>
+                <StackPanel VerticalAlignment="Center" Spacing="3">
+                  <TextBlock Text="绑定" FontSize="15" FontWeight="SemiBold" Foreground="#1F3B3A"/>
+                  <TextBlock Text="用 6 位绑定码把账号绑到 MC 玩家名" FontSize="11.5"
+                             Foreground="{DynamicResource ThemeMuted}"/>
+                </StackPanel>
+              </StackPanel>
+            </Button>
+
+            <Button Height="74" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
+                    Tag="unbind" Click="OnBindChoiceClick"
+                    Background="#F2FFFFFF" BorderBrush="{DynamicResource ThemePanelBorder}" BorderThickness="1"
+                    CornerRadius="0" Padding="16,0" Cursor="Hand">
+              <StackPanel Orientation="Horizontal" Spacing="14" VerticalAlignment="Center">
+                <Path Width="26" Height="26" Stretch="Uniform" VerticalAlignment="Center"
+                      Fill="#C62828" Data="M4,4 L9,9 M9,4 L4,9 M2,2 L11,11"/>
+                <StackPanel VerticalAlignment="Center" Spacing="3">
+                  <TextBlock Text="解绑" FontSize="15" FontWeight="SemiBold" Foreground="#1F3B3A"/>
+                  <TextBlock Text="解除当前账号与 MC 玩家名的绑定" FontSize="11.5"
+                             Foreground="{DynamicResource ThemeMuted}"/>
+                </StackPanel>
+              </StackPanel>
+            </Button>
+
+            <Button Content="取消" Click="OnBindCloseClick" Height="34" HorizontalAlignment="Right"
+                    Padding="18,0" CornerRadius="0" Background="{DynamicResource ThemeLight}"
+                    BorderThickness="0" Foreground="#1F3B3A" Cursor="Hand"/>
+          </StackPanel>
+
+          <!-- ② 绑定:6 个方块 + 取消 / 绑定 -->
+          <StackPanel x:Name="BindInputPanel" Grid.Row="1" IsVisible="False" Spacing="16">
+            <TextBlock Text="输入 6 位绑定码" FontSize="13" Foreground="{DynamicResource ThemeMuted}"/>
+            <Grid ColumnDefinitions="*,8,*,8,*,8,*,8,*,8,*">
+              <TextBox x:Name="Code0" Grid.Column="0" Classes="codebox" MaxLength="1"/>
+              <TextBox x:Name="Code1" Grid.Column="2" Classes="codebox" MaxLength="1"/>
+              <TextBox x:Name="Code2" Grid.Column="4" Classes="codebox" MaxLength="1"/>
+              <TextBox x:Name="Code3" Grid.Column="6" Classes="codebox" MaxLength="1"/>
+              <TextBox x:Name="Code4" Grid.Column="8" Classes="codebox" MaxLength="1"/>
+              <TextBox x:Name="Code5" Grid.Column="10" Classes="codebox" MaxLength="1"/>
+            </Grid>
+            <TextBlock x:Name="BindHint" Text="" FontSize="11.5" Foreground="#C62828"/>
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10">
+              <Button Content="取消" Click="OnBindCloseClick" Height="34" Padding="18,0" CornerRadius="0"
+                      Background="{DynamicResource ThemeLight}" BorderThickness="0" Foreground="#1F3B3A" Cursor="Hand"/>
+              <Button Content="绑定" Click="OnBindSubmitClick" Height="34" Padding="22,0" CornerRadius="0"
+                      Background="{DynamicResource ThemePrimary}" BorderThickness="0" Foreground="White" Cursor="Hand"/>
+            </StackPanel>
+          </StackPanel>
+
+          <!-- ③ 解绑:确认 -->
+          <StackPanel x:Name="UnbindPanel" Grid.Row="1" IsVisible="False" Spacing="16">
+            <TextBlock Text="解绑后这名玩家再进服时会被要求重新绑定;当前账号不会丢。"
+                       FontSize="12.5" TextWrapping="Wrap" Foreground="{DynamicResource ThemeMuted}"/>
+            <Border Padding="12,10" Background="#FDE7E7" BorderBrush="#F3B7B7" BorderThickness="1">
+              <TextBlock x:Name="UnbindInfo" Text="确认要解绑吗?" FontSize="12.5" Foreground="#8E1B1B"
+                         TextWrapping="Wrap"/>
+            </Border>
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10">
+              <Button Content="取消" Click="OnBindCloseClick" Height="34" Padding="18,0" CornerRadius="0"
+                      Background="{DynamicResource ThemeLight}" BorderThickness="0" Foreground="#1F3B3A" Cursor="Hand"/>
+              <Button Content="确认解绑" Click="OnUnbindSubmitClick" Height="34" Padding="22,0" CornerRadius="0"
+                      Background="#C62828" BorderThickness="0" Foreground="White" Cursor="Hand"/>
+            </StackPanel>
+          </StackPanel>
+        </Grid>
+      </Border>
+    </Grid>
 
 </Grid>
 </Window>

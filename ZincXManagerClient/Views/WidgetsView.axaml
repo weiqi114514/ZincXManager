@@ -1,0 +1,99 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:models="using:ZincXManagerClient.Models"
+             x:Class="ZincXManagerClient.Views.WidgetsView">
+
+  <UserControl.Styles>
+    <!-- 搜索框:细高,和功能条同一套质感 -->
+    <Style Selector="TextBox.fnsearch">
+      <Setter Property="FontSize" Value="13"/>
+      <Setter Property="Height" Value="34"/>
+      <Setter Property="Padding" Value="10,6"/>
+      <Setter Property="CornerRadius" Value="0"/>
+      <Setter Property="Background" Value="#CCFFFFFF"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource ThemePanelBorder}"/>
+      <Setter Property="BorderThickness" Value="1"/>
+    </Style>
+
+    <!-- 功能条:一细条,左图标 / 中名称 / 右灰介绍 -->
+    <Style Selector="Button.fn">
+      <Setter Property="HorizontalAlignment" Value="Stretch"/>
+      <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+      <Setter Property="Height" Value="44"/>
+      <Setter Property="Padding" Value="10,0"/>
+      <Setter Property="Margin" Value="0,0,0,8"/>
+      <Setter Property="CornerRadius" Value="0"/>
+      <Setter Property="Background" Value="{DynamicResource ThemeGlassLight}"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource ThemePanelBorder}"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="Cursor" Value="Hand"/>
+    </Style>
+    <Style Selector="Button.fn /template/ ContentPresenter">
+      <Setter Property="Background" Value="Transparent"/>
+      <Setter Property="BorderThickness" Value="0"/>
+      <Setter Property="CornerRadius" Value="0"/>
+    </Style>
+    <Style Selector="Button.fn:pointerover">
+      <Setter Property="Background" Value="#D8FFFFFF"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource ThemePrimary}"/>
+    </Style>
+    <Style Selector="Path.fnicon">
+      <Setter Property="Width" Value="20"/>
+      <Setter Property="Height" Value="20"/>
+      <Setter Property="Stretch" Value="Uniform"/>
+      <Setter Property="Fill" Value="{DynamicResource ThemePrimaryDark}"/>
+      <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+    <Style Selector="TextBlock.fntitle">
+      <Setter Property="FontSize" Value="13.5"/>
+      <Setter Property="FontWeight" Value="SemiBold"/>
+      <Setter Property="Foreground" Value="#1F3B3A"/>
+      <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+    <Style Selector="TextBlock.fndesc">
+      <Setter Property="FontSize" Value="11.5"/>
+      <Setter Property="Foreground" Value="{DynamicResource ThemeMuted}"/>
+      <Setter Property="VerticalAlignment" Value="Center"/>
+      <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+    </Style>
+  </UserControl.Styles>
+
+  <Grid RowDefinitions="Auto,*" Margin="24,18,24,16" RowSpacing="12">
+
+    <!-- 顶部搜索 -->
+    <TextBox x:Name="SearchBox" Grid.Row="0" Classes="fnsearch" Watermark="搜索功能…"/>
+
+    <!-- 下方左右两半 -->
+    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+      <Grid ColumnDefinitions="*,12,*">
+        <ItemsControl x:Name="LeftList" Grid.Column="0">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="models:WidgetEntry">
+              <Button Classes="fn" Tag="{Binding Key}" Click="OnItemClick">
+                <Grid ColumnDefinitions="Auto,10,Auto,10,*">
+                  <Path Grid.Column="0" Classes="fnicon" Data="{Binding IconPath}"/>
+                  <TextBlock Grid.Column="2" Classes="fntitle" Text="{Binding Title}"/>
+                  <TextBlock Grid.Column="4" Classes="fndesc" Text="{Binding Description}"/>
+                </Grid>
+              </Button>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+
+        <ItemsControl x:Name="RightList" Grid.Column="2">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="models:WidgetEntry">
+              <Button Classes="fn" Tag="{Binding Key}" Click="OnItemClick">
+                <Grid ColumnDefinitions="Auto,10,Auto,10,*">
+                  <Path Grid.Column="0" Classes="fnicon" Data="{Binding IconPath}"/>
+                  <TextBlock Grid.Column="2" Classes="fntitle" Text="{Binding Title}"/>
+                  <TextBlock Grid.Column="4" Classes="fndesc" Text="{Binding Description}"/>
+                </Grid>
+              </Button>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </Grid>
+    </ScrollViewer>
+  </Grid>
+</UserControl>
