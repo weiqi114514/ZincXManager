@@ -1,4 +1,4 @@
-using System.Text;
+using System.Text;  // 文本编码与 StringBuilder
 
 namespace ZincXManagerShared.Logging;
 

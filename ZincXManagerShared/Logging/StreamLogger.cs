@@ -1,6 +1,6 @@
-using System;
-using System.IO;
-using System.Text;
+using System;  // 基础类型 / 常用静态方法
+using System.IO;  // 文件与目录读写
+using System.Text;  // 文本编码与 StringBuilder
 
 namespace ZincXManagerShared.Logging;
 
@@ -13,7 +13,9 @@ public sealed class StreamLogger : ILogger, IDisposable
     private readonly object _lock = new();
     private readonly FileStream _stream;
     private readonly StreamWriter _writer;
+    // 当前最低日志级别。
     private LogLevel _minLevel;
+    // 是否已经释放过。
     private bool _disposed;
 
     /// <summary>创建(或追加打开)日志文件。</summary>

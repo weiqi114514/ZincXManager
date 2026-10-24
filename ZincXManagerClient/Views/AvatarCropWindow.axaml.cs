@@ -1,13 +1,13 @@
-using System;
-using System.IO;
-using Avalonia;
-using Avalonia.Controls;
-using Avalonia.Controls.Primitives;
-using Avalonia.Input;
-using Avalonia.Interactivity;
-using Avalonia.Media;
-using Avalonia.Media.Imaging;
-using ZincXManagerShared.Logging;
+using System;  // 基础类型 / 常用静态方法
+using System.IO;  // 文件与目录读写
+using Avalonia;  // 界面框架入口
+using Avalonia.Controls;  // 窗口与控件
+using Avalonia.Controls.Primitives;  // 界面框架
+using Avalonia.Input;  // 鼠标键盘输入
+using Avalonia.Interactivity;  // 路由事件
+using Avalonia.Media;  // 画刷 / 颜色 / 几何
+using Avalonia.Media.Imaging;  // 位图
+using ZincXManagerShared.Logging;  // 共享库
 
 namespace ZincXManagerClient.Views;
 
@@ -34,14 +34,18 @@ public partial class AvatarCropWindow : Window
     private double _zoom = 1;
     private double _offsetX;
     private double _offsetY;
+    // 是否正在拖裁剪框。
     private bool _dragging;
+    // 上一次鼠标位置(算位移用)。
     private Point _lastPoint;
 
+    /// <summary>头像裁剪窗口:拖框选区域、缩放。</summary>
     public AvatarCropWindow()
         : this("")
     {
     }
 
+    /// <summary>头像裁剪窗口:拖框选区域、缩放。</summary>
     public AvatarCropWindow(string path)
     {
         InitializeComponent();
@@ -87,18 +91,23 @@ public partial class AvatarCropWindow : Window
         }
     }
 
+    /// <summary>按住标题栏拖动窗口。</summary>
     private void OnTitleBarPointerPressed(object? sender, PointerPressedEventArgs e)
     {
         if (!e.GetCurrentPoint(this).Properties.IsLeftButtonPressed) return;
         BeginMoveDrag(e);
     }
 
+    /// <summary>点最小化按钮:窗口最小化。</summary>
     private void OnMinimizeClick(object? sender, RoutedEventArgs e) => WindowState = WindowState.Minimized;
 
+    /// <summary>点右上角关闭按钮:关掉这个窗口。</summary>
     private void OnCloseClick(object? sender, RoutedEventArgs e) => Close(null);
 
+    /// <summary>取消:不保存直接关。</summary>
     private void OnCancelClick(object? sender, RoutedEventArgs e) => Close(null);
 
+    /// <summary>在裁剪区按下:开始拖裁剪框。</summary>
     private void OnStagePointerPressed(object? sender, PointerPressedEventArgs e)
     {
         _dragging = true;
@@ -106,6 +115,7 @@ public partial class AvatarCropWindow : Window
         e.Pointer.Capture(Stage);
     }
 
+    /// <summary>拖动裁剪框时跟手移动。</summary>
     private void OnStagePointerMoved(object? sender, PointerEventArgs e)
     {
         if (!_dragging) return;
@@ -117,6 +127,7 @@ public partial class AvatarCropWindow : Window
         ApplyTransform();
     }
 
+    /// <summary>松开鼠标:结束拖动。</summary>
     private void OnStagePointerReleased(object? sender, PointerReleasedEventArgs e)
     {
         _dragging = false;
@@ -130,6 +141,7 @@ public partial class AvatarCropWindow : Window
         e.Handled = true;
     }
 
+    /// <summary>缩放滑杆变了:按新比例重算裁剪框。</summary>
     private void OnZoomChanged(object? sender, RangeBaseValueChangedEventArgs e)
     {
         _zoom = e.NewValue;

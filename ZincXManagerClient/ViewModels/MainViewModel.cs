@@ -1,17 +1,17 @@
-using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
-using System.Collections.ObjectModel;
-using System.ComponentModel;
-using System.IO;
-using System.Linq;
-using Avalonia.Media;
-using Avalonia.Media.Imaging;
-using ZincXManagerShared.Account;
-using CommunityToolkit.Mvvm.ComponentModel;
-using ZincXManagerClient.Models;
-using ZincXManagerShared.Logging;
-using ZincXManagerShared.Network;
+using System;  // 基础类型 / 常用静态方法
+using System.Collections.Generic;  // 泛型集合
+using System.Threading.Tasks;  // async / await 异步
+using System.Collections.ObjectModel;  // 可观察集合(界面绑定用)
+using System.ComponentModel;  // INotifyPropertyChanged / 属性变更
+using System.IO;  // 文件与目录读写
+using System.Linq;  // LINQ 查询
+using Avalonia.Media;  // 画刷 / 颜色 / 几何
+using Avalonia.Media.Imaging;  // 位图
+using ZincXManagerShared.Account;  // 共享库
+using CommunityToolkit.Mvvm.ComponentModel;  // MVVM 可观察对象
+using ZincXManagerClient.Models;  // 客户端自身
+using ZincXManagerShared.Logging;  // 共享库
+using ZincXManagerShared.Network;  // 共享库
 
 namespace ZincXManagerClient.ViewModels;
 
@@ -111,7 +111,7 @@ public partial class MainViewModel : ViewModelBase
 
     /// <summary>当前一级导航(决定右侧显示哪个页面)。</summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsSettings), nameof(IsEconomy), nameof(IsPlaceholder), nameof(IsCommunity), nameof(IsOrganization), nameof(IsFriends), nameof(IsManage), nameof(ShowMessages))]
+    [NotifyPropertyChangedFor(nameof(IsSettings), nameof(IsEconomy), nameof(IsPlaceholder), nameof(IsCommunity), nameof(IsOrganization), nameof(IsManage), nameof(ShowMessages))]
     public partial string CurrentPage { get; set; } = "";
 
     /// <summary>是否正在显示设置页。</summary>
@@ -150,13 +150,12 @@ public partial class MainViewModel : ViewModelBase
 
     /// <summary>没选任何页面(点了 Logo)时不显示"该页面还没做"。</summary>
     public bool IsPlaceholder => CurrentPage.Length > 0 && !IsEconomy
-        && CurrentPage != "社区" && CurrentPage != "组织" && CurrentPage != "好友" && CurrentPage != "管理";
+        && CurrentPage != "社区" && CurrentPage != "组织" && CurrentPage != "管理";
 
     public bool IsCommunity => CurrentPage == "社区";
 
     public bool IsOrganization => CurrentPage == "组织";
 
-    public bool IsFriends => CurrentPage == "好友";
 
     public bool IsManage => CurrentPage == "管理";
 
@@ -221,6 +220,7 @@ public partial class MainViewModel : ViewModelBase
     public bool IsTabChangelog => TabOf(TabIndex) == "changelog";
     public bool IsTabWeb => TabOf(TabIndex) == "web";
 
+    /// <summary>按页面名找对应的消息页签。</summary>
     private string TabOf(int index) => index >= 0 && index < Tabs.Count ? Tabs[index].Key : "messages";
 
     /// <summary>运行日志内容(取最新一份日志的末尾)。</summary>
@@ -769,6 +769,7 @@ public partial class MainViewModel : ViewModelBase
         CurrentPage = "";
     }
 
+    /// <summary>点左侧导航:切页面,并把选中态挪过去。</summary>
     public void SelectNav(NavItem item)
     {
         foreach (var nav in NavItems)

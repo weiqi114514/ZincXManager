@@ -1,4 +1,4 @@
-﻿namespace ZincXManagerClient.Models;
+namespace ZincXManagerClient.Models;
 
 /// <summary>
 /// 界面图标(路径数据取自设计稿导出的 SVG,viewBox 尺寸见 W/H)。
@@ -49,11 +49,7 @@ public static class Icons
     public const string LogoSlash =
         "M4.045,4.058l-3.242,-2.833l0.395,-0.452l3.242,2.833zM8.794,8.218c-0.782,-0.736 -1.934,-1.769 -3.456,-3.101l0.395,-0.452c1.528,1.336 2.685,2.375 3.472,3.116z";
 
-    // LOGO:三角(10x6)
-    public const string LogoTriangle = "M5,0l4.33,5.25h-8.66z";
 
-    // 下拉箭头(3x1)
-    public const string Caret = "M1.625,1l-1.237,-1l2.475,0l-1.237,1z";
 
 
     // ---------- 子功能图标(design/子功能图标,24x24 描边 2,直角) ----------

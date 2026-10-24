@@ -1,5 +1,7 @@
-using System.Security.Cryptography;
-using ZincXManagerShared.Logging;
+// System.Security.Cryptography:SHA-256(没通过时用的随机 pepper)
+using System.Security.Cryptography;  // 加密与哈希
+// ZincXManagerShared.Logging:启动闸/接入闸把结论写进日志
+using ZincXManagerShared.Logging;  // 共享库
 
 namespace ZincXManagerShared.Verify;
 

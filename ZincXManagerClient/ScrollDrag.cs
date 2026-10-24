@@ -1,9 +1,9 @@
-using System;
-using Avalonia;
-using Avalonia.Controls;
-using Avalonia.Input;
-using Avalonia.Interactivity;
-using Avalonia.VisualTree;
+using System;  // 基础类型 / 常用静态方法
+using Avalonia;  // 界面框架入口
+using Avalonia.Controls;  // 窗口与控件
+using Avalonia.Input;  // 鼠标键盘输入
+using Avalonia.Interactivity;  // 路由事件
+using Avalonia.VisualTree;  // 界面框架
 
 namespace ZincXManagerClient;
 

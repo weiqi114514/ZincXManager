@@ -1,8 +1,8 @@
-using System.Linq;
-using Avalonia.Controls;
-using Avalonia.Input;
-using Avalonia.Interactivity;
-using ZincXManagerClient.Models;
+using System.Linq;  // LINQ 查询
+using Avalonia.Controls;  // 窗口与控件
+using Avalonia.Input;  // 鼠标键盘输入
+using Avalonia.Interactivity;  // 路由事件
+using ZincXManagerClient.Models;  // 客户端自身
 
 namespace ZincXManagerClient.Views;
 
@@ -21,10 +21,13 @@ public partial class FunctionPickerView : UserControl
         ItemsHost.ItemsSource = items;
     }
 
+    /// <summary>点卡片。</summary>
     private void OnCardPressed(object? sender, PointerPressedEventArgs e) => Open(sender);
 
+    /// <summary>点「进入」。</summary>
     private void OnEnterClick(object? sender, RoutedEventArgs e) => Open(sender);
 
+    /// <summary>打开子功能(目前仅提示)。</summary>
     private void Open(object? sender)
     {
         if (sender is not Control { Tag: string key } || key.Length == 0)

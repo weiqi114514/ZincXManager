@@ -1,11 +1,11 @@
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Text;
-using System.Text.Json;
-using ZincXManagerClient.Models;
-using ZincXManagerShared.Logging;
-using ZincXManagerShared.Network;
+using System;  // 基础类型 / 常用静态方法
+using System.Collections.Generic;  // 泛型集合
+using System.IO;  // 文件与目录读写
+using System.Text;  // 文本编码与 StringBuilder
+using System.Text.Json;  // JSON 序列化
+using ZincXManagerClient.Models;  // 客户端自身
+using ZincXManagerShared.Logging;  // 共享库
+using ZincXManagerShared.Network;  // 共享库
 
 namespace ZincXManagerClient;
 
@@ -163,6 +163,7 @@ internal static class MessageStore
         }
     }
 
+    /// <summary>内部类型代号 → 显示用的类型名。</summary>
     private static string KindText(MessageKind kind) => kind switch
     {
         MessageKind.Update => MessageCard.Update,
@@ -172,6 +173,7 @@ internal static class MessageStore
         _ => MessageCard.Text,
     };
 
+    /// <summary>显示用的类型名 → 内部类型代号。</summary>
     private static MessageKind ParseKind(string kind) => kind switch
     {
         MessageCard.Update => MessageKind.Update,
@@ -181,11 +183,13 @@ internal static class MessageStore
         _ => MessageKind.Text,
     };
 
+    /// <summary>取消息的纯文本正文(不带格式段)。</summary>
     private static string Text(JsonElement item, string name)
         => item.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.String
             ? value.GetString() ?? ""
             : "";
 
+    /// <summary>把文本里的分隔符转义,存盘后还能原样还原。</summary>
     private static string Escape(string text)
         => text.Replace("\\", "\\\\").Replace("\"", "\\\"").Replace("\n", "\\n").Replace("\r", "");
 }

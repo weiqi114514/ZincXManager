@@ -1,6 +1,6 @@
-using System.Collections.Concurrent;
-using System.Security.Cryptography;
-using System.Text;
+using System.Collections.Concurrent;  // 并发集合(多线程共享)
+using System.Security.Cryptography;  // 加密与哈希
+using System.Text;  // 文本编码与 StringBuilder
 
 namespace ZincXManagerShared.Account;
 

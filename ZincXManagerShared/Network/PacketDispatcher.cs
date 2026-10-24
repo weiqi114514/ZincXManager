@@ -1,5 +1,5 @@
-using System.Threading.Channels;
-using ZincXManagerShared.Logging;
+using System.Threading.Channels;  // 生产者-消费者队列
+using ZincXManagerShared.Logging;  // 共享库
 
 namespace ZincXManagerShared.Network;
 

@@ -1,7 +1,7 @@
-using System.Globalization;
-using System.Text;
-using System.Text.Json;
-using ZincXManagerShared.Logging;
+using System.Globalization;  // 区域与格式化
+using System.Text;  // 文本编码与 StringBuilder
+using System.Text.Json;  // JSON 序列化
+using ZincXManagerShared.Logging;  // 共享库
 
 namespace ZincXManagerServer;
 

@@ -1,14 +1,14 @@
-using System;
-using System.IO;
-using System.Threading.Tasks;
-using Avalonia.Media;
-using Avalonia.Media.Imaging;
-using Avalonia.Threading;
-using CommunityToolkit.Mvvm.ComponentModel;
-using ZincXManagerClient.Models;
-using ZincXManagerShared.Account;
-using ZincXManagerShared.Logging;
-using ZincXManagerShared.Network;
+using System;  // 基础类型 / 常用静态方法
+using System.IO;  // 文件与目录读写
+using System.Threading.Tasks;  // async / await 异步
+using Avalonia.Media;  // 画刷 / 颜色 / 几何
+using Avalonia.Media.Imaging;  // 位图
+using Avalonia.Threading;  // UI 线程调度
+using CommunityToolkit.Mvvm.ComponentModel;  // MVVM 可观察对象
+using ZincXManagerClient.Models;  // 客户端自身
+using ZincXManagerShared.Account;  // 共享库
+using ZincXManagerShared.Logging;  // 共享库
+using ZincXManagerShared.Network;  // 共享库
 
 namespace ZincXManagerClient.ViewModels;
 
@@ -197,6 +197,7 @@ public partial class LoginViewModel : ViewModelBase
         return LoginCoreAsync(LoginRecord.User, LoginRecord.Hash, LoginRecord.Level, register: false, saveRecord: false);
     }
 
+    /// <summary>真正走一次登录:发 600 登录包,等 601 回执。</summary>
     private async Task<bool> LoginCoreAsync(string user, string hash, string level, bool register, bool saveRecord)
     {
         if (IsBusy)
@@ -273,6 +274,7 @@ public partial class LoginViewModel : ViewModelBase
         return true;
     }
 
+    /// <summary>收到账号类回执(601/603)后更新界面状态。</summary>
     private void OnAccountReply(ushort type, string text)
     {
         // 负载:"ok|名称|ID|等级" 或 "err|原因"
@@ -328,6 +330,7 @@ public partial class LoginViewModel : ViewModelBase
         Avatar = ToImage(packet.Data);
     }
 
+    /// <summary>头像字节 → 可显示的位图。</summary>
     private static IImage? ToImage(byte[] bytes)
     {
         if (bytes.Length == 0)

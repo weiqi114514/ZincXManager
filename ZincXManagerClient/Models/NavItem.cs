@@ -1,5 +1,5 @@
-using Avalonia.Media;
-using CommunityToolkit.Mvvm.ComponentModel;
+using Avalonia.Media;  // 画刷 / 颜色 / 几何
+using CommunityToolkit.Mvvm.ComponentModel;  // MVVM 可观察对象
 
 namespace ZincXManagerClient.Models;
 

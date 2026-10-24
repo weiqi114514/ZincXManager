@@ -1,6 +1,6 @@
-using System;
-using System.Collections.Generic;
-using ZincXManagerShared.Logging;
+using System;  // 基础类型 / 常用静态方法
+using System.Collections.Generic;  // 泛型集合
+using ZincXManagerShared.Logging;  // 共享库
 
 namespace ZincXManagerServer.Command;
 
@@ -26,6 +26,7 @@ internal static class ConfigMode
         public bool ReadOnly { get; init; }
     }
 
+    // 该端可配置项的清单(配置模式表格用它)。
     internal static readonly Item[] Items =
     [
         new() { Key = "name",          Cn = "服务端名称",   Description = "玩家看到的名称(linkname=1 时跟账号名)", Type = "文本 1-32 字符" },
@@ -52,6 +53,7 @@ internal static class ConfigMode
         "notice", "push", "osuser", "srv", "user", "ban", "file", "net", "config",
     };
 
+    // 是否处于配置模式。
     private static bool _active;
 
     /// <summary>当前是否在配置模式里。</summary>
@@ -143,17 +145,20 @@ internal static class ConfigMode
         return true;
     }
 
+    /// <summary>按显示宽度算字符串占几列(中文算 2 列)。</summary>
     private static int DisplayWidth(string s)
     {
         var w = 0;
         foreach (var c in s) { w += c >= 0x2E80 ? 2 : 1; }
         return w;
     }
+/// <summary>按显示宽度右侧补空格。</summary>
 
     private static string Pad(string s, int width)
     {
         var pad = width - DisplayWidth(s);
         return pad > 0 ? s + new string(' ', pad) : s;
+    /// <summary>把三列排成对齐的表格文本。</summary>
     }
 
     private static string BuildTable()

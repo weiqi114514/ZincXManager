@@ -393,3 +393,51 @@ img,svg{max-width:100%}
 .mock-msg .msg em{font-style:normal;font-size:11.5px;color:var(--green);display:block;margin-bottom:5px}
 .mock-msg .msg p{margin:0;font-size:12.5px;color:#cfd8e3}
 @media (max-width:1080px){.mock-body{grid-template-columns:180px 1fr}.mock-msg{display:none}}
+
+
+/* ---------- 下载小窗口(数据来自 GitHub Releases) ---------- */
+body.dl-lock{overflow:hidden}
+.dl-modal{position:fixed;inset:0;z-index:80;background:rgba(3,5,8,.72);display:flex;align-items:center;justify-content:center;padding:24px}
+.dl-modal[hidden]{display:none}
+.dl-box{width:100%;max-width:760px;max-height:82vh;display:flex;flex-direction:column;background:var(--ink-2);border:1px solid var(--line-2);box-shadow:0 24px 80px rgba(0,0,0,.55)}
+.dl-head{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--line)}
+.dl-head b{font-size:15px;letter-spacing:.02em}
+.dl-close{background:transparent;border:1px solid var(--line-2);color:var(--fg-dim);width:30px;height:30px;cursor:pointer;line-height:1}
+.dl-close:hover{color:#fff;border-color:var(--green)}
+.dl-filters{display:flex;flex-wrap:wrap;gap:18px;padding:14px 20px;border-bottom:1px solid var(--line)}
+.dl-fgroup{display:flex;align-items:center;gap:6px}
+.dl-fgroup span{font-size:11.5px;color:var(--fg-dim);letter-spacing:.14em;margin-right:2px}
+.dl-f{background:transparent;border:1px solid var(--line-2);color:var(--fg-dim);font-size:12.5px;padding:5px 11px;cursor:pointer}
+.dl-f:hover{color:#fff;border-color:var(--green)}
+.dl-f.on{background:var(--green);border-color:var(--green);color:#04130a}
+.dl-list{overflow:auto;padding:6px 20px 18px}
+.dl-ver{border-bottom:1px solid var(--line);padding:12px 0 6px}
+.dl-ver:last-child{border-bottom:0}
+.dl-ver-head{display:flex;align-items:baseline;gap:10px;margin-bottom:6px}
+.dl-ver-head b{font-size:13.5px;color:var(--green-2)}
+.dl-ver-head span{font-size:11.5px;color:var(--fg-dim)}
+.dl-row{display:grid;grid-template-columns:74px minmax(0,1fr) 72px 64px;gap:10px;align-items:center;padding:7px 0;border-top:1px dashed rgba(255,255,255,.05)}
+.dl-kind{font-size:11.5px;color:var(--fg-dim)}
+.dl-name{font-size:12px;color:#cfd8e3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dl-size{font-size:11.5px;color:var(--fg-dim);text-align:right}
+.dl-btn{padding:5px 12px;font-size:12px;text-align:center}
+.dl-empty{padding:26px 4px;color:var(--fg-dim);font-size:13px;line-height:1.9}
+@media (max-width:720px){
+  .dl-row{grid-template-columns:64px minmax(0,1fr) 56px 56px}
+  .dl-name{font-size:11px}
+}
+
+/* 弹窗滚动条:跟页面一样的深色,别用浏览器白条 */
+.dl-modal,.dl-list{color-scheme:dark}
+.dl-list::-webkit-scrollbar{width:10px}
+.dl-list::-webkit-scrollbar-track{background:#0b0e13}
+.dl-list::-webkit-scrollbar-thumb{background:#2a323d;border:2px solid #0b0e13}
+.dl-list::-webkit-scrollbar-thumb:hover{background:#3a4653}
+.dl-list{scrollbar-color:#2a323d #0b0e13;scrollbar-width:thin}
+
+/* 下载页的两列说明(替代表格,中文长句不再挤在一起) */
+.dl-pick{border-top:1px solid var(--line)}
+.dl-pick>div{display:grid;grid-template-columns:190px minmax(0,1fr);gap:18px;padding:13px 0;border-bottom:1px solid var(--line)}
+.dl-pick b{font-size:13.5px;color:#fff;font-weight:600}
+.dl-pick span{font-size:13px;color:var(--fg-dim);line-height:1.9}
+@media (max-width:720px){.dl-pick>div{grid-template-columns:1fr;gap:4px}}

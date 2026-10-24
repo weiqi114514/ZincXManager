@@ -1,21 +1,22 @@
-using System;
-using Avalonia.Animation;
-using Avalonia.Animation.Easings;
-using Avalonia.Controls;
-using Avalonia.Controls.Shapes;
-using Avalonia.Media;
-using Avalonia.Styling;
-using Avalonia.Threading;
-using Avalonia.Input;
-using Avalonia.Interactivity;
-using Avalonia.Platform.Storage;
-using ZincXManagerShared.Logging;
-using ZincXManagerClient.ViewModels;
+using System;  // 基础类型 / 常用静态方法
+using Avalonia.Animation;  // 界面框架
+using Avalonia.Animation.Easings;  // 界面框架
+using Avalonia.Controls;  // 窗口与控件
+using Avalonia.Controls.Shapes;  // 图形(线 / 矩形 / 路径)
+using Avalonia.Media;  // 画刷 / 颜色 / 几何
+using Avalonia.Styling;  // 样式与主题
+using Avalonia.Threading;  // UI 线程调度
+using Avalonia.Input;  // 鼠标键盘输入
+using Avalonia.Interactivity;  // 路由事件
+using Avalonia.Platform.Storage;  // 界面框架
+using ZincXManagerShared.Logging;  // 共享库
+using ZincXManagerClient.ViewModels;  // 客户端自身
 
 namespace ZincXManagerClient.Views;
 
 public partial class OobeWindow : Window
 {
+    /// <summary>首次使用向导窗口的构造函数。</summary>
     public OobeWindow()
     {
         InitializeComponent();
@@ -244,14 +245,17 @@ public partial class OobeWindow : Window
         }
     }
 
+    /// <summary>按住标题栏拖动窗口。</summary>
     private void OnTitleBarPointerPressed(object? sender, PointerPressedEventArgs e)
     {
         if (!e.GetCurrentPoint(this).Properties.IsLeftButtonPressed) return;
         BeginMoveDrag(e);
     }
 
+    /// <summary>点最小化按钮:窗口最小化。</summary>
     private void OnMinimizeClick(object? sender, RoutedEventArgs e) => WindowState = WindowState.Minimized;
 
+    /// <summary>点右上角关闭按钮:关掉这个窗口。</summary>
     private void OnCloseClick(object? sender, RoutedEventArgs e) => Close();
 
     /// <summary>选择背景壁纸。</summary>
@@ -279,6 +283,7 @@ public partial class OobeWindow : Window
         }
     }
 
+    /// <summary>清除壁纸。</summary>
     private void OnClearWallpaperClick(object? sender, RoutedEventArgs e) => Vm?.ClearWallpaper();
 
     /// <summary>个性化 → 切换配色。</summary>
@@ -294,6 +299,7 @@ public partial class OobeWindow : Window
         e.Handled = true;
     }
 
+    /// <summary>选配色。</summary>
     private void OnThemeClick(object? sender, RoutedEventArgs e)
     {
         if (sender is Button { Tag: string name } && Vm is not null)
@@ -337,6 +343,7 @@ public partial class OobeWindow : Window
         timer.Start();
     }
 
+    /// <summary>选连接模式。</summary>
     private void OnModeClick(object? sender, RoutedEventArgs e)
     {
         if (sender is Button { Tag: string mode })
@@ -350,11 +357,13 @@ public partial class OobeWindow : Window
         }
     }
 
+    /// <summary>提交登录。</summary>
     private async void OnLoginClick(object? sender, RoutedEventArgs e)
     {
         if (Vm is not null) await Vm.LoginAsync();
     }
 
+    /// <summary>注册账号(等级固定 Player)。</summary>
     private async void OnRegisterClick(object? sender, RoutedEventArgs e)
     {
         if (Vm is not null) await Vm.RegisterAsync();

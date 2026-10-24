@@ -1,7 +1,7 @@
-using System;
-using Avalonia;
-using Avalonia.Controls;
-using ZincXManagerClient.Views;
+using System;  // 基础类型 / 常用静态方法
+using Avalonia;  // 界面框架入口
+using Avalonia.Controls;  // 窗口与控件
+using ZincXManagerClient.Views;  // 客户端自身
 
 namespace ZincXManagerClient;
 

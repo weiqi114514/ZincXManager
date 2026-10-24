@@ -1,6 +1,6 @@
-using Avalonia.Threading;
-using ZincXManagerClient.ViewModels;
-using ZincXManagerShared.Logging;
+using Avalonia.Threading;  // UI 线程调度
+using ZincXManagerClient.ViewModels;  // 客户端自身
+using ZincXManagerShared.Logging;  // 共享库
 
 namespace ZincXManagerClient.Logging;
 

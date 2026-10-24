@@ -1,21 +1,21 @@
-using System;
-using System.Collections.ObjectModel;
-using System.Net;
-using System.Text;
-using System.Threading.Tasks;
-using Avalonia.Media;
-using Avalonia.Threading;
-using CommunityToolkit.Mvvm.ComponentModel;
-using ZincXManagerClient.Logging;
-using ZincXManagerClient.Models;
-using ZincXManagerShared.Logging;
-using ZincXManagerShared.Network;
-using ZincXManagerShared.Verify;
+using System;  // 基础类型 / 常用静态方法
+using System.Collections.ObjectModel;  // 可观察集合(界面绑定用)
+using System.Net;  // IP 地址与网络端点
+using System.Text;  // 文本编码与 StringBuilder
+using System.Threading.Tasks;  // async / await 异步
+using Avalonia.Media;  // 画刷 / 颜色 / 几何
+using Avalonia.Threading;  // UI 线程调度
+using CommunityToolkit.Mvvm.ComponentModel;  // MVVM 可观察对象
+using ZincXManagerClient.Logging;  // 客户端自身
+using ZincXManagerClient.Models;  // 客户端自身
+using ZincXManagerShared.Logging;  // 共享库
+using ZincXManagerShared.Network;  // 共享库
+using ZincXManagerShared.Verify;  // 共享库
 
 // 与 BCL 的 TcpClient 同名,起个别名
 using TcpClient = ZincXManagerShared.Network.TcpClient;
 
-using ZincXManagerShared.Security;
+using ZincXManagerShared.Security;  // 共享库
 
 namespace ZincXManagerClient.ViewModels;
 
@@ -85,10 +85,14 @@ public partial class ConnectViewModel : ViewModelBase, IDisposable
         }
     }
 
+    // 官方服地址(构造时从 config 读)。
     private readonly string _ozip;
+    // 官方服端口(构造时从 config 读)。
     private readonly string _ozport;
 
+    // 日志输出的界面接收器。
     private readonly UiLogSink _sink;
+    // 当前 TCP 连接;没连就是 null。
     private TcpClient? _client;
 
     /// <summary>等 381(加密协商回包)用。</summary>
@@ -163,6 +167,7 @@ public partial class ConnectViewModel : ViewModelBase, IDisposable
         _ => $"SAOS:先连子服务端 {_czip}:{_czport},由它转发官方服务端 {_ozip}:{_ozport}",
     };
 
+    /// <summary>连接页的视图模型:目标地址、模式、连接状态都在这里。</summary>
     public ConnectViewModel()
     {
         // 把共享库日志接到界面:网络/文件/命令的日志都会实时显示
@@ -342,11 +347,11 @@ public partial class ConnectViewModel : ViewModelBase, IDisposable
             // 连接建立后先协商会话密钥(后面所有报文都加密;拿不到 381 说明是旧版服务端)
             try
             {
-                var handshake = new SessionHandshake();
+                var handshake = new SessionHandshake();          // 本次握手的密钥对
                 _sessionWait = new TaskCompletionSource<byte[]>(TaskCreationOptions.RunContinuationsAsynchronously);
                 await client.SendAsync(Protocol.SessionHello, handshake.PublicKey);
 
-                var done = await Task.WhenAny(_sessionWait.Task, Task.Delay(5000));
+                var done = await Task.WhenAny(_sessionWait.Task, Task.Delay(5000));   // 等 381,最多 5 秒
                 if (done == _sessionWait.Task)
                 {
                     client.Crypto = handshake.Complete(_sessionWait.Task.Result, isServer: false);
@@ -578,8 +583,10 @@ public partial class ConnectViewModel : ViewModelBase, IDisposable
         StatusBrush = new SolidColorBrush(Color.Parse(color));
     }
 
+    /// <summary>只往日志列表里加一条,不弹提示条。</summary>
     private void AddLogOnly(string message) => Logger.Log(LogLevel.Info, "[ZXMC] " + message);
 
+    /// <summary>断开连接并释放资源。</summary>
     public void Dispose()
     {
         Logger.RemoveSink(_sink);

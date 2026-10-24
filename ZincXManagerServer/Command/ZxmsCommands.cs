@@ -1,10 +1,10 @@
-using System;
-using System.Threading.Tasks;
-using ZincXManagerShared.Account;
-using System.Linq;
-using ZincXManagerShared.Command;
-using ZincXManagerShared.Logging;
-using ZincXManagerShared.Network;
+using System;  // 基础类型 / 常用静态方法
+using System.Threading.Tasks;  // async / await 异步
+using ZincXManagerShared.Account;  // 共享库
+using System.Linq;  // LINQ 查询
+using ZincXManagerShared.Command;  // 共享库
+using ZincXManagerShared.Logging;  // 共享库
+using ZincXManagerShared.Network;  // 共享库
 
 // 与 BCL 的 TcpClient 同名,起个别名
 using TcpClient = ZincXManagerShared.Network.TcpClient;
@@ -296,6 +296,7 @@ public static class ZxmsCommands
             "ban list");
     }
 
+    /// <summary>ban del:删掉一条封禁(按类型 + 值)。</summary>
     private static void CmdBanDel(BanStore bans, string[] args)
     {
         if (args.Length < 2)
@@ -308,6 +309,7 @@ public static class ZxmsCommands
             ? $"[封禁] 已解封 {args[0]}={args[1]}"
             : "[封禁] 没有这条封禁记录");
     }
+/// <summary>ban list:列出当前所有封禁及剩余时间。</summary>
 
     private static void CmdBanList(BanStore bans)
     {

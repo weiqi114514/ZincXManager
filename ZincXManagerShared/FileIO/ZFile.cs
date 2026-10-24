@@ -1,5 +1,5 @@
-using System.Text;
-using ZincXManagerShared.Logging;
+using System.Text;  // 文本编码与 StringBuilder
+using ZincXManagerShared.Logging;  // 共享库
 
 namespace ZincXManagerShared.FileIO;
 
@@ -449,6 +449,7 @@ public class ZFile : IDisposable
         return ok;
     }
 
+    /// <summary>写一个键值到文件(改配置项)。</summary>
     public bool WriteFileMap(string key, int value)
     {
         var ok = false;
@@ -532,6 +533,7 @@ public class ZFile : IDisposable
 
     // ---------- 内部实现(调用方必须已经持有 _sync) ----------
 
+    /// <summary>真正打开文件:按 mode 建流与读写器。</summary>
     private bool OpenCore(string fileName, string actionLog, out LogLevel level, out string message)
     {
         if (string.IsNullOrWhiteSpace(fileName))
@@ -572,6 +574,7 @@ public class ZFile : IDisposable
         }
     }
 
+    /// <summary>删除文件并释放句柄。</summary>
     private bool DeleteCore(string fileName, out LogLevel level, out string message)
     {
         CloseStreamCore();

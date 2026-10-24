@@ -1,4 +1,4 @@
-using System.Buffers.Binary;
+using System.Buffers.Binary;  // 大端读写(BinaryPrimitives)
 
 namespace ZincXManagerShared.Network;
 

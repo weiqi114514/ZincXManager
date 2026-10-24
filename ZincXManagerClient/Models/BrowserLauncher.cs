@@ -1,7 +1,7 @@
-using System;
-using System.Collections.Generic;
-using System.IO;
-using Microsoft.Win32;
+using System;  // 基础类型 / 常用静态方法
+using System.Collections.Generic;  // 泛型集合
+using System.IO;  // 文件与目录读写
+using Microsoft.Win32;  // 注册表(读浏览器/系统设置)
 
 namespace ZincXManagerClient.Models;
 

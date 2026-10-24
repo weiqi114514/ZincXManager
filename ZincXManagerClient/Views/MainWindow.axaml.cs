@@ -1,25 +1,26 @@
-﻿using System;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Avalonia;
-using Avalonia.Animation;
-using Avalonia.Animation.Easings;
-using Avalonia.Controls;
-using Avalonia.Controls.Shapes;
-using Avalonia.Styling;
-using Avalonia.Input;
-using Avalonia.Interactivity;
-using Avalonia.Media;
-using ZincXManagerClient.Models;
-using ZincXManagerClient.ViewModels;
-using ZincXManagerShared.Logging;
-using ZincXManagerShared.Network;
+using System;  // 基础类型 / 常用静态方法
+using System.Linq;  // LINQ 查询
+using System.Text;  // 文本编码与 StringBuilder
+using System.Threading.Tasks;  // async / await 异步
+using Avalonia;  // 界面框架入口
+using Avalonia.Animation;  // 界面框架
+using Avalonia.Animation.Easings;  // 界面框架
+using Avalonia.Controls;  // 窗口与控件
+using Avalonia.Controls.Shapes;  // 图形(线 / 矩形 / 路径)
+using Avalonia.Styling;  // 样式与主题
+using Avalonia.Input;  // 鼠标键盘输入
+using Avalonia.Interactivity;  // 路由事件
+using Avalonia.Media;  // 画刷 / 颜色 / 几何
+using ZincXManagerClient.Models;  // 客户端自身
+using ZincXManagerClient.ViewModels;  // 客户端自身
+using ZincXManagerShared.Logging;  // 共享库
+using ZincXManagerShared.Network;  // 共享库
 
 namespace ZincXManagerClient.Views;
 
 public partial class MainWindow : Window
 {
+    /// <summary>主窗口的构造函数:挂心跳、拉伸、拖拽,恢复上次状态。</summary>
     public MainWindow()
     {
         InitializeComponent();
@@ -182,10 +183,13 @@ public partial class MainWindow : Window
         }
     }
 
+    /// <summary>刷新日志。</summary>
     private void OnRefreshLogClick(object? sender, RoutedEventArgs e) => Vm?.LoadLog();
 
+    /// <summary>刷新更新日志。</summary>
     private void OnRefreshChangelogClick(object? sender, RoutedEventArgs e) => Vm?.LoadChangelog();
 
+    /// <summary>刷新网页。</summary>
     private void OnLoadWebClick(object? sender, RoutedEventArgs e)
     {
         if (Vm is not null)
@@ -271,6 +275,7 @@ public partial class MainWindow : Window
         _officialTimer.Start();
     }
 
+    /// <summary>连接状态变化后刷新。</summary>
     private void OnConnectChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
         if (e.PropertyName == nameof(ConnectViewModel.IsConnected))
@@ -279,6 +284,7 @@ public partial class MainWindow : Window
         }
     }
 
+    /// <summary>处理官方验证结果。</summary>
     private void OnOfficialChecked(bool ok, string detail)
     {
         if (Vm is not { } vm)
@@ -428,8 +434,10 @@ public partial class MainWindow : Window
         BeginMoveDrag(e);
     }
 
+    /// <summary>点最小化按钮:窗口最小化。</summary>
     private void OnMinimizeClick(object? sender, RoutedEventArgs e) => WindowState = WindowState.Minimized;
 
+    /// <summary>点右上角关闭按钮:关掉这个窗口。</summary>
     private void OnCloseClick(object? sender, RoutedEventArgs e) => Close();
 
     /// <summary>点左上 Logo:回到主界面(不选任何页面)。</summary>
@@ -446,8 +454,10 @@ public partial class MainWindow : Window
         this.FindControl<FunctionPickerView>("ManagePage")?.SetContent("管理", Vm.ManageItems);
     }
 
+    /// <summary>回默认页。</summary>
     private void OnLogoClick(object? sender, RoutedEventArgs e) => Vm?.ClearSelection();
 
+    /// <summary>切页面。</summary>
     private void OnNavItemClick(object? sender, RoutedEventArgs e)
     {
         if (sender is not Button { DataContext: NavItem item }) return;
@@ -462,6 +472,7 @@ public partial class MainWindow : Window
         Vm?.SelectNav(item);
     }
 
+    // 独立的好友窗口;打开过就复用。
     private FriendsWindow? _friendsWindow;
 
     /// <summary>打开(或激活)好友条窗体。</summary>
@@ -528,6 +539,7 @@ public partial class MainWindow : Window
         }
     }
 
+    /// <summary>删除本地消息。</summary>
     private void OnDeleteMessageClick(object? sender, RoutedEventArgs e)
     {
         if (sender is Button { DataContext: MessageItem item } && Vm is { } vm)
@@ -595,6 +607,7 @@ public partial class MainWindow : Window
         _heartbeat.Start();
     }
 
+    /// <summary>心跳:断了重连,5 次失败切回连接页。</summary>
     private async Task HeartbeatAsync()
     {
         var connect = ClientSession.Connect;
@@ -660,6 +673,7 @@ public partial class MainWindow : Window
     private Size _gripStartSize;
     private bool _gripDragging;
 
+    /// <summary>按下手柄,开始拉伸。</summary>
     private void OnGripPressed(object? sender, PointerPressedEventArgs e)
     {
         _gripDragging = true;
@@ -669,6 +683,7 @@ public partial class MainWindow : Window
         e.Handled = true;
     }
 
+    /// <summary>拖手柄改窗口大小。</summary>
     private void OnGripMoved(object? sender, PointerEventArgs e)
     {
         if (!_gripDragging) { return; }
@@ -678,6 +693,7 @@ public partial class MainWindow : Window
         e.Handled = true;
     }
 
+    /// <summary>结束拉伸。</summary>
     private void OnGripReleased(object? sender, PointerReleasedEventArgs e)
     {
         _gripDragging = false;

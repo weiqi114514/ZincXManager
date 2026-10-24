@@ -1,6 +1,6 @@
-using Avalonia.Controls;
-using Avalonia.Input;
-using Avalonia.Interactivity;
+using Avalonia.Controls;  // 窗口与控件
+using Avalonia.Input;  // 鼠标键盘输入
+using Avalonia.Interactivity;  // 路由事件
 
 namespace ZincXManagerClient.Views;
 
@@ -15,19 +15,26 @@ public partial class EconomyView : UserControl
         InitializeComponent();
     }
 
+    /// <summary>打开商店。</summary>
     private void OnStorePressed(object? sender, PointerPressedEventArgs e) => OpenStore();
 
+    /// <summary>点「进入」:打开商店。</summary>
     private void OnStoreEnter(object? sender, RoutedEventArgs e) => OpenStore();
 
+    /// <summary>打开银行。</summary>
     private void OnBankPressed(object? sender, PointerPressedEventArgs e) => OpenBank();
 
+    /// <summary>点「进入」:打开银行。</summary>
     private void OnBankEnter(object? sender, RoutedEventArgs e) => OpenBank();
 
+    /// <summary>打开商店(未接服务端)。</summary>
     private void OpenStore()
         => _ = MessageDialog.InfoAsync(OwnerWindow(), "商店", "商店功能还没做", hint: "先占个位置,做好之后从这里进");
 
+    /// <summary>打开银行(未接服务端)。</summary>
     private void OpenBank()
         => _ = MessageDialog.InfoAsync(OwnerWindow(), "银行", "银行功能还没做", hint: "先占个位置,做好之后从这里进");
 
+    /// <summary>取宿主窗口。</summary>
     private Window? OwnerWindow() => TopLevel.GetTopLevel(this) as Window;
 }

@@ -1,5 +1,5 @@
-using System.Security.Cryptography;
-using System.Text;
+using System.Security.Cryptography;  // 加密与哈希
+using System.Text;  // 文本编码与 StringBuilder
 
 namespace ZincXManagerShared.Security;
 
@@ -14,8 +14,10 @@ public sealed class SessionHandshake
     private const string SaltText = "zxm-session-v1";
     private const string InfoText = "zxmc-zxms";
 
+    // 本次握手的 ECDH 实例。
     private readonly ECDiffieHellman _ecdh;
 
+    /// <summary>会话握手:生成 P-256 密钥对,和对端换公钥后导出会话密钥。</summary>
     public SessionHandshake()
     {
         _ecdh = ECDiffieHellman.Create(ECCurve.NamedCurves.nistP256);
@@ -58,16 +60,21 @@ public sealed class SessionCrypto
     private const int NonceSize = 12;
     private const int TagSize = 16;
 
+    // 发送方向的 AES-GCM。
     private readonly AesGcm _send;
+    // 接收方向的 AES-GCM。
     private readonly AesGcm _recv;
+    // 发送序号(防止重放)。
     private long _counter;
 
+    /// <summary>会话密钥:由 ECDH 共享密钥派生出 AES-256-GCM。</summary>
     public SessionCrypto(byte[] sendKey, byte[] recvKey)
     {
         _send = new AesGcm(sendKey, TagSize);
         _recv = new AesGcm(recvKey, TagSize);
     }
 
+    /// <summary>加密一段负载,输出 nonce + 密文 + tag。</summary>
     public byte[] Encrypt(byte[] plain)
     {
         var nonce = new byte[NonceSize];
@@ -80,6 +87,7 @@ public sealed class SessionCrypto
         return output;
     }
 
+    /// <summary>解密一段负载,校验 tag。</summary>
     public byte[] Decrypt(byte[] blob)
     {
         if (blob.Length < NonceSize + TagSize)

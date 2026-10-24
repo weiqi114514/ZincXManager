@@ -1,7 +1,7 @@
-using System;
-using System.Globalization;
-using Avalonia.Data.Converters;
-using ZincXManagerShared.Logging;
+using System;  // 基础类型 / 常用静态方法
+using System.Globalization;  // 区域与格式化
+using Avalonia.Data.Converters;  // 界面框架
+using ZincXManagerShared.Logging;  // 共享库
 
 namespace ZincXManagerClient.Models;
 
@@ -34,6 +34,7 @@ public class MessageBodyConverter : IValueConverter
         }
     }
 
+    /// <summary>绑定回写时的反向转换(界面 → 数据)。</summary>
     public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
         => throw new NotSupportedException();
 }

@@ -1,15 +1,16 @@
-using System.Collections.Specialized;
-using Avalonia.Controls;
-using ZincXManagerShared;
-using ZincXManagerShared.Logging;
-using Avalonia.Input;
-using Avalonia.Interactivity;
-using ZincXManagerClient.ViewModels;
+using System.Collections.Specialized;  // 集合变更通知
+using Avalonia.Controls;  // 窗口与控件
+using ZincXManagerShared;  // 共享库
+using ZincXManagerShared.Logging;  // 共享库
+using Avalonia.Input;  // 鼠标键盘输入
+using Avalonia.Interactivity;  // 路由事件
+using ZincXManagerClient.ViewModels;  // 客户端自身
 
 namespace ZincXManagerClient.Views;
 
 public partial class ConnectWindow : Window
 {
+    /// <summary>连接窗口的构造函数:初始化界面与事件。</summary>
     public ConnectWindow()
     {
         InitializeComponent();
@@ -83,8 +84,10 @@ public partial class ConnectWindow : Window
         BeginMoveDrag(e);
     }
 
+    /// <summary>点最小化按钮:窗口最小化。</summary>
     private void OnMinimizeClick(object? sender, RoutedEventArgs e) => WindowState = WindowState.Minimized;
 
+    /// <summary>点右上角关闭按钮:关掉这个窗口。</summary>
     private void OnCloseClick(object? sender, RoutedEventArgs e) => Close();
 
     /// <summary>切换连接模式(按钮的 Tag 就是模式名);重复点同一个模式也重填一次目标地址。</summary>
@@ -97,6 +100,7 @@ public partial class ConnectWindow : Window
         }
     }
 
+    /// <summary>按当前模式和目标地址连接。</summary>
     private async void OnConnectClick(object? sender, RoutedEventArgs e)
     {
         if (Vm is null)
@@ -117,11 +121,13 @@ public partial class ConnectWindow : Window
         await Vm.ConnectAsync();
     }
 
+    /// <summary>断开当前连接。</summary>
     private async void OnDisconnectClick(object? sender, RoutedEventArgs e)
     {
         if (Vm is not null) await Vm.DisconnectAsync();
     }
 
+    /// <summary>清空日志。</summary>
     private void OnClearLogClick(object? sender, RoutedEventArgs e) => Vm?.ClearLogs();
 
     /// <summary>连上之后进入主界面(原来的主界面,连接界面关闭)。</summary>
@@ -188,6 +194,7 @@ public partial class ConnectWindow : Window
         await MessageDialog.InfoAsync(owner, "已保存", $"官方服务端地址已改为 {ip}:{port}。", hint: "");
     }
 
+    /// <summary>进主界面。</summary>
     private void OnOpenMainClick(object? sender, RoutedEventArgs e)
     {
         // 连接好之后先进登录界面;登录成功再由登录窗口进主界面(不在这里直进主界面)

@@ -1,6 +1,6 @@
-using System;
-using System.Security.Cryptography;
-using System.Text;
+using System;  // 基础类型 / 常用静态方法
+using System.Security.Cryptography;  // 加密与哈希
+using System.Text;  // 文本编码与 StringBuilder
 
 namespace ZincXManagerShared.Account;
 
@@ -24,6 +24,7 @@ public static class MachineCode
         return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(text))).ToLowerInvariant();
     }
 
+    /// <summary>取第一块网卡 MAC(按 MAC 排序,避免顺序不定)。</summary>
     private static string FirstMac()
     {
         try
@@ -49,6 +50,7 @@ public static class MachineCode
         return "nomac";
     }
 
+    /// <summary>取系统盘卷序列号。</summary>
     private static string VolumeSerial()
     {
         try
@@ -68,6 +70,7 @@ public static class MachineCode
     }
 
     [System.Runtime.InteropServices.DllImport("kernel32.dll", CharSet = System.Runtime.InteropServices.CharSet.Unicode, SetLastError = true)]
+    /// <summary>P/Invoke:取卷序列号。</summary>
     private static extern bool GetVolumeInformation(string rootPathName, StringBuilder? volumeNameBuffer, int volumeNameSize,
         out uint volumeSerialNumber, out uint maximumComponentLength, out uint fileSystemFlags,
         StringBuilder? fileSystemNameBuffer, int fileSystemNameSize);

@@ -29,6 +29,8 @@
         <Color x:Key="ThemeMutedColor">#8FCBDF</Color>
 
         <!-- 滚动条(键名来自 Fluent 的 ScrollBar 模板) -->
+        <!-- 静止状态的滑块:Fluent 模板默认读这个键,漏了它滑块就一直用系统灰蓝 -->
+        <SolidColorBrush x:Key="ScrollBarThumbFill" Color="#8FCBDF"/>
         <SolidColorBrush x:Key="ScrollBarPanningThumbBackground" Color="#8FCBDF"/>
         <SolidColorBrush x:Key="ScrollBarThumbFillPointerOver" Color="#2662A7"/>
         <SolidColorBrush x:Key="ScrollBarThumbFillPressed" Color="#1F5292"/>

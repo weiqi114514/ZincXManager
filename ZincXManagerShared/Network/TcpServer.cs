@@ -1,9 +1,9 @@
-using System.Collections.Concurrent;
-using System.Net;
-using System.Net.Sockets;
-using ZincXManagerShared.Logging;
+using System.Collections.Concurrent;  // 并发集合(多线程共享)
+using System.Net;  // IP 地址与网络端点
+using System.Net.Sockets;  // TCP 套接字
+using ZincXManagerShared.Logging;  // 共享库
 
-using ZincXManagerShared.Security;
+using ZincXManagerShared.Security;  // 共享库
 
 namespace ZincXManagerShared.Network;
 

@@ -1,6 +1,6 @@
-using System.Net;
-using System.Net.Sockets;
-using ZincXManagerShared.Security;
+using System.Net;  // IP 地址与网络端点
+using System.Net.Sockets;  // TCP 套接字
+using ZincXManagerShared.Security;  // 共享库
 
 namespace ZincXManagerShared.Network;
 

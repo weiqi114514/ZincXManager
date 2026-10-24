@@ -29,6 +29,7 @@ public static class MessageCard
     public const string Update = "update";
     public const string Choice = "choice";
     public const string Input = "input";
+    // 卡片动作:选择。
     public const string Select = "select";
 
     /// <summary>合法种类。</summary>

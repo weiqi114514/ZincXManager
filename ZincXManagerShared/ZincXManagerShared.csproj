@@ -10,4 +10,9 @@
     <IsAotCompatible>true</IsAotCompatible>
   </PropertyGroup>
 
+  <ItemGroup>
+    <!-- 正版许可证:ECDSA 签名 + XML 格式(GitHub: junian/Standard.Licensing,MIT) -->
+    <PackageReference Include="Standard.Licensing" Version="1.3.1" />
+  </ItemGroup>
+
 </Project>

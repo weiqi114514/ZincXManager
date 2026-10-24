@@ -1,4 +1,4 @@
-using Avalonia.Controls;
+using Avalonia.Controls;  // 窗口与控件
 
 namespace ZincXManagerClient.Views;
 

@@ -1,5 +1,5 @@
-using System.Text;
-using ZincXManagerShared.Logging;
+using System.Text;  // 文本编码与 StringBuilder
+using ZincXManagerShared.Logging;  // 共享库
 
 namespace ZincXManagerShared.Network;
 

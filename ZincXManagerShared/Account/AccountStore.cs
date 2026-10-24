@@ -1,7 +1,7 @@
-using System.Text;
-using System.Text.Json;
-using ZincXManagerShared.Logging;
-using ZincXManagerShared.Network;
+using System.Text;  // 文本编码与 StringBuilder
+using System.Text.Json;  // JSON 序列化
+using ZincXManagerShared.Logging;  // 共享库
+using ZincXManagerShared.Network;  // 共享库
 
 namespace ZincXManagerShared.Account;
 
@@ -56,6 +56,7 @@ public sealed class AccountStore
     private readonly object _sync = new();
     private readonly Dictionary<string, Account> _map = new(StringComparer.OrdinalIgnoreCase);
     private readonly string[] _levels;
+    // 自助注册时的默认等级。
     private readonly string _registerLevel;
 
     /// <summary>别的账号表里是否已经有这个名字(服务端账号 / 用户账号不能重名)。</summary>

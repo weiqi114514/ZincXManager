@@ -1,4 +1,4 @@
-using System.Net;
+using System.Net;  // IP 地址与网络端点
 
 namespace ZincXManagerShared.Network;
 

@@ -1,14 +1,14 @@
-using System;
-using System.Collections.ObjectModel;
-using System.IO;
-using System.Threading.Tasks;
-using Avalonia.Media;
-using Avalonia.Media.Imaging;
-using ZincXManagerShared.Account;
-using ZincXManagerShared.Network;
-using CommunityToolkit.Mvvm.ComponentModel;
-using ZincXManagerClient.Models;
-using ZincXManagerShared.Logging;
+using System;  // 基础类型 / 常用静态方法
+using System.Collections.ObjectModel;  // 可观察集合(界面绑定用)
+using System.IO;  // 文件与目录读写
+using System.Threading.Tasks;  // async / await 异步
+using Avalonia.Media;  // 画刷 / 颜色 / 几何
+using Avalonia.Media.Imaging;  // 位图
+using ZincXManagerShared.Account;  // 共享库
+using ZincXManagerShared.Network;  // 共享库
+using CommunityToolkit.Mvvm.ComponentModel;  // MVVM 可观察对象
+using ZincXManagerClient.Models;  // 客户端自身
+using ZincXManagerShared.Logging;  // 共享库
 
 namespace ZincXManagerClient.ViewModels;
 
@@ -23,9 +23,13 @@ public partial class SettingsViewModel : ViewModelBase
     private const string KeyMode = "mode";
     private const string KeyRole = "role";
     private const string KeyWallpaper = "wallpaper";
+    // config 键:子服地址。
     private const string KeyCzip = "czip";
+    // config 键:子服端口。
     private const string KeyCzport = "czport";
+    // config 键:官方服地址。
     private const string KeyOzip = "ozip";
+    // config 键:官方服端口。
     private const string KeyOzport = "ozport";
 
     /// <summary>选了新壁纸 / 恢复默认时通知外面(参数为空串表示恢复默认)。</summary>
@@ -430,6 +434,7 @@ public partial class SettingsViewModel : ViewModelBase
         Logger.Log(LogLevel.Info, "[ZXMC] 已退出登录");
     }
 
+    /// <summary>头像字节 → 可显示的位图。</summary>
     private static IImage? ToImage(byte[] bytes)
     {
         if (bytes.Length == 0)

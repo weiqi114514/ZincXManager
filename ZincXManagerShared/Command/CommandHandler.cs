@@ -1,11 +1,11 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading;
-using ZincXManagerShared.FileIO;
-using ZincXManagerShared.Logging;
-using ZincXManagerShared.Network;
+using System;  // 基础类型 / 常用静态方法
+using System.Collections.Generic;  // 泛型集合
+using System.Linq;  // LINQ 查询
+using System.Text;  // 文本编码与 StringBuilder
+using System.Threading;  // 线程 / 取消 / 定时
+using ZincXManagerShared.FileIO;  // 共享库
+using ZincXManagerShared.Logging;  // 共享库
+using ZincXManagerShared.Network;  // 共享库
 
 namespace ZincXManagerShared.Command;
 
@@ -41,6 +41,7 @@ public class CommandHandler
     // file 分支共用的文件实例（整个 file 命令只用这一个）
     private readonly ZFile _file = new ZFile();
 
+    /// <summary>命令处理器:挂命令表、起命令线程、按行分发。</summary>
     public CommandHandler()
     {
         RegisterBuiltInCommands();
@@ -90,10 +91,12 @@ public class CommandHandler
         Logger.Log(LogLevel.Info, "[Command] 命令监听已启动，输入 help 查看可用命令");
     }
 
+    /// <summary>停止命令线程。</summary>
     public void Stop() => _running = false;
 
     // ---------- 线程主循环 ----------
 
+    /// <summary>读命令并分发。</summary>
     private void Loop()
     {
         while (_running)
@@ -119,6 +122,7 @@ public class CommandHandler
 
     // ---------- 命令分发：最长前缀匹配 ----------
 
+    /// <summary>解析并执行一条命令。</summary>
     private void Dispatch(string[] parts)
     {
         for (int take = parts.Length; take >= 1; take--)
@@ -162,6 +166,7 @@ public class CommandHandler
 
     // ---------- 内置命令注册 ----------
 
+    /// <summary>注册内置命令(help / info / file / log 这些)。</summary>
     private void RegisterBuiltInCommands()
     {
         // 顶层
@@ -217,7 +222,7 @@ public class CommandHandler
 
     // ---------- 顶层命令 ----------
 
-    // help：无参列出全部；带参显示该命令的用法
+    /// <summary>help:无参列出全部命令,带参显示该命令用法。</summary>
     private void CmdHelp(string[] args)
     {
         // help <命令>：显示该命令用法
@@ -300,7 +305,7 @@ public class CommandHandler
         Logger.Log(LogLevel.Info, sbAll.ToString().TrimEnd('\r', '\n'));
     }
 
-    // 显示单个命令的详细信息
+    /// <summary>显示单条命令的用法。</summary>
     private void ShowCommandDetail(string name)
     {
         var usage = _usages.TryGetValue(name, out var u) ? u : name;
@@ -315,17 +320,20 @@ public class CommandHandler
         Logger.Log(LogLevel.Info, sb.ToString().TrimEnd('\r', '\n'));
     }
 
+    /// <summary>exit:退出进程。</summary>
     private void CmdExit(string[] args)
     {
         Logger.Log(LogLevel.Info, "[Command] 收到退出命令，正在退出...");
         Environment.Exit(0);
     }
 
+    /// <summary>echo:原样回显一行(自测用)。</summary>
     private void CmdEcho(string[] args)
     {
         Logger.Log(LogLevel.Info, string.Join(' ', args));
     }
 
+    /// <summary>info:打印本端身份 / 端口 / 连接数等信息。</summary>
     private void CmdInfo(string[] args)
     {
         var sb = new StringBuilder();
@@ -338,6 +346,7 @@ public class CommandHandler
         Logger.Log(LogLevel.Info, sb.ToString().TrimEnd('\r', '\n'));
     }
 
+    /// <summary>info pc:打印运行环境(系统 / 内存 / 进程)信息。</summary>
     private void CmdInfoPC(string[] args)
     {
         var sb = new StringBuilder();
@@ -392,6 +401,7 @@ public class CommandHandler
 
     // ---------- file 命令：方法一一映射 ----------
 
+    /// <summary>file open:打开一个文件句柄并缓存起来。</summary>
     private void CmdFileFileOperate(string[] args)
     {
         if (args.Length < 2)
@@ -409,12 +419,14 @@ public class CommandHandler
             Logger.Log(LogLevel.Error, $"fileoperate 失败: {fileName} (mode={mode})");
     }
 
+    /// <summary>file close:关掉缓存的文件句柄。</summary>
     private void CmdFileCloseFile(string[] args)
     {
         if (_file.CloseFile())
             Logger.Log(LogLevel.Info, "closefile 成功");
     }
 
+    /// <summary>file read txt:按文本读文件。</summary>
     private void CmdFileReadFileTxt(string[] args)
     {
         if (!RequireOpen()) return;
@@ -428,6 +440,7 @@ public class CommandHandler
         Logger.Log(LogLevel.Info, string.Join('\n', lines));
     }
 
+    /// <summary>file read map:按"键=值"读配置型文件。</summary>
     private void CmdFileReadFileMap(string[] args)
     {
         if (!RequireOpen()) return;
@@ -445,6 +458,7 @@ public class CommandHandler
         Logger.Log(LogLevel.Info, sb.ToString().TrimEnd('\r', '\n'));
     }
 
+    /// <summary>file read bin:按字节读文件(十六进制输出)。</summary>
     private void CmdFileReadFileBin(string[] args)
     {
         if (!RequireOpen()) return;
@@ -462,6 +476,7 @@ public class CommandHandler
         Logger.Log(LogLevel.Info, $"已读取 {data.Length} 字节");
     }
 
+    /// <summary>file dir:列目录。</summary>
     private void CmdFileReadDir(string[] args)
     {
         if (args.Length < 1)
@@ -479,6 +494,7 @@ public class CommandHandler
         Logger.Log(LogLevel.Info, text.TrimEnd('\r', '\n'));
     }
 
+    /// <summary>file write txt:覆盖写入文本文件。</summary>
     private void CmdFileWriteFileTxt(string[] args)
     {
         if (!RequireOpen()) return;
@@ -520,6 +536,7 @@ public class CommandHandler
         }
     }
 
+    /// <summary>file set:写一个键值到配置文件。</summary>
     private void CmdFileWriteFileMap(string[] args)
     {
         if (!RequireOpen()) return;
@@ -538,6 +555,7 @@ public class CommandHandler
             Logger.Log(LogLevel.Error, "writefilemap 失败");
     }
 
+    /// <summary>file get:读某个键的值。</summary>
     private void CmdFileMapGet(string[] args)
     {
         if (!RequireOpen()) return;
@@ -554,6 +572,7 @@ public class CommandHandler
         Logger.Log(LogLevel.Info, $"{key} = {v}");
     }
 
+    /// <summary>file get txt:按行号取一行文本。</summary>
     private void CmdFileTxtGet(string[] args)
     {
         if (!RequireOpen()) return;
@@ -572,6 +591,7 @@ public class CommandHandler
 
     // ---------- 辅助 ----------
 
+    /// <summary>检查文件句柄是否已打开,没开就报错。</summary>
     private bool RequireOpen()
     {
         if (!_file.IsOpen)
@@ -582,6 +602,7 @@ public class CommandHandler
         return true;
     }
 
+    /// <summary>把 1/0/true/false 解析成 bool。</summary>
     private static bool TryParseBool(string s, out bool result)
     {
         if (bool.TryParse(s, out result)) return true;
@@ -591,6 +612,7 @@ public class CommandHandler
         return false;
     }
 
+    /// <summary>把等级名解析成 LogLevel。</summary>
     private static bool TryParseLevel(string s, out LogLevel level)
     {
         // 只接受明确的等级名，不接受随便的字符串
@@ -600,6 +622,7 @@ public class CommandHandler
 
     // ---------- 分支：log ----------
 
+    /// <summary>log write:往日志里写一条(排查用)。</summary>
     private void CmdLogWrite(string[] args)
     {
         if (args.Length < 1)
@@ -631,6 +654,7 @@ public class CommandHandler
         Logger.Log(level, "[用户] " + text);
     }
 
+    /// <summary>log level:调日志级别。</summary>
     private void CmdLogLevel(string[] args)
     {
         if (args.Length < 1)

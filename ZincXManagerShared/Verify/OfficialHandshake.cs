@@ -1,5 +1,7 @@
-using System.Security.Cryptography;
-using System.Text;
+// System.Security.Cryptography:HMACSHA256(证明里的防重放校验)与随机 nonce
+using System.Security.Cryptography;  // 加密与哈希
+// System.Text:UTF-8 编解码(证明里的许可证原文)
+using System.Text;  // 文本编码与 StringBuilder
 
 namespace ZincXManagerShared.Verify;
 
@@ -125,7 +127,7 @@ public static class OfficialHandshake
             Code = "ok",
             Detail = "对端官方验证通过",
             Name = verdict.Name,
-            Machine = verdict.Machine,
+            KeyHash = verdict.KeyHash,
             Serial = verdict.Serial,
             Expires = verdict.Expires,
             Pepper = verdict.Pepper,
@@ -133,9 +135,11 @@ public static class OfficialHandshake
         };
     }
 
+    /// <summary>用 pepper + nonce 算 HMAC-SHA256。</summary>
     private static byte[] Mac(byte[] pepper, string nonce)
         => HMACSHA256.HashData(pepper, Encoding.UTF8.GetBytes(nonce));
 
+    /// <summary>构造一个"不通过"的结论。</summary>
     private static OfficialVerdict Bad(string code, string detail)
         => new() { Ok = false, Code = code, Detail = detail };
 }

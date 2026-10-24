@@ -1,5 +1,5 @@
-using System;
-using CommunityToolkit.Mvvm.ComponentModel;
+using System;  // 基础类型 / 常用静态方法
+using CommunityToolkit.Mvvm.ComponentModel;  // MVVM 可观察对象
 
 namespace ZincXManagerClient.Models;
 

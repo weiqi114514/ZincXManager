@@ -1,4 +1,4 @@
-using System;
+using System;  // 基础类型 / 常用静态方法
 
 namespace ZincXManagerClient;
 

@@ -3,6 +3,27 @@
 ZincXManager(锌X管理面板)的变更记录。格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 版本号与 GitHub Release 标签对应(如 `v0.1.1`);未发布的改动记在「未发布」下,发布时归档为版本号。
 
+## [a0.5.2] - 2026-10-24
+
+> **本版本主题**:重做正版验证。签名从 RSA 换成 ECDSA,许可证不再绑机器码,改成绑授权码;顺带把客户端入口拆成小函数、注释写细。
+
+### 重构
+- **正版验证改用 [Standard.Licensing](https://github.com/junian/Standard.Licensing)**(MIT):许可证是 XML,签名算法 ECDSA P-256 + SHA-512,私钥以口令加密保存,不再有明文私钥文件
+- **许可证改成绑授权码,不再绑机器码**:授权码放在 exe 同目录的 `official.key`,许可证里只存它的 SHA-256。换机器、换硬盘都不用重签,机器码只用于封禁等其它用途
+- **不通过的原因更细**:`no-file`(没有 lic)/ `key-missing`(没有 official.key)/ `key`(授权码不匹配)/ `expired` / `bad-signature` / `bad-format`,排查时日志直接说哪一种
+
+### 说明
+- **旧的 RSA 许可证全部作废**,包括之前签发的 `official.lic` 与服务器上那份;旧钥匙已备份到 `_keys-rsa-bak`
+- 内置公钥换了,**客户端和子服务端要跟着更新**,否则对端校验会报 `bad-signature`
+- NativeAOT 实测可用:官方服务端单文件约 8.9 MB,启动、验签、监听都正常
+
+### 清理
+- **删掉主窗口里那份废弃的「好友」内嵌页**(FriendsView + IsFriends 绑定):好友早就独立成窗了,留着是死代码
+- 删掉没用到的图标常量(LogoTriangle / Caret)和模板遗留下来的 avalonia-logo.ico
+
+### 代码
+- 客户端入口 `Program.cs` 拆成 `OpenLog() / RunDesktop() / BuildAvaloniaApp()` 三个静态函数,并补齐逐变量、逐 using 的注释
+
 ## [a0.5.1] - 2026-10-21
 
 > **本版本主题**:**机器码要稳定**。修掉一个在多网卡环境(Docker / 面板 / 远程桌面都会装虚拟网卡)下会让官方许可证「时好时坏」的缺陷。

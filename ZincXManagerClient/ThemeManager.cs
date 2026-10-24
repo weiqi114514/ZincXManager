@@ -1,10 +1,10 @@
-using System;
-using Avalonia;
-using Avalonia.Controls;
-using Avalonia.Controls.ApplicationLifetimes;
-using Avalonia.Media;
-using ZincXManagerClient.Models;
-using ZincXManagerShared.Logging;
+using System;  // 基础类型 / 常用静态方法
+using Avalonia;  // 界面框架入口
+using Avalonia.Controls;  // 窗口与控件
+using Avalonia.Controls.ApplicationLifetimes;  // 桌面应用生命周期
+using Avalonia.Media;  // 画刷 / 颜色 / 几何
+using ZincXManagerClient.Models;  // 客户端自身
+using ZincXManagerShared.Logging;  // 共享库
 
 namespace ZincXManagerClient;
 
@@ -174,6 +174,7 @@ internal static class ThemeManager
 
         // 滚动条:Fluent 的 ScrollBar 模板把轨道/滑块颜色写在资源键里(见 ScrollBar.xaml),
         // 所以改这些键就能连"槽"一起跟主题
+        resources["ScrollBarThumbFill"] = Solid(theme.Muted);            // 静止滑块(少了它就不跟配色)
         resources["ScrollBarPanningThumbBackground"] = Solid(theme.Muted);
         resources["ScrollBarThumbFillPointerOver"] = Solid(theme.Primary);
         resources["ScrollBarThumbFillPressed"] = Solid(theme.PrimaryDark);
@@ -253,6 +254,7 @@ internal static class ThemeManager
         resources["ThemeWindowVeil"] = Solid("#FFFFFFFF");
     }
 
+    /// <summary>颜色字符串 → 画刷(换主题时统一走这里)。</summary>
     private static IBrush Solid(string argbHex) => new SolidColorBrush(Color.Parse(argbHex));
 
     /// <summary>给 6 位颜色加上透明度前缀(0x00-0xFF),得到 #AARRGGBB。</summary>

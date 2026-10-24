@@ -1,6 +1,6 @@
-using System.Collections.Concurrent;
-using System.Net;
-using System.Text;
+using System.Collections.Concurrent;  // 并发集合(多线程共享)
+using System.Net;  // IP 地址与网络端点
+using System.Text;  // 文本编码与 StringBuilder
 
 namespace ZincXManagerShared.Network;
 

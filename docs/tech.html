@@ -71,23 +71,23 @@ footer{color:var(--muted);border-top:1px solid var(--line);margin-top:30px;paddi
 <h2 id="howto">如何操作</h2>
 <p class="lead">这一节是纯文字操作说明,不是自动生成的表。按顺序做即可。</p>
 
-<h3>① 生成许可证(license / lic)</h3>
-<p>许可证由 <span class="mono">ZXMTL</span>(ZincXManagerLicTool)签发。<b>私钥只在你自己的机器上,永远不要进仓库、不要发给别人</b>。</p>
-<pre><code># 1) 只做一次:生成一对钥匙(私钥 + 公钥),顺手把公钥写进 OfficialKey.cs
-zxm-lic keygen &lt;钥匙目录&gt;
-zxm-lic keygen &lt;钥匙目录&gt; --emit &lt;OfficialKey.cs 路径&gt;
+<h3>① 生成许可证(official.lic / official.key)</h3>
+<p>许可证由 <span class="mono">ZXMTL</span>(ZincXManagerLicTool)签发,<b>ECDSA P-256 签名、XML 格式</b>(库用标准 <span class="mono">Standard.Licensing</span>)。<b>私钥只在你自己的机器上,永远不要进仓库、不要发给别人</b>;私钥用口令加密存盘,签发时给同一个口令。</p>
+<pre><code># 1) 只做一次:生成一对钥匙(私钥口令加密 + 公钥),顺手把公钥写进 OfficialKey.cs
+set ZXM_LIC_PASS=你的口令
+zxm-lic keygen &lt;钥匙目录&gt; --emit &lt;OfficialKey.cs 路径&gt; --pass &lt;口令&gt;
 
-# 2) 给某台机器签一张证
-#    机器码让对方在 ZXMS / ZXMOS 控制台敲 info 打印出来
-zxm-lic sign &lt;私钥.pem&gt; &lt;机器码&gt; &lt;名称&gt; &lt;天数|0=永久&gt; &lt;输出.lic&gt; [序列号]
+# 2) 给某个授权码签一张证(不再需要机器码)
+zxm-lic sign &lt;私钥.pem&gt; &lt;授权码&gt; &lt;名称&gt; &lt;天数|0=100年&gt; &lt;输出.lic&gt; [序列号] --pass &lt;口令&gt;
 
-# 3) 签完验一下(用公钥 + 指定机器码)
-zxm-lic verify &lt;公钥.pem&gt; &lt;证书.lic&gt; &lt;机器码&gt;</code></pre>
-<p>拿到 <span class="mono">.lic</span> 后放到服务端程序同目录,启动时自动读取。换机器 = 用新机器码重新签,旧证不通用。</p>
+# 3) 签完验一下(用公钥 + 同一个授权码)
+zxm-lic verify &lt;公钥.pem&gt; &lt;证书.lic&gt; &lt;授权码&gt;</code></pre>
+<p>部署时把 <span class="mono">official.lic</span> 与 <span class="mono">official.key</span>(授权码原文,一行)放在 ZXMOS 程序同目录,启动时两个都要读:证验签 + 有效期,key 用来和证里的授权码哈希比对。<b>许可证绑授权码、不绑机器码</b> —— 换机器/换硬盘不用重签,但授权码不能泄露。</p>
+<div class="tips">校验不通过时代码会说明是哪一种:<span class="mono">no-file</span>(没有 lic)、<span class="mono">key-missing</span>(没有 official.key)、<span class="mono">key</span>(授权码对不上)、<span class="mono">expired</span>(过期)、<span class="mono">bad-signature</span>(签名不对)、<span class="mono">bad-format</span>(文件坏了)。</div>
 
 <h3>② 看身份码(排障用)</h3>
 <ul>
-  <li>子服务端控制台敲 <span class="mono">info</span>:会打印进程 ID、.NET 版本、日志文件、<b>本机机器码</b>与<b>服务端码</b>。</li>
+  <li>子服务端控制台敲 <span class="mono">info</span>:会打印进程 ID、.NET 版本、日志文件、<b>本机机器码</b>(只作参考,许可证已不绑它)与<b>服务端码</b>。</li>
   <li>身份码对不上时,握手会被拒绝,日志里会写明是哪一段(机器码 / 服务端码)。</li>
 </ul>
 

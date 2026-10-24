@@ -1,11 +1,11 @@
-using System;
-using System.Threading.Tasks;
-using Avalonia.Threading;
-using CommunityToolkit.Mvvm.ComponentModel;
-using ZincXManagerClient.Models;
-using ZincXManagerShared.Account;
-using ZincXManagerShared.Logging;
-using ZincXManagerShared.Network;
+using System;  // 基础类型 / 常用静态方法
+using System.Threading.Tasks;  // async / await 异步
+using Avalonia.Threading;  // UI 线程调度
+using CommunityToolkit.Mvvm.ComponentModel;  // MVVM 可观察对象
+using ZincXManagerClient.Models;  // 客户端自身
+using ZincXManagerShared.Account;  // 共享库
+using ZincXManagerShared.Logging;  // 共享库
+using ZincXManagerShared.Network;  // 共享库
 
 namespace ZincXManagerClient.ViewModels;
 
@@ -308,6 +308,7 @@ public partial class OobeViewModel : ViewModelBase
     [NotifyPropertyChangedFor(nameof(CanGoNext))]
     public partial bool IsLoggedIn { get; set; }
 
+    /// <summary>首次使用向导的视图模型。</summary>
     public OobeViewModel()
     {
         _connect.AccountReply += OnAccountReply;
@@ -340,6 +341,7 @@ public partial class OobeViewModel : ViewModelBase
         }
     }
 
+    /// <summary>取消息的纯文本正文(不带格式段)。</summary>
     private static string Text(string key, string fallback)
     {
         var value = ClientConfig.GetOrEmpty(key);
@@ -453,6 +455,7 @@ public partial class OobeViewModel : ViewModelBase
         return ok;
     }
 
+    /// <summary>收到账号类回执(601/603)后更新界面状态。</summary>
     private void OnAccountReply(ushort type, string text)
     {
         // 负载:"ok|名称|ID|等级" 或 "err|原因"
@@ -495,6 +498,7 @@ public partial class OobeViewModel : ViewModelBase
         _connect.Port = Mode == "OOS" ? OzPort : CzPort;
     }
 
+    /// <summary>把当前填的数据源存进 config。</summary>
     private void SaveDataSource()
     {
         ClientConfig.Set("mode", Mode);
@@ -547,6 +551,8 @@ public partial class OobeViewModel : ViewModelBase
             $"[ZXMC] OOBE 完成:模式={Mode} 数据源={CzipText()} 官方={OzipText()} 账号={ClientSession.User} 等级={Level}");
     }
 
+    /// <summary>子服地址的输入框文本(读写 config 里的 czip/czport)。</summary>
     private string CzipText() => $"{CzIp}:{CzPort}";
+    /// <summary>官方服地址的输入框文本(读写 config 里的 ozip/ozport)。</summary>
     private string OzipText() => $"{OzIp}:{OzPort}";
 }

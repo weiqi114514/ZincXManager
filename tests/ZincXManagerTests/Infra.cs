@@ -1,9 +1,9 @@
-using System.Diagnostics;
-using System.Net.Sockets;
-using System.Text;
-using ZincXManagerShared.Network;
-using ZincXManagerShared.Security;
-using ZincXManagerShared.Account;
+using System.Diagnostics;  // 进程 / 调试
+using System.Net.Sockets;  // TCP 套接字
+using System.Text;  // 文本编码与 StringBuilder
+using ZincXManagerShared.Network;  // 共享库
+using ZincXManagerShared.Security;  // 共享库
+using ZincXManagerShared.Account;  // 共享库
 using SocketClient = System.Net.Sockets.TcpClient;
 
 namespace ZincXManagerTests;
@@ -46,6 +46,7 @@ public sealed class Svc : IDisposable
     public string Dir { get; }
     private readonly StringBuilder _out = new();
 
+    /// <summary>服务端/客户端进程包装:起进程、等端口、发控制台命令、收集输出。</summary>
     private Svc(Process p, string dir)
     {
         Proc = p;
@@ -76,6 +77,7 @@ public sealed class Svc : IDisposable
         return targetDir;
     }
 
+    /// <summary>启动一个进程(可顺带写 config.ini),输出与错误都异步收集起来。</summary>
     public static Svc Start(string exe, string dir, IDictionary<string, string>? ini = null)
     {
         Directory.CreateDirectory(dir);
@@ -100,6 +102,7 @@ public sealed class Svc : IDisposable
         return new Svc(p, dir);
     }
 
+    /// <summary>一条断言的可读文本(通过/失败 + 细节)。</summary>
     public string Out { get { lock (_out) { return _out.ToString(); } } }
 
     /// <summary>往服务端控制台敲一条命令(notice / push / info 这类)。</summary>
@@ -128,6 +131,7 @@ public sealed class Svc : IDisposable
         return false;
     }
 
+    /// <summary>结束进程并释放句柄。</summary>
     public void Dispose()
     {
         try { if (!Proc.HasExited) { Proc.Kill(true); } } catch { }
@@ -147,8 +151,10 @@ public sealed class Probe : IDisposable
     public string Name { get; }
     public string? LastAck { get; private set; }
 
+    /// <summary>纯 C# 客户端探针:自己走握手、登录、收包,不依赖 ZXMC 界面。</summary>
     private Probe(string name) { Name = name; }
 
+    /// <summary>连上服务端并完成加密协商(380/381),之后所有包都加密。</summary>
     public static async Task<Probe> ConnectAsync(string host, int port, string connMode, int timeoutMs = 8000)
     {
         var p = new Probe($"{host}:{port}");
@@ -185,6 +191,7 @@ public sealed class Probe : IDisposable
         return p;
     }
 
+    /// <summary>按协议头(Id/Type/Flags/Length,大端)组包并发送,自动加密。</summary>
     public async Task SendAsync(ushort packetId, ushort type, byte[] payload)
     {
         var body = payload;
@@ -209,6 +216,7 @@ public sealed class Probe : IDisposable
         await _ns.FlushAsync();
     }
 
+    /// <summary>读一个完整包(16 字节头 + 负载),带超时。</summary>
     private async Task<(ushort Type, byte[] Data)?> ReadOneAsync(int timeoutMs)
     {
         using var cts = new CancellationTokenSource(timeoutMs);
@@ -261,6 +269,7 @@ public sealed class Probe : IDisposable
         return null;
     }
 
+    /// <summary>注册一个账号,返回服务端是否回 ok|。</summary>
     public async Task<bool> RegisterAsync(string user, string pass, string machine, int timeoutMs = 8000)
     {
         var hash = PasswordHash.Hash(user, pass);
@@ -270,6 +279,7 @@ public sealed class Probe : IDisposable
         return ack?.StartsWith("ok|") == true;
     }
 
+    /// <summary>登录:带 nonce/proof 走挑战-响应,返回是否回 ok|。</summary>
     public async Task<bool> LoginAsync(string user, string pass, string machine, string level, string side, int timeoutMs = 8000)
     {
         var hash = PasswordHash.Hash(user, pass);
@@ -281,6 +291,7 @@ public sealed class Probe : IDisposable
         return ack?.StartsWith("ok|") == true;
     }
 
+    /// <summary>结束进程并释放句柄。</summary>
     public void Dispose()
     {
         try { _ns?.DisposeAsync(); } catch { }

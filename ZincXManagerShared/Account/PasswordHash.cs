@@ -1,5 +1,5 @@
-using System.Security.Cryptography;
-using System.Text;
+using System.Security.Cryptography;  // 加密与哈希
+using System.Text;  // 文本编码与 StringBuilder
 
 namespace ZincXManagerShared.Account;
 

@@ -1,11 +1,11 @@
-using System.Net;
-using System.Net.Sockets;
-using ZincXManagerShared.Logging;
+using System.Net;  // IP 地址与网络端点
+using System.Net.Sockets;  // TCP 套接字
+using ZincXManagerShared.Logging;  // 共享库
 
 // BCL 的连接对象与本类同名,文件内部统一用 SocketClient 指代它
 using SocketClient = System.Net.Sockets.TcpClient;
 
-using ZincXManagerShared.Security;
+using ZincXManagerShared.Security;  // 共享库
 
 namespace ZincXManagerShared.Network;
 

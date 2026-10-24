@@ -1,7 +1,7 @@
-using System;
-using System.Collections.Generic;
-using System.IO;
-using ZincXManagerShared.FileIO;
+using System;  // 基础类型 / 常用静态方法
+using System.Collections.Generic;  // 泛型集合
+using System.IO;  // 文件与目录读写
+using ZincXManagerShared.FileIO;  // 共享库
 
 namespace ZincXManagerShared.Logging;
 

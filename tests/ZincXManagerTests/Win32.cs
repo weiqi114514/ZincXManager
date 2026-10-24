@@ -1,4 +1,4 @@
-using System.Runtime.InteropServices;
+using System.Runtime.InteropServices;  // P/Invoke 调系统 API
 
 namespace ZincXManagerTests;
 
@@ -20,9 +20,13 @@ public static class Win32
     [StructLayout(LayoutKind.Sequential)]
     private struct RECT { public int Left, Top, Right, Bottom; }
 
+    // mouse_event:按下左键。
     private const uint MOUSEEVENTF_LEFTDOWN = 0x0002;
+    // mouse_event:松开左键。
     private const uint MOUSEEVENTF_LEFTUP = 0x0004;
+    // keybd_event:按键抬起。
     private const uint KEYEVENTF_KEYUP = 0x0002;
+    // SetWindowPos:不改尺寸 / 不改层级。
     private const uint SWP_NOSIZE = 0x0001, SWP_NOZORDER = 0x0004;
 
     /// <summary>窗口是否还在、能不能拿到矩形。</summary>
@@ -44,6 +48,7 @@ public static class Win32
         Thread.Sleep(300);
     }
 
+    /// <summary>把鼠标移到屏幕坐标点一下(给 GUI 注入用)。</summary>
     public static void ClickAt(int x, int y)
     {
         SetForegroundWindow(GetForegroundWindow());
@@ -84,5 +89,6 @@ public static class Win32
         }
     }
 
+    /// <summary>P/Invoke:发一次按键(按下/抬起)。</summary>
     public static void PressEnter() { keybd_event(0x0D, 0, 0, UIntPtr.Zero); Thread.Sleep(30); keybd_event(0x0D, 0, KEYEVENTF_KEYUP, UIntPtr.Zero); }
 }

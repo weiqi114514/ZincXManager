@@ -1,16 +1,17 @@
-using System;
-using System.Threading.Tasks;
-using Avalonia.Controls;
-using Avalonia.Interactivity;
-using Avalonia.Platform.Storage;
-using ZincXManagerShared.Logging;
-using ZincXManagerClient.Models;
-using ZincXManagerClient.ViewModels;
+using System;  // 基础类型 / 常用静态方法
+using System.Threading.Tasks;  // async / await 异步
+using Avalonia.Controls;  // 窗口与控件
+using Avalonia.Interactivity;  // 路由事件
+using Avalonia.Platform.Storage;  // 界面框架
+using ZincXManagerShared.Logging;  // 共享库
+using ZincXManagerClient.Models;  // 客户端自身
+using ZincXManagerClient.ViewModels;  // 客户端自身
 
 namespace ZincXManagerClient.Views;
 
 public partial class SettingsView : UserControl
 {
+    /// <summary>设置页的构造函数。</summary>
     public SettingsView()
     {
         InitializeComponent();
@@ -223,6 +224,7 @@ public partial class SettingsView : UserControl
         }
     }
 
+    /// <summary>打开目录(不存在则提示)。</summary>
     private void OpenFolder(string path)
     {
         try
@@ -240,14 +242,19 @@ public partial class SettingsView : UserControl
         }
     }
 
+    /// <summary>打开官网。</summary>
     private void OnOpenWebsiteClick(object? sender, RoutedEventArgs e) => OpenUrl(Vm?.WebsiteUrl ?? "");
 
+    /// <summary>打开文档中心。</summary>
     private void OnOpenDocsClick(object? sender, RoutedEventArgs e) => OpenUrl(Vm?.DocsUrl ?? "");
 
+    /// <summary>打开源码仓库。</summary>
     private void OnOpenRepoClick(object? sender, RoutedEventArgs e) => OpenUrl(Vm?.RepoUrl ?? "");
 
+    /// <summary>打开线上更新日志页面。</summary>
     private void OnOpenChangelogClick(object? sender, RoutedEventArgs e) => OpenUrl(Vm?.ChangelogUrl ?? "");
 
+    /// <summary>打开程序目录。</summary>
     private void OnOpenConfigFolderClick(object? sender, RoutedEventArgs e)
     {
         var p = Vm?.ConfigPath;
@@ -258,8 +265,10 @@ public partial class SettingsView : UserControl
         }
     }
 
+    /// <summary>打开日志目录。</summary>
     private void OnOpenLogFolderClick(object? sender, RoutedEventArgs e) => OpenFolder(Vm?.LogDirectory ?? "");
 
+    /// <summary>切设置分区。</summary>
     private void OnSubNavClick(object? sender, RoutedEventArgs e)
     {
         if (sender is Button { DataContext: SubNavItem item })

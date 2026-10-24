@@ -1,7 +1,7 @@
-using Avalonia.Controls;
-using Avalonia.Controls.Templates;
-using ZincXManagerClient.ViewModels;
-using ZincXManagerClient.Views;
+using Avalonia.Controls;  // 窗口与控件
+using Avalonia.Controls.Templates;  // 界面框架
+using ZincXManagerClient.ViewModels;  // 客户端自身
+using ZincXManagerClient.Views;  // 客户端自身
 
 namespace ZincXManagerClient;
 
@@ -25,5 +25,6 @@ public class ViewLocator : IDataTemplate
         _ => new TextBlock { Text = "Not Found: " + param.GetType().Name },
     };
 
+    /// <summary>视图定位:按 ViewModel 类型找对应窗口/控件。</summary>
     public bool Match(object? data) => data is ViewModelBase;
 }

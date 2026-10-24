@@ -1,12 +1,12 @@
-using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
-using Avalonia;
-using Avalonia.Controls;
-using Avalonia.Controls.ApplicationLifetimes;
-using Avalonia.Markup.Xaml;
-using ZincXManagerClient.ViewModels;
-using ZincXManagerClient.Views;
+using System;  // 基础类型 / 常用静态方法
+using System.Collections.Generic;  // 泛型集合
+using System.Threading.Tasks;  // async / await 异步
+using Avalonia;  // 界面框架入口
+using Avalonia.Controls;  // 窗口与控件
+using Avalonia.Controls.ApplicationLifetimes;  // 桌面应用生命周期
+using Avalonia.Markup.Xaml;  // XAML 加载
+using ZincXManagerClient.ViewModels;  // 客户端自身
+using ZincXManagerClient.Views;  // 客户端自身
 
 namespace ZincXManagerClient;
 
@@ -27,12 +27,19 @@ public partial class App : Application
     public override void OnFrameworkInitializationCompleted()
     {
         // 已经有一个在跑 → 直接退出(新开的这个不留)
-        if (!SingleInstanceMutex.WaitOne(0))
+        // 注意:客户端没有控制台,这句一定要落日志,不然"双击没反应"完全查不到原因
+        // 测试要同时开多个客户端(套件9/11 会各起一个),给个开关跳过互斥
+        var skipSingleInstance = Environment.GetEnvironmentVariable("ZXM_NO_SINGLE_INSTANCE") == "1";
+        if (!skipSingleInstance && !SingleInstanceMutex.WaitOne(0))
         {
-            System.Console.WriteLine("[ZXMC] 已有一个客户端在运行,本次启动退出");
+            ZincXManagerShared.Logging.Logger.Log(ZincXManagerShared.Logging.LogLevel.Warning,
+                "[ZXMC] 已有一个客户端在运行,本次启动退出(单实例互斥)");
             Environment.Exit(0);
             return;
         }
+
+        ZincXManagerShared.Logging.Logger.Log(ZincXManagerShared.Logging.LogLevel.Info,
+            "[ZXMC] 单实例互斥已拿到,开始初始化界面");
         // 先把 config 里存的配色 / 透明样式应用一次,否则所有窗口都是写死的默认蓝
         ThemeManager.ApplySaved();
 

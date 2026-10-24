@@ -1,6 +1,6 @@
-using System.Diagnostics;
-using System.Text;
-using ZincXManagerTests;
+using System.Diagnostics;  // 进程 / 调试
+using System.Text;  // 文本编码与 StringBuilder
+using ZincXManagerTests;  // 测试项目自身命名空间
 
 const string Ws = @"G:\文档\deepseek-harness\default-workspace";
 const string DebugMs = @"E:\report\ZincXManager\ZincXManagerServer\bin\Debug\net10.0";
@@ -262,23 +262,16 @@ var results = new List<SuiteResult>();
     var dir = Svc.PrepareBin(DebugOs, Path.Combine(Ws, "_zxt", "official"));
     try
     {
-        // 1) 拿本机机器码(ZXMTL machine)
-        var machine = "";
-        var psiM = new ProcessStartInfo(LicTool, "machine")
-        {
-            RedirectStandardOutput = true, UseShellExecute = false, CreateNoWindow = true,
-            StandardOutputEncoding = Encoding.UTF8,
-        };
-        using (var pm = Process.Start(psiM)!)
-        {
-            machine = (await pm.StandardOutput.ReadToEndAsync()).Trim();
-            pm.WaitForExit(10000);
-        }
-        r.Add("ZXMTL 打出本机机器码", machine.Length == 64 && machine.All(Uri.IsHexDigit), machine);
-
+        // 1) 官方密钥 + 授权码(许可证现在绑授权码,不再绑机器码)
         var keyDir = Path.Combine(Ws, "_keys");
-        var priv = Path.Combine(keyDir, "zxmos-official-private.pem");
+        var priv = Path.Combine(keyDir, "official-private.pem");
+        var pub = Path.Combine(keyDir, "official-public.pem");
+        var licenseKey = "CSharp-Test-License-Key";
+        var pass = Environment.GetEnvironmentVariable("ZXM_LIC_PASS") ?? "";
         r.Add("官方私钥存在", File.Exists(priv), priv);
+        r.Add("官方公钥存在", File.Exists(pub), pub);
+        r.Add("签证实入口令可用", pass.Length > 0, pass.Length > 0 ? "" : "环境变量 ZXM_LIC_PASS 没设置");
+        File.WriteAllText(Path.Combine(dir, "official.key"), licenseKey, new UTF8Encoding(false));
 
         // 2) 无证启动:应退出 code=2 并提示放 official.lic
         if (File.Exists(Path.Combine(dir, "official.lic"))) { File.Delete(Path.Combine(dir, "official.lic")); }
@@ -295,11 +288,15 @@ var results = new List<SuiteResult>();
 
         // 3) 签证 → 带证启动
         var licOut = Path.Combine(dir, "official.lic");
-        var psiS = new ProcessStartInfo(LicTool, $@"sign ""{priv}"" {machine} CSharp-官方服 30 ""{licOut}"" ZX-CS-0001")
+        var psiS = new ProcessStartInfo(LicTool)
         {
             RedirectStandardOutput = true, RedirectStandardError = true, UseShellExecute = false,
             CreateNoWindow = true, StandardOutputEncoding = Encoding.UTF8,
         };
+        foreach (var arg in new[] { "sign", priv, licenseKey, "CSharp-官方服", "30", licOut, "ZX-CS-0001", "--pass", pass })
+        {
+            psiS.ArgumentList.Add(arg);
+        }
         using (var ps = Process.Start(psiS)!)
         {
             var o = await ps.StandardOutput.ReadToEndAsync();
@@ -529,6 +526,16 @@ var results = new List<SuiteResult>();
 
     try
     {
+        // 先清掉上次跑剩的客户端 / 服务端:它们会占着单实例互斥和端口
+        foreach (var proc in Process.GetProcessesByName("ZincXManagerClient").Concat(Process.GetProcessesByName("ZincXManagerOServer")))
+        {
+            try { proc.Kill(true); } catch { }
+        }
+        foreach (var proc in Process.GetProcessesByName("ZincXManagerClient").Concat(Process.GetProcessesByName("ZincXManagerOServer")))
+        {
+            try { proc.WaitForExit(3000); } catch { }
+        }
+
         r.Add("AOT 包四个目录都在",
             Directory.Exists(aotOs) && Directory.Exists(aotMs) && Directory.Exists(aotCli) && Directory.Exists(aotLic));
         // 客户端带 2~3 个原生渲染库(SkiaSharp 之类)是正常的,其余端必须是干净单文件
@@ -586,6 +593,8 @@ var results = new List<SuiteResult>();
         {
             WorkingDirectory = cliDir, UseShellExecute = false, CreateNoWindow = false,
         };
+        // 跳过单实例互斥:AOT 与 Debug 两个客户端要同时起
+        cliPsi.Environment["ZXM_NO_SINGLE_INSTANCE"] = "1";
         using var cli = Process.Start(cliPsi)!;
         var gotWindow = false;
         for (var i = 0; i < 40; i++)
@@ -718,10 +727,13 @@ var results = new List<SuiteResult>();
             "oobe=0", "mode=OS", "czip=127.0.0.1", "czport=21412", "glass=1",
         }, new UTF8Encoding(false));
 
-        cli = Process.Start(new ProcessStartInfo(Path.Combine(cliDir, "ZincXManagerClient.exe"))
+        var guiPsi = new ProcessStartInfo(Path.Combine(cliDir, "ZincXManagerClient.exe"))
         {
             WorkingDirectory = cliDir, UseShellExecute = false,
-        })!;
+        };
+        // 同上:跳过单实例互斥
+        guiPsi.Environment["ZXM_NO_SINGLE_INSTANCE"] = "1";
+        cli = Process.Start(guiPsi)!;
 
         // 等窗口出来(标题非空)
         var ready = false;

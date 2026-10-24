@@ -1,5 +1,5 @@
-using ZincXManagerShared.FileIO;
-using ZincXManagerShared.Logging;
+using ZincXManagerShared.FileIO;  // 共享库
+using ZincXManagerShared.Logging;  // 共享库
 
 namespace ZincXManagerClient;
 

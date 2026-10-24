@@ -1,4 +1,4 @@
-﻿<Window Icon="/Assets/zxm-window.png" xmlns="https://github.com/avaloniaui"
+<Window Icon="/Assets/zxm-window.png" xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:ZincXManagerClient.ViewModels"
         xmlns:models="using:ZincXManagerClient.Models"
@@ -354,9 +354,6 @@
           <views:FunctionPickerView x:Name="CommunityPage" Grid.Row="0" Grid.RowSpan="2" IsVisible="{Binding IsCommunity}"/>
           <views:FunctionPickerView x:Name="OrganizationPage" Grid.Row="0" Grid.RowSpan="2" IsVisible="{Binding IsOrganization}"/>
           <views:FunctionPickerView x:Name="ManagePage" Grid.Row="0" Grid.RowSpan="2" IsVisible="{Binding IsManage}"/>
-
-          <!-- 好友:预留两栏好友窗口 -->
-          <views:FriendsView Grid.Row="0" Grid.RowSpan="2" IsVisible="{Binding IsFriends}"/>
 
           <!-- 其它页面:占位 -->
           <StackPanel Grid.Row="0" Grid.RowSpan="2" VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="6"

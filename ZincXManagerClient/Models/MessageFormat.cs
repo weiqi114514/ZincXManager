@@ -1,10 +1,10 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text.RegularExpressions;
-using Avalonia.Controls;
-using Avalonia.Controls.Documents;
-using Avalonia.Media;
+using System;  // 基础类型 / 常用静态方法
+using System.Collections.Generic;  // 泛型集合
+using System.Linq;  // LINQ 查询
+using System.Text.RegularExpressions;  // 正则
+using Avalonia.Controls;  // 窗口与控件
+using Avalonia.Controls.Documents;  // 界面框架
+using Avalonia.Media;  // 画刷 / 颜色 / 几何
 
 namespace ZincXManagerClient.Models;
 
@@ -125,6 +125,7 @@ public static class MessageFormat
         return tb;
     }
 
+    /// <summary>把 Markdown 片段转成消息排版用的段。</summary>
     private static List<(string kind, int level, string content)> ParseMarkdown(string text)
     {
         var list = new List<(string, int, string)>();
@@ -178,6 +179,7 @@ public static class MessageFormat
         return list;
     }
 
+    /// <summary>把 HTML 片段转成消息排版用的段。</summary>
     private static List<(string kind, int level, string content)> ParseHtml(string text)
     {
         var list = new List<(string, int, string)>();

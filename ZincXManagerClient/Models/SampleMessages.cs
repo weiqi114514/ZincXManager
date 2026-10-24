@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+using System.Collections.Generic;  // 泛型集合
 
 namespace ZincXManagerClient.Models;
 

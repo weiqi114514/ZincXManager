@@ -1,172 +1,173 @@
-using System.Security.Cryptography;
-using System.Text;
-using ZincXManagerShared.Account;
+// System:DateTime / Guid / Environment 这些基础类型
+using System;  // 基础类型 / 常用静态方法
+// System.Collections.Generic:签发时组织 ProductFeatures 的字典
+using System.Collections.Generic;  // 泛型集合
+// System.IO:读 official.lic / official.key
+using System.IO;  // 文件与目录读写
+// System.Linq:把校验链结果转成列表
+using System.Linq;  // LINQ 查询
+// System.Security.Cryptography:SHA-256(授权码指纹与 pepper)
+using System.Security.Cryptography;  // 加密与哈希
+// System.Text:UTF-8 编解码
+using System.Text;  // 文本编码与 StringBuilder
+// Standard.Licensing:License 对象与签名/校验入口
+using Standard.Licensing;  // 许可证对象与签名
+// Standard.Licensing.Validation:ExpirationDate / Signature 校验链与失败类型
+using Standard.Licensing.Validation;  // 许可证校验链
 
 namespace ZincXManagerShared.Verify;
 
 /// <summary>官方验证的结论(校验通过 / 哪一种不通过)。</summary>
 public sealed class OfficialVerdict
 {
-    /// <summary>过了没有。</summary>
     public bool Ok { get; init; }
-
-    /// <summary>不通过的原因代号(<c>ok</c> / <c>no-file</c> / <c>bad-format</c> / <c>bad-signature</c> / <c>machine</c> / <c>expired</c> / <c>no-key</c>)。</summary>
     public string Code { get; init; } = "ok";
-
-    /// <summary>给人看的一句话(管理员自己看,不发给对端)。</summary>
     public string Detail { get; init; } = "";
-
-    /// <summary>许可证上写的服务器名。</summary>
     public string Name { get; init; } = "";
-
-    /// <summary>许可证绑定的机器码(小写十六进制)。</summary>
-    public string Machine { get; init; } = "";
-
-    /// <summary>序列号。</summary>
+    /// <summary>许可证绑定的授权码哈希(小写十六进制)。</summary>
+    public string KeyHash { get; init; } = "";
     public string Serial { get; init; } = "";
-
-    /// <summary>到期时间(<see cref="DateTime.MinValue"/> = 永久)。</summary>
     public DateTime Expires { get; init; }
-
-    /// <summary>
-    /// 只有校验通过才有:由许可证算出来的 32 字节 pepper。
-    /// 给"第二层"用 —— 把验证结果混进握手 / 运行逻辑,光把检查注释掉是没用的。
-    /// </summary>
     public byte[] Pepper { get; init; } = [];
-
-    /// <summary>通过校验的那张许可证原文(第二层要把它出示给对端)。</summary>
     public string LicenseText { get; init; } = "";
 }
 
 /// <summary>
-/// ZXMOS 的官方(正版)验证:一张由官方私钥签发的 <c>official.lic</c>,绑定机器码、带有效期。
-///
-/// <para><b>信任模型(别指望混淆能挡住破解,要认清秘密在哪):</b></para>
-/// <list type="number">
-///   <item>签名用的 <b>私钥永不出厂</b> —— 只在你自己的签发工具里(<c>zxm-lic</c>);</item>
-///   <item>程序里只内置 <b>公钥</b>(打散存放,见 <see cref="OfficialKey"/>),它只能<b>验签</b>,不能签发;</item>
-///   <item>许可证绑定 <b>机器码</b> —— 拷到别的机器上验不过;</item>
-///   <item>够狠的一步是"结果参与运行"(见 <see cref="OfficialVerdict.Pepper"/>) —— 光把 <c>if</c> 删掉,后面就处处对不上。</item>
-/// </list>
-///
-/// <para>许可证是纯文本 <c>键=值</c>,一行一个字段,签名盖在"规范化后的负载"上,所以手改任何一个字段都会验签失败。</para>
+/// ZXMOS 官方验证:ECDSA 签名的许可证(Standard.Licensing,XML),绑定<b>授权码</b>而不是机器码。
+/// 授权码放 exe 同目录的 official.key,许可证里只存它的 SHA-256;换机器不用重签。
 /// </summary>
 public static class OfficialLicense
 {
-    /// <summary>许可证文件名(放 exe 同目录)。</summary>
     public const string FileName = "official.lic";
-
-    /// <summary>产品名(许可证第 1 段,防止 ZXMS 的证书拿来给 ZXMOS 用)。</summary>
+    public const string KeyFileName = "official.key";
     public const string Product = "ZXMOS";
 
-    /// <summary>
-    /// 规范化负载 —— <b>签发和校验必须用同一个函数</b>,不然签名对不上。
-    /// 格式:<c>产品|名称|机器码|签发日|到期日|序列号</c>(机器码统一小写)。
-    /// </summary>
-    public static string Canonical(string product, string name, string machine, string issued, string expires, string serial)
-        => string.Join('|', product.Trim(), name.Trim(), machine.Trim().ToLowerInvariant(),
-            issued.Trim(), expires.Trim(), serial.Trim());
+    // 许可证 features 键:产品名。
+    private const string FProduct = "product";
+    // 许可证 features 键:授权码哈希。
+    private const string FKey = "keyhash";
+    // 许可证 features 键:序列号。
+    private const string FSerial = "serial";
+    // 许可证 features 键:签发日期。
+    private const string FIssued = "issued";
+    // 许可证 features 键:服务器名。
+    private const string FName = "name";
 
-    /// <summary>用一张许可证 + 一把公钥 + 本机机器码做校验(自己验自己:机器码必须对)。</summary>
-    public static OfficialVerdict Verify(string licenseText, RSA? key, string machine)
-        => VerifyCore(licenseText, key, machine, true);
+    /// <summary>授权码 → 许可证里存的哈希。</summary>
+    public static string HashKey(string licenseKey)
+        => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(licenseKey.Trim()))).ToLowerInvariant();
 
-    /// <summary>
-    /// 对端校验(第二层):只验"这张证是不是官方签发的 + 过没过期",**不比对机器码** ——
-    /// 验证方根本不知道对方机器的机器码,那是服务端自己的事(它自己那关在启动时已经过了)。
-    /// </summary>
-    public static OfficialVerdict VerifyPeer(string licenseText, RSA? key)
-        => VerifyCore(licenseText, key, "", false);
+    /// <summary>本机自检:官方公钥 + 授权码都比对。</summary>
+    public static OfficialVerdict Verify(string licenseText, string publicKey, string licenseKey)
+        => VerifyCore(licenseText, publicKey, licenseKey, requireKey: true);
 
-    private static OfficialVerdict VerifyCore(string licenseText, RSA? key, string machine, bool requireMachine)
+    /// <summary>对端校验:只验签名与有效期,不知道对方授权码。</summary>
+    public static OfficialVerdict VerifyPeer(string licenseText, string publicKey)
+        => VerifyCore(licenseText, publicKey, "", requireKey: false);
+
+    private static OfficialVerdict VerifyCore(string licenseText, string publicKey, string licenseKey, bool requireKey)
     {
-        if (key is null)
+        if (string.IsNullOrWhiteSpace(licenseText))
+        {
+            return new OfficialVerdict { Ok = false, Code = "bad-format", Detail = "许可证是空的" };
+        }
+
+        if (string.IsNullOrWhiteSpace(publicKey))
         {
             return new OfficialVerdict { Ok = false, Code = "no-key", Detail = "内置公钥读取失败" };
         }
 
-        if (!TryRead(licenseText, out var fields))
+        License lic;
+        try
         {
-            return new OfficialVerdict { Ok = false, Code = "bad-format", Detail = "许可证格式不对(要 键=值 的行)" };
+            lic = License.Load(licenseText);
+        }
+        catch (Exception ex)
+        {
+            return new OfficialVerdict { Ok = false, Code = "bad-format", Detail = "许可证解析失败:" + ex.Message };
         }
 
-        var product = Field(fields, "product");
-        var name = Field(fields, "name");
-        var licMachine = Field(fields, "machine");
-        var issued = Field(fields, "issued");
-        var expires = Field(fields, "expires");
-        var serial = Field(fields, "serial");
-        var signature = Field(fields, "sig");
-
-        if (product.Length == 0 || licMachine.Length == 0 || signature.Length == 0)
+        IReadOnlyList<IValidationFailure> failures;
+        try
         {
-            return new OfficialVerdict { Ok = false, Code = "bad-format", Detail = "许可证缺字段(product / machine / sig 必须有)" };
+            failures = lic.Validate()
+                .ExpirationDate(DateTime.Now)
+                .And()
+                .Signature(publicKey)
+                .AssertValidLicense()
+                .ToList();
+        }
+        catch (Exception ex)
+        {
+            return new OfficialVerdict { Ok = false, Code = "bad-format", Detail = "许可证校验失败:" + ex.Message };
+        }
+
+        if (failures.Count > 0)
+        {
+            foreach (var failure in failures)
+            {
+                if (failure is LicenseExpiredValidationFailure)
+                {
+                    return new OfficialVerdict
+                    {
+                        Ok = false,
+                        Code = "expired",
+                        Detail = "许可证已于 " + lic.Expiration.ToString("yyyy-MM-dd") + " 到期",
+                        Name = Field(lic, FName),
+                        Serial = Field(lic, FSerial),
+                        Expires = lic.Expiration,
+                    };
+                }
+            }
+
+            return new OfficialVerdict
+            {
+                Ok = false,
+                Code = "bad-signature",
+                Detail = "签名对不上(许可证被改过,或者不是官方签发的)",
+            };
+        }
+
+        var product = Field(lic, FProduct);
+        var keyHash = Field(lic, FKey);
+        var serial = Field(lic, FSerial);
+        var name = Field(lic, FName);
+
+        if (product.Length == 0 || keyHash.Length == 0)
+        {
+            return new OfficialVerdict { Ok = false, Code = "bad-format", Detail = "许可证缺字段(product / keyhash 必须有)" };
         }
 
         if (!string.Equals(product, Product, StringComparison.OrdinalIgnoreCase))
         {
-            return new OfficialVerdict { Ok = false, Code = "bad-format", Detail = $"许可证是给 {product} 的,不是 {Product}" };
+            return new OfficialVerdict { Ok = false, Code = "bad-format", Detail = "许可证是给 " + product + " 的,不是 " + Product };
         }
 
-        var payload = Canonical(product, name, licMachine, issued, expires, serial);
-
-        byte[] sig;
-        try
+        if (requireKey)
         {
-            sig = Convert.FromBase64String(signature);
-        }
-        catch
-        {
-            return new OfficialVerdict { Ok = false, Code = "bad-format", Detail = "sig 不是合法的 Base64" };
-        }
-
-        var signed = false;
-        try
-        {
-            signed = key.VerifyData(Encoding.UTF8.GetBytes(payload), sig, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
-        }
-        catch
-        {
-            signed = false;
-        }
-
-        if (!signed)
-        {
-            // 签名不对 = 有人改过字段 / 自己拿别的钥匙签的
-            return new OfficialVerdict { Ok = false, Code = "bad-signature", Detail = "签名对不上(许可证被改过,或者不是官方签发的)" };
-        }
-
-        // 机器码:绑机器,拷走没用(对端校验时跳过这一步 —— 验证方不知道对方机器的机器码)
-        var here = MachineCode.Value.Trim().ToLowerInvariant();
-        if (requireMachine && !string.Equals(licMachine.Trim().ToLowerInvariant(), here, StringComparison.OrdinalIgnoreCase))
-        {
-            return new OfficialVerdict
-            {
-                Ok = false,
-                Code = "machine",
-                Detail = $"许可证是给另一台机器的(证上 {Short(licMachine)} / 本机 {(machine.Length > 0 ? Short(machine) : Short(here))})",
-                Name = name,
-                Machine = licMachine,
-                Serial = serial,
-            };
-        }
-
-        // 有效期:空 = 永久
-        var expiresAt = DateTime.MinValue;
-        if (expires.Length > 0 && DateTime.TryParse(expires, out var parsed))
-        {
-            expiresAt = parsed.Date.AddDays(1).AddSeconds(-1);   // 到期日当天还能用
-            if (DateTime.Now > expiresAt)
+            if (string.IsNullOrWhiteSpace(licenseKey))
             {
                 return new OfficialVerdict
                 {
                     Ok = false,
-                    Code = "expired",
-                    Detail = $"许可证已于 {parsed:yyyy-MM-dd} 到期",
+                    Code = "key-missing",
+                    Detail = "没找到授权码 " + KeyFileName + "(和 official.lic 放同一个目录)",
                     Name = name,
-                    Machine = licMachine,
                     Serial = serial,
-                    Expires = expiresAt,
+                    Expires = lic.Expiration,
+                };
+            }
+
+            if (!string.Equals(HashKey(licenseKey), keyHash.Trim(), StringComparison.OrdinalIgnoreCase))
+            {
+                return new OfficialVerdict
+                {
+                    Ok = false,
+                    Code = "key",
+                    Detail = "授权码和许可证不匹配(这份 official.lic 不是给这个授权码签的)",
+                    Name = name,
+                    Serial = serial,
+                    Expires = lic.Expiration,
                 };
             }
         }
@@ -175,42 +176,52 @@ public static class OfficialLicense
         {
             Ok = true,
             Code = "ok",
-            Detail = "官方验证通过",
+            Detail = "许可证有效",
             Name = name,
-            Machine = licMachine,
+            KeyHash = keyHash.Trim(),
             Serial = serial,
-            Expires = expiresAt,
-            Pepper = PepperOf(sig, name, licMachine, serial),
+            Expires = lic.Expiration,
+            Pepper = PepperOf(licenseText),
             LicenseText = licenseText,
         };
     }
 
-    /// <summary>
-    /// 本机自检:默认读工作目录下的 <c>official.lic</c>(可用环境变量 <c>ZXM_LICENSE</c> 指别的路径)。
-    /// </summary>
+    /// <summary>取许可证 features 里的一个字段,没有就返回空串。</summary>
+    private static string Field(License lic, string name)
+        => lic.ProductFeatures?.Get(name)?.Trim() ?? "";
+
+    /// <summary>本机自检:默认读工作目录下的 official.lic / official.key(可用 ZXM_LICENSE / ZXM_KEY 覆盖)。</summary>
     public static OfficialVerdict Check(string? directory = null)
     {
-        var path = Environment.GetEnvironmentVariable("ZXM_LICENSE");
-        if (string.IsNullOrWhiteSpace(path))
+        var dir = directory ?? Directory.GetCurrentDirectory();
+
+        var licensePath = Environment.GetEnvironmentVariable("ZXM_LICENSE");
+        if (string.IsNullOrWhiteSpace(licensePath))
         {
-            path = Path.Combine(directory ?? Directory.GetCurrentDirectory(), FileName);
+            licensePath = Path.Combine(dir, FileName);
+        }
+
+        var keyPath = Environment.GetEnvironmentVariable("ZXM_KEY");
+        if (string.IsNullOrWhiteSpace(keyPath))
+        {
+            keyPath = Path.Combine(dir, KeyFileName);
         }
 
         try
         {
-            if (!File.Exists(path))
+            if (!File.Exists(licensePath))
             {
                 return new OfficialVerdict
                 {
                     Ok = false,
                     Code = "no-file",
-                    Detail = $"没找到许可证 {path}(把官方签发的 {FileName} 放到 exe 同目录)",
+                    Detail = "没找到许可证 " + licensePath + "(把官方签发的 " + FileName + " 放到 exe 同目录)",
                 };
             }
 
-            var text = File.ReadAllText(path, Encoding.UTF8);
-            using var key = OfficialKey.Create();
-            return Verify(text, key, MachineCode.Value);
+            var text = File.ReadAllText(licensePath, Encoding.UTF8);
+            var licenseKey = File.Exists(keyPath) ? File.ReadAllText(keyPath, Encoding.UTF8).Trim() : "";
+            return Verify(text, OfficialKey.Create(), licenseKey);
         }
         catch (Exception ex)
         {
@@ -218,49 +229,30 @@ public static class OfficialLicense
         }
     }
 
-    /// <summary>把签名 + 许可信息搅成 pepper(第二层校验用;换了证就换 pepper)。</summary>
-    private static byte[] PepperOf(byte[] sig, string name, string machine, string serial)
+    /// <summary>签发一张证(给 zxm-lic 用):绑定授权码哈希、名称、序列号、天数(0 = 100 年)。</summary>
+    public static string Sign(string privateKey, string passphrase, string licenseKey, string name, int days, string serial)
     {
-        var seed = Encoding.UTF8.GetBytes(Canonical(Product, name, machine, "", "", serial));
-        var mixed = new byte[seed.Length + sig.Length];
-        seed.CopyTo(mixed, 0);
-        Array.Copy(sig, 0, mixed, seed.Length, sig.Length);
-        return SHA256.HashData(mixed);
+        var now = DateTime.Now;
+        var expires = days <= 0 ? now.AddYears(100) : now.AddDays(days);
+
+        var license = License.New()
+            .WithUniqueIdentifier(Guid.NewGuid())
+            .As(LicenseType.Standard)
+            .ExpiresAt(expires)
+            .WithProductFeatures(new Dictionary<string, string>
+            {
+                [FProduct] = Product,
+                [FKey] = HashKey(licenseKey),
+                [FSerial] = serial,
+                [FIssued] = now.ToString("yyyy-MM-dd"),
+                [FName] = name,
+            })
+            .CreateAndSignWithPrivateKey(privateKey, passphrase);
+
+        return license.ToString();
     }
 
-    /// <summary>读 键=值 的行;<c>#</c> 开头的行和空行跳过,<c>[节]</c> 也跳过。</summary>
-    private static bool TryRead(string text, out Dictionary<string, string> fields)
-    {
-        fields = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-
-        if (string.IsNullOrWhiteSpace(text))
-        {
-            return false;
-        }
-
-        foreach (var raw in text.Split('\n'))
-        {
-            var line = raw.Trim();
-            if (line.Length == 0 || line.StartsWith('#') || line.StartsWith('['))
-            {
-                continue;
-            }
-
-            var cut = line.IndexOf('=');
-            if (cut <= 0)
-            {
-                continue;
-            }
-
-            fields[line[..cut].Trim()] = line[(cut + 1)..].Trim();
-        }
-
-        return fields.Count > 0;
-    }
-
-    private static string Field(Dictionary<string, string> fields, string name)
-        => fields.TryGetValue(name, out var value) ? value : "";
-
-    private static string Short(string machine)
-        => machine.Length > 8 ? machine[..8] + "…" : machine;
+    /// <summary>由许可证原文算 pepper(第二层校验用)。</summary>
+    private static byte[] PepperOf(string licenseText)
+        => SHA256.HashData(Encoding.UTF8.GetBytes(licenseText));
 }

@@ -1,10 +1,10 @@
-using System;
-using System.Threading.Tasks;
-using Avalonia;
-using Avalonia.Controls;
-using Avalonia.Input;
-using Avalonia.Interactivity;
-using Avalonia.Media;
+using System;  // 基础类型 / 常用静态方法
+using System.Threading.Tasks;  // async / await 异步
+using Avalonia;  // 界面框架入口
+using Avalonia.Controls;  // 窗口与控件
+using Avalonia.Input;  // 鼠标键盘输入
+using Avalonia.Interactivity;  // 路由事件
+using Avalonia.Media;  // 画刷 / 颜色 / 几何
 
 namespace ZincXManagerClient.Views;
 
@@ -169,6 +169,7 @@ public partial class MessageDialog : Window
         return dialog._result;
     }
 
+    /// <summary>配置对话框内容。</summary>
     private void Configure(DialogOptions options)
     {
         TitleText.Text = options.Title;
@@ -261,6 +262,7 @@ public partial class MessageDialog : Window
         Close();
     }
 
+    /// <summary>回车确认 / Esc 取消。</summary>
     private void OnInputKeyDown(object? sender, KeyEventArgs e)
     {
         if (e.Key == Key.Enter)
@@ -269,6 +271,7 @@ public partial class MessageDialog : Window
         }
     }
 
+    /// <summary>按住标题栏拖动窗口。</summary>
     private void OnTitleBarPointerPressed(object? sender, PointerPressedEventArgs e)
     {
         if (e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
@@ -277,5 +280,6 @@ public partial class MessageDialog : Window
         }
     }
 
+    /// <summary>点右上角关闭按钮:关掉这个窗口。</summary>
     private void OnCloseClick(object? sender, RoutedEventArgs e) => Finish("cancel");
 }

@@ -1,6 +1,6 @@
-using System.Text;
-using System.Text.Json;
-using ZincXManagerShared.Logging;
+using System.Text;  // 文本编码与 StringBuilder
+using System.Text.Json;  // JSON 序列化
+using ZincXManagerShared.Logging;  // 共享库
 
 namespace ZincXManagerShared.Account;
 
