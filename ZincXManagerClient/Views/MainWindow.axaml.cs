@@ -374,8 +374,10 @@ public partial class MainWindow : Window
             return;
         }
 
-        var askText = "来自服务器的登录请求\n\n登录账号:" + player + "\n登录IP:" + ip + "\n所属地:" + geo + "\n\n是否允许他进入服务器?";
-        var agree = await MessageDialog.ConfirmAsync(this, "登录请求", askText, yes: "是", no: "否");
+        // 专用弹窗(外观和 MessageDialog 一套):显示账号 / IP / 归属地,让玩家决定放不放行
+        var dialog = new LoginRequestWindow(player, ip, geo);
+        await dialog.ShowDialog(this);
+        var agree = dialog.Agreed;
 
         try
         {

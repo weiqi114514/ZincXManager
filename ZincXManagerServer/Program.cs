@@ -18,7 +18,8 @@ using ZincXManagerServer.Command;  // 子服自身
 // 与 BCL 的 TcpClient 同名,起个别名
 using TcpClient = ZincXManagerShared.Network.TcpClient;
 
-using ZincXManagerServer.Login;  // 登录/绑定存储与归属地
+using ZincXManagerServer.Login;  // 归属地查询
+using ZincXManagerShared.Login;  // 绑定表 / 持久登录表 / 登录日志
 
 namespace ZincXManagerServer;
 
