@@ -22,7 +22,7 @@ public partial class WidgetsView : UserControl
         new WidgetEntry
         {
             Key = "bind", Title = "绑定 / 解绑", Description = "把 ZXMC 账号绑到 MC 玩家名上",
-            IconPath = Icons.Friends,
+            IconPath = Icons.Bind, Stroke = true,
         },
         new WidgetEntry
         {

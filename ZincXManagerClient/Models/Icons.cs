@@ -115,4 +115,12 @@ public static class Icons
     public const string OfficialSquare =
         "M2.6 9.2L12 3.6L21.4 9.2 M5 9.2V20.8 M12 9.2V20.8 M19 9.2V20.8 M2.6 20.8H21.4";
 
+    // 绑定:两个交扣的链环(描边)
+    public const string Bind =
+        "M10 13a5 5 0 0 0 7 0l2-2a5 5 0 0 0-7-7l-1 1 M14 11a5 5 0 0 0-7 0l-2 2a5 5 0 0 0 7 7l1-1";
+
+    // 解绑:断开的链环(描边,中间一道裂缝)
+    public const string Unbind =
+        "M9.5 13a5 5 0 0 0 5.5 0 M15 11a5 5 0 0 0-5.5 0 M12 2.5V9 M12 15v6.5";
+
 }

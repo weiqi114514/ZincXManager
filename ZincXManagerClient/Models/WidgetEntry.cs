@@ -14,4 +14,7 @@ public sealed class WidgetEntry
 
     /// <summary>图标矢量路径(SVG path 数据)。</summary>
     public string IconPath { get; init; } = "";
+
+    /// <summary>图标是描边(Stroke)还是实心(Fill);链环这类是描边。</summary>
+    public bool Stroke { get; init; }
 }

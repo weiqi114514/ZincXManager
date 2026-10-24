@@ -44,6 +44,17 @@
       <Setter Property="Fill" Value="{DynamicResource ThemePrimaryDark}"/>
       <Setter Property="VerticalAlignment" Value="Center"/>
     </Style>
+    <!-- 描边图标(链环这类):只画线,不填充 -->
+    <Style Selector="Path.fniconstroke">
+      <Setter Property="Width" Value="20"/>
+      <Setter Property="Height" Value="20"/>
+      <Setter Property="Stretch" Value="Uniform"/>
+      <Setter Property="Stroke" Value="{DynamicResource ThemePrimaryDark}"/>
+      <Setter Property="StrokeThickness" Value="1.7"/>
+      <Setter Property="StrokeLineCap" Value="Round"/>
+      <Setter Property="Fill" Value="Transparent"/>
+      <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
     <Style Selector="TextBlock.fntitle">
       <Setter Property="FontSize" Value="13.5"/>
       <Setter Property="FontWeight" Value="SemiBold"/>
@@ -71,7 +82,8 @@
             <DataTemplate x:DataType="models:WidgetEntry">
               <Button Classes="fn" Tag="{Binding Key}" Click="OnItemClick">
                 <Grid ColumnDefinitions="Auto,10,Auto,10,*">
-                  <Path Grid.Column="0" Classes="fnicon" Data="{Binding IconPath}"/>
+                  <Path Grid.Column="0" Classes="fnicon" Data="{Binding IconPath}" IsVisible="{Binding !Stroke}"/>
+                  <Path Grid.Column="0" Classes="fniconstroke" Data="{Binding IconPath}" IsVisible="{Binding Stroke}"/>
                   <TextBlock Grid.Column="2" Classes="fntitle" Text="{Binding Title}"/>
                   <TextBlock Grid.Column="4" Classes="fndesc" Text="{Binding Description}"/>
                 </Grid>
@@ -85,7 +97,8 @@
             <DataTemplate x:DataType="models:WidgetEntry">
               <Button Classes="fn" Tag="{Binding Key}" Click="OnItemClick">
                 <Grid ColumnDefinitions="Auto,10,Auto,10,*">
-                  <Path Grid.Column="0" Classes="fnicon" Data="{Binding IconPath}"/>
+                  <Path Grid.Column="0" Classes="fnicon" Data="{Binding IconPath}" IsVisible="{Binding !Stroke}"/>
+                  <Path Grid.Column="0" Classes="fniconstroke" Data="{Binding IconPath}" IsVisible="{Binding Stroke}"/>
                   <TextBlock Grid.Column="2" Classes="fntitle" Text="{Binding Title}"/>
                   <TextBlock Grid.Column="4" Classes="fndesc" Text="{Binding Description}"/>
                 </Grid>

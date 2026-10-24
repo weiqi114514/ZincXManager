@@ -591,7 +591,8 @@
                     CornerRadius="0" Padding="16,0" Cursor="Hand">
               <StackPanel Orientation="Horizontal" Spacing="14" VerticalAlignment="Center">
                 <Path Width="26" Height="26" Stretch="Uniform" VerticalAlignment="Center"
-                      Fill="{DynamicResource ThemePrimaryDark}" Data="M10,2 L14,6 L9,11 L5,7 Z M1,9 L7,15 L1,21 L1,9 Z"/>
+                      Data="{x:Static models:Icons.Bind}" Fill="Transparent" Stroke="{DynamicResource ThemePrimaryDark}"
+                      StrokeThickness="1.7" StrokeLineCap="Round"/>
                 <StackPanel VerticalAlignment="Center" Spacing="3">
                   <TextBlock Text="绑定" FontSize="15" FontWeight="SemiBold" Foreground="#1F3B3A"/>
                   <TextBlock Text="用 6 位绑定码把账号绑到 MC 玩家名" FontSize="11.5"
@@ -606,7 +607,8 @@
                     CornerRadius="0" Padding="16,0" Cursor="Hand">
               <StackPanel Orientation="Horizontal" Spacing="14" VerticalAlignment="Center">
                 <Path Width="26" Height="26" Stretch="Uniform" VerticalAlignment="Center"
-                      Fill="#C62828" Data="M4,4 L9,9 M9,4 L4,9 M2,2 L11,11"/>
+                      Data="{x:Static models:Icons.Unbind}" Fill="Transparent" Stroke="#C62828"
+                      StrokeThickness="1.7" StrokeLineCap="Round"/>
                 <StackPanel VerticalAlignment="Center" Spacing="3">
                   <TextBlock Text="解绑" FontSize="15" FontWeight="SemiBold" Foreground="#1F3B3A"/>
                   <TextBlock Text="解除当前账号与 MC 玩家名的绑定" FontSize="11.5"
