@@ -8,6 +8,7 @@ using System.Threading.Tasks;  // async / await 异步
 using ZincXManagerShared.Account;  // 共享库
 using ZincXManagerShared.Command;  // 共享库
 using ZincXManagerShared.FileIO;  // 共享库
+using ZincXManagerShared.History;  // 补发游标
 using ZincXManagerShared.Logging;  // 共享库
 using ZincXManagerShared.Network;  // 共享库
 using ZincXManagerShared.Security;  // 共享库
@@ -1155,8 +1156,17 @@ internal static class Program
     {
         var sent = 0;
 
+        // 这个账号已经补发到哪条了:比它旧的不再发(客户端删过的消息不会又冒出来)
+        var cursorKey = "ZXMC:" + who;
+        var cursor = HistoryCursor.Get(cursorKey);
+
         foreach (var entry in MessageArchive.Recent())
         {
+            if (entry.Id <= cursor)
+            {
+                continue;
+            }
+
             // 官方端连着时,官方转下来的那批由官方端自己补,不再从这里发一遍
             if (skipOfficial && entry.Source.StartsWith("ZXMOS-", StringComparison.OrdinalIgnoreCase))
             {
@@ -1187,6 +1197,7 @@ internal static class Program
             {
                 await packet.SendAsync(Protocol.MessageHistory, entry.Card, packet.Id);
                 sent++;
+                HistoryCursor.Advance(cursorKey, entry.Id);
             }
             catch (Exception ex)
             {
