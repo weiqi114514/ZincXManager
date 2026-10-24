@@ -222,6 +222,55 @@ zxm-lic verify &lt;公钥.pem&gt; &lt;证书.lic&gt; &lt;授权码&gt;</code></p
 <tr><td>切档刷新</td><td class="mono">ApplyGlass → ApplyWindowMaterial</td><td>遍历已打开窗口重新套材质,避免「切到半透明档还是亚克力」</td></tr>
 </tbody></table>
 
+<h2 id="msgcmd">消息命令参数(msg notice / msg push)</h2>
+<p class="lead">消息卡片现在统一走 <span class="mono">msg</span> 父命令,参数用空格分开。<b>标题和正文里不能带空格</b> —— 空格就是参数分隔符,要空格用下划线或全角空格替代。</p>
+
+<pre><code>msg notice &lt;种类&gt; &lt;标题&gt; &lt;正文&gt; [主动作] [次动作] [选项]
+msg push &lt;目标&gt; &lt;种类&gt; &lt;标题&gt; &lt;正文&gt; [主动作] [次动作] [选项]</code></pre>
+
+<table>
+<tr><th style="width:110px">参数</th><th style="width:80px">必填</th><th>说明</th></tr>
+<tr><td class="mono">种类</td><td>是</td><td><span class="mono">text</span> 纯文本 / <span class="mono">update</span> 更新公告 / <span class="mono">choice</span> 二选一 / <span class="mono">input</span> 要输入 / <span class="mono">select</span> 多选一</td></tr>
+<tr><td class="mono">标题</td><td>是</td><td>卡片标题,不能为空,不能带空格</td></tr>
+<tr><td class="mono">正文</td><td>是</td><td>卡片正文,最长 500 字,不能带空格</td></tr>
+<tr><td class="mono">主动作</td><td>否</td><td>主动作按钮的文字(比如「是」);不写就没有这个按钮</td></tr>
+<tr><td class="mono">次动作</td><td>否</td><td>次要按钮的文字(比如「否」);不写就没有</td></tr>
+<tr><td class="mono">选项</td><td>否</td><td>只有 <span class="mono">select</span> 用,逗号分隔,例如 <span class="mono">1.21.1,1.21,1.20.6</span></td></tr>
+</table>
+
+<p><b>目标(target)写法</b>(仅 ZXMOS 有这几种):</p>
+<table>
+<tr><th style="width:180px">写法</th><th>含义</th></tr>
+<tr><td class="mono">账号名</td><td>指定某个玩家</td></tr>
+<tr><td class="mono">@all</td><td>所有在线客户端</td></tr>
+<tr><td class="mono">@server:子服账号</td><td>只发给那个子服务端自己,不转给玩家</td></tr>
+<tr><td class="mono">@clients:子服账号</td><td>发给那个子服名下的所有玩家</td></tr>
+</table>
+
+<pre><code># ZXMS:全服公告(二选一卡片)
+msg notice choice 是否同意 新协议要点见附件 是 否
+
+# ZXMS:只推给某个玩家(多选一)
+msg push 猫娘 select 版本选择 请选一个版本
+
+# ZXMOS:给自己名下所有子服的玩家
+msg push @clients:ZXMS-Test text 本服公告 今晚维护
+
+# ZXMOS:只给某个子服自己
+msg push @server:ZXMS-Test text 通知 请检查配置</code></pre>
+
+<h3 id="megback">玩家返回记录(Data/MegBack.txt)</h3>
+<p>玩家在卡片上点了按钮(或填空提交),服务端会把这条返回单独记一份,方便事后查"谁选了什么"。</p>
+<ul>
+  <li>文件:<span class="mono">Data/MegBack.txt</span>(服务端工作目录下,一行一条,追加写)</li>
+  <li>格式:<span class="mono">[年/月/日][时/分/秒][消息ID][造成这次返回的目标] 返回内容</span></li>
+  <li>目标:公告写卡片的来源标签(如 <span class="mono">ZXMS-锌能源服务器</span>);定向推送写 <span class="mono">@all</span> / 玩家名 / <span class="mono">@clients:子服账号</span></li>
+  <li>消息ID:卡片对应的存档消息号(拿不到就是 <span class="mono">0</span>)</li>
+</ul>
+<pre><code>[2026/10/24][15:47:54][1][ZXMS-CSharp-消息服] 是
+[2026/10/24][15:52:10][3][猫娘] 1.21.1
+[2026/10/24][15:53:02][5][@clients:ZXMS-Test] 参加</code></pre>
+
 <h2 id="cmd">② 各端命令表</h2>
 <p class="lead">控制台命令(ZXMC 是图形客户端,没有控制台命令)。参数写法里的 <span class="mono">&lt;...&gt;</span> 表示必填位。</p>
 <h3>ZXMS 子服务端 · 21 条</h3>
@@ -239,8 +288,8 @@ zxm-lic verify &lt;公钥.pem&gt; &lt;证书.lic&gt; &lt;授权码&gt;</code></p
 <tr><td class="mono">osuser</td><td class="mono">osuser &lt;新账号名&gt; &lt;新密码&gt;</td><td>改本端在 ZXMOS 上的账号名(要官方端批准,改完本地账号与密码一起换)。</td><td class="mono">CmdOsUser</td><td class="mono muted">ZincXManagerServer/Command/ZxmsCommands.cs:127</td></tr>
 <tr><td class="mono">msgdays</td><td class="mono">msgdays &lt;天数&gt;</td><td>设置:下发给客户端后,客户端本地消息保留多少天。</td><td class="mono">—</td><td class="mono muted">ZincXManagerServer/Command/ZxmsCommands.cs:131</td></tr>
 <tr><td class="mono">srvmsgdays</td><td class="mono">srvmsgdays &lt;天数&gt;</td><td>设置本服存档保留多少天(玩家补发历史时用)。</td><td class="mono">—</td><td class="mono muted">ZincXManagerServer/Command/ZxmsCommands.cs:143</td></tr>
-<tr><td class="mono">notice</td><td class="mono">notice &lt;标题&gt;|&lt;正文&gt;[|来源|主动作|次动作|选项]</td><td>向本服所有客户端广播一张公告卡片。</td><td class="mono">CmdNotice</td><td class="mono muted">ZincXManagerServer/Command/ZxmsCommands.cs:157</td></tr>
-<tr><td class="mono">push</td><td class="mono">push &lt;账号&gt; &lt;标题&gt;|&lt;正文&gt;[|动作]</td><td>只给指定账号推一张卡片,其他人收不到。</td><td class="mono">CmdPush</td><td class="mono muted">ZincXManagerServer/Command/ZxmsCommands.cs:161</td></tr>
+<tr><td class="mono">msg</td><td class="mono">msg notice &lt;种类&gt; &lt;标题&gt; &lt;正文&gt; [主动作] [次动作] [选项]<br>msg push &lt;目标账号&gt; &lt;种类&gt; &lt;标题&gt; &lt;正文&gt; [主动作] [次动作] [选项]</td><td>发消息。<b>notice</b> = 本服全体广播;<b>push</b> = 只给指定账号。种类与参数见 <a href="#msgcmd">消息命令参数</a>。</td><td class="mono">CmdNotice / CmdPush</td><td class="mono muted">ZincXManagerServer/Command/ZxmsCommands.cs</td></tr>
+
 <tr><td class="mono">srv show</td><td class="mono">srv show</td><td>显示本端在官方服务端上的账号名(只读,改名用 osuser)。</td><td class="mono">CmdSrvShow</td><td class="mono muted">ZincXManagerServer/Command/ZxmsCommands.cs:165</td></tr>
 <tr><td class="mono">config</td><td class="mono">config</td><td>进入配置模式:表格列出全部配置项(中文名/键名/当前值/类型/作用),可按键名或中文名改值。</td><td class="mono">—</td><td class="mono muted">ZincXManagerServer/Command/ZxmsCommands.cs:169</td></tr>
 <tr><td class="mono">ban add</td><td class="mono">ban add &lt;user|ip|machine&gt; &lt;值&gt; [perm|30d|12h] [原因]</td><td>封禁一个账号 / IP / 机器码;不带时长默认永久。</td><td class="mono">CmdBanAdd</td><td class="mono muted">ZincXManagerServer/Command/ZxmsCommands.cs:282</td></tr>
@@ -267,8 +316,8 @@ zxm-lic verify &lt;公钥.pem&gt; &lt;证书.lic&gt; &lt;授权码&gt;</code></p
 <tr><td class="mono">srv del</td><td class="mono">srv del &lt;名称或ID&gt;</td><td>删除子服务端账号。</td><td class="mono">CmdUserDel</td><td class="mono muted">ZincXManagerOServer/Command/ZxmosCommands.cs:165</td></tr>
 <tr><td class="mono">srv rep</td><td class="mono">srv rep &lt;名称或ID&gt; &lt;新密码&gt;</td><td>重置子服务端账号的密码。</td><td class="mono">CmdUserRep</td><td class="mono muted">ZincXManagerOServer/Command/ZxmosCommands.cs:169</td></tr>
 <tr><td class="mono">msgdays</td><td class="mono">msgdays &lt;天数&gt;</td><td>设置官方端消息保留天数(下发给子服/客户端时用)。</td><td class="mono">—</td><td class="mono muted">ZincXManagerOServer/Command/ZxmosCommands.cs:174</td></tr>
-<tr><td class="mono">notice</td><td class="mono">notice &lt;标题&gt;|&lt;正文&gt;[|来源|主动作|次动作|选项]</td><td>以官方端身份广播公告卡片,经子服逐跳转给玩家。</td><td class="mono">—</td><td class="mono muted">ZincXManagerOServer/Command/ZxmosCommands.cs:185</td></tr>
-<tr><td class="mono">push</td><td class="mono">push &lt;@账号|@clients:名称|@servers&gt; &lt;标题&gt;|&lt;正文&gt;</td><td>定向推送:@账号 = 指定玩家,@clients:子服名 = 该子服下所有玩家,@servers = 所有子服。</td><td class="mono">—</td><td class="mono muted">ZincXManagerOServer/Command/ZxmosCommands.cs:198</td></tr>
+<tr><td class="mono">msg</td><td class="mono">msg notice &lt;种类&gt; &lt;标题&gt; &lt;正文&gt; [主动作] [次动作] [选项]<br>msg push &lt;目标&gt; &lt;种类&gt; &lt;标题&gt; &lt;正文&gt; [主动作] [次动作] [选项]</td><td>发消息。目标可以是账号名 / <span class="mono">@all</span> / <span class="mono">@server:子服账号</span> / <span class="mono">@clients:子服账号</span>;参数见 <a href="#msgcmd">消息命令参数</a>。</td><td class="mono">—</td><td class="mono muted">ZincXManagerOServer/Command/ZxmosCommands.cs</td></tr>
+
 <tr><td class="mono">srv ban</td><td class="mono">srv ban &lt;名称&gt; [perm|30d] [原因]</td><td>封禁一个子服务端(禁止它再连官方端)。</td><td class="mono">—</td><td class="mono muted">ZincXManagerOServer/Command/ZxmosCommands.cs:222</td></tr>
 <tr><td class="mono">srv unban</td><td class="mono">srv unban &lt;名称&gt;</td><td>解封子服务端。</td><td class="mono">—</td><td class="mono muted">ZincXManagerOServer/Command/ZxmosCommands.cs:256</td></tr>
 <tr><td class="mono">srv blacklist</td><td class="mono">srv blacklist</td><td>列出被封禁的子服务端。</td><td class="mono">—</td><td class="mono muted">ZincXManagerOServer/Command/ZxmosCommands.cs:268</td></tr>

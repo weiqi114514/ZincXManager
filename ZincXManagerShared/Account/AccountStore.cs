@@ -62,7 +62,7 @@ public sealed class AccountStore
     /// <summary>别的账号表里是否已经有这个名字(服务端账号 / 用户账号不能重名)。</summary>
     private readonly Func<string, bool>? _alsoTaken;
 
-    /// <summary>账号文件路径。</summary>
+    /// <summary>账号目录(默认 User/Data,一个账号一个 {ID}.json)。</summary>
     public string Path { get; }
 
     /// <param name="path">账号文件。</param>
@@ -466,125 +466,62 @@ public sealed class AccountStore
         return true;
     }
 
-    /// <summary>
-    /// 读 JSON;顺手处理两件事:① 老版本的 users.ini 自动迁移成 json;
-    /// ② 老版本留下的明文密码升级成密文。
-    /// </summary>
+    /// <summary>读账号目录:一个账号一个文件 <c>{用户ID}.json</c>,只认这个目录(旧单文件不再迁移)。</summary>
     private void Load()
     {
-        var migrated = false;
-
         try
         {
-            // 没 json 但老的 ini 在 → 先按 ini 读,读完存成 json(账号不丢)
-            var legacy = System.IO.Path.ChangeExtension(Path, ".ini");
-            if (!File.Exists(Path) && File.Exists(legacy))
-            {
-                Logger.Log(LogLevel.Info, $"[账号] 发现老文件 {legacy},正在迁移成 {Path}");
-                LoadLegacy(legacy, ref migrated);
-                if (migrated)
-                {
-                    Logger.Log(LogLevel.Info, "[账号] 已把明文密码升级为密文");
-                }
-
-                Save();
-                return;
-            }
-
-            if (!File.Exists(Path))
+            if (!Directory.Exists(Path))
             {
                 return;
             }
 
-            using var doc = JsonDocument.Parse(File.ReadAllText(Path, Encoding.UTF8));
-            foreach (var item in doc.RootElement.EnumerateArray())
+            foreach (var file in Directory.GetFiles(Path, "*.json"))
             {
-                var name = item.TryGetProperty("name", out var n) ? n.GetString() ?? "" : "";
-                if (name.Length == 0)
+                try
                 {
-                    continue;
+                    using var doc = JsonDocument.Parse(File.ReadAllText(file, Encoding.UTF8));
+                    var item = doc.RootElement;
+
+                    var name = item.TryGetProperty("name", out var n) ? n.GetString() ?? "" : "";
+                    if (name.Length == 0)
+                    {
+                        continue;
+                    }
+
+                    var secret = item.TryGetProperty("password", out var p) ? p.GetString() ?? "" : "";
+
+                    // 老存档可能是明文,读到就升级成密文
+                    if (secret.Length > 0 && !PasswordHash.IsHash(secret))
+                    {
+                        secret = PasswordHash.Hash(name, secret);
+                    }
+
+                    var level = item.TryGetProperty("level", out var l) ? l.GetString() ?? "" : "";
+                    var account = new Account
+                    {
+                        Name = name,
+                        Password = secret,
+                        Level = IsLevel(level) ? level : _registerLevel,
+                        Id = item.TryGetProperty("id", out var i) && i.TryGetInt32(out var id) ? id : 0,
+                        Ip = item.TryGetProperty("ip", out var ip) ? ip.GetString() ?? "" : "",
+                        LastIp = item.TryGetProperty("lastIp", out var lip) ? lip.GetString() ?? "" : "",
+                        Machine = item.TryGetProperty("machine", out var m) ? m.GetString() ?? "" : "",
+                        ServerCode = item.TryGetProperty("serverCode", out var sc) ? sc.GetString() ?? "" : "",
+                        Owner = item.TryGetProperty("owner", out var o) ? o.GetString() ?? "" : "",
+                    };
+
+                    _map[account.Name] = account;
                 }
-
-                var secret = item.TryGetProperty("password", out var p) ? p.GetString() ?? "" : "";
-
-                if (secret.Length > 0 && !PasswordHash.IsHash(secret))
+                catch (Exception ex)
                 {
-                    secret = PasswordHash.Hash(name, secret);
-                    migrated = true;
+                    Logger.Log(LogLevel.Warning, $"[账号] 读 {System.IO.Path.GetFileName(file)} 失败: {ex.Message}");
                 }
-
-                var level = item.TryGetProperty("level", out var l) ? l.GetString() ?? "" : "";
-                var account = new Account
-                {
-                    Name = name,
-                    Password = secret,
-                    Level = IsLevel(level) ? level : _registerLevel,
-                    Id = item.TryGetProperty("id", out var i) && i.TryGetInt32(out var id) ? id : 0,
-                    Ip = item.TryGetProperty("ip", out var ip) ? ip.GetString() ?? "" : "",
-                    LastIp = item.TryGetProperty("lastIp", out var lip) ? lip.GetString() ?? "" : "",
-                    Machine = item.TryGetProperty("machine", out var m) ? m.GetString() ?? "" : "",
-                    ServerCode = item.TryGetProperty("serverCode", out var sc) ? sc.GetString() ?? "" : "",
-                    Owner = item.TryGetProperty("owner", out var o) ? o.GetString() ?? "" : "",
-                };
-
-                _map[account.Name] = account;
             }
         }
         catch (Exception ex)
         {
-            Logger.Log(LogLevel.Error, "[账号] 迁移老账号文件失败: " + ex.Message);
-        }
-    }
-
-    /// <summary>读老格式(名称=密文,等级,ID,IP,最后IP,机器码,归属),一行一个。</summary>
-    private void LoadLegacy(string legacyPath, ref bool migrated)
-    {
-        try
-        {
-            foreach (var line in File.ReadAllLines(legacyPath, Encoding.UTF8))
-            {
-                var text = line.Trim();
-                if (text.Length == 0 || text.StartsWith('#'))
-                {
-                    continue;
-                }
-
-                var eq = text.IndexOf('=');
-                if (eq <= 0)
-                {
-                    continue;
-                }
-
-                var fields = text[(eq + 1)..].Split(',');
-                var name = text[..eq].Trim();
-                var secret = fields.Length > 0 ? fields[0] : "";
-
-                // 旧格式存的是明文 → 这里换成密文,下次保存就写回文件
-                if (secret.Length > 0 && !PasswordHash.IsHash(secret))
-                {
-                    secret = PasswordHash.Hash(name, secret);
-                    migrated = true;
-                }
-
-                var account = new Account
-                {
-                    Name = name,
-                    Password = secret,
-                    Level = fields.Length > 1 && IsLevel(fields[1]) ? fields[1] : _registerLevel,
-                    Id = fields.Length > 2 && int.TryParse(fields[2], out var id) ? id : 0,
-                    Ip = fields.Length > 3 ? fields[3].Trim() : "",
-                    LastIp = fields.Length > 4 ? fields[4].Trim() : "",
-                    Machine = fields.Length > 5 ? fields[5].Trim() : "",
-                    Owner = fields.Length > 6 ? fields[6].Trim() : "",
-                    ServerCode = fields.Length > 7 ? fields[7].Trim() : "",
-                };
-
-                _map[account.Name] = account;
-            }
-        }
-        catch (Exception ex)
-        {
-            Logger.Log(LogLevel.Error, "[账号] 迁移老账号文件失败: " + ex.Message);
+            Logger.Log(LogLevel.Error, "[账号] 读账号目录失败: " + ex.Message);
         }
     }
 
@@ -592,36 +529,55 @@ public sealed class AccountStore
     private static string Escape(string text)
         => text.Replace("\\", "\\\\").Replace("\"", "\\\"").Replace("\n", "\\n").Replace("\r", "");
 
-    /// <summary>写文件(写的就是密文)。</summary>
+    /// <summary>写账号目录:每个账号单独一个 <c>{用户ID}.json</c>;表里没有的旧文件顺手删掉。</summary>
     private void Save()
     {
         try
         {
-            // 手写 JSON(不依赖反射,APO/AOT 下也安全)
-            var json = new StringBuilder("[\n");
-            var list = _map.Values.OrderBy(a => a.Id).ToArray();
+            Directory.CreateDirectory(Path);
 
-            for (var index = 0; index < list.Length; index++)
+            var used = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var a in _map.Values.OrderBy(x => x.Id))
             {
-                var a = list[index];
-                json.Append("  {\"name\":\"").Append(Escape(a.Name))
-                    .Append("\",\"password\":\"").Append(Escape(a.Password))
-                    .Append("\",\"level\":\"").Append(Escape(a.Level))
-                    .Append("\",\"id\":").Append(a.Id)
-                    .Append(",\"ip\":\"").Append(Escape(a.Ip))
-                    .Append("\",\"lastIp\":\"").Append(Escape(a.LastIp))
-                    .Append("\",\"machine\":\"").Append(Escape(a.Machine))
-                    .Append("\",\"serverCode\":\"").Append(Escape(a.ServerCode))
-                    .Append("\",\"owner\":\"").Append(Escape(a.Owner))
-                    .Append("\"}").Append(index == list.Length - 1 ? "\n" : ",\n");
+                if (a.Id <= 0)
+                {
+                    continue;
+                }
+
+                var file = System.IO.Path.Combine(Path, a.Id + ".json");
+                File.WriteAllText(file, One(a), Encoding.UTF8);
+                used.Add(file);
             }
 
-            json.Append(']');
-            File.WriteAllText(Path, json.ToString(), Encoding.UTF8);
+            // 删账号后留下的文件在这里清掉,不然重启又读回来
+            foreach (var file in Directory.GetFiles(Path, "*.json"))
+            {
+                if (!used.Contains(file))
+                {
+                    File.Delete(file);
+                }
+            }
         }
         catch (Exception ex)
         {
-            Logger.Log(LogLevel.Error, "[账号] 保存账号文件失败: " + ex.Message);
+            Logger.Log(LogLevel.Error, "[账号] 写账号文件失败: " + ex.Message);
         }
+    }
+
+    /// <summary>把一个账号拼成 JSON(手写,不依赖反射,AOT 安全)。</summary>
+    private static string One(Account a)
+    {
+        var json = new StringBuilder();
+        json.Append("{\"name\":\"").Append(Escape(a.Name))
+            .Append("\",\"password\":\"").Append(Escape(a.Password))
+            .Append("\",\"level\":\"").Append(Escape(a.Level))
+            .Append("\",\"id\":").Append(a.Id)
+            .Append(",\"ip\":\"").Append(Escape(a.Ip))
+            .Append("\",\"lastIp\":\"").Append(Escape(a.LastIp))
+            .Append("\",\"machine\":\"").Append(Escape(a.Machine))
+            .Append("\",\"serverCode\":\"").Append(Escape(a.ServerCode))
+            .Append("\",\"owner\":\"").Append(Escape(a.Owner))
+            .Append("\"}");
+        return json.ToString();
     }
 }

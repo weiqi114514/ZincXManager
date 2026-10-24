@@ -76,7 +76,11 @@ var results = new List<SuiteResult>();
             r.Add("错误密码登录被拒", !bad, p2.LastAck ?? "无回执");
         }
 
-        var users = File.Exists(Path.Combine(dir, "users.json")) ? File.ReadAllText(Path.Combine(dir, "users.json")) : "";
+        // 账号现在是一个账号一个文件:User/Data/{ID}.json,合并起来再找字段
+        var dataDir = Path.Combine(dir, "User", "Data");
+        var users = Directory.Exists(dataDir)
+            ? string.Join(Environment.NewLine, Directory.GetFiles(dataDir, "*.json").OrderBy(f => f).Select(File.ReadAllText))
+            : "";
         r.Add("注册记下了机器码", users.Contains("MACH-CS-1"));
         r.Add("注册记下了来源 IP", users.Contains("127.0.0.1"));
     }
@@ -109,7 +113,7 @@ var results = new List<SuiteResult>();
         r.Add("探针登录", await probe.LoginAsync("msgplayer", "pw123456", "MACH-MSG", "Player", "zxms"));
 
         // ---- 公告 500 ----
-        ms.SendCmd("notice 维护公告|今晚 23:00 停机维护 10 分钟");
+        ms.SendCmd("msg notice text 维护公告 今晚23:00停机维护10分钟");
         var notice = await probe.WaitAsync(ZincXManagerShared.Network.Protocol.Notice, 8000);
         r.Add("收到公告(500)", notice is not null, notice ?? "没收到");
         if (notice is not null)
@@ -123,7 +127,7 @@ var results = new List<SuiteResult>();
         }
 
         // ---- 定向推送 501 ----
-        ms.SendCmd("push msgplayer 私信|这条只有你能看到");
+        ms.SendCmd("msg push msgplayer text 私信 这条只有你能看到");
         var push = await probe.WaitAsync(ZincXManagerShared.Network.Protocol.Push, 8000);
         r.Add("收到定向推送(501)", push is not null, push ?? "没收到");
         if (push is not null)
@@ -133,8 +137,21 @@ var results = new List<SuiteResult>();
             r.Add("推送正文正确", push.Contains("这条只有你能看到"), push);
         }
 
+        // ---- 玩家点卡片按钮 → 服务端记进 Data/MegBack.txt ----
+        if (notice is not null)
+        {
+            var action = ZincXManagerShared.Network.MessageCard.BuildAction("是", "", notice);
+            await probe.SendAsync(7, ZincXManagerShared.Network.Protocol.CardAction,
+                Encoding.UTF8.GetBytes(action));
+            await Task.Delay(1500);
+
+            var megBack = Path.Combine(dir, "Data", "MegBack.txt");
+            var backText = File.Exists(megBack) ? File.ReadAllText(megBack) : "";
+            r.Add("玩家返回写进 Data/MegBack.txt", backText.Contains("] 是"), File.Exists(megBack) ? backText.Trim() : "没有文件");
+        }
+
         // ---- 推给不在线的账号:没人收到,但要正常返回 ----
-        ms.SendCmd("push nobody_here 离线私信|这人不在线");
+        ms.SendCmd("msg push nobody_here text 离线私信 这人不在线");
         await Task.Delay(1200);
         var outText = ms.Out;
         r.Add("推给不在线账号被忽略", outText.Contains("不在") || outText.Contains("忽略"), "(见服务端日志)");
@@ -165,7 +182,7 @@ var results = new List<SuiteResult>();
         }   // 断开
 
         await Task.Delay(600);
-        ms2.SendCmd("notice 离线公告|你不在的时候发的");
+        ms2.SendCmd("msg notice text 离线公告 你不在的时候发的");
         await Task.Delay(1200);
 
         using var p2 = await Probe.ConnectAsync("127.0.0.1", 21404, "OS");
@@ -359,9 +376,9 @@ var results = new List<SuiteResult>();
         using (var ms = Svc.Start(Path.Combine(dir, "ZincXManagerServer.exe"), dir, ini))
         {
             r.Add("ZXMS 监听 21407", ms.WaitPort(21407));
-            ms.SendCmd("notice 历史公告一|第一条");
+            ms.SendCmd("msg notice text 历史公告一 第一条");
             await Task.Delay(600);
-            ms.SendCmd("notice 历史公告二|第二条");
+            ms.SendCmd("msg notice text 历史公告二 第二条");
             await Task.Delay(900);
         }
         var saved = File.Exists(json) ? File.ReadAllText(json) : "";
@@ -766,7 +783,7 @@ var results = new List<SuiteResult>();
             r.Note("完整 GUI 登录流程(点按钮/进主界面)受窗口焦点影响不稳定,只在这里验\"注入通道\",交互本身由 DSH 手测覆盖");
 
             // 服务端发一条,看客户端日志有没有收到(证明注入的那个客户端确实连在服上)
-            ms.SendCmd("notice GUI注入公告|这条是注入测试");
+            ms.SendCmd("msg notice text GUI注入公告 这条是注入测试");
             await Task.Delay(2500);
             var cliLogDir = Path.Combine(cliDir, "logs");
             var log = "";

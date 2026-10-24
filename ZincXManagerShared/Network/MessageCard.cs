@@ -145,6 +145,59 @@ public static class MessageCard
     /// 举例:<c>维护公告|今晚 23:00 停机|text</c>、<c>是否同意|新协议要点…|choice|是|否</c>、
     /// <c>版本选择|请选一个|select|||1.21.1,1.21,1.20.6</c>。
     /// </summary>
+
+    /// <summary>
+    /// 把「空格分参」的命令参数读成一张卡片:
+    /// <c>&lt;种类&gt; &lt;标题&gt; &lt;正文&gt; [主动作] [次动作] [选项]</c>。
+    /// 选项只有 select 用,逗号分隔;标题/正文不能为空。
+    /// </summary>
+    public static bool TryReadCardArgs(string[] args, out CardInput card, out string error)
+    {
+        card = new CardInput();
+        error = "";
+
+        if (args.Length < 3)
+        {
+            error = "至少写 种类 标题 正文(完整:种类 标题 正文 [主动作] [次动作] [选项])";
+            return false;
+        }
+
+        var kind = args[0].Trim().ToLowerInvariant();
+        if (!IsKind(kind))
+        {
+            error = "种类只能是 " + string.Join(" / ", Kinds);
+            return false;
+        }
+
+        var options = args.Length > 5
+            ? args[5].Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            : Array.Empty<string>();
+
+        card = new CardInput
+        {
+            Title = args[1].Trim(),
+            Body = args[2].Trim(),
+            Kind = kind,
+            Primary = args.Length > 3 ? args[3].Trim() : "",
+            Secondary = args.Length > 4 ? args[4].Trim() : "",
+            Options = options,
+        };
+
+        if (card.Title.Length == 0)
+        {
+            error = "标题不能为空";
+            return false;
+        }
+
+        if (card.Body.Length > MaxBody)
+        {
+            error = $"正文最长 {MaxBody} 字,现在 {card.Body.Length} 字";
+            return false;
+        }
+
+        return true;
+    }
+
     public static bool TryReadCard(string text, out CardInput card, out string error)
     {
         card = new CardInput();

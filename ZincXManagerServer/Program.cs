@@ -107,7 +107,7 @@ internal static class Program
     private static TcpServer? _server;
 
     /// <summary>账号表(users.ini):注册 / 登录都查它;控制台 account 命令也用它。</summary>
-    private static readonly AccountStore Accounts = new("users.json");
+    private static readonly AccountStore Accounts = new("User/Data");
 
     /// <summary>封禁表:账号 / IP / 机器码,永久或定时。</summary>
     private static readonly BanStore Bans = new("bans.json");
@@ -435,6 +435,14 @@ internal static class Program
                 var forwarded = talk.CardSource.StartsWith("ZXMOS-", StringComparison.OrdinalIgnoreCase) &&
                                 await TryForwardCardActionAsync(who, text);
 
+                // 玩家返回单独记一份:Data/MegBack.txt(一行一条)
+                var originId = MessageCard.TryParse(talk.Card, out var origin) ? origin.Id : 0;
+                var originEntry = originId > 0 ? MessageArchive.Find(originId) : null;
+                var originTarget = originEntry is null || originEntry.Target.Trim().Length == 0
+                    ? (talk.CardSource.Length > 0 ? talk.CardSource : "notice")
+                    : originEntry.Target;
+                CardResponses.Append(DateTime.Now, originId, originTarget, MessageCard.ActionText(text));
+
                 Logger.Log(LogLevel.Info,
                     $"[消息] {who} 在卡片「{talk.CardTitle}」上点了「{MessageCard.ActionText(text)}」" +
                     (forwarded ? "(已转交官方服务端)" : "(本服卡片)"));
@@ -503,6 +511,21 @@ internal static class Program
                 {
                     SentMessages.Add(ackId, ackIds);
                     Logger.Log(LogLevel.Info, $"[消息] {ackWho} 回执:已收 {ackIds.Length} 条");
+                }
+
+                // 官方服那边也存了这批消息:回执要原样转过去,
+                // 不然它没有"已发"记录,客户端每次重启它都会再补一遍
+                var ackOs = _os;
+                if (ackOs is { IsConnected: true } && ackIds.Length > 0)
+                {
+                    try
+                    {
+                        await ackOs.WriteAsync(new Packet(0, Protocol.MessageAck, packet.Data));
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.Log(LogLevel.Warning, "[消息] 转发回执给官方服失败: " + ex.Message);
+                    }
                 }
                 break;
             }

@@ -154,13 +154,29 @@ public static class ZxmsCommands
                 $"[消息] 本服消息存档保留天数已设为 {Math.Clamp(days, 1, 365)} 天,现存 {left} 条");
         }, "设置本服自己存档的保留天数(影响补发的历史消息):srvmsgdays <天数>", "srvmsgdays 14");
 
-        cmd.Register("notice", args => CmdNotice(localNotice, args),
-            "给本服所有客户端发公告:notice <标题>|<正文>[|种类|主动作|次动作|选项];种类 = text / update / choice / input / select",
-            "notice 是否同意|新协议要点见附件|choice|是|否");
+        cmd.Register("msg", args =>
+        {
+            if (args.Length == 0)
+            {
+                Logger.Log(LogLevel.Warning, "[消息] 用法:" + NoticeUsage);
+                Logger.Log(LogLevel.Warning, "[消息] 用法:" + PushUsage);
+                return;
+            }
 
-        cmd.Register("push", args => CmdPush(localPush, args),
-            "给本服某个玩家定向推送(只发本服):push <账号> <标题>|<正文>[|种类|主动作|次动作|选项]",
-            "push 猫娘 版本选择|请选一个版本|select|||1.21.1,1.21,1.20.6");
+            switch (args[0].ToLowerInvariant())
+            {
+                case "notice":
+                    CmdNotice(localNotice, args[1..]);
+                    break;
+                case "push":
+                    CmdPush(localPush, args[1..]);
+                    break;
+                default:
+                    Logger.Log(LogLevel.Warning, $"[消息] 不认识的子命令 {args[0]};可用:notice / push");
+                    break;
+            }
+        }, "消息:msg notice <种类> <标题> <正文> [主动作] [次动作] [选项] / msg push <目标> <种类> <标题> <正文> [主动作] [次动作] [选项]",
+            "msg notice choice 是否同意 新协议要点见附件 是 否");
 
         cmd.Register("srv show", _ => CmdSrvShow(serverAccountNameProvider()),
             "查看本端接入官方服务端用的账号名",
@@ -175,7 +191,7 @@ public static class ZxmsCommands
     private static readonly string[] CommandWords =
     {
         "help", "echo", "exit", "info", "infopc", "msgdays", "srvmsgdays", "name",
-        "notice", "push", "osuser", "srv", "user", "ban", "file", "net", "config", "exitc",
+        "msg", "osuser", "srv", "user", "ban", "file", "net", "config", "exitc",
     };
 
     /// <summary>这行输入看起来像控制台命令吗(像的话就不该被当成账号名 / 密码收下)。</summary>
@@ -467,7 +483,7 @@ public static class ZxmsCommands
     /// <summary>notice &lt;标题&gt;|&lt;正文&gt;[|种类|主动作|次动作|选项]:给本服所有客户端发公告。</summary>
     private static void CmdNotice(Func<CardInput, int> notice, string[] args)
     {
-        if (!TryReadCard(args, NoticeUsage, out var card))
+        if (!TryReadCardArgs(args, NoticeUsage, out var card))
         {
             return;
         }
@@ -488,7 +504,7 @@ public static class ZxmsCommands
         }
 
         var target = args[0].Trim();
-        if (!TryReadCard(args[1..], PushUsage, out var card))
+        if (!TryReadCardArgs(args[1..], PushUsage, out var card))
         {
             return;
         }
@@ -500,23 +516,17 @@ public static class ZxmsCommands
     }
 
     /// <summary>公告卡片的写法(帮助与报错都用它)。</summary>
-    private const string NoticeUsage = "notice <标题>|<正文>[|种类|主动作|次动作|选项]";
+    private const string NoticeUsage = "msg notice <种类> <标题> <正文> [主动作] [次动作] [选项]";
 
     /// <summary>定向推送的写法。</summary>
-    private const string PushUsage = "push <账号> <标题>|<正文>[|种类|主动作|次动作|选项]";
+    private const string PushUsage = "msg push <目标> <种类> <标题> <正文> [主动作] [次动作] [选项]";
 
-    /// <summary>把命令参数读成一张卡片(格式/长度/按钮文案都在共享库里校验)。</summary>
-    private static bool TryReadCard(string[] args, string usage, out CardInput card)
+    /// <summary>把「种类 标题 正文 [主动作] [次动作] [选项]」读成一张卡片(校验在共享库里)。</summary>
+    private static bool TryReadCardArgs(string[] args, string usage, out CardInput card)
     {
         card = new CardInput();
 
-        if (args.Length < 1)
-        {
-            Logger.Log(LogLevel.Warning, "[消息] 用法:" + usage);
-            return false;
-        }
-
-        if (!MessageCard.TryReadCard(string.Join(' ', args), out card, out var error))
+        if (!MessageCard.TryReadCardArgs(args, out card, out var error))
         {
             Logger.Log(LogLevel.Warning, $"[消息] {error};用法:{usage}");
             return false;

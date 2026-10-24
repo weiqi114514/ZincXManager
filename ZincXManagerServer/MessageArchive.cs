@@ -107,6 +107,15 @@ internal static class MessageArchive
     }
 
     /// <summary>保留期内的全部消息(按存档顺序)。</summary>
+    /// <summary>按消息号找一条存档(找不到返回 null)。</summary>
+    public static Entry? Find(int id)
+    {
+        lock (_list)
+        {
+            return _list.FirstOrDefault(e => e.Id == id);
+        }
+    }
+
     public static IReadOnlyList<Entry> Recent()
     {
         lock (_list)
