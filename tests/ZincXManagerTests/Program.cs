@@ -150,6 +150,13 @@ var results = new List<SuiteResult>();
             r.Add("玩家返回写进 Data/MegBack.txt", backText.Contains("] 是"), File.Exists(megBack) ? backText.Trim() : "没有文件");
         }
 
+        // ---- msg backget:列玩家返回(带玩家名) ----
+        ms.SendCmd("msg backget");
+        await Task.Delay(1000);
+        var backOut = ms.Out;
+        r.Add("msg backget 列出记录(带玩家名)",
+            backOut.Contains("日期/时间") && backOut.Contains("msgplayer"), "(见服务端日志)");
+
         // ---- 推给不在线的账号:没人收到,但要正常返回 ----
         ms.SendCmd("msg push nobody_here text 离线私信 这人不在线");
         await Task.Delay(1200);

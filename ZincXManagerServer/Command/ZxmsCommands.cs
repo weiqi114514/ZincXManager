@@ -4,6 +4,7 @@ using ZincXManagerShared.Account;  // 共享库
 using System.Linq;  // LINQ 查询
 using ZincXManagerShared.Command;  // 共享库
 using ZincXManagerShared.Logging;  // 共享库
+using ZincXManagerShared.History;  // megback 查询
 using ZincXManagerShared.Network;  // 共享库
 
 // 与 BCL 的 TcpClient 同名,起个别名
@@ -59,6 +60,8 @@ public static class ZxmsCommands
         Func<string> osTargetProvider,
         Func<string> osNameProvider,
         ZxmsIdentity identity,
+        Func<int> backgetCountProvider,
+        Func<string, string> osMegBack,
         Func<int> clientCountProvider,
         Func<ClientRegistry?> registryProvider,
         Func<AccountStore> accountProvider,
@@ -74,6 +77,9 @@ public static class ZxmsCommands
     {
         // 记住本端的服务端账号名:用户账号不能和它重名(和 config 里的 osuser 同步)
         _serverAccountName = serverAccountNameProvider();
+
+        // 账号表(给 megback p 按名字查 ID 用,也用来把玩家 ID 翻成名字)
+        var accounts = accountProvider;
 
         cmd.Register("net status", _ => CmdNetStatus(osProvider(), osTargetProvider(), osNameProvider(), clientCountProvider()),
             "查看 ZXMOS 连接与客户端接入情况",
@@ -171,12 +177,40 @@ public static class ZxmsCommands
                 case "push":
                     CmdPush(localPush, args[1..]);
                     break;
+                case "backget":
+                {
+                    // 尾部带 -os 就查官方端的记录(必须是本服账号)
+                    var query = args[1..];
+                    var wantOs = query.Length > 0 &&
+                                 string.Equals(query[^1], "-os", StringComparison.OrdinalIgnoreCase);
+                    if (wantOs)
+                    {
+                        query = query[..^1];
+                        var text = osMegBack(string.Join(' ', query));
+                        foreach (var line in text.Split('\n'))
+                        {
+                            Logger.Log(LogLevel.Info, "[消息] " + line);
+                        }
+
+                        break;
+                    }
+
+                    // 查本服玩家返回记录(Data/MegBack.txt)
+                    MegBackCommand.Run(query,
+                        id => TitleOf(id),
+                        name => accounts().Find(name)?.Id ?? 0,
+                        id => accounts().NameOf(id),
+                        backgetCountProvider());
+                    break;
+                }
                 default:
                     Logger.Log(LogLevel.Warning, $"[消息] 不认识的子命令 {args[0]};可用:notice / push");
                     break;
             }
         }, "消息:msg notice <种类> <标题> <正文> [主动作] [次动作] [选项] / msg push <目标> <种类> <标题> <正文> [主动作] [次动作] [选项]",
-            "msg notice choice 是否同意 新协议要点见附件 是 否");
+            "msg notice choice 是否同意 新协议要点见附件 是 否    /    " + MegBackCommand.Usage);
+
+
 
         cmd.Register("srv show", _ => CmdSrvShow(serverAccountNameProvider()),
             "查看本端接入官方服务端用的账号名",
@@ -516,6 +550,14 @@ public static class ZxmsCommands
     }
 
     /// <summary>公告卡片的写法(帮助与报错都用它)。</summary>
+
+    /// <summary>按消息号取卡片标题(用于 megback 列表;取不到返回空)。</summary>
+    private static string TitleOf(int messageId)
+    {
+        var entry = MessageArchive.Find(messageId);
+        return entry is not null && MessageCard.TryParse(entry.Card, out var card) ? card.Title : "";
+    }
+
     private const string NoticeUsage = "msg notice <种类> <标题> <正文> [主动作] [次动作] [选项]";
 
     /// <summary>定向推送的写法。</summary>

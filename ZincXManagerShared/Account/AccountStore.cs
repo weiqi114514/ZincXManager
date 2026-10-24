@@ -55,6 +55,9 @@ public sealed class AccountStore
 {
     private readonly object _sync = new();
     private readonly Dictionary<string, Account> _map = new(StringComparer.OrdinalIgnoreCase);
+
+    // ID → 账号 的映射表:按 ID 取名字不用每次遍历整张表
+    private readonly Dictionary<int, Account> _byId = new();
     private readonly string[] _levels;
     // 自助注册时的默认等级。
     private readonly string _registerLevel;
@@ -113,6 +116,18 @@ public sealed class AccountStore
     }
 
     /// <summary>按"名称或 ID"找账号(控制台命令用);没有就返回 null。</summary>
+    /// <summary>按 ID 找账号(走映射表,快)。</summary>
+    public Account? FindById(int id)
+    {
+        lock (_sync)
+        {
+            return _byId.TryGetValue(id, out var account) ? account : null;
+        }
+    }
+
+    /// <summary>按 ID 取账号名(映射表查不到返回空)。</summary>
+    public string NameOf(int id) => FindById(id)?.Name ?? "";
+
     public Account? FindByKey(string key)
     {
         key = key.Trim();
@@ -190,6 +205,7 @@ public sealed class AccountStore
             };
 
             _map[name] = created;
+            _byId[created.Id] = created;
             Save();
             account = created;
             error = "";
@@ -459,6 +475,7 @@ public sealed class AccountStore
                 return false;
             }
 
+            _byId.Remove(account.Id);
             Save();
         }
 
@@ -522,6 +539,16 @@ public sealed class AccountStore
         catch (Exception ex)
         {
             Logger.Log(LogLevel.Error, "[账号] 读账号目录失败: " + ex.Message);
+        }
+
+        // 读完重建 ID 映射表
+        _byId.Clear();
+        foreach (var account in _map.Values)
+        {
+            if (account.Id > 0)
+            {
+                _byId[account.Id] = account;
+            }
         }
     }
 

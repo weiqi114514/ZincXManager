@@ -260,6 +260,26 @@ msg push @clients:ZXMS-Test text 本服公告 今晚维护
 msg push @server:ZXMS-Test text 通知 请检查配置</code></pre>
 
 <h3 id="megback">玩家返回记录(Data/MegBack.txt)</h3>
+<h3 id="backget">查玩家返回(msg backget)</h3>
+<p>服务端控制台直接查 <span class="mono">Data/MegBack.txt</span>,按条件过滤后打成列表。</p>
+<pre><code>msg backget                              # 最新 N 条(N = config 的 backgetcount,默认 50)
+msg backget d &lt;起&gt; &lt;止&gt;              # 按日期:26/10/23、26/10、26 都行
+msg backget t &lt;起&gt; &lt;止&gt;              # 按时刻:10/3/23 = 10 时 3 分 23 秒
+msg backget m &lt;消息ID&gt;                 # 某条消息的全部返回
+msg backget p &lt;玩家ID或名称&gt;           # 某个玩家的全部返回</code></pre>
+<table>
+<tr><th style="width:150px">配置项</th><th>说明</th></tr>
+<tr><td class="mono">backgetcount</td><td><span class="mono">msg backget</span> 不带参数时返回多少条,默认 50,范围 1~1000</td></tr>
+</table>
+<p>列表每行:<span class="mono">日期/时间 · 消息ID · 玩家 · 标题 · 目标 · 返回内容</span>。玩家名走账号表的 ID→名称映射,不每次翻目录。</p>
+<p><b>查官方端(ZXMS 才有):</b>命令尾部加 <span class="mono">-os</span>,会转发给 ZXMOS 去查它那份记录。只能查本子服名下的账号:</p>
+<pre><code>msg backget -os                              # 官方端最新 N 条(只含本服账号)
+msg backget m 12 -os                         # 这条消息在本服账号里的返回
+msg backget p 猫娘 -os                        # 这个玩家(必须属于本服)
+msg backget d 26/10/23 26/10/24 -os          # 按日期</code></pre>
+<p>协议:ZXMS 发 <span class="mono">508 MegBackReq</span>(负载 = 查询参数),ZXMOS 回 <span class="mono">509 MegBackAck</span>(纯文本,一行一条);超时 6 秒。</p>
+
+
 <p>玩家在卡片上点了按钮(或填空提交),服务端会把这条返回单独记一份,方便事后查"谁选了什么"。</p>
 <ul>
   <li>文件:<span class="mono">Data/MegBack.txt</span>(服务端工作目录下,一行一条,追加写)</li>

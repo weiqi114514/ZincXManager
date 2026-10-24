@@ -54,11 +54,26 @@ internal static class Program
     /// <summary>本服自己的消息存档保留天数(config.ini 的 srvmsgdays,默认 7):补发时给客户端看多久的本服历史。</summary>
     private const string KeySrvMsgDays = "srvmsgdays";
 
+    // 配置键:玩家返回查询(msg backget)默认返回条数
+    private const string KeyBackget = "backgetcount";
+
+    // 默认返回条数
+    private const int DefaultBackgetCount = 50;
+
     /// <summary>本服存档保留天数默认值(天)。</summary>
     private const int DefaultSrvMsgDays = 7;
 
     /// <summary>当前本服存档保留天数(启动时从 config 读,srvmsgdays 命令可改)。</summary>
     private static int _srvMsgDays = DefaultSrvMsgDays;
+
+    // 玩家返回查询默认条数(config 的 backgetcount)
+    private static int _backgetCount = DefaultBackgetCount;
+
+    // -os 查询:等官方端回包的待决表(包 id → 结果)
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<int, TaskCompletionSource<string>> MegBackWaits = new();
+
+    // -os 查询的包 id 序号
+    private static int _megBackSeq;
 
     /// <summary>官方验证第二层的开关(config.ini 的 officialcheck,默认 1 = 开):对端不是官方服务端就断开。</summary>
     private const string KeyOfficialCheck = "officialcheck";
@@ -232,6 +247,39 @@ internal static class Program
     /// 处理一条来自 ZXMC / ZXMM 的报文:按 Type 分派。
     /// </summary>
     /// <param name="packet">收到的报文包(带连接上下文)。</param>
+    /// <summary>
+    /// 替命令查官方端的玩家返回记录(msg backget ... -os):发 508,等 509 回包。
+    /// </summary>
+    /// <param name="args">查询参数(命令里 -os 之前那部分)。</param>
+    /// <returns>官方端渲染好的文本;连不上/超时返回原因。</returns>
+    private static async Task<string> QueryOsMegBackAsync(string args)
+    {
+        var os = _os;
+        if (os is null || !os.IsConnected)
+        {
+            return "官方服务端未连接,查不了 -os";
+        }
+
+        var id = Interlocked.Increment(ref _megBackSeq);
+        var wait = new TaskCompletionSource<string>();
+        MegBackWaits[id] = wait;
+
+        try
+        {
+            await os.WriteAsync(new Packet((ulong)id, Protocol.MegBackReq, Encoding.UTF8.GetBytes(args)));
+            var done = await Task.WhenAny(wait.Task, Task.Delay(6000));
+            return done == wait.Task ? await wait.Task : "等官方服务端回包超时";
+        }
+        catch (Exception ex)
+        {
+            return "转发查询失败: " + ex.Message;
+        }
+        finally
+        {
+            MegBackWaits.TryRemove(id, out _);
+        }
+    }
+
     private static async Task HandlePacketAsync(ServerboundPacket packet)
     {
         // 别名:让方法体保持原来的写法
@@ -441,7 +489,8 @@ internal static class Program
                 var originTarget = originEntry is null || originEntry.Target.Trim().Length == 0
                     ? (talk.CardSource.Length > 0 ? talk.CardSource : "notice")
                     : originEntry.Target;
-                CardResponses.Append(DateTime.Now, originId, originTarget, MessageCard.ActionText(text));
+                CardResponses.Append(DateTime.Now, originId, originTarget,
+                    Accounts.Find(who)?.Id ?? 0, MessageCard.ActionText(text));
 
                 Logger.Log(LogLevel.Info,
                     $"[消息] {who} 在卡片「{talk.CardTitle}」上点了「{MessageCard.ActionText(text)}」" +
@@ -496,6 +545,17 @@ internal static class Program
                     await packet.SendAsync(Protocol.MessageHistoryDone, localSent.ToString(), packet.Id);
                 }
 
+                break;
+            }
+
+            // ---- 官方端回包(509):-os 查询结果,唤醒等待的命令 ----
+            case Protocol.MegBackAck:
+            {
+                var ackText = Encoding.UTF8.GetString(packet.Data);
+                if (MegBackWaits.TryRemove((int)packet.Id, out var pending))
+                {
+                    pending.TrySetResult(ackText);
+                }
                 break;
             }
 
@@ -629,6 +689,16 @@ internal static class Program
                 $"[CONFIG]{KeySrvMsgDays} 未配置,已写入默认值 {_srvMsgDays}(本服消息存档保留天数)");
         }
 
+        // 玩家返回查询默认条数(msg backget 不带参数时返回多少条)
+        _backgetCount = int.TryParse(config.MapGet(KeyBackget).Trim(), out var backget) && backget > 0
+            ? Math.Clamp(backget, 1, 1000)
+            : DefaultBackgetCount;
+        if (config.MapGet(KeyBackget).Trim().Length == 0)
+        {
+            config.WriteFileMap(KeyBackget, _backgetCount.ToString());
+            Logger.Log(LogLevel.Info, $"[CONFIG]{KeyBackget} 未配置,已写入默认值 {_backgetCount}(玩家返回查询条数)");
+        }
+
         MessageArchive.SetKeepDays(_srvMsgDays);
         MessageArchive.Load();
 
@@ -759,6 +829,8 @@ internal static class Program
                     Logger.Log(LogLevel.Info, $"[配置] 本端名称已改为 {value}");
                 },
             },
+            backgetCountProvider: () => _backgetCount,
+            osMegBack: argsText => QueryOsMegBackAsync(argsText).GetAwaiter().GetResult(),
             clientCountProvider: () => _server?.Connections.Count ?? 0,
             registryProvider: () => _server?.Registry,
             accountProvider: () => Accounts,

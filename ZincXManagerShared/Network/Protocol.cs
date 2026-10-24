@@ -111,6 +111,12 @@ public static class Protocol
     /// </summary>
     public const ushort MessageAck = 507;
 
+    /// <summary>508 ZXMS → ZXMOS:要官方端的玩家返回记录(msg backget ... -os)。负载 = 查询参数原文。</summary>
+    public const ushort MegBackReq = 508;
+
+    /// <summary>509 ZXMOS → ZXMS:玩家返回记录的查询结果(纯文本,一行一条;err| 开头表示失败)。</summary>
+    public const ushort MegBackAck = 509;
+
     /// <summary>
     /// 服务端 → 客户端:服务端配置(客户端连上后下发一次),负载按行 <c>键=值</c>。
     /// 目前只有 <c>msgdays</c> = 这个子服务端的消息保留天数(客户端据此决定本地留多久;不认识的行忽略)。
