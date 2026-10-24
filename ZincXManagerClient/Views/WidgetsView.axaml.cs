@@ -16,33 +16,13 @@ public partial class WidgetsView : UserControl
     /// <summary>点开了某个功能。</summary>
     public event Action<string>? WidgetActivated;
 
-    // 全部功能(搜索在它上面过滤)
+    // 全部功能(搜索在它上面过滤) —— 小功能组目前只有绑定/解绑这一个
     private readonly List<WidgetEntry> _all =
     [
         new WidgetEntry
         {
             Key = "bind", Title = "绑定 / 解绑", Description = "把 ZXMC 账号绑到 MC 玩家名上",
             IconPath = Icons.Bind, Stroke = true,
-        },
-        new WidgetEntry
-        {
-            Key = "friends", Title = "好友", Description = "打开好友条与聊天窗口", IconPath = Icons.Friends,
-        },
-        new WidgetEntry
-        {
-            Key = "store", Title = "商店", Description = "看货架、下单、查余额", IconPath = Icons.Store,
-        },
-        new WidgetEntry
-        {
-            Key = "bank", Title = "银行", Description = "存取、转账、看流水", IconPath = Icons.Bank,
-        },
-        new WidgetEntry
-        {
-            Key = "help", Title = "帮助", Description = "常见问题与使用文档", IconPath = Icons.Help,
-        },
-        new WidgetEntry
-        {
-            Key = "feedback", Title = "反馈", Description = "把问题或建议发给我们", IconPath = Icons.Feedback,
         },
     ];
 

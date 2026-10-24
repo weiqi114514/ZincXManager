@@ -760,9 +760,21 @@ internal static class Program
                 break;
             }
 
-            // ---- 查绑定(629,给 ZXMM 用):回列表,一行一条 玩家名=账号名 ----
+            // ---- 查绑定(629):ZXMM 查全部;ZXMC 只查自己绑了哪个 ----
             case Protocol.BindQuery:
             {
+                var queryInfo = _server?.Registry.Find(packet.Connection.Id);
+
+                if (queryInfo?.Role == "ZXMC")
+                {
+                    // 客户端来查:只回自己这条(解绑页要显示"当前绑定了谁")
+                    var selfId = Accounts.Find(queryInfo.User)?.Id ?? 0;
+                    var selfPlayer = selfId > 0 ? LoginStore.PlayerOf(selfId) : "";
+                    await packet.SendAsync(Protocol.BindList,
+                        selfPlayer.Length > 0 ? $"{selfPlayer}={queryInfo.User}" : "", packet.Id);
+                    break;
+                }
+
                 var lines = LoginStore.AllBinds()
                     .Select(pair => $"{pair.Value}={Accounts.FindById(pair.Key)?.Name ?? "?"}");
                 await packet.SendAsync(Protocol.BindList, string.Join("\n", lines), packet.Id);

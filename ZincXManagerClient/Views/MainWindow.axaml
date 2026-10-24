@@ -212,8 +212,8 @@
     </Style>
     <!-- 绑定码:6 个方块(Steam 那种一格一个字符) -->
     <Style Selector="TextBox.codebox">
-      <Setter Property="Height" Value="54"/>
-      <Setter Property="FontSize" Value="24"/>
+      <Setter Property="Height" Value="82"/>
+      <Setter Property="FontSize" Value="26"/>
       <Setter Property="FontWeight" Value="SemiBold"/>
       <Setter Property="HorizontalContentAlignment" Value="Center"/>
       <Setter Property="VerticalContentAlignment" Value="Center"/>
@@ -590,9 +590,6 @@
                     Background="#F2FFFFFF" BorderBrush="{DynamicResource ThemePanelBorder}" BorderThickness="1"
                     CornerRadius="0" Padding="16,0" Cursor="Hand">
               <StackPanel Orientation="Horizontal" Spacing="14" VerticalAlignment="Center">
-                <Path Width="26" Height="26" Stretch="Uniform" VerticalAlignment="Center"
-                      Data="{x:Static models:Icons.Bind}" Fill="Transparent" Stroke="{DynamicResource ThemePrimaryDark}"
-                      StrokeThickness="1.7" StrokeLineCap="Round"/>
                 <StackPanel VerticalAlignment="Center" Spacing="3">
                   <TextBlock Text="绑定" FontSize="15" FontWeight="SemiBold" Foreground="#1F3B3A"/>
                   <TextBlock Text="用 6 位绑定码把账号绑到 MC 玩家名" FontSize="11.5"
@@ -606,9 +603,6 @@
                     Background="#F2FFFFFF" BorderBrush="{DynamicResource ThemePanelBorder}" BorderThickness="1"
                     CornerRadius="0" Padding="16,0" Cursor="Hand">
               <StackPanel Orientation="Horizontal" Spacing="14" VerticalAlignment="Center">
-                <Path Width="26" Height="26" Stretch="Uniform" VerticalAlignment="Center"
-                      Data="{x:Static models:Icons.Unbind}" Fill="Transparent" Stroke="#C62828"
-                      StrokeThickness="1.7" StrokeLineCap="Round"/>
                 <StackPanel VerticalAlignment="Center" Spacing="3">
                   <TextBlock Text="解绑" FontSize="15" FontWeight="SemiBold" Foreground="#1F3B3A"/>
                   <TextBlock Text="解除当前账号与 MC 玩家名的绑定" FontSize="11.5"
@@ -619,6 +613,7 @@
 
             <Button Content="取消" Click="OnBindCloseClick" Height="34" HorizontalAlignment="Right"
                     Padding="18,0" CornerRadius="0" Background="{DynamicResource ThemeLight}"
+                    HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
                     BorderThickness="0" Foreground="#1F3B3A" Cursor="Hand"/>
           </StackPanel>
 
@@ -636,9 +631,11 @@
             <TextBlock x:Name="BindHint" Text="" FontSize="11.5" Foreground="#C62828"/>
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10">
               <Button Content="取消" Click="OnBindCloseClick" Height="34" Padding="18,0" CornerRadius="0"
-                      Background="{DynamicResource ThemeLight}" BorderThickness="0" Foreground="#1F3B3A" Cursor="Hand"/>
+                      Background="{DynamicResource ThemeLight}" BorderThickness="0" Foreground="#1F3B3A" Cursor="Hand"
+                      HorizontalContentAlignment="Center" VerticalContentAlignment="Center"/>
               <Button Content="绑定" Click="OnBindSubmitClick" Height="34" Padding="22,0" CornerRadius="0"
-                      Background="{DynamicResource ThemePrimary}" BorderThickness="0" Foreground="White" Cursor="Hand"/>
+                      Background="{DynamicResource ThemePrimary}" BorderThickness="0" Foreground="White" Cursor="Hand"
+                      HorizontalContentAlignment="Center" VerticalContentAlignment="Center"/>
             </StackPanel>
           </StackPanel>
 
@@ -652,9 +649,11 @@
             </Border>
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10">
               <Button Content="取消" Click="OnBindCloseClick" Height="34" Padding="18,0" CornerRadius="0"
-                      Background="{DynamicResource ThemeLight}" BorderThickness="0" Foreground="#1F3B3A" Cursor="Hand"/>
+                      Background="{DynamicResource ThemeLight}" BorderThickness="0" Foreground="#1F3B3A" Cursor="Hand"
+                      HorizontalContentAlignment="Center" VerticalContentAlignment="Center"/>
               <Button Content="确认解绑" Click="OnUnbindSubmitClick" Height="34" Padding="22,0" CornerRadius="0"
-                      Background="#C62828" BorderThickness="0" Foreground="White" Cursor="Hand"/>
+                      Background="#C62828" BorderThickness="0" Foreground="White" Cursor="Hand"
+                      HorizontalContentAlignment="Center" VerticalContentAlignment="Center"/>
             </StackPanel>
           </StackPanel>
         </Grid>

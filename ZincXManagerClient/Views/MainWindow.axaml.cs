@@ -340,6 +340,28 @@ public partial class MainWindow : Window
     /// <summary>绑定 / 解绑回执到了(绑定窗口在时订阅它显示结果;没人订阅就弹对话框)。</summary>
     public event Action<bool, string>? BindAckArrived;
 
+    // 当前账号绑定的 MC 玩家名(空 = 没绑)
+    private string _boundPlayer = "";
+
+    /// <summary>问服务端:我这个账号绑了谁(629,回 630)。</summary>
+    private async void QueryBindAsync()
+    {
+        var connect = ClientSession.Connect;
+        if (connect is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await connect.SendAsync(Protocol.BindQuery, string.Empty);
+        }
+        catch (Exception ex)
+        {
+            Logger.Log(LogLevel.Warning, "[绑定] 查询失败: " + ex.Message);
+        }
+    }
+
     /// <summary>
     /// 收到登录请求(621):弹窗问玩家,回答发回服务端(622)。
     /// 绑定码窗口做好之前先用通用对话框顶着。
@@ -400,6 +422,9 @@ public partial class MainWindow : Window
         }
 
         BindOverlay.IsVisible = true;
+
+        // 顺手问一下服务端:这个账号现在绑了谁(解绑页要显示出来)
+        QueryBindAsync();
     }
 
     /// <summary>关掉覆盖层。</summary>
@@ -517,6 +542,20 @@ public partial class MainWindow : Window
                 var latePlayer = lateParts.Length > 1 ? lateParts[1].Trim() : "";
                 _ = MessageDialog.WarnAsync(this, "登录超时",
                     $"玩家 {latePlayer} 的登录请求超过 5 分钟未确认,已作废。\n让他重新进服即可重新发起。");
+                break;
+            }
+
+            // ---- 绑定关系(630):回答"我这个账号绑了谁" ----
+            case Protocol.BindList:
+            {
+                var line = text.Trim();
+                _boundPlayer = line.Length > 0 ? line.Split('=')[0].Trim() : "";
+                UnbindInfo.Text = _boundPlayer.Length > 0
+                    ? "当前账号绑定的是:玩家 " + _boundPlayer + "\n解绑后这名玩家再进服需要重新绑定。"
+                    : "当前账号还没有绑定任何 MC 玩家。";
+                Logger.Log(LogLevel.Info, _boundPlayer.Length > 0
+                    ? $"[绑定] 当前账号绑定了玩家 {_boundPlayer}"
+                    : "[绑定] 当前账号还没有绑定");
                 break;
             }
 
