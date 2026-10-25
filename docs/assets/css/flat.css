@@ -441,3 +441,94 @@ body.dl-lock{overflow:hidden}
 .dl-pick b{font-size:13.5px;color:#fff;font-weight:600}
 .dl-pick span{font-size:13px;color:var(--fg-dim);line-height:1.9}
 @media (max-width:720px){.dl-pick>div{grid-template-columns:1fr;gap:4px}}
+
+/* =====================================================================
+   首页(b0.1.1a 视觉重做:简洁规整,各段版式不再重复)
+   ===================================================================== */
+.sec-title{padding:64px 0 26px;border-bottom:1px solid var(--line);margin-bottom:34px;max-width:980px}
+.sec-title .k{font-family:Consolas,monospace;font-size:11.5px;letter-spacing:.22em;color:var(--green);text-transform:uppercase;margin-bottom:14px}
+.sec-title h2{font-size:clamp(28px,3.4vw,46px);line-height:1.05;letter-spacing:-.035em;font-weight:900;margin:0}
+.sec-title p{margin:14px 0 0;color:var(--fg-dim);font-size:15px;line-height:1.9;max-width:64ch}
+
+.strip{border-bottom:1px solid var(--line);background:var(--ink-2)}
+.strip-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--line)}
+.strip-grid>div{background:var(--ink-2);padding:26px 28px}
+.strip-grid b{display:block;font-size:34px;font-weight:900;line-height:1;letter-spacing:-.03em}
+.strip-grid span{display:block;margin-top:8px;font-size:12.5px;color:var(--fg-dim);letter-spacing:.06em}
+
+.cards-3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}
+.card{border:1px solid var(--line);background:var(--ink-2);padding:24px 26px}
+.card h3{margin:0 0 8px;font-size:18px;letter-spacing:-.01em}
+.card p{margin:0 0 14px;color:var(--fg-dim);font-size:13.5px;line-height:1.85}
+.card ul{margin:0;padding:0;list-style:none;display:grid;gap:7px}
+.card li{position:relative;padding-left:16px;font-size:13px;color:#cfd8e3}
+.card li::before{content:"";position:absolute;left:0;top:.62em;width:7px;height:1px;background:var(--green)}
+
+.split{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:40px;align-items:center;padding:28px 0;border-top:1px solid var(--line)}
+.split:first-of-type{border-top:0}
+.split.reverse .split-copy{order:2}
+.split.reverse .shot{order:1}
+.split-copy h3{margin:0 0 10px;font-size:22px;letter-spacing:-.02em}
+.split-copy p{margin:0 0 16px;color:var(--fg-dim);font-size:14px;line-height:1.9}
+.ticks{margin:0;padding:0;list-style:none;display:grid;gap:8px}
+.ticks li{position:relative;padding-left:18px;font-size:13.5px;color:#cfd8e3}
+.ticks li::before{content:"";position:absolute;left:0;top:.62em;width:7px;height:1px;background:var(--green)}
+
+.shot{margin:0;border:1px solid var(--line);background:var(--ink);overflow:hidden}
+.shot img{display:block;width:100%;height:auto}
+.shot figcaption{padding:9px 12px;font-size:12px;color:var(--fg-dim);border-top:1px solid var(--line);font-family:Consolas,monospace;letter-spacing:.05em}
+.hero-shot{box-shadow:0 20px 60px rgba(0,0,0,.5)}
+.hero-points{display:flex;flex-wrap:wrap;gap:18px;margin:18px 0 0;padding:0;list-style:none}
+.hero-points li{position:relative;padding-left:16px;font-size:13px;color:var(--fg-dim)}
+.hero-points li::before{content:"";position:absolute;left:0;top:.62em;width:7px;height:1px;background:var(--green)}
+
+.steps{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:1px;background:var(--line);border:1px solid var(--line);margin:0;padding:0;list-style:none}
+.steps li{background:var(--ink-2);padding:22px 20px}
+.steps b{display:block;font-family:Consolas,monospace;font-size:12px;letter-spacing:.18em;color:var(--green);margin-bottom:10px}
+.steps h4{margin:0 0 6px;font-size:14px}
+.steps p{margin:0;color:var(--fg-dim);font-size:12.5px;line-height:1.8}
+
+.compare{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line);border:1px solid var(--line)}
+.compare-col{background:var(--ink-2);padding:26px 28px}
+.compare-col h4{margin:0 0 16px;font-size:13px;letter-spacing:.08em;text-transform:uppercase;font-family:Consolas,monospace;color:var(--fg-dim)}
+.compare-col.us h4{color:var(--green)}
+.compare-col ul{margin:0;padding:0;list-style:none;display:grid;gap:10px}
+.compare-col li{font-size:13.5px;line-height:1.8;color:#cfd8e3;padding-left:16px;position:relative}
+.compare-col.us li::before{content:"";position:absolute;left:0;top:.62em;width:7px;height:1px;background:var(--green)}
+.compare-col.them li{color:var(--fg-dim)}
+.compare-col.them li::before{content:"";position:absolute;left:0;top:.62em;width:7px;height:1px;background:var(--line-2)}
+
+.arch{margin:0 0 18px;border:1px solid var(--line);background:var(--ink-2);padding:22px;overflow:auto}
+.arch img{display:block;width:100%;min-width:640px;height:auto}
+.notes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin:0;padding:0;list-style:none}
+.notes li{border-top:1px solid var(--line);padding-top:12px;font-size:13px;color:var(--fg-dim);line-height:1.8}
+.notes b{display:block;font-family:Consolas,monospace;color:var(--green);font-size:12.5px;margin-bottom:4px}
+
+.tags{display:flex;flex-wrap:wrap;gap:8px}
+.tags span{border:1px solid var(--line);background:var(--ink-2);padding:8px 14px;font-size:13px;color:#cfd8e3}
+.tags span:hover{border-color:var(--line-2)}
+
+.trio{border:1px solid var(--line)}
+.cta-row{display:flex;gap:12px;flex-wrap:wrap;margin-top:26px}
+.faq-list details{border:1px solid var(--line);background:var(--ink-2);padding:16px 20px;margin-bottom:10px}
+.faq-list summary{cursor:pointer;font-weight:700;font-size:14px}
+.faq-list details p{margin:10px 0 0;color:var(--fg-dim);font-size:13.5px;line-height:1.9}
+.cta{border-bottom:1px solid var(--line)}
+.cta-in{display:flex;flex-wrap:wrap;gap:24px;align-items:center;justify-content:space-between;padding:70px 28px}
+.cta-in h2{margin:0;font-size:clamp(28px,3.8vw,54px);font-weight:900;letter-spacing:-.04em;line-height:1}
+.cta-in p{margin:10px 0 0;color:var(--fg-dim);font-size:14px}
+.cta-actions{display:flex;gap:12px;flex-wrap:wrap}
+
+@media (max-width:1080px){
+  .cards-3{grid-template-columns:1fr}
+  .split{grid-template-columns:1fr;gap:20px}
+  .split.reverse .split-copy,.split.reverse .shot{order:0}
+  .steps{grid-template-columns:1fr 1fr}
+  .notes{grid-template-columns:1fr}
+  .strip-grid{grid-template-columns:1fr 1fr}
+}
+@media (max-width:720px){
+  .compare{grid-template-columns:1fr}
+  .steps{grid-template-columns:1fr}
+  .sec-title{padding-top:48px}
+}

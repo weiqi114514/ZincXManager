@@ -37,453 +37,199 @@
 
 <main>
 
-<!-- 首屏:讲能干什么 -->
+<!-- 首屏 -->
 <section class="hero grid-bg">
   <div class="hero-in">
     <div class="hero-copy">
-      <span class="hero-tag" id="hero-version">b0.1.0 · 自动更新已上线</span>
+      <span class="hero-tag" id="hero-version">b0.1.1a · 连接阶段拦截已上线</span>
       <h1 class="zxm-hero"><span>Zinc</span><span class="bm-slot"><span class="bm-cur">X</span><span class="bm-next"></span></span><span class="dim">Manager</span></h1>
-      <p class="lead">
-        一个客户端,把你的 Minecraft 服务器管起来:
-        发公告、开商店、管玩家、建社区 —— 不用再装一堆后台、开一堆网页。
-      </p>
+      <p class="lead">一个客户端，管起你的 Minecraft 服务器：公告、商店、玩家、社区。</p>
       <div class="hero-actions">
-        <a class="btn btn-primary" href="download.html">下载客户端(免安装)</a>
-        <a class="btn" href="#capabilities">看它能干什么</a>
+        <a class="btn btn-primary" href="download.html">下载客户端（免安装）</a>
+        <a class="btn" href="#features">看它能干什么</a>
       </div>
+      <ul class="hero-points"><li>四端一套栈</li><li>AOT 单文件</li><li>图形界面</li></ul>
     </div>
-    <div class="hero-side">
-      <div class="stat"><div class="big">大统一</div><div class="txt"><b>多个功能集于一体</b><span>多位一体</span></div></div>
-      <div class="stat"><div class="big">简便</div><div class="txt"><b>玩家/管理都有GUI界面</b><span>便携的管理界面</span></div></div>
-      <div class="stat"><div class="big">无依赖</div><div class="txt"><b>使用AOT技术打包，不用装 .NET 运行时等任何依赖</b><span>没有任何依赖，包括NET</span></div></div>
-      <div class="stat"><div class="big">快速上手</div><div class="txt"><b>简单的界面设计，功能描述，程序结构，让你快速上手</b><span>快速上手的软件</span></div></div>
-    </div>
+    <figure class="shot hero-shot">
+      <img src="assets/img/shot-main.png" alt="ZXMC 客户端主界面：左侧导航、社区广场与消息面板" loading="eager">
+      <figcaption>ZXMC 客户端</figcaption>
+    </figure>
   </div>
 </section>
 
-<!-- 跑马灯 -->
-<div class="marquee" aria-hidden="true">
-  <div class="marquee-track">
-    <span>大统一 <em>·</em> 简便 <em>·</em> 隐私 <em>·</em> 快速 <em>·</em> 管理 <em>·</em> 首发 <em>·</em> 无依赖 <em>·</em>&nbsp;</span>
-    <span>大统一 <em>·</em> 简便 <em>·</em> 隐私 <em>·</em> 快速 <em>·</em> 管理 <em>·</em> 首发 <em>·</em> 无依赖 <em>·</em>&nbsp;</span>
-  </div>
-</div>
+<!-- 数字 -->
+<section class="strip"><div class="wrap strip-grid">
+  <div><b>4</b><span>端一套栈</span></div>
+  <div><b>26</b><span>控制台命令</span></div>
+  <div><b>100+</b><span>协议码</span></div>
+  <div><b>144</b><span>自动测试</span></div>
+</div></section>
 
-<!-- 数字带 -->
-<section class="sec" style="padding:30px 0">
-  <div class="wrap" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px">
-    <div class="card-block" style="margin:0">
-      <div style="font-size:34px;font-weight:900;line-height:1">4</div>
-      <div style="margin-top:6px;font-weight:700">端一套栈</div>
-      <div style="color:var(--fg-dim);font-size:13px">客户端 / 子服 / 官方 / 模组</div>
-    </div>
-    <div class="card-block" style="margin:0">
-      <div style="font-size:34px;font-weight:900;line-height:1">26</div>
-      <div style="margin-top:6px;font-weight:700">条控制台命令</div>
-      <div style="color:var(--fg-dim);font-size:13px">封禁、绑定、消息、通道</div>
-    </div>
-    <div class="card-block" style="margin:0">
-      <div style="font-size:34px;font-weight:900;line-height:1">100+</div>
-      <div style="margin-top:6px;font-weight:700">个协议码</div>
-      <div style="color:var(--fg-dim);font-size:13px">包头 16 字节,负载上限 8 MB</div>
-    </div>
-    <div class="card-block" style="margin:0">
-      <div style="font-size:34px;font-weight:900;line-height:1">144</div>
-      <div style="margin-top:6px;font-weight:700">项自动测试</div>
-      <div style="color:var(--fg-dim);font-size:13px">14 个套件,每次发版都跑</div>
-    </div>
+<!-- 玩家 -->
+<section class="sec" id="player"><div class="wrap">
+  <header class="sec-title">
+    <div class="k">For players</div>
+    <h2>玩家能用的</h2>
+    <p>社区、经济、组织——日常经营需要的东西都在客户端里，不用记指令。</p>
+  </header>
+  <div class="cards-3">
+    <article class="card">
+      <h3>社区</h3>
+      <p>服务器广场、帖子、资源库、聊天室与投票。</p>
+      <ul><li>广场与帖子</li><li>资源 / 蓝图共享</li><li>公共聊天室</li></ul>
+    </article>
+    <article class="card">
+      <h3>经济</h3>
+      <p>商店、拍卖、银行与转账，玩家自己就能经营。</p>
+      <ul><li>开店与拍卖</li><li>存取 / 贷款 / 债券</li><li>交易记录可查</li></ul>
+    </article>
+    <article class="card">
+      <h3>组织</h3>
+      <p>个人 / 团队 / 企业三类组织，带工资、公款与待办。</p>
+      <ul><li>开发区 / 基地 / 机器登记</li><li>工资与公款</li><li>组织内消息</li></ul>
+    </article>
   </div>
-</section>
+</div></section>
 
-<section class="sec" id="player">
-  <div class="wrap">
-    <div class="sec-head">
-      <div>
-        <div class="k">For players</div>
-        <h2>玩家能用<br>什么</h2>
-      </div>
-      <p>从开发区到小功能组:日常经营、社区交流、蓝图与 mod,都在客户端里。</p>
+<!-- 管理员 -->
+<section class="sec" id="admin"><div class="wrap">
+  <header class="sec-title">
+    <div class="k">For admins</div>
+    <h2>管理员能用的</h2>
+    <p>从 MC 服务器运维到平台运营，四层能力在同一套界面里。</p>
+  </header>
+  <div class="split">
+    <div class="split-copy">
+      <h3>服务器运维</h3>
+      <p>MCSM、RCON、文件与模组、地图备份、玩家数据——都在客户端里动手。</p>
+      <ul class="ticks"><li>MCSM / RCON / 监听控制台</li><li>文件、Mod、地图备份</li><li>玩家数据、OP、白名单</li></ul>
     </div>
-    <div class="sec-body">
-      <div class="row">
-        <div class="side"><h3>组织</h3><p>把玩家组织起来,也把地图上的东西登记清楚。</p></div>
-        <div class="items">
-          <div><h4>开发区</h4><p>登记注册开发区,只能在自己登记的区域开发,不乱占地方。</p></div>
-          <div><h4>基地</h4><p>登记基地,和开发区一个思路,但用途是基地不是开发。</p></div>
-          <div><h4>机器</h4><p>每台机器都要登记;没登记的会被警告甚至强制拆除,防卡顿。</p></div>
-          <div><h4>TODO</h4><p>内置待办,组织里的事有人跟。</p></div>
-          <div><h4>公共资源库</h4><p>组织内的共享库,文档、蓝图都放这。</p></div>
-          <div><h4>工资</h4><p>给成员发工资,一句话的事。</p></div>
-          <div><h4>公款</h4><p>拿组织的公款去买卖,账目清楚。</p></div>
-          <div><h4>特殊用途</h4><p>注册成金融类企业,就多出银行这类专用功能。</p></div>
-        </div>
-      </div>
-      <div class="row">
-        <div class="side"><h3>社区 · 广场</h3><p>服务器广场(你自己)与锌源广场(官方),同一套结构。</p></div>
-        <div class="items">
-          <div><h4>资源库</h4><p>蓝图、地图、材质包上传与下载,玩家和管理者都能传。</p></div>
-          <div><h4>帖子</h4><p>发帖、回帖、置顶。</p></div>
-          <div><h4>聊天室</h4><p>公共聊天室,可以按主题开多个房间。</p></div>
-          <div><h4>投票</h4><p>发起投票;范围可以是个人、某个子服,或整个 ZXM。</p></div>
-        </div>
-      </div>
-      <div class="row">
-        <div class="side"><h3>经济</h3><p>商店与银行,玩家自己也能开。</p></div>
-        <div class="items">
-          <div><h4>商店 · 店铺</h4><p>官方和玩家都能开店,定价上架。</p></div>
-          <div><h4>商店 · 拍卖</h4><p>竞价拍卖,到点成交。</p></div>
-          <div><h4>银行 · 转账</h4><p>账户之间转钱,货币全服相通。</p></div>
-          <div><h4>银行 · 存款 / 贷款 / 债券</h4><p>存钱、借钱、买债券;一个人可以开多个银行账户。</p></div>
-        </div>
-      </div>
-      <div class="row">
-        <div class="side"><h3>管理(玩家侧)</h3><p>自己那份数据和版本,自己管。</p></div>
-        <div class="items">
-          <div><h4>版本管理</h4><p>管理 MC 版本,以及 mod、材质包、蓝图、光影。</p></div>
-          <div><h4>数据源</h4><p>存多个数据源,随时切换,不用每次手填。</p></div>
-          <div><h4>服务器</h4><p>一个子服可连多个 MC 服,玩家数据各不同,按服切换;哪些全局、哪些独立由服主定。</p></div>
-          <div><h4>数据统计</h4><p>在线、经济、消息等数据。</p></div>
-        </div>
-      </div>
-      <div class="row">
-        <div class="side"><h3>小功能组</h3><p>零碎但每天都用得上的东西。</p></div>
-        <div class="items">
-          <div><h4>绑定 / 换绑</h4><p>跟 ZXM 账号绑定,不用第三方登录插件。</p></div>
-          <div><h4>在线查看</h4><p>现在谁在线,一眼看到。</p></div>
-          <div><h4>仓库</h4><p>买到的东西都在仓库里,可扩容。</p></div>
-          <div><h4>签到</h4><p>可选,签到拿奖励,奖励由管理者配。</p></div>
-          <div><h4>活动</h4><p>管理者发活动,玩家做任务领奖。</p></div>
-          <div><h4>成就</h4><p>ZXM 内的成就,比如第 100 次启动客户端。</p></div>
-          <div><h4>贴图解析</h4><p>把 mod 的 jar 丢进来,自动解析贴图,商店里的物品不再是无图方块。</p></div>
-          <div><h4>服板联登</h4><p>进服时要在已绑定的客户端账户里点确认:不确认进不去,确认了才放行。</p></div>
-        </div>
-      </div>
+    <figure class="shot"><img src="assets/img/shot-settings.png" alt="ZXMC 设置页：模式与数据源" loading="lazy"><figcaption>设置 · 数据源</figcaption></figure>
+  </div>
+  <div class="split reverse">
+    <figure class="shot"><img src="assets/img/shot-bind.png" alt="ZXMC 绑定 / 解绑覆盖层" loading="lazy"><figcaption>绑定 / 解绑</figcaption></figure>
+    <div class="split-copy">
+      <h3>平台运营</h3>
+      <p>账号、社区、组织、官方商店与金融；封禁会同步通知玩家和群。</p>
+      <ul class="ticks"><li>账号 / 社区 / 组织管理</li><li>官方商店与贷款</li><li>联 ban、群同步、留痕</li></ul>
     </div>
   </div>
-</section>
+</div></section>
 
-<section class="sec" id="admin">
-  <div class="wrap">
-    <div class="sec-head">
-      <div>
-        <div class="k">For admins</div>
-        <h2>管理员能用<br>什么</h2>
-      </div>
-      <p>MC 服务器、跨服联动、平台运营、查询留痕 —— 四层都在同一套界面里。</p>
+<!-- 进服 -->
+<section class="sec" id="login-flow"><div class="wrap">
+  <header class="sec-title">
+    <div class="k">How joining works</div>
+    <h2>玩家进服会发生什么</h2>
+    <p>不是输密码就能进：每一步都由 ZXMS 判定，模组只执行。</p>
+  </header>
+  <ol class="steps">
+    <li><b>01</b><h4>模组上报</h4><p>玩家连上 MC，ZXMM 把名字与 IP 推给 ZXMS。</p></li>
+    <li><b>02</b><h4>查豁免</h4><p>登录数组 / 持久登录表命中，直接放行。</p></li>
+    <li><b>03</b><h4>没绑定</h4><p>生成 6 位绑定码，踢出并提示去客户端绑定。</p></li>
+    <li><b>04</b><h4>已绑定</h4><p>客户端弹登录请求，账号主人点同意或拒绝。</p></li>
+    <li><b>05</b><h4>放行或踢出</h4><p>同意才进；拒绝、超时由 ZXMS 指挥模组踢掉。</p></li>
+  </ol>
+</div></section>
+
+<!-- 对比 -->
+<section class="sec" id="capabilities"><div class="wrap">
+  <header class="sec-title">
+    <div class="k">Vs. mods &amp; plugins</div>
+    <h2>和别的模组 / 插件不一样</h2>
+    <p>别人是往 MC 服务端里塞插件，我们是一个独立程序加一个客户端。</p>
+  </header>
+  <div class="compare">
+    <div class="compare-col us">
+      <h4>ZincXManager</h4>
+      <ul>
+        <li>独立程序，不绑 MC 版本，服务端关着也能用</li>
+        <li>功能一体，不需要额外插件，也没有插件冲突</li>
+        <li>图形界面操作，消息支持排版、离线补齐</li>
+        <li>AOT 单文件，拷走即搬家，冷启动几百毫秒</li>
+      </ul>
     </div>
-    <div class="sec-body">
-      <div class="row">
-        <div class="side"><h3>MC 服务器管理</h3><p>直接动手的那一层。</p></div>
-        <div class="items">
-          <div><h4>MCSM</h4><p>接入 MCSM 的 API,在 ZXM 里直接操作 MCSM 的实例。</p></div>
-          <div><h4>RCON</h4><p>和 MC 服务端直连,执行命令。</p></div>
-          <div><h4>监听服务器</h4><p>实时看 MC 服输出。</p></div>
-          <div><h4>文件管理</h4><p>管理 MC 服或 ZXMS 所在机器的文件。</p></div>
-          <div><h4>Mod / 插件管理</h4><p>装、卸、换版本。</p></div>
-          <div><h4>地图管理 / 备份切换</h4><p>换图、回滚到某个备份。</p></div>
-          <div><h4>玩家数据管理</h4><p>直接改玩家 dat 等数据。</p></div>
-          <div><h4>OP 管理</h4><p>给权限、收权限。</p></div>
-          <div><h4>玩家背包管理</h4><p>查看与调整玩家背包。</p></div>
-          <div><h4>白名单</h4><p>MC 白名单管理,和 ZXM 绑定联动。</p></div>
-        </div>
-      </div>
-      <div class="row">
-        <div class="side"><h3>功能类</h3><p>跨服、外部联动、批量动作。</p></div>
-        <div class="items">
-          <div><h4>地图备份</h4><p>一键备份,出事能回。</p></div>
-          <div><h4>多服玩家互通</h4><p>多区服之间自动同步玩家数据。</p></div>
-          <div><h4>与 MC 服的连接设置</h4><p>地址、端口、密钥,一处配好。</p></div>
-          <div><h4>QQ 机器人连接</h4><p>接 QQ 机器人框架,群里也能管。</p></div>
-          <div><h4>QQ 绑定</h4><p>把 ZXM 账号和 QQ 绑起来。</p></div>
-          <div><h4>联 ban</h4><p>在 ZXM 里封人,同时给被封玩家发消息、往群里同步。</p></div>
-          <div><h4>投票发布</h4><p>按范围发:特定人、整个子服、整个 ZXM。</p></div>
-          <div><h4>统计</h4><p>人数、经济、在线曲线。</p></div>
-        </div>
-      </div>
-      <div class="row">
-        <div class="side"><h3>ZXM 自身的运营</h3><p>平台这一层也归你管。</p></div>
-        <div class="items">
-          <div><h4>账户管理</h4><p>ZXM 账号的增删改查。</p></div>
-          <div><h4>社区管理</h4><p>帖子、资源、聊天室分别管。</p></div>
-          <div><h4>组织管理</h4><p>个人 / 团队 / 企业组织分别管。</p></div>
-          <div><h4>官方商店</h4><p>上架、下架、改价。</p></div>
-          <div><h4>官方贷款 / 债券</h4><p>平台侧的金融产品。</p></div>
-          <div><h4>开发区 / 机器 / 基地管理</h4><p>审核、撤销、纠错。</p></div>
-        </div>
-      </div>
-      <div class="row">
-        <div class="side"><h3>查询与留痕</h3><p>出了问题能查得到。</p></div>
-        <div class="items">
-          <div><h4>坐标校验</h4><p>自动核对登记的开发区 / 机器坐标是否真实存在。</p></div>
-          <div><h4>玩家出入记录</h4><p>谁什么时候进的哪个服。</p></div>
-          <div><h4>群聊天记录</h4><p>QQ 群聊天留档。</p></div>
-          <div><h4>服聊天记录</h4><p>游戏内聊天留档。</p></div>
-        </div>
-      </div>
+    <div class="compare-col them">
+      <h4>常见插件 / 模组</h4>
+      <ul>
+        <li>跟着服务端版本与重启走</li>
+        <li>功能靠插件拼，配置分散</li>
+        <li>靠聊天框敲指令</li>
+        <li>需要对应运行时或依赖</li>
+      </ul>
     </div>
   </div>
-</section>
-
-<!-- 与众不同 -->
-<!-- 进服流程 -->
-<section class="sec" id="login-flow">
-  <div class="wrap">
-    <div class="sec-head">
-      <div>
-        <div class="k">How joining works</div>
-        <h2>玩家进服<br>会发生什么</h2>
-      </div>
-      <p>不是"输密码就能进":每一次进服都由服务端按顺序判断,全部在 ZXMS 侧完成。</p>
-    </div>
-
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px">
-      <div class="card-block" style="margin:0">
-        <div class="k" style="margin-bottom:6px">STEP 1</div>
-        <h4 style="margin:0 0 6px">模组上报</h4>
-        <p style="margin:0;color:var(--fg-dim);font-size:13.5px">玩家连上 MC,模组把「玩家名 + IP」经 21200 推给 ZXMS。模组自己不做判断。</p>
-      </div>
-      <div class="card-block" style="margin:0">
-        <div class="k" style="margin-bottom:6px">STEP 2</div>
-        <h4 style="margin:0 0 6px">查登录数组</h4>
-        <p style="margin:0;color:var(--fg-dim);font-size:13.5px">5 分钟内确认过的玩家直接放行,不用重复弹窗。</p>
-      </div>
-      <div class="card-block" style="margin:0">
-        <div class="k" style="margin-bottom:6px">STEP 3</div>
-        <h4 style="margin:0 0 6px">查持久登录表</h4>
-        <p style="margin:0;color:var(--fg-dim);font-size:13.5px">账号主人点过「记住」的玩家,命中就写回登录数组并放行。</p>
-      </div>
-      <div class="card-block" style="margin:0">
-        <div class="k" style="margin-bottom:6px">STEP 4</div>
-        <h4 style="margin:0 0 6px">有没有绑定</h4>
-        <p style="margin:0;color:var(--fg-dim);font-size:13.5px">没绑定 → 生成 6 位绑定码,踢出并提示去客户端绑定。</p>
-      </div>
-      <div class="card-block" style="margin:0">
-        <div class="k" style="margin-bottom:6px">STEP 5</div>
-        <h4 style="margin:0 0 6px">问账号主人</h4>
-        <p style="margin:0;color:var(--fg-dim);font-size:13.5px">已绑定 → 客户端弹「登录请求」(玩家名 / IP / 归属地),允许还是拒绝由人决定。</p>
-      </div>
-      <div class="card-block" style="margin:0">
-        <div class="k" style="margin-bottom:6px">STEP 6</div>
-        <h4 style="margin:0 0 6px">放行或踢出</h4>
-        <p style="margin:0;color:var(--fg-dim);font-size:13.5px">同意才进得去;拒绝、5 分钟没人点、或者越权回答,一律由 ZXMS 指挥模组踢掉。</p>
-      </div>
-    </div>
-  </div>
-</section>
-
-<section class="sec" id="capabilities">
-  <div class="wrap">
-    <div class="sec-head">
-      <div>
-        <div class="k">Vs. mods &amp; plugins</div>
-        <h2>和别的管理<br>模组 / 插件<br>不一样</h2>
-      </div>
-      <p>同样是管服:别人是往 MC 服务端里塞插件,我们是一个独立的程序 + 客户端。</p>
-    </div>
-    <div class="sec-body">
-      <div class="row">
-        <div class="side"><h3>独立程序<br>不塞进服务端</h3><p>插件要绑 MC 版本、跟着服务端重启;这是个单独的程序,升级互不影响。</p></div>
-        <div class="items">
-          <div><h4>只要是个MC服务端就能接</h4><p>独立于MC之外，使用RCON或模组/插件进行通信或管理</p></div>
-          <div><h4>不挑版本</h4><p>不管你是什么版本（包括原版），ZXM都能接</p></div>
-          <div><h4>MC服务端关了也能用</h4><p>关了就不能用?NO！即使MC服务端关了你还是可以使用商店等各种功能！</p></div>
-          <div><h4>没有任何前置</h4><p>不需要nodejs，net，任何东西，直接运行</p></div>
-        </div>
-      </div>
-      <div class="row">
-        <div class="side"><h3>大统一<br>再见吧插件！</h3><p>货币？商店？投票？全部归于一体</p></div>
-        <div class="items">
-          <div><h4>不需要任何额外插件</h4><p>所有的功能实现都在ZXM中，MC 服务端只需要RCON或者桥接插件</p></div>
-          <div><h4>功能管理</h4><p>功能太多不需要？可以选择关闭特定功能</p></div>
-          <div><h4>一个界面管全部</h4><p>不用在五六个插件的配置文件之间来回切</p></div>
-          <div><h4>拜拜插件冲突</h4><p>再也不会出现这个插件和那个插件冲突的问题，全部归于一体</p></div>
-        </div>
-      </div>
-      <div class="row">
-        <div class="side"><h3>有了界面<br>不靠敲指令</h3><p>插件时代玩家靠聊天框记指令;这里有界面、有按钮。</p></div>
-        <div class="items">
-          <div><h4>图形界面操作</h4><p>开店、转账、加好友都是点,不是记命令。</p></div>
-          <div><h4>消息能排版</h4><p>公告支持 Markdown / HTML,不再是一行字。</p></div>
-          <div><h4>消息不会刷屏丢失</h4><p>离线消息由服务端保留,上线补齐。</p></div>
-          <div><h4>不用装客户端 mod</h4><p>独立客户端,不污染游戏本体。</p></div>
-        </div>
-      </div>
-      <div class="row">
-        <div class="side"><h3>装在 U 盘<br>也能跑</h3><p>没有安装向导、没有运行时、没有环境依赖。</p></div>
-        <div class="items">
-          <div><h4>单文件程序</h4><p>原生 AOT 编译,双击 exe 就启动。</p></div>
-          <div><h4>数据随身走</h4><p>配置、消息、日志都在 exe 同目录,拷走即搬家。</p></div>
-          <div><h4>启动快</h4><p>没有 JIT 预热,冷启动几百毫秒级。</p></div>
-          <div><h4>也能正规安装</h4><p>要开始菜单和桌面图标就用 MSI。</p></div>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
+</div></section>
 
 <!-- 架构 -->
-<section class="sec" id="arch">
-  <div class="wrap">
-    <div class="sec-head">
-      <div>
-        <div class="k">Architecture</div>
-        <h2>四个端<br>怎么连</h2>
-      </div>
-      <p>三条独立的连接:玩家用客户端连子服,子服连官方端,子服再用一条专用通道指挥模组。互不抢端口。</p>
-    </div>
-
-    <div class="sec-body">
-      <div class="row">
-        <div class="side"><h3>ZXMC → ZXMS</h3><p>玩家 / 管理员用的客户端,连子服务端的 21000。</p></div>
-        <div class="items">
-          <div><h4>加密会话</h4><p>ECDH(P-256) 协商后整体 AES-256-GCM,抓包只能看到密文。</p></div>
-          <div><h4>挑战-响应登录</h4><p>密码不出网:客户端发 proof = SHA256(密文:nonce),服务端自己算一遍。</p></div>
-          <div><h4>断线自愈</h4><p>5 秒一次心跳,断了自动重连,连续 5 次失败才退回连接界面。</p></div>
-        </div>
-      </div>
-
-      <div class="row">
-        <div class="side"><h3>ZXMS → ZXMOS</h3><p>子服务端接到官方端,账号、头像、消息分发走官方。</p></div>
-        <div class="items">
-          <div><h4>100 / 101 握手</h4><p>先报上线,对方回收到,之后才允许转发业务包。</p></div>
-          <div><h4>官方端做分发</h4><p>公告、推送、历史由 ZXMOS 统一发,子服只转。</p></div>
-          <div><h4>能断开单干</h4><p>连不上官方时子服照常跑,本地账号自己说了算。</p></div>
-        </div>
-      </div>
-
-      <div class="row">
-        <div class="side"><h3>ZXMS → ZXMM</h3><p>专用通道 21200,只用来让模组踢人/查在线。</p></div>
-        <div class="items">
-          <div><h4>模组只执行</h4><p>登录判断、绑定关系全在 ZXMS,模组不加任何业务逻辑。</p></div>
-          <div><h4>只听本机</h4><p>默认只绑 127.0.0.1;跨机必须配共享令牌,5 秒内不自报就断开。</p></div>
-          <div><h4>5 秒 × 5 次</h4><p>连不上就停手并报错,控制台 <span class="mono">zxmm connect</span> 手动重连。</p></div>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
+<section class="sec" id="arch"><div class="wrap">
+  <header class="sec-title">
+    <div class="k">Architecture</div>
+    <h2>四个端怎么连</h2>
+    <p>三条独立连接：客户端连子服，子服连官方端，子服再用专用通道指挥模组。</p>
+  </header>
+  <figure class="arch"><img src="assets/img/arch.svg" alt="四端架构：ZXMC 连 ZXMS，ZXMS 连 ZXMOS，ZXMS 经 21200 指挥 ZXMM" loading="lazy"></figure>
+  <ul class="notes">
+    <li><b>21000</b> 客户端 ↔ 子服务端，加密会话 + 挑战响应登录</li>
+    <li><b>25000</b> 子服务端 ↔ 官方服务端，账号、头像、消息分发</li>
+    <li><b>21200</b> 子服务端 ↔ 模组，只用来踢人与查询，默认只听本机</li>
+  </ul>
+</div></section>
 
 <!-- 功能清单 -->
-<section class="sec" id="features">
-  <div class="wrap">
-    <div class="sec-head">
-      <div>
-        <div class="k">Everything you get</div>
-        <h2>功能清单</h2>
-      </div>
-      <p>打开客户端,左侧就是这些;每个都是一件能立刻做的事。</p>
-    </div>
-    <div class="sec-body">
-      <div class="row">
-        <div class="side"><h3>社区</h3><p>让玩家有地方待着。</p></div>
-        <div class="items">
-          <div><h4>服务器广场</h4><p>你自己的社区板块,名字可改。</p></div>
-          <div><h4>官方广场</h4><p>连官方时自动出现,全服玩家都能看。</p></div>
-          <div><h4>好友与私聊</h4><p>独立好友条,双击开聊天窗。</p></div>
-          <div><h4>公告与消息</h4><p>系统、公告、私信分开,支持格式化。</p></div>
-        </div>
-      </div>
-      <div class="row">
-        <div class="side"><h3>经济</h3><p>让服务器有自己的循环。</p></div>
-        <div class="items">
-          <div><h4>商店</h4><p>摆商品、定价、玩家下单。</p></div>
-          <div><h4>银行</h4><p>存取款、转账、利息。</p></div>
-          <div><h4>交易记录</h4><p>谁买了什么,查得到。</p></div>
-          <div><h4>权限挂钩</h4><p>不同等级看到不同商品。</p></div>
-        </div>
-      </div>
-      <div class="row">
-        <div class="side"><h3>管理</h3><p>日常运维不用折腾。</p></div>
-        <div class="items">
-          <div><h4>封禁玩家</h4><p>按账号或机器码拦人,处罚记录可查。</p></div>
-          <div><h4>商店管理</h4><p>删除违规商店,也能手动替玩家添加。</p></div>
-          <div><h4>调整所属权</h4><p>商店、组织的归属可以在账号之间转移。</p></div>
-          <div><h4>数据统计</h4><p>玩家、经济、消息指标汇总。</p></div>
-        </div>
-      </div>
-      <div class="row">
-        <div class="side"><h3>组织</h3><p>玩家自己也能建,不只是管理员的工具。</p></div>
-        <div class="items">
-          <div><h4>个人组织</h4><p>小队规模的协作。</p></div>
-          <div><h4>团队组织</h4><p>多人分工、共同目标。</p></div>
-          <div><h4>企业组织</h4><p>大型组织的层级管理。</p></div>
-          <div><h4>组织内消息</h4><p>只在组织内可见的公告与消息。</p></div>
-        </div>
-      </div>
-    </div>
+<section class="sec" id="features"><div class="wrap">
+  <header class="sec-title">
+    <div class="k">Everything you get</div>
+    <h2>功能清单</h2>
+    <p>打开客户端，左侧就是这些；每个都是一件能立刻做的事。</p>
+  </header>
+  <div class="tags">
+    <span>服务器广场</span><span>官方广场</span><span>好友 / 私聊</span><span>公告与消息</span>
+    <span>商店</span><span>拍卖</span><span>银行</span><span>贷款 / 债券</span>
+    <span>组织</span><span>工资 / 公款</span><span>开发区</span><span>机器登记</span>
+    <span>封禁</span><span>OP / 白名单</span><span>地图备份</span><span>玩家数据</span>
+    <span>MCSM</span><span>RCON</span><span>文件管理</span><span>Mod 管理</span>
+    <span>统计</span><span>投票</span><span>联 ban</span><span>QQ 绑定</span>
   </div>
-</section>
+</div></section>
 
-<!-- 上手三步 -->
-<section class="sec" id="start">
-  <div class="wrap">
-    <div class="sec-head">
-      <div>
-        <div class="k">Get started</div>
-        <h2>三步就能用</h2>
-      </div>
-      <p>不用先看文档,跟着走一遍就会。</p>
-    </div>
-    <div class="sec-body" style="padding-bottom:56px">
-      <div class="trio">
-        <article><div class="idx">01</div><h3>下载</h3><div class="role">30 秒</div><p>拿免安装包,解压到任意文件夹;或装 MSI。</p></article>
-        <article><div class="idx">02</div><h3>选服</h3><div class="role">1 分钟</div><p>连官方直接进;有自己的服就填地址端口。</p></article>
-        <article><div class="idx">03</div><h3>开始用</h3><div class="role">立刻</div><p>登录后左侧点开就能发公告、开商店、管玩家。</p></article>
-      </div>
-      <p style="margin-top:26px;display:flex;gap:12px;flex-wrap:wrap">
-        <a class="btn btn-primary" href="download.html">下载客户端</a>
-        <a class="btn" href="help.html">看文档</a>
-      </p>
-    </div>
+<!-- 三步 -->
+<section class="sec" id="start"><div class="wrap">
+  <header class="sec-title">
+    <div class="k">Get started</div>
+    <h2>三步就能用</h2>
+    <p>不用先看文档，跟着走一遍就会。</p>
+  </header>
+  <div class="trio">
+    <article><div class="idx">01</div><h3>下载</h3><div class="role">30 秒</div><p>拿免安装包解压即用，或装 MSI。</p></article>
+    <article><div class="idx">02</div><h3>选服</h3><div class="role">1 分钟</div><p>连官方直接进；自己的服填地址端口。</p></article>
+    <article><div class="idx">03</div><h3>开始用</h3><div class="role">立刻</div><p>登录后左侧点开就能发公告、开商店、管玩家。</p></article>
   </div>
-</section>
+  <p class="cta-row"><a class="btn btn-primary" href="download.html">下载客户端</a><a class="btn" href="help.html">看文档</a></p>
+</div></section>
 
 <!-- FAQ -->
-<section class="sec" id="faq">
-  <div class="wrap">
-    <div class="sec-head">
-      <div>
-        <div class="k">FAQ</div>
-        <h2>常见问题</h2>
-      </div>
-      <p>更多在 <a href="help.html">文档与帮助</a>。</p>
-    </div>
-    <div class="sec-body" style="padding-bottom:56px">
-      <div class="doc-main">
-        <details style="border:1px solid var(--line);padding:14px 18px;margin-bottom:10px">
-          <summary style="cursor:pointer;font-weight:700">我没有自己的服务器,能用吗?</summary>
-          <p style="margin-top:10px">能。连官方服务端就能用社区、广场、消息这些;商店与自建社区内容需要自己的子服务端。</p>
-        </details>
-        <details style="border:1px solid var(--line);padding:14px 18px;margin-bottom:10px">
-          <summary style="cursor:pointer;font-weight:700">要装数据库或 .NET 吗?</summary>
-          <p style="margin-top:10px">不用。客户端是单文件程序;子服务端也是解压即用,数据就是同目录下的文件。</p>
-        </details>
-        <details style="border:1px solid var(--line);padding:14px 18px;margin-bottom:10px">
-          <summary style="cursor:pointer;font-weight:700">玩家会不会很难上手?</summary>
-          <p style="margin-top:10px">玩家只需要一个客户端。登录后看到的就是左侧几个入口,不需要再学第二套系统。</p>
-        </details>
-        <details style="border:1px solid var(--line);padding:14px 18px">
-          <summary style="cursor:pointer;font-weight:700">换电脑或换服怎么办?</summary>
-          <p style="margin-top:10px">整个文件夹拷走即可;换服在连接窗口里改地址端口,不用重装。</p>
-        </details>
-      </div>
-    </div>
+<section class="sec" id="faq"><div class="wrap">
+  <header class="sec-title">
+    <div class="k">FAQ</div>
+    <h2>常见问题</h2>
+    <p>更多在 <a href="help.html">文档与帮助</a>。</p>
+  </header>
+  <div class="faq-list">
+    <details><summary>我没有自己的服务器，能用吗？</summary><p>能。连官方服务端就能用社区、广场、消息；商店与自建社区内容需要自己的子服务端。</p></details>
+    <details><summary>要装数据库或 .NET 吗？</summary><p>不用。客户端是单文件程序，子服务端解压即用，数据就是同目录下的文件。</p></details>
+    <details><summary>换电脑或换服怎么办？</summary><p>整个文件夹拷走即可；换服在连接窗口改地址端口，不用重装。</p></details>
   </div>
-</section>
+</div></section>
 
 <!-- CTA -->
-<section class="sec" style="border-bottom:1px solid var(--line)">
-  <div class="wrap" style="padding:76px 28px;display:flex;flex-wrap:wrap;gap:24px;align-items:center;justify-content:space-between">
-    <div>
-      <h2 style="font-size:clamp(30px,4vw,60px);font-weight:900;letter-spacing:-.04em;line-height:1">现在就开始</h2>
-      <p style="color:var(--fg-dim);margin-top:12px">下载客户端,连你的服务器,几分钟后就能发第一条公告。</p>
-    </div>
-    <div style="display:flex;gap:12px">
-      <a class="btn btn-primary" href="download.html">下载客户端</a>
-      <a class="btn" href="help.html">看文档</a>
-    </div>
+<section class="sec cta"><div class="wrap cta-in">
+  <div>
+    <h2>现在就开始</h2>
+    <p>下载客户端，连你的服务器，几分钟后就能发第一条公告。</p>
   </div>
-</section>
+  <div class="cta-actions"><a class="btn btn-primary" href="download.html">下载客户端</a><a class="btn" href="help.html">看文档</a></div>
+</div></section>
 
 </main>
 
