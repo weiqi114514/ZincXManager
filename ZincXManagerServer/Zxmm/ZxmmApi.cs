@@ -51,6 +51,12 @@ public sealed class ZxmmApi : IAsyncDisposable
     /// <summary>ZXMM 推来"玩家进服"事件(玩家名, IP)。</summary>
     public event Action<string, string>? PlayerJoined;
 
+    /// <summary>
+    /// ZXMM 推来"玩家正在连接(configuration 阶段)"事件(玩家名, IP)。
+    /// 这时还没有 ServerPlayer,踢人是断开登录连接,客户端会显示理由。
+    /// </summary>
+    public event Action<string, string>? PlayerJoining;
+
     /// <summary>专用通道当前有没有连上。</summary>
     public bool Connected => _client?.Connected == true;
 
@@ -225,6 +231,25 @@ public sealed class ZxmmApi : IAsyncDisposable
             if (_pending.TryRemove(id, out var waiter))
             {
                 waiter.TrySetResult((parts[2] == "ok", parts.Length > 3 ? parts[3] : ""));
+            }
+
+            return;
+        }
+
+        // 事件 evt|joining|玩家|IP(玩家还在 configuration 阶段,这时踢客户端会显示理由)
+        if (parts.Length >= 4 && parts[0] == "evt" && parts[1] == "joining")
+        {
+            var joiningName = parts[2];
+            var joiningIp = parts[3];   //玩家IP
+
+            Log($"[ZXMM] 收到连接中事件: {joiningName} ({joiningIp})");
+            try
+            {
+                PlayerJoining?.Invoke(joiningName, joiningIp);
+            }
+            catch (Exception ex)
+            {
+                Log($"[ZXMM] 处理连接中事件异常: {ex.Message}");
             }
 
             return;

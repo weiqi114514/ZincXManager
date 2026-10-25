@@ -310,7 +310,9 @@ internal static class Program
     }
 
     /// <summary>一条等待客户端确认的登录请求。</summary>
-    private sealed record PendingLogin(string Player, string Ip, int AccountId, Guid OriginConnId, DateTime At);
+    /// <summary>一条等待客户端确认的登录请求。KickedAtJoining = 连接阶段就把人踢走了,超时只清记录。</summary>
+    private sealed record PendingLogin(string Player, string Ip, int AccountId, Guid OriginConnId, DateTime At,
+        bool KickedAtJoining);
 
     /// <summary>一条等待账号主人二次确认的绑定(绑定码已校验通过,还没写绑定表)。</summary>
     private sealed record PendingBind(int AccountId, string Player, string Code, DateTime At);
@@ -411,6 +413,81 @@ internal static class Program
         return new Zxmm.ZxmmApi(host, port, _zxmmToken);
     }
 
+    /// <summary>
+    /// configuration 阶段快判:能直接放行就什么都不做;不能就下发踢人,理由显示在客户端的连接界面。
+    ///
+    /// <para>已绑定的玩家不再原地等 621:发完登录请求就把人踢走,账号主人点「同意」后重进,
+    /// 命中登录数组直接放行 —— 也就是「在 ZXMC 点完确认再进服务器」。</para>
+    /// </summary>
+    private static async Task HandlePlayerJoiningAsync(string player, string ip)
+    {
+        if (string.IsNullOrWhiteSpace(player))
+        {
+            return;
+        }
+
+        ip = GeoLookup.Normalize(ip);
+        if (ip.Length == 0)
+        {
+            ip = "unknown";
+        }
+
+        // ① 登录数组 / 持久登录表(同玩家 + 同 IP)→ 放行,交给 play 阶段
+        if (InLoginArray(player))
+        {
+            LoginStore.Log($"[配置阶段] 玩家 {player}({ip}) 在登录数组里,放行");
+            return;
+        }
+
+        if (LoginStore.HasPersistentLogin(player, ip))
+        {
+            LoginStore.Log($"[配置阶段] 玩家 {player}({ip}) 在持久登录表里(同 IP),放行");
+            return;
+        }
+
+        // ② 封禁:理由跟着踢人一起下发
+        if (Bans.Check(player, ip, "", out var ban))
+        {
+            Logger.Log(LogLevel.Warning, $"[配置阶段] 拒绝被封禁的玩家 {player}({ban!.Kind}={ban.Value})");
+            await KickViaZxmmAsync(player, $"已被封禁:{ban.Reason}({ban.Remain})");
+            return;
+        }
+
+        var boundAccount = LoginStore.AccountOf(player);   //绑定的账号ID
+
+        // ③ 没绑定 → 生成绑定码,踢去 ZXMC 绑定
+        if (boundAccount <= 0)
+        {
+            var code = NewBindCode();   //绑定码
+            lock (BindCodes)
+            {
+                BindCodes[code] = (player, DateTime.Now);
+            }
+
+            LoginStore.Log($"[未绑定] 玩家 {player}({ip}) 拿到绑定码 {code}(连接阶段)");
+            await KickViaZxmmAsync(player,
+                "请先绑定账号。绑定码：" + code + " —— 在 ZXMC 的「小功能组 → 绑定/解绑」里输入这 6 位");
+            return;
+        }
+
+        // ④ 已绑定但这次没确认过:621 发给账号主人,然后把玩家踢走,点完同意重进即可
+        var requestId = Interlocked.Increment(ref _loginSeq);   //请求ID
+        PendingLogins[requestId] = new PendingLogin(player, ip, boundAccount, Guid.Empty, DateTime.Now,
+            KickedAtJoining: true);
+        LoginStore.Log($"[登录请求] {player}({ip}) → 账号 {boundAccount},请求 {requestId}(连接阶段)");
+
+        var geo = await GeoLookup.LookupAsync(ip);   //归属地
+        if (!await SendToAccountAsync(boundAccount, Protocol.LoginAsk, $"{requestId}|{player}|{ip}|{geo}"))
+        {
+            PendingLogins.TryRemove(requestId, out _);
+            LoginStore.Log($"[登录失败] 玩家 {player}: 绑定的 ZXMC 账号不在线");
+            await KickViaZxmmAsync(player, "绑定的 ZXMC 账号不在线，无法确认登录，请稍后再试");
+            return;
+        }
+
+        await KickViaZxmmAsync(player, "登录请求已发送到 ZXMC，点「同意」后重新进入服务器");
+    }
+
     /// <summary>玩家进服:全部流程都在这里判(登录数组→持久表→绑定→弹窗)</summary>
     private static async Task HandlePlayerJoinedAsync(string player, string ip)
     {
@@ -433,7 +510,7 @@ internal static class Program
         }
 
         // ② 持久登录表 → 记进登录数组,放行
-        if (LoginStore.HasPersistentLogin(player))
+        if (LoginStore.HasPersistentLogin(player, ip))
         {
             AddToLoginArray(player);
             LoginStore.Log($"[持久登录] 玩家 {player}({ip}) 在持久登录表里,放行");
@@ -471,7 +548,8 @@ internal static class Program
         }
 
         var requestId = Interlocked.Increment(ref _loginSeq);   //请求ID
-        PendingLogins[requestId] = new PendingLogin(player, ip, boundAccount, Guid.Empty, DateTime.Now);
+        PendingLogins[requestId] = new PendingLogin(player, ip, boundAccount, Guid.Empty, DateTime.Now,
+            KickedAtJoining: false);
         LoginStore.Log($"[登录请求] {player}({ip}) → 账号 {boundAccount},请求 {requestId}");
 
         // 归属地是展示用的:最多等 1.2 秒,超时按"未知"发,不拖住登录弹窗
@@ -1210,6 +1288,21 @@ internal static class Program
                 }
             });
         };
+        _zxmmApi.PlayerJoining += (player, ip) =>
+        {
+            // configuration 阶段就来问一句:能放行就不回应,不能就踢(客户端显示理由、不会卡在加载界面)
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await HandlePlayerJoiningAsync(player, ip);
+                }
+                catch (Exception ex)
+                {
+                    Logger.Log(LogLevel.Error, $"[ZXMM] 处理连接中事件异常({player}): {ex}");
+                }
+            });
+        };
         _zxmmApi.Start();
 
         return (config, serverName, connectOS);
@@ -1311,6 +1404,13 @@ internal static class Program
                     }
 
                     LoginStore.Log($"[登录超时] 玩家 {late.Player},请求 {pair.Key},超过 5 分钟未确认");
+
+                    // 连接阶段就踢走的玩家:记录清掉就行,不再发超时通知、也不再踢(人早不在线)
+                    if (late.KickedAtJoining)
+                    {
+                        continue;
+                    }
+
                     var origin = _server?.Connections.FirstOrDefault(c => c.Id == late.OriginConnId);
                     if (origin is not null)
                     {

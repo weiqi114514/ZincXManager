@@ -239,8 +239,8 @@ public static class LoginStore
         }
     }
 
-    /// <summary>持久登录表里有没有这个玩家。</summary>
-    public static bool HasPersistentLogin(string player)
+    /// <summary>持久登录表里有没有这个玩家(同玩家 + 同 IP 才算免确认;换 IP 要重新确认)。</summary>
+    public static bool HasPersistentLogin(string player, string ip)
     {
         lock (_lock)
         {
@@ -253,8 +253,17 @@ public static class LoginStore
 
                 foreach (var line in ReadLines(PersistentFile))
                 {
-                    var name = line.Split('|')[0].Trim();   //拆分结果
-                    if (string.Equals(name, player, StringComparison.OrdinalIgnoreCase))
+                    var fields = line.Split('|');   //拆分结果
+                    var name = fields.Length > 0 ? fields[0].Trim() : "";
+                    var savedIp = fields.Length > 1 ? fields[1].Trim() : "";
+
+                    if (!string.Equals(name, player, StringComparison.OrdinalIgnoreCase))
+                    {
+                        continue;
+                    }
+
+                    // ip 传空 = 不校验 IP(控制台/历史数据兼容),正常登录都带 IP
+                    if (ip.Length == 0 || string.Equals(savedIp, ip, StringComparison.OrdinalIgnoreCase))
                     {
                         return true;
                     }

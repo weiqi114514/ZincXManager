@@ -51,6 +51,7 @@ footer{color:var(--muted);border-top:1px solid var(--line);margin-top:30px;paddi
 <p class="lead">全部由源码自动生成并逐项校对:扫描 128 个类型、801 个方法(1313 个参数)、400 个属性、410 个字段;协议码取自 <span class="mono">ZincXManagerShared/Network/Protocol.cs</span>,命令取自各端命令注册表。</p>
 <p class="tips"><b>b0.1.0 更新:</b>新增 620–630「登录确认 / 账号绑定」协议(含专用长连接 21200 的说明)、<span class="mono">bind / unbind / bind list</span> 三条控制台命令、<span class="mono">ZxmmApi</span>(ZXMS↔ZXMM 长连接)与 <span class="mono">LoginRequestWindow</span> 两个类型,以及登录数组 / 持久登录表 / 解绑立即失效的流程说明。ZXMM 模组本身的文档另见 <span class="mono">ZXMM-技术文档.md</span>。</p>
 <p class="tips"><b>b0.1.1 更新:</b>绑定拆成两步 —— <span class="mono">626</span> 只校验绑定码并回 <span class="mono">pending|令牌|玩家名</span>,ZXMC 用户点「确定绑定」后发 <span class="mono">631 BindConfirm</span> 才真正落盘(令牌 2 分钟、一次性、只认发起账号);未绑定账号查询(629)只回 <span class="mono">nobind</span>,不再下发别人的玩家名与绑定码。</p>
+<p class="tips"><b>b0.1.1a 更新:</b>新增 configuration 阶段登录检查(21200 事件 <span class="mono">evt|joining</span>):未绑定 / 封禁的玩家在「正在加入世界」时就被踢出并显示理由。登录确认改成「发 621 后立刻踢走,账号主人点同意后重进」;持久登录免确认改成同玩家<b>且同 IP</b>;ZXMS 没连上时 ZXMM 完全不动作(不攒事件、不踢人、不提示)。</p>
 <h2 id="a050">a0.5.0 客户端怎么应对断线</h2>
 <p class="lead">这一段是纯操作说明,讲客户端在连接断开/窗口尺寸这两件事上的行为,不是自动生成的表。</p>
 <h3>断线心跳与自动重连</h3>
@@ -140,9 +141,9 @@ zxm-lic verify &lt;公钥.pem&gt; &lt;证书.lic&gt; &lt;授权码&gt;</code></p
 <tr><td class="mono">610</td><td class="mono">AccountMigrate</td><td class="mono">ZXMOS</td><td class="mono">ZXMS</td><td>ZXMOS → ZXMS:把某些用户账号移交给子服务端(拉黑前先移交,别让玩家丢号)。负载 &quot;名称|密文|等级&quot; 每行一条。</td><td class="mono muted">Network/Protocol.cs</td></tr>
 <tr><td class="mono">611</td><td class="mono">AccountRename</td><td class="mono">ZXMS</td><td class="mono">ZXMOS</td><td>ZXMS → ZXMOS:改本端子服务端账号的名字(顺带改密码),由控制台 osuser 命令发起。 负载 &quot;旧名|新名|新密文|机器码|服务端码&quot;;ZXMOS 校验账号存在 + 机器码 / 服务端码与登记一致才改。</td><td class="mono muted">Network/Protocol.cs</td></tr>
 <tr><td class="mono">612</td><td class="mono">AccountRenameAck</td><td class="mono">ZXMOS</td><td class="mono">ZXMS</td><td>ZXMOS → ZXMS:改名回执,&quot;ok|新名&quot; 或 &quot;err|原因&quot;。</td><td class="mono muted">Network/Protocol.cs</td></tr>
-<tr><td class="mono">620</td><td class="mono">LoginRequest</td><td class="mono">ZXMM</td><td class="mono">ZXMS</td><td>玩家进服通知。<b>b0.1.0 起已废</b>:ZXMM 改走 21200 专用长连接 <span class="mono">evt|joined|玩家名|IP</span>,旧的 &quot;玩家名|IP&quot; 包不再使用。</td><td class="mono muted">Network/Protocol.cs</td></tr>
-<tr><td class="mono">621</td><td class="mono">LoginAsk</td><td class="mono">ZXMS</td><td class="mono">ZXMC</td><td>ZXMS → ZXMC:有玩家进服,问账号主人放不放行。负载 &quot;请求ID|玩家名|IP|归属地&quot;;ZXMC 弹「登录请求」窗口显示这三项。</td><td class="mono muted">Network/Protocol.cs</td></tr>
-<tr><td class="mono">622</td><td class="mono">LoginAnswer</td><td class="mono">ZXMC</td><td class="mono">ZXMS</td><td>ZXMC → ZXMS:玩家的选择,负载 &quot;请求ID|yes&quot; 或 &quot;请求ID|no&quot;。允许则写登录数组 + 持久登录表,拒绝则调 ZXMM 踢人。</td><td class="mono muted">Network/Protocol.cs</td></tr>
+<tr><td class="mono">620</td><td class="mono">LoginRequest</td><td class="mono">ZXMM</td><td class="mono">ZXMS</td><td>玩家进服通知。<b>b0.1.0 起已废</b>:ZXMM 改走 21200 专用长连接 <span class="mono">evt|joined|玩家名|IP</span>(b0.1.1a 起还有 <span class="mono">evt|joining</span>,configuration 阶段提前踢),旧的 &quot;玩家名|IP&quot; 包不再使用。</td><td class="mono muted">Network/Protocol.cs</td></tr>
+<tr><td class="mono">621</td><td class="mono">LoginAsk</td><td class="mono">ZXMS</td><td class="mono">ZXMC</td><td>ZXMS → ZXMC:有玩家连接,问账号主人放不放行。负载 &quot;请求ID|玩家名|IP|归属地&quot;;ZXMC 弹「登录请求」窗口。ZXMS 发完就<b>立刻把玩家踢走</b>,账号主人点同意后玩家重进。</td><td class="mono muted">Network/Protocol.cs</td></tr>
+<tr><td class="mono">622</td><td class="mono">LoginAnswer</td><td class="mono">ZXMC</td><td class="mono">ZXMS</td><td>ZXMC → ZXMS:玩家的选择,负载 &quot;请求ID|yes&quot; 或 &quot;请求ID|no&quot;。允许则写登录数组 + 持久登录表(玩家已在连接阶段被踢走,重进即可);拒绝不再需要踢人。</td><td class="mono muted">Network/Protocol.cs</td></tr>
 <tr><td class="mono">623</td><td class="mono">LoginResult</td><td class="mono">ZXMS</td><td class="mono">ZXMM</td><td>登录结果。<b>b0.1.0 起已废</b>:ZXMS 不再回包,改为直接调 ZXMM 执行接口的 <span class="mono">kick</span>。</td><td class="mono muted">Network/Protocol.cs</td></tr>
 <tr><td class="mono">624</td><td class="mono">LoginTimeout</td><td class="mono">ZXMS</td><td class="mono">ZXMC</td><td>ZXMS → ZXMC:5 分钟没人点,通知客户端弹「登录超时」;同时 ZXMS 调 ZXMM 把该玩家踢掉。</td><td class="mono muted">Network/Protocol.cs</td></tr>
 <tr><td class="mono">625</td><td class="mono">BindNotice</td><td class="mono">ZXMM</td><td class="mono">ZXMS</td><td>ZXMM → ZXMS:把玩家手里的绑定码转给服务端。负载 &quot;绑定码|玩家名&quot;。</td><td class="mono muted">Network/Protocol.cs</td></tr>
@@ -153,18 +154,19 @@ zxm-lic verify &lt;公钥.pem&gt; &lt;证书.lic&gt; &lt;授权码&gt;</code></p
 <tr><td class="mono">630</td><td class="mono">BindList</td><td class="mono">ZXMS</td><td class="mono">ZXMC, ZXMM</td><td>绑定列表。ZXMC:&quot;玩家名=账号名&quot; 或 &quot;nobind||&quot;;ZXMM:每行 &quot;玩家名=账号名&quot;,没有则空负载。</td><td class="mono muted">Network/Protocol.cs</td></tr>
 <tr><td class="mono">631</td><td class="mono">BindConfirm</td><td class="mono">ZXMC</td><td class="mono">ZXMS</td><td>ZXMC → ZXMS:绑定二次确认(负载 = 确认令牌)。令牌只对发起账号有效、2 分钟过期、一次性;校验通过才写绑定表并回 627 ok。</td><td class="mono muted">Network/Protocol.cs</td></tr>
 </tbody></table>
-<h3 id="loginflow">登录确认与账号绑定(b0.1.1)</h3>
+<h3 id="loginflow">登录确认与账号绑定(b0.1.1a)</h3>
 <table><thead><tr><th>环节</th><th>谁做</th><th>说明</th></tr></thead><tbody>
 <tr><td>玩家进服上报</td><td class="mono">ZXMM → ZXMS</td><td>走 21200 专用长连接,一行 <span class="mono">evt|joined|玩家名|IP</span>;ZXMM 不做任何判断。</td></tr>
+<tr><td>连接阶段(配置阶段)</td><td class="mono">ZXMM → ZXMS</td><td><span class="mono">evt|joining|玩家名|IP</span>:玩家还在「正在加入世界」时就问 ZXMS,未绑定 / 封禁直接踢,客户端显示理由。</td></tr>
 <tr><td>判断放不放行</td><td class="mono">ZXMS</td><td>依次看:登录数组(5 分钟) → <span class="mono">Data/PersistentLogin.txt</span> → 有没有绑定 → 弹窗问账号主人。</td></tr>
 <tr><td>没绑定</td><td class="mono">ZXMS → ZXMM</td><td>生成 6 位绑定码,通过执行接口 <span class="mono">kick</span> 把玩家踢出并提示绑定码。</td></tr>
-<tr><td>已绑定</td><td class="mono">ZXMS ↔ ZXMC</td><td>621 弹「登录请求」(玩家名 / IP / 归属地),玩家点允许 → 622 → 写登录数组与持久表。</td></tr>
-<tr><td>拒绝 / 超时</td><td class="mono">ZXMS → ZXMM</td><td>直接调 <span class="mono">kick</span> 踢人;超时还会给 ZXMC 发 624 弹「登录超时」。</td></tr>
+<tr><td>已绑定</td><td class="mono">ZXMS ↔ ZXMC</td><td>连接阶段发 621(玩家名 / IP / 归属地),同时把玩家踢走;账号主人点允许 → 622 → 写登录数组与持久表,玩家重进直接进。</td></tr>
+<tr><td>拒绝 / 超时</td><td class="mono">ZXMS → ZXMM</td><td>玩家已在连接阶段被踢走,拒绝/超时不再踢人;超时只给 ZXMC 发 624 并清掉请求。</td></tr>
 <tr><td>解绑</td><td class="mono">ZXMC → ZXMS</td><td>628;ZXMS 删绑定 + 删持久表 + 清登录数组 + 踢人,下一次进服要重新绑定。</td></tr>
 <tr><td>绑定确认</td><td class="mono">ZXMC → ZXMS</td><td>输入绑定码 → 626 回 <span class="mono">pending|令牌|玩家名</span> → 用户点「确定绑定」→ 631 → 写 <span class="mono">Data/BindUser.txt</span>;取消则令牌过期作废,绑定码还能重试。</td></tr>
 </tbody></table>
 <p class="tips">绑定数据在 <span class="mono">Data/BindUser.txt</span>(每行 <span class="mono">账号ID=玩家名</span>),持久信任在 <span class="mono">Data/PersistentLogin.txt</span>,操作流水在 <span class="mono">Data/loginlog.log</span>。控制台可用 <span class="mono">bind</span> / <span class="mono">unbind</span> / <span class="mono">bind list</span> 手动管理。</p>
-<p class="tips"><b>安全要点:</b>① <span class="mono">622</span> 只有被问的那个账号能回答,别的账号回答会被忽略并记 <span class="mono">[安全] 越权回答登录请求</span>(且不吃掉请求);② 进服事件 2 秒内按「玩家名+IP」去重,避免重连时弹两次窗;③ 解绑与改绑都会清 <span class="mono">PersistentLogin.txt</span> 并踢掉在线玩家,不存在"解绑了还能进";④ 模组 <span class="mono">21200</span> 只绑 <span class="mono">127.0.0.1</span>,跨机部署必须配 <span class="mono">api.token</span> = ZXMS 的 <span class="mono">zxmmtoken</span>;⑤ 绑定码即使泄漏也绑不走账号:<span class="mono">626</span> 只校验,<span class="mono">631</span> 要账号本人在 ZXMC 点确认,令牌只认发起账号且 2 分钟作废;⑥ 未绑定的账号查绑定(629)只回 <span class="mono">nobind</span>,别人的玩家名与绑定码不会下发。</p>
+<p class="tips"><b>安全要点:</b>① <span class="mono">622</span> 只有被问的那个账号能回答,别的账号回答会被忽略并记 <span class="mono">[安全] 越权回答登录请求</span>(且不吃掉请求);② 进服事件 2 秒内按「玩家名+IP」去重,避免重连时弹两次窗;③ 解绑与改绑都会清 <span class="mono">PersistentLogin.txt</span> 并踢掉在线玩家,不存在"解绑了还能进";④ 模组 <span class="mono">21200</span> 只绑 <span class="mono">127.0.0.1</span>,跨机部署必须配 <span class="mono">api.token</span> = ZXMS 的 <span class="mono">zxmmtoken</span>;⑤ 绑定码即使泄漏也绑不走账号:<span class="mono">626</span> 只校验,<span class="mono">631</span> 要账号本人在 ZXMC 点确认,令牌只认发起账号且 2 分钟作废;⑥ 未绑定的账号查绑定(629)只回 <span class="mono">nobind</span>,别人的玩家名与绑定码不会下发;⑦ 持久登录免确认按「玩家名 + IP」匹配,换 IP 要重新确认;⑧ ZXMS 没连上时 ZXMM 完全不动作(不攒、不踢、不提示),这段窗口没有验证,部署时别让 ZXMS 长期离线。</p>
 
 <h3 id="secure">会话加密与登录挑战(ZXMC ↔ ZXMS,a0.3.1 起)</h3>
 <p class="lead">以前登录请求里直接带 <span class="mono">SHA256(账号:密码)</span>,这个密文是<b>静态</b>的 —— 抓到一次就能无限重放。现在改成两层:先建加密会话,再叠加一次性挑战。</p>
@@ -308,6 +310,7 @@ zxm-lic verify &lt;公钥.pem&gt; &lt;证书.lic&gt; &lt;授权码&gt;</code></p
 <table><thead><tr><th>行</th><th>方向</th><th>说明</th></tr></thead><tbody>
 <tr><td class="mono">hello|令牌</td><td class="mono">ZXMS → ZXMM</td><td>仅当模组配了 <span class="mono">api.token</span>。<b>5 秒内没收到就断开</b>,令牌不符也断开</td></tr>
 <tr><td class="mono">evt|joined|玩家名|IP</td><td class="mono">ZXMM → ZXMS</td><td>进服事件。IP 是<b>纯地址</b>(不带 <span class="mono">/</span>、不带端口)</td></tr>
+<tr><td class="mono">evt|joining|玩家名|IP</td><td class="mono">ZXMM → ZXMS</td><td>连接事件(configuration 阶段)。ZXMS 可回 <span class="mono">kick</span> 断开登录,客户端显示理由</td></tr>
 <tr><td class="mono">req|id|方法|参数…</td><td class="mono">ZXMS → ZXMM</td><td>下发任务,id 由 ZXMS 自增</td></tr>
 <tr><td class="mono">res|id|ok|结果</td><td class="mono">ZXMM → ZXMS</td><td>任务成功</td></tr>
 <tr><td class="mono">res|id|err|原因</td><td class="mono">ZXMM → ZXMS</td><td>任务失败。<b>ZXMS 以 ok/err 判定有没有真的做成</b></td></tr>
