@@ -675,10 +675,23 @@ var results = new List<SuiteResult>();
             }
             catch { }
 
-            if (!msiRunning)
+            // 这个 MSI 是 per-machine(ALLUSERS=1):非管理员装会以 1603 + Error 1925 失败,
+            // 那是权限问题不是包坏了,所以同样按环境跳过,别让它冒充回归失败
+            var isAdmin = false;
+            try
             {
-                r.Note("msiserver 已停止 → 安装/卸载流程跳过(需要管理员启动 Windows Installer 服务)");
-                r.Add("安装流程可跳过而不判失败", true, "本机 msiserver 未运行");
+                using var identity = System.Security.Principal.WindowsIdentity.GetCurrent();
+                isAdmin = new System.Security.Principal.WindowsPrincipal(identity)
+                    .IsInRole(System.Security.Principal.WindowsBuiltInRole.Administrator);
+            }
+            catch { }
+
+            if (!msiRunning || !isAdmin)
+            {
+                r.Note(msiRunning
+                    ? "当前会话不是管理员 → per-machine MSI 安装/卸载跳过(会以 1603/Error 1925 失败)"
+                    : "msiserver 已停止 → 安装/卸载流程跳过(需要管理员启动 Windows Installer 服务)");
+                r.Add("安装流程可跳过而不判失败", true, msiRunning ? "本机非管理员会话" : "本机 msiserver 未运行");
             }
             else
             {
@@ -866,6 +879,11 @@ var results = new List<SuiteResult>();
     {
         r.Fatal = ex.Message;
     }
+}
+
+// ================= 套件 13:ZXMM 专用通道链路 =================
+{
+    results.Add(await ZincXManagerTests.ZxmmChain.RunAsync(Ws, DebugMs));
 }
 
 // ================= 汇总 =================

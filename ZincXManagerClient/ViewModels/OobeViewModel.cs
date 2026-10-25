@@ -188,10 +188,7 @@ public partial class OobeViewModel : ViewModelBase
     public bool IsOs => Mode == "OS";
     public bool IsOos => Mode == "OOS";
 
-    /// <summary>
-    /// OS / SAOS 时客户端只连子服务端(官方那一段由 ZXMS 自己连),所以只填子服务端地址;
-    /// OOS 是客户端直连官方服务端,才需要填官方地址。
-    /// </summary>
+    /// <summary>OS / SAOS 时客户端只连子服务端(官方那一段由 ZXMS 自己连),所以只填子服务端地址; OOS 是客户端直连官方服务端,才需要填官方地址。</summary>
     public bool ShowClientSource => Mode != "OOS";
 
     /// <summary>只有 OOS 直连官方服务端时才需要填官方地址。</summary>
@@ -459,7 +456,7 @@ public partial class OobeViewModel : ViewModelBase
     private void OnAccountReply(ushort type, string text)
     {
         // 负载:"ok|名称|ID|等级" 或 "err|原因"
-        var parts = text.Split('|');
+        var parts = text.Split('|');   //拆分结果
         var ok = parts.Length > 0 && parts[0] == "ok";
         var message = ok
             ? $"登录成功:{parts[1]}({parts[3]})"
@@ -484,11 +481,7 @@ public partial class OobeViewModel : ViewModelBase
         _reply?.TrySetResult((ok, message));
     }
 
-    /// <summary>把数据源那几项写进 config.ini。</summary>
-    /// <summary>
-    /// 按当前模式把连接目标设好(OS/SAOS → czip;OOS → ozip),并把填写写进 config。
-    /// 连接按钮和登录/注册都走这里,避免"选了 OOS 却按 czip 连"。
-    /// </summary>
+    /// <summary>按当前模式设连接目标(OS/SAOS → czip;OOS → ozip)并写进 config</summary>
     public void ApplyConnectTarget()
     {
         SaveDataSource();

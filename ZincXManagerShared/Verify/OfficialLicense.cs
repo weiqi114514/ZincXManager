@@ -32,10 +32,7 @@ public sealed class OfficialVerdict
     public string LicenseText { get; init; } = "";
 }
 
-/// <summary>
-/// ZXMOS 官方验证:ECDSA 签名的许可证(Standard.Licensing,XML),绑定<b>授权码</b>而不是机器码。
-/// 授权码放 exe 同目录的 official.key,许可证里只存它的 SHA-256;换机器不用重签。
-/// </summary>
+/// <summary>ZXMOS 官方验证:ECDSA 签名的许可证(Standard.Licensing,XML),绑定<b>授权码</b>而不是机器码。 授权码放 exe 同目录的 official.key,许可证里只存它的 SHA-256;换机器不用重签。</summary>
 public static class OfficialLicense
 {
     public const string FileName = "official.lic";

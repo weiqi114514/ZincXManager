@@ -102,10 +102,7 @@ public class ZFile : IDisposable
         return ok;
     }
 
-    /// <summary>
-    /// 析构:静默关闭文件(不写日志)。
-    /// 旧版 Dispose 会走 CloseFile,重复释放时会在退出阶段刷出一条无意义的 Warning。
-    /// </summary>
+    /// <summary>析构:静默关闭文件(不写日志)。 旧版 Dispose 会走 CloseFile,重复释放时会在退出阶段刷出一条无意义的 Warning。</summary>
     public void Dispose()
     {
         lock (_sync) CloseStreamCore();
@@ -188,10 +185,7 @@ public class ZFile : IDisposable
         return result;
     }
 
-    /// <summary>
-    /// 读取当前打开文件的全部字节。
-    /// 返回 null 表示读取失败(未打开 / 出错),返回空数组表示文件确实为空。
-    /// </summary>
+    /// <summary>读取当前打开文件的全部字节。 返回 null 表示读取失败(未打开 / 出错),返回空数组表示文件确实为空。</summary>
     public byte[]? ReadFileBytes()
     {
         byte[]? data = null;
@@ -383,10 +377,7 @@ public class ZFile : IDisposable
         return ok;
     }
 
-    /// <summary>
-    /// 写一个键值:已存在同名键则原地替换(顺序不变),否则追加到文件末尾。
-    /// 空行、注释行与其它行都会原样保留。
-    /// </summary>
+    /// <summary>写一个键值:已存在同名键则原地替换(顺序不变),否则追加到文件末尾。 空行、注释行与其它行都会原样保留。</summary>
     public bool WriteFileMap(string key, string value)
     {
         var ok = false;

@@ -38,10 +38,7 @@ public sealed class DialogOptions
     /// <summary>右下按钮(文字, 是否主按钮, 回传的标记)。</summary>
     public (string Text, bool Primary, string Tag)[] Buttons { get; init; } = [("确认", true, "ok")];
 
-    /// <summary>
-    /// "必须读完才能点"的秒数(&gt;0 时:主按钮先禁用并显示倒计时,读够秒数才可点)。
-    /// 用在"改官方服务端地址"这种后果很重的操作上。
-    /// </summary>
+    /// <summary>"必须读完才能点"的秒数(&gt;0 时:主按钮先禁用并显示倒计时,读够秒数才可点)。 用在"改官方服务端地址"这种后果很重的操作上。</summary>
     public int GateSeconds { get; init; }
 
     /// <summary>倒计时期间主按钮上的文字(会拼上剩余秒数)。</summary>
@@ -51,10 +48,7 @@ public sealed class DialogOptions
 /// <summary>弹窗结果:点了哪个按钮 + 输入内容 + 选中的项。</summary>
 public sealed record DialogResult(string Tag, string Input, string Choice);
 
-/// <summary>
-/// 通用弹窗:一套窗口覆盖设计稿里的四种(单按钮 / 双按钮 / 填空 / 选择)。
-/// 用法见 <see cref="InfoAsync"/> / <see cref="ConfirmAsync"/> / <see cref="AskAsync"/> / <see cref="ChooseAsync"/>。
-/// </summary>
+/// <summary>通用弹窗:单按钮 / 双按钮 / 填空 / 选择四种共用一个窗口</summary>
 public partial class MessageDialog : Window
 {
     private DialogResult _result = new("", "", "");
@@ -142,10 +136,7 @@ public partial class MessageDialog : Window
         return result.Tag == "ok" ? result.Choice : null;
     }
 
-    /// <summary>
-    /// 警示 + <b>读满 5 秒才能确认</b> 的双按钮弹窗(用于"改官方服务端地址"这类危险操作)。
-    /// 返回 true = 用户读完并确认;false = 取消 / 直接关掉窗口。
-    /// </summary>
+    /// <summary>警示 + <b>读满 5 秒才能确认</b> 的双按钮弹窗(用于"改官方服务端地址"这类危险操作)。 返回 true = 用户读完并确认;false = 取消 / 直接关掉窗口。</summary>
     public static async Task<bool> ReadConfirmAsync(Window owner, string title, string text,
         string confirm = "我已阅读,继续自定义", string cancel = "算了,保持官方", int seconds = 5, string hint = "")
     {

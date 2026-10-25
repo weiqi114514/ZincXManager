@@ -26,9 +26,7 @@ public static class MegBackCommand
     public const string Usage =
         "msg backget | msg backget d <起> <止> | msg backget t <起> <止> | msg backget m <消息ID> | msg backget p <玩家ID/名称>";
 
-    /// <summary>
-    /// 执行查询并把结果打到日志。
-    /// </summary>
+    /// <summary>执行查询并把结果打到日志。</summary>
     /// <param name="args">backget 之后的参数。</param>
     /// <param name="titleOf">按消息号取卡片标题(取不到返回空)。</param>
     /// <param name="playerIdOf">按名称/ID 找玩家账号 ID(找不到返回 0)。</param>
@@ -46,9 +44,7 @@ public static class MegBackCommand
         return true;
     }
 
-    /// <summary>
-    /// 只做过滤,不输出:参数不对返回 null(调用方负责报用法)。
-    /// </summary>
+    /// <summary>只做过滤,不输出:参数不对返回 null(调用方负责报用法)。</summary>
     public static List<MegBackEntry>? Query(string[] args, Func<string, int> playerIdOf, int defaultCount = DefaultCount)
     {
         var all = CardResponses.Load();
@@ -205,7 +201,7 @@ public static class MegBackCommand
     private static bool TryParseDate(string text, bool isEnd, out DateTime at)
     {
         at = DateTime.MinValue;
-        var parts = text.Trim().Replace('-', '/').Split('/', StringSplitOptions.RemoveEmptyEntries);
+        var parts = text.Trim().Replace('-', '/').Split('/', StringSplitOptions.RemoveEmptyEntries);   //拆分结果
         if (parts.Length == 0 || !int.TryParse(parts[0], out var year))
         {
             return false;
@@ -230,7 +226,7 @@ public static class MegBackCommand
     private static bool TryParseTime(string text, out TimeSpan time)
     {
         time = TimeSpan.Zero;
-        var parts = text.Trim().Replace(':', '/').Split('/', StringSplitOptions.RemoveEmptyEntries);
+        var parts = text.Trim().Replace(':', '/').Split('/', StringSplitOptions.RemoveEmptyEntries);   //拆分结果
         if (parts.Length == 0 || !int.TryParse(parts[0], out var hour))
         {
             return false;

@@ -91,11 +91,7 @@ internal static class ThemeManager
         ApplyAlpha(alpha, save: false);
     }
 
-    /// <summary>
-    /// 开关亚克力。
-    /// 开 = 壁纸按 Fluent 亚克力模糊(半径 30)、表面着色 80%;
-    /// 关 = 不模糊、表面降到 60% 的纯半透明。
-    /// </summary>
+    /// <summary>开关亚克力。 开 = 壁纸按 Fluent 亚克力模糊(半径 30)、表面着色 80%; 关 = 不模糊、表面降到 60% 的纯半透明。</summary>
     public static void ApplyGlass(bool enabled, bool save = true)
     {
         GlassEnabled = enabled;

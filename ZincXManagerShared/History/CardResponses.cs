@@ -105,7 +105,7 @@ public static class CardResponses
             return false;
         }
 
-        var parts = line.Split(']', 6);
+        var parts = line.Split(']', 6);   //拆分结果
         if (parts.Length < 6)
         {
             return false;

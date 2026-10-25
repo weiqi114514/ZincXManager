@@ -48,10 +48,7 @@ public sealed class SessionHandshake
     }
 }
 
-/// <summary>
-/// 会话加解密:AES-256-GCM。密文格式 = [12 字节 nonce][密文][16 字节 tag]。
-/// 发送方向用递增计数器当 nonce,不会重复。
-/// </summary>
+/// <summary>会话加解密:AES-256-GCM。密文格式 = [12 字节 nonce][密文][16 字节 tag]。 发送方向用递增计数器当 nonce,不会重复。</summary>
 public sealed class SessionCrypto
 {
     /// <summary>包标志位:负载已加密。</summary>

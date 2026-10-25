@@ -32,6 +32,59 @@ public static class LoginStore
     // 绑定表缓存(账号ID → 玩家名)
     private static Dictionary<int, string>? _cache;
 
+    /// <summary>
+    /// 追加一行:用 <see cref="FileShare.ReadWrite"/> 打开,别人 tail / 面板读日志时不会把这次写入顶掉。
+    /// <para>默认的 <c>File.AppendAllText</c> 是 <c>FileShare.Read</c>,只要有人正开着读就抛 IOException,
+    /// 结果就是"日志里少了几行"这种找不出原因的坑。</para>
+    /// </summary>
+    private static void AppendLine(string path, string line)
+    {
+        var dir = Path.GetDirectoryName(path);
+        if (!string.IsNullOrEmpty(dir))
+        {
+            Directory.CreateDirectory(dir);
+        }
+
+        using var stream = new FileStream(path, FileMode.Append, FileAccess.Write,
+            FileShare.ReadWrite | FileShare.Delete);
+        using var writer = new StreamWriter(stream, new UTF8Encoding(true));
+        writer.WriteLine(line);
+    }
+
+    /// <summary>整份读出来(允许别人同时写)。</summary>
+    private static string[] ReadLines(string path)
+    {
+        using var stream = new FileStream(path, FileMode.Open, FileAccess.Read,
+            FileShare.ReadWrite | FileShare.Delete);
+        using var reader = new StreamReader(stream, Encoding.UTF8);
+        var lines = new List<string>();
+        string? line;
+        while ((line = reader.ReadLine()) != null)
+        {
+            lines.Add(line);
+        }
+
+        return lines.ToArray();
+    }
+
+    /// <summary>整份写回(允许别人同时读,不会因为 tail 而失败)。</summary>
+    private static void WriteLines(string path, IEnumerable<string> lines)
+    {
+        var dir = Path.GetDirectoryName(path);
+        if (!string.IsNullOrEmpty(dir))
+        {
+            Directory.CreateDirectory(dir);
+        }
+
+        using var stream = new FileStream(path, FileMode.Create, FileAccess.Write,
+            FileShare.ReadWrite | FileShare.Delete);
+        using var writer = new StreamWriter(stream, new UTF8Encoding(true));
+        foreach (var line in lines)
+        {
+            writer.WriteLine(line);
+        }
+    }
+
     /// <summary>这个账号绑定的玩家名(没绑返回空)。</summary>
     public static string PlayerOf(int accountId)
     {
@@ -71,7 +124,7 @@ public static class LoginStore
 
         lock (_lock)
         {
-            var binds = LoadBinds();
+            var binds = LoadBinds();   //全部绑定
 
             // 玩家已经被别的账号绑了
             var owner = binds.FirstOrDefault(p => string.Equals(p.Value, player, StringComparison.OrdinalIgnoreCase));
@@ -94,7 +147,7 @@ public static class LoginStore
         player = "";
         lock (_lock)
         {
-            var binds = LoadBinds();
+            var binds = LoadBinds();   //全部绑定
             if (!binds.TryGetValue(accountId, out var found))
             {
                 return false;
@@ -117,19 +170,71 @@ public static class LoginStore
         }
     }
 
-    /// <summary>写持久登录表(玩家名 + IP + 时间)。</summary>
+    /// <summary>写持久登录表(玩家名 + IP + 时间)。同一玩家只留最新一条，不会越写越长。</summary>
     public static void AddPersistentLogin(string player, string ip)
     {
         lock (_lock)
         {
             try
             {
-                File.AppendAllText(PersistentFile,
-                    $"{player}|{ip}|{DateTime.Now:yyyy/MM/dd HH:mm:ss}" + Environment.NewLine, Encoding.UTF8);
+                var line = $"{player}|{ip}|{DateTime.Now:yyyy/MM/dd HH:mm:ss}";
+                var kept = new List<string> { line };
+
+                if (File.Exists(PersistentFile))
+                {
+                    foreach (var old in ReadLines(PersistentFile))
+                    {
+                        if (old.Trim().Length == 0)
+                        {
+                            continue;
+                        }
+
+                        var name = old.Split('|')[0].Trim();   //拆分结果
+                        if (!string.Equals(name, player, StringComparison.OrdinalIgnoreCase))
+                        {
+                            kept.Add(old);
+                        }
+                    }
+                }
+
+                WriteLines(PersistentFile, kept);
             }
             catch (Exception ex)
             {
                 Logger.Log(LogLevel.Warning, "[登录] 写持久登录表失败: " + ex.Message);
+            }
+        }
+    }
+
+    /// <summary>从持久登录表里删掉这个玩家(解绑时调用,让"已信任"立刻失效)。</summary>
+    public static void RemovePersistentLogin(string player)
+    {
+        lock (_lock)
+        {
+            try
+            {
+                if (!File.Exists(PersistentFile))
+                {
+                    return;
+                }
+
+                var lines = ReadLines(PersistentFile);
+                var kept = new List<string>();
+
+                foreach (var line in lines)
+                {
+                    var name = line.Split('|')[0].Trim();   //拆分结果
+                    if (!string.Equals(name, player, StringComparison.OrdinalIgnoreCase))
+                    {
+                        kept.Add(line);
+                    }
+                }
+
+                WriteLines(PersistentFile, kept);
+            }
+            catch (Exception ex)
+            {
+                Logger.Log(LogLevel.Warning, "[登录] 清持久登录表失败: " + ex.Message);
             }
         }
     }
@@ -146,9 +251,9 @@ public static class LoginStore
                     return false;
                 }
 
-                foreach (var line in File.ReadAllLines(PersistentFile, Encoding.UTF8))
+                foreach (var line in ReadLines(PersistentFile))
                 {
-                    var name = line.Split('|')[0].Trim();
+                    var name = line.Split('|')[0].Trim();   //拆分结果
                     if (string.Equals(name, player, StringComparison.OrdinalIgnoreCase))
                     {
                         return true;
@@ -171,14 +276,7 @@ public static class LoginStore
         {
             try
             {
-                var dir = Path.GetDirectoryName(LogFile);
-                if (!string.IsNullOrEmpty(dir))
-                {
-                    Directory.CreateDirectory(dir);
-                }
-
-                File.AppendAllText(LogFile, $"{DateTime.Now:yyyy/MM/dd HH:mm:ss} {text}" + Environment.NewLine,
-                    Encoding.UTF8);
+                AppendLine(LogFile, $"{DateTime.Now:yyyy/MM/dd HH:mm:ss} {text}");
             }
             catch (Exception ex)
             {
@@ -200,9 +298,9 @@ public static class LoginStore
         {
             if (File.Exists(BindFile))
             {
-                foreach (var line in File.ReadAllLines(BindFile, Encoding.UTF8))
+                foreach (var line in ReadLines(BindFile))
                 {
-                    var parts = line.Split('=', 2);
+                    var parts = line.Split('=', 2);   //拆分结果
                     if (parts.Length == 2 && int.TryParse(parts[0].Trim(), out var id) && id > 0 &&
                         parts[1].Trim().Length > 0)
                     {
@@ -232,7 +330,7 @@ public static class LoginStore
             }
 
             var lines = map.OrderBy(p => p.Key).Select(p => $"{p.Key}={p.Value}");
-            File.WriteAllLines(BindFile, lines, Encoding.UTF8);
+            WriteLines(BindFile, lines);
             _cache = map;
         }
         catch (Exception ex)

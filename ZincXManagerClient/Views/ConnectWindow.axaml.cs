@@ -130,11 +130,7 @@ public partial class ConnectWindow : Window
     /// <summary>清空日志。</summary>
     private void OnClearLogClick(object? sender, RoutedEventArgs e) => Vm?.ClearLogs();
 
-    /// <summary>连上之后进入主界面(原来的主界面,连接界面关闭)。</summary>
-    /// <summary>
-    /// 调整官方服务端连接(从设置页搬过来的):先给 5 秒风险说明,同意再填 IP:端口,
-    /// 写进 config 的 ozip/ozport 并刷新 OOS 的连接目标。
-    /// </summary>
+    /// <summary>调官方端连接:先给 5 秒风险说明,同意后填 IP:端口,写进 config 并刷新 OOS 目标</summary>
     private async void OnAdjustOfficialClick(object? sender, RoutedEventArgs e)
     {
         var owner = this;
@@ -178,7 +174,7 @@ public partial class ConnectWindow : Window
             return;
         }
 
-        var ip = text[..idx].Trim();
+        var ip = text[..idx].Trim();   //玩家IP
         var portText = text[(idx + 1)..].Trim();
         if (!ushort.TryParse(portText, out var port) || port == 0)
         {

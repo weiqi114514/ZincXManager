@@ -74,9 +74,7 @@ internal static class ConfigMode
         Logger.Log(LogLevel.Info, "已退出配置模式,回到正常命令模式");
     }
 
-    /// <summary>
-    /// 配置模式里的每一行都从这里走;返回 true = 已处理(不再当命令)。
-    /// </summary>
+    /// <summary>配置模式里的每一行都从这里走;返回 true = 已处理(不再当命令)。</summary>
     internal static bool Handle(string line)
     {
         if (!_active)
@@ -97,7 +95,7 @@ internal static class ConfigMode
         }
 
 
-        var parts = text.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        var parts = text.Split(' ', StringSplitOptions.RemoveEmptyEntries);   //拆分结果
         var name = parts.Length > 0 ? parts[0] : "";
         var value = parts.Length > 1 ? string.Join(' ', parts[1..]) : "";
 

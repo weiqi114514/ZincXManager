@@ -40,9 +40,7 @@ public partial class WidgetsView : UserControl
         Refresh();
     }
 
-    /// <summary>
-    /// 当前是不是直连官方服(OOS):官方服没有账号绑定,连它的时候不显示绑定功能。
-    /// </summary>
+    /// <summary>当前是不是直连官方服(OOS):官方服没有账号绑定,连它的时候不显示绑定功能。</summary>
     private static bool IsOfficialOnly()
         => string.Equals(ClientConfig.GetOrEmpty("mode"), "OOS", StringComparison.OrdinalIgnoreCase);
 

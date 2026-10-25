@@ -138,6 +138,13 @@ public class TcpServer : IServer
 
                 if ((packet.Flags & SessionCrypto.FlagEncrypted) != 0)
                 {
+                    // 握手包(SessionHello)是进 dispatcher 队列处理的,而这里在读循环里;
+                    // 对端发得快时,加密包可能先于握手包被处理完 —— 等它落下来(最多 2 秒)再判非法
+                    for (var wait = 0; wait < 40 && connection.Crypto is null; wait++)
+                    {
+                        await Task.Delay(50, _cts.Token);
+                    }
+
                     if (connection.Crypto is null)
                     {
                         throw new InvalidDataException("收到加密包,但会话密钥尚未协商");

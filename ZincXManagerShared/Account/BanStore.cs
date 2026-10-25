@@ -42,10 +42,7 @@ public sealed class BanEntry
     }
 }
 
-/// <summary>
-/// 封禁表(ZXMS / ZXMOS 各一份 bans.ini):可以按账号、IP、机器码封,
-/// 支持永久与定时(定时就是写一个解封时间,过期自动失效)。
-/// </summary>
+/// <summary>封禁表(ZXMS / ZXMOS 各一份 bans.ini):可以按账号、IP、机器码封, 支持永久与定时(定时就是写一个解封时间,过期自动失效)。</summary>
 public sealed class BanStore
 {
     private readonly object _sync = new();
@@ -260,7 +257,7 @@ public sealed class BanStore
                 continue;
             }
 
-            var f = text.Split(',');
+            var f = text.Split(',');   //拆分结果
             if (f.Length < 3)
             {
                 continue;

@@ -72,7 +72,7 @@ public static class OfficialHandshake
                     : "对方拿不出官方证明(" + code + ")");
         }
 
-        var parts = payload.Split(Separator);
+        var parts = payload.Split(Separator);   //拆分结果
         if (parts.Length != 3)
         {
             return Bad("bad-format", "证明格式不对");

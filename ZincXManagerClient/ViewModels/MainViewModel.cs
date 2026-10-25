@@ -123,10 +123,7 @@ public partial class MainViewModel : ViewModelBase
     /// <summary>小功能组(搜索 + 两栏功能列表)。</summary>
     public bool IsWidgets => CurrentPage == "小功能组";
 
-    /// <summary>
-    /// 锌源广场(官方社区)是否显示:按实际连接状态判断 ——
-    /// OOS 直连 ZXMOS,或 SAOS 经子服连官方(连上即认为有官方社区);OS(纯子服)不显示。
-    /// </summary>
+    /// <summary>锌源广场(官方社区)是否显示:按实际连接状态判断 —— OOS 直连 ZXMOS,或 SAOS 经子服连官方(连上即认为有官方社区);OS(纯子服)不显示。</summary>
     public void RefreshOfficialVisibility()
     {
         var connect = ClientSession.Connect;
@@ -303,7 +300,7 @@ public partial class MainViewModel : ViewModelBase
             // 日志文件正被本进程开着写:必须带 FileShare.ReadWrite,否则会报"被另一个进程占用"
             using var fs = new FileStream(file.FullName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
             using var reader = new StreamReader(fs);
-            var all = reader.ReadToEnd().Replace("\r\n", "\n").Split('\n');
+            var all = reader.ReadToEnd().Replace("\r\n", "\n").Split('\n');   //拆分结果
             var lines = all;
             var tail = lines.Length > 400 ? lines[(lines.Length - 400)..] : lines;
             LogText = $"# {file.Name}(最近 400 行){Environment.NewLine}{Environment.NewLine}" + string.Join(Environment.NewLine, tail);
@@ -373,9 +370,7 @@ public partial class MainViewModel : ViewModelBase
     [ObservableProperty]
     public partial string StatusText { get; set; } = "";
 
-    /// <summary>
-    /// 窗口背景图。默认不设置(显示界面自带的渐变底色),由用户在设置 → 个性化里选择图片后才有值。
-    /// </summary>
+    /// <summary>窗口背景图。默认不设置(显示界面自带的渐变底色),由用户在设置 → 个性化里选择图片后才有值。</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasBackgroundImage))]
     public partial IImage? BackgroundImage { get; set; }
@@ -529,7 +524,7 @@ public partial class MainViewModel : ViewModelBase
     {
         foreach (var line in payload.Split('\n', StringSplitOptions.RemoveEmptyEntries))
         {
-            var parts = line.Split('=', 2);
+            var parts = line.Split('=', 2);   //拆分结果
             if (parts.Length != 2)
             {
                 continue;
@@ -626,10 +621,7 @@ public partial class MainViewModel : ViewModelBase
         return true;
     }
 
-    /// <summary>
-    /// 实时收到一条服务端消息(公告 500 / 定向推送 501):进消息面板,顺带弹一条提示条。
-    /// 补发(504)不走这里 —— 补十条就弹十条太吵。
-    /// </summary>
+    /// <summary>实时收到一条服务端消息(公告 500 / 定向推送 501):进消息面板,顺带弹一条提示条。 补发(504)不走这里 —— 补十条就弹十条太吵。</summary>
     public bool ReceiveCard(string rawCard)
     {
         if (!AddCard(rawCard))
@@ -645,10 +637,7 @@ public partial class MainViewModel : ViewModelBase
         return true;
     }
 
-    /// <summary>
-    /// 告诉服务端"这条我确实收到了"(507)。服务端收到回执才记进已发清单,
-    /// 以后补发不会再给同一条;删掉后重开也不会再冒出来。
-    /// </summary>
+    /// <summary>告诉服务端"这条我确实收到了"(507)。服务端收到回执才记进已发清单, 以后补发不会再给同一条;删掉后重开也不会再冒出来。</summary>
     public async Task AckMessageAsync(string rawCard)
     {
         var connect = ClientSession.Connect;
@@ -721,11 +710,7 @@ public partial class MainViewModel : ViewModelBase
     /// <summary>这次开窗已经报过一次"历史消息"的提示条了(两次请求别弹两条差不多的)。</summary>
     private bool _historyAnnounced;
 
-    /// <summary>
-    /// 登录成功后向服务端要一次补发(505 = MessageHistoryReq):服务端会把保留期内、我还没收到的
-    /// 消息**逐条**(504)回过来,最后回一条 506 收尾。
-    /// 没连上就什么都不做(不假装发过)。
-    /// </summary>
+    /// <summary>登录成功后向服务端要一次补发(505 = MessageHistoryReq):服务端会把保留期内、我还没收到的 消息**逐条**(504)回过来,最后回一条 506 收尾。 没连上就什么都不做(不假装发过)。</summary>
     public async Task RequestMessageHistoryAsync()
     {
         var connect = ClientSession.Connect;
@@ -829,7 +814,6 @@ public partial class MainViewModel : ViewModelBase
 
     // ---------- 交互 ----------
 
-    /// <summary>切换左侧导航选中项;选到"设置"时右侧换成设置页。</summary>
     /// <summary>点 Logo:取消左侧所有选中,回到"没选页面"的主界面状态。</summary>
     public void ClearSelection()
     {
@@ -861,10 +845,7 @@ public partial class MainViewModel : ViewModelBase
         Logger.Log(LogLevel.Info, "[ZXMC] 切换页面:" + item.Label);
     }
 
-    /// <summary>
-    /// 把卡片上的动作上报给服务端(202 = CardAction,负载 动作|输入|原卡片)。
-    /// 没连上服务端就只提示一下,不假装发成功。
-    /// </summary>
+    /// <summary>把卡片上的动作上报给服务端(202 = CardAction,负载 动作|输入|原卡片)。 没连上服务端就只提示一下,不假装发成功。</summary>
     public async Task SendCardActionAsync(MessageItem item, string action, string input)
     {
         var payload = MessageCard.BuildAction(action, input, item.RawCard);

@@ -49,10 +49,7 @@ public partial class SettingsView : UserControl
         Vm?.UseOfficialAddress();
     }
 
-    /// <summary>
-    /// 勾「自定义 IP:端口」:先弹一段"第三方官方服务端的风险"说明,<b>读满 5 秒才能确认</b>;
-    /// 确认之后才允许填地址(否则自动勾回官方那一项)。
-    /// </summary>
+    /// <summary>勾「自定义 IP:端口」:先弹一段"第三方官方服务端的风险"说明,<b>读满 5 秒才能确认</b>; 确认之后才允许填地址(否则自动勾回官方那一项)。</summary>
     private async void OnCustomAddressClick(object? sender, RoutedEventArgs e)
     {
         if (TopLevel.GetTopLevel(this) is not Window owner)
@@ -63,10 +60,7 @@ public partial class SettingsView : UserControl
         await HandleOfficialSourceChangeAsync(owner);
     }
 
-    /// <summary>
-    /// 「自定义官方服务端」这条路的公共逻辑:已经是自定义就直接填地址;
-    /// 否则先弹风险说明(读满 5 秒才能确认),同意才允许改,不同意自动勾回官方。
-    /// </summary>
+    /// <summary>「自定义官方服务端」这条路的公共逻辑:已经是自定义就直接填地址; 否则先弹风险说明(读满 5 秒才能确认),同意才允许改,不同意自动勾回官方。</summary>
     private async Task HandleOfficialSourceChangeAsync(Window owner)
     {
         if (Vm is null)

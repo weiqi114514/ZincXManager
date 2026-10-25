@@ -284,9 +284,7 @@ public partial class MainWindow : Window
         }
     }
 
-    /// <summary>
-    /// 官方验证第二层的结果:通过就轻描淡写提一句;不是官方服务端就明确警告(官方构建会直接断开)。
-    /// </summary>
+    /// <summary>官方验证第二层的结果:通过就轻描淡写提一句;不是官方服务端就明确警告(官方构建会直接断开)。</summary>
     private Avalonia.Threading.DispatcherTimer? _officialTimer;
 
     private void StartOfficialWatch()
@@ -332,16 +330,21 @@ public partial class MainWindow : Window
         Logger.Log(LogLevel.Warning, "[ZXMC] 官方验证提示:" + detail);
     }
 
-    /// <summary>
-    /// 服务端消息:公告(500)直接显示;定向推送(501)先核对目标账号是不是自己
-    /// (服务端已经按账号过滤过,这里只是多一层保险);
-    /// 补发(504 / 506)进同一条显示路径,只是要按「来源 + 消息号」去重。
-    /// </summary>
-    /// <summary>绑定 / 解绑回执到了(绑定窗口在时订阅它显示结果;没人订阅就弹对话框)。</summary>
+    /// <summary>绑定/解绑回执:窗口在就订阅显示,没人订阅直接弹框</summary>
     public event Action<bool, string>? BindAckArrived;
 
     // 当前账号绑定的 MC 玩家名(空 = 没绑)
     private string _boundPlayer = "";
+
+    /// <summary>把 6 位绑定码填进 6 个输入框。</summary>
+    private void FillCodeBoxes(string code)
+    {
+        var boxes = new[] { Code0, Code1, Code2, Code3, Code4, Code5 };
+        for (var i = 0; i < boxes.Length && i < code.Length; i++)
+        {
+            boxes[i].Text = code[i].ToString();
+        }
+    }
 
     /// <summary>问服务端:我这个账号绑了谁(629,回 630)。</summary>
     private async void QueryBindAsync()
@@ -362,10 +365,7 @@ public partial class MainWindow : Window
         }
     }
 
-    /// <summary>
-    /// 收到登录请求(621):弹窗问玩家,回答发回服务端(622)。
-    /// 绑定码窗口做好之前先用通用对话框顶着。
-    /// </summary>
+    /// <summary>收到登录请求(621):弹窗问玩家,回答发回服务端(622)。 绑定码窗口做好之前先用通用对话框顶着。</summary>
     private async Task HandleLoginAskAsync(string requestId, string player, string ip, string geo)
     {
         var connect = ClientSession.Connect;
@@ -497,7 +497,7 @@ public partial class MainWindow : Window
             return;
         }
 
-        var text = Encoding.UTF8.GetString(packet.Data);
+        var text = Encoding.UTF8.GetString(packet.Data);   //包内容
 
         switch (packet.Type)
         {
@@ -528,7 +528,7 @@ public partial class MainWindow : Window
             // ---- 登录请求(621):问玩家是/否,回答回 622 ----
             case Protocol.LoginAsk:
             {
-                var askParts = text.Split('|');
+                var askParts = text.Split('|');   //拆分结果
                 var askId = askParts.Length > 0 ? askParts[0].Trim() : "";
                 var askPlayer = askParts.Length > 1 ? askParts[1].Trim() : "";
                 var askIp = askParts.Length > 2 ? askParts[2].Trim() : "";
@@ -540,7 +540,7 @@ public partial class MainWindow : Window
             // ---- 登录超时(624):五分钟没人点 ----
             case Protocol.LoginTimeout:
             {
-                var lateParts = text.Split('|');
+                var lateParts = text.Split('|');   //拆分结果
                 var latePlayer = lateParts.Length > 1 ? lateParts[1].Trim() : "";
                 _ = MessageDialog.WarnAsync(this, "登录超时",
                     $"玩家 {latePlayer} 的登录请求超过 5 分钟未确认,已作废。\n让他重新进服即可重新发起。");
@@ -551,6 +551,31 @@ public partial class MainWindow : Window
             case Protocol.BindList:
             {
                 var line = text.Trim();
+
+                // 服务端回 nobind|玩家名|绑定码 —— 这个账号还没绑,把最近进服那位的码给玩家看
+                if (line.StartsWith("nobind", StringComparison.OrdinalIgnoreCase))
+                {
+                    var parts = line.Split('|');   //拆分结果
+                    var who = parts.Length > 1 ? parts[1].Trim() : "";
+                    var code = parts.Length > 2 ? parts[2].Trim() : "";
+                    _boundPlayer = "";
+
+                    if (code.Length == 6)
+                    {
+                        UnbindInfo.Text = (who.Length > 0 ? "玩家 " + who + " 还没绑定账号。绑定码:" + code
+                                : "还没有绑定账号。绑定码:" + code)
+                            + "\n(已自动填进下面的输入框,点「绑定」就行)";
+                        FillCodeBoxes(code);
+                    }
+                    else
+                    {
+                        UnbindInfo.Text = "还没有绑定任何 MC 玩家。先让玩家进一次服,ZXMS 会给出绑定码。";
+                    }
+
+                    Logger.Log(LogLevel.Info, $"[绑定] 未绑定,最近玩家 {who} 的码 {(code.Length > 0 ? code : "无")}");
+                    break;
+                }
+
                 _boundPlayer = line.Length > 0 ? line.Split('=')[0].Trim() : "";
                 UnbindInfo.Text = _boundPlayer.Length > 0
                     ? "当前账号绑定的是:玩家 " + _boundPlayer + "\n解绑后这名玩家再进服需要重新绑定。"
@@ -633,10 +658,7 @@ public partial class MainWindow : Window
 
     private MainViewModel? Vm => DataContext as MainViewModel;
 
-    /// <summary>
-    /// 一条提示条刚摆上来:下一帧加上 in 类,让它从左上角外面"滑进来";到点再摘掉 in 类滑回去,
-    /// 动画放完才把这条从列表里去掉。
-    /// </summary>
+    /// <summary>一条提示条刚摆上来:下一帧加上 in 类,让它从左上角外面"滑进来";到点再摘掉 in 类滑回去, 动画放完才把这条从列表里去掉。</summary>
     private async void OnToastLoaded(object? sender, RoutedEventArgs e)
     {
         if (sender is not Border toast)
@@ -687,8 +709,7 @@ public partial class MainWindow : Window
     /// <summary>点右上角关闭按钮:关掉这个窗口。</summary>
     private void OnCloseClick(object? sender, RoutedEventArgs e) => Close();
 
-    /// <summary>点左上 Logo:回到主界面(不选任何页面)。</summary>
-    /// <summary>把各页的子功能清单交给通用子功能页。</summary>
+    /// <summary>把各页的子功能清单交给通用子功能页</summary>
     private void RefreshFunctionPages()
     {
         if (Vm is null)
@@ -737,10 +758,7 @@ public partial class MainWindow : Window
         _friendsWindow.Show();
     }
 
-    /// <summary>删掉这条消息(界面上的「删除」,同时从本地存档里去掉)。</summary>
-    /// <summary>
-    /// 左下角按钮:消息面板在 500ms 内从右往左滑开铺满工作区(左留 18、右留 10),再点收回 312。
-    /// </summary>
+    /// <summary>左下角按钮:消息面板 500ms 内滑开铺满,再点收回 312</summary>
     private void OnOpenMessagesFullClick(object? sender, RoutedEventArgs e)
     {
         if (this.FindControl<Border>("MessagesPanel") is not { } panel)
@@ -795,10 +813,7 @@ public partial class MainWindow : Window
         }
     }
 
-    /// <summary>
-    /// 卡片上的按钮:把"点了哪个按钮 + 卡片里填 / 选的内容"上报给服务端。
-    /// 选择卡片带的是下拉框里选的项,填空卡片带的是输入框里的字。
-    /// </summary>
+    /// <summary>卡片上的按钮:把"点了哪个按钮 + 卡片里填 / 选的内容"上报给服务端。 选择卡片带的是下拉框里选的项,填空卡片带的是输入框里的字。</summary>
     private void OnCardActionClick(object? sender, RoutedEventArgs e)
     {
         if (sender is Button { Content: string action, DataContext: MessageItem item } && Vm is { } vm)
@@ -836,11 +851,7 @@ public partial class MainWindow : Window
             Logger.Log(LogLevel.Error, $"[ZXMC] 打开{what}失败 {url}: {ex.Message}");
         }
     }
-    /// <summary>
-    /// 心跳 + 自动重连。
-    /// 每 5 秒查一次连接:掉线先弹红色提示「与服务端的连接已断开,尝试重连」,
-    /// 之后每 5 秒重连一次,提示「正在重连 N/5」;连上了弹绿色提示并清零计数。
-    /// </summary>
+    /// <summary>心跳 + 自动重连。 每 5 秒查一次连接:掉线先弹红色提示「与服务端的连接已断开,尝试重连」, 之后每 5 秒重连一次,提示「正在重连 N/5」;连上了弹绿色提示并清零计数。</summary>
     private Avalonia.Threading.DispatcherTimer? _heartbeat;
     private int _reconnectAttempt;
     private bool _reconnecting;

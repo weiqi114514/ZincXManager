@@ -78,6 +78,15 @@ internal static class Program
     // 绑定码 → (玩家名, 生成时间)
     private static readonly Dictionary<string, (string Player, DateTime At)> BindCodes = new();
 
+    /// <summary>最近一次进服时拿到的绑定码(玩家名 → 码),给 ZXMC 显示用。</summary>
+    private static readonly Dictionary<string, (string Code, DateTime At)> LastBindByPlayer = new();
+
+    /// <summary>登录数组(玩家名 → 到期时间):确认通过的玩家默认 5 分钟内直接放行。</summary>
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, DateTime> LoginArray = new();
+
+    /// <summary>登录数组有效期(分钟)。</summary>
+    private const int LoginArrayMinutes = 5;
+
     // 登录请求序号
     private static int _loginSeq;
 
@@ -94,6 +103,9 @@ internal static class Program
 
     /// <summary>客户端接入端口(czport),Main 里读出来挂这里,报文方法要用。</summary>
     private static string _czport = DefaultCzPort;
+
+    /// <summary>ZXMM 执行接口地址,启动时从 config 读。</summary>
+    private static string _zxmmApiAddress = DefaultZxmmApi;
 
     /// <summary>本实例的服务端码(config.ini 的 servercode):32 位十六进制,首次生成后不变。
     /// 同一台机器可以跑多个 ZXMS,靠它区分"是哪一个实例"(机器码只用来识别设备 / 防绕过)。</summary>
@@ -113,6 +125,21 @@ internal static class Program
     private const string KeyOzport = "ozport";
     // config 键:子服端口。
     private const string KeyCzport = "czport";
+
+    /// <summary>ZXMM 执行接口地址(zxmmapi):ZXMS 连过去下发任务,格式 host:port。</summary>
+    private const string KeyZxmmApi = "zxmmapi";
+
+    /// <summary>ZXMM 执行接口默认地址。</summary>
+    private const string DefaultZxmmApi = "127.0.0.1:21200";
+
+    /// <summary>ZXMM 共享令牌(zxmmtoken):与模组 config 里的 api.token 一致才校验,空 = 不校验。</summary>
+    private const string KeyZxmmToken = "zxmmtoken";
+
+    /// <summary>ZXMM 共享令牌的值,启动时从 config 读。</summary>
+    private static string _zxmmToken = "";
+
+    /// <summary>ZXMM 执行接口(懒创建)。</summary>
+    private static Zxmm.ZxmmApi? _zxmmApi;
     // 官方服务端默认端口:25000(客户端默认也是 zxm.zincms.top:25000)
     private const string DefaultOsPort = "25000";
     private const string DefaultCzPort = "25566";
@@ -148,14 +175,11 @@ internal static class Program
         }
     }
 
-    /// <summary>
-    /// 本端显示给玩家的名称。<b>linkname=1(默认)时直接复用官方账号名</b>(和 ZXMOS 上那个账号一个字不差),
-    /// linkname=0 时用 config.ini 的 name,两者互不干扰。
-    /// </summary>
+    /// <summary>本端显示给玩家的名称。<b>linkname=1(默认)时直接复用官方账号名</b>(和 ZXMOS 上那个账号一个字不差), linkname=0 时用 config.ini 的 name,两者互不干扰。</summary>
     static string ResolveName(ZFile config)
     {
-        var account = config.MapGet(KeyOsUser).Trim();
-        var own = config.MapGet(KeyName).Trim();
+        var account = config.MapGet(KeyOsUser).Trim();   //配置值
+        var own = config.MapGet(KeyName).Trim();   //配置值
 
         if (config.MapGet(KeyLinkName).Trim() != "0" && account.Length > 0)
         {
@@ -173,7 +197,7 @@ internal static class Program
     /// </summary>
     static string ResolveConnectOS(ZFile config)
     {
-        var raw = config.MapGet(KeyConnectOs).Trim();
+        var raw = config.MapGet(KeyConnectOs).Trim();   //配置值
         var legacy = config.MapGet(KeyConfigVer).Trim().Length == 0;
 
         if (legacy && raw is "0" or "1")
@@ -199,10 +223,7 @@ internal static class Program
         return value;
     }
 
-    /// <summary>
-    /// 配置检查:ini 里这个键没有"有效值"就在控制台问一次,问到合法值后写回 ini。
-    /// 直接回车(空输入)或输入流已结束(管道/重定向)时用 fallback 兜底,不会死循环。
-    /// </summary>
+    /// <summary>配置检查:ini 里这个键没有"有效值"就在控制台问一次,问到合法值后写回 ini。 直接回车(空输入)或输入流已结束(管道/重定向)时用 fallback 兜底,不会死循环。</summary>
     static string AskIfMissing(ZFile file, string key, string prompt, Func<string, bool> valid, string fallback)
     {
         var value = file.MapGet(key).Trim();
@@ -232,10 +253,7 @@ internal static class Program
         }
     }
 
-    /// <summary>
-    /// 回复握手确认(收到 300 回 301)。
-    /// 成功/失败都记日志 —— 否则服务端这边只有"上线",看不出确认包有没有发出去。
-    /// </summary>
+    /// <summary>回复握手确认(收到 300 回 301)。 成功/失败都记日志 —— 否则服务端这边只有"上线",看不出确认包有没有发出去。</summary>
     static async Task ReplyHandshakeAsync(ServerboundPacket packet, ushort ackType, string ackName, string peer, string text)
     {
         try
@@ -255,13 +273,9 @@ internal static class Program
             typeof(Program).Assembly, typeof(System.Reflection.AssemblyInformationalVersionAttribute)))
             ?.InformationalVersion?.Split('+')[0] ?? "1.0.0";
 
-    /// <summary>
-    /// 处理一条来自 ZXMC / ZXMM 的报文:按 Type 分派。
-    /// </summary>
+    /// <summary>处理一条来自 ZXMC / ZXMM 的报文:按 Type 分派。</summary>
     /// <param name="packet">收到的报文包(带连接上下文)。</param>
-    /// <summary>
-    /// 替命令查官方端的玩家返回记录(msg backget ... -os):发 508,等 509 回包。
-    /// </summary>
+    /// <summary>替命令查官方端的玩家返回记录(msg backget ... -os):发 508,等 509 回包。</summary>
     /// <param name="args">查询参数(命令里 -os 之前那部分)。</param>
     /// <returns>官方端渲染好的文本;连不上/超时返回原因。</returns>
     private static async Task<string> QueryOsMegBackAsync(string args)
@@ -299,7 +313,7 @@ internal static class Program
     private static async Task<bool> SendToAccountAsync(int accountId, ushort type, string payload)
     {
         var server = _server;
-        var account = Accounts.FindById(accountId);
+        var account = Accounts.FindById(accountId);   //账号
         if (server is null || account is null)
         {
             return false;
@@ -327,6 +341,168 @@ internal static class Program
         return false;
     }
 
+    /// <summary>让 ZXMM 踢人(ZXMS 只发配,动作由它在主线程执行)</summary>
+    private static async Task<bool> KickViaZxmmAsync(string player, string reason)
+    {
+        if (string.IsNullOrWhiteSpace(player))
+        {
+            return false;
+        }
+
+        try
+        {
+            _zxmmApi ??= CreateZxmmApi();
+
+            // ZXMM 回 err 就说明没真踢成(人不在线 / 主线程忙),别一律当成功
+            var (ok, detail) = await _zxmmApi.KickAsync(player, reason);
+            Logger.Log(ok ? LogLevel.Info : LogLevel.Warning,
+                $"[ZXMM] 下发踢人任务 {player} → {detail}");
+            return ok;
+        }
+        catch (Exception ex)
+        {
+            Logger.Log(LogLevel.Warning, "[ZXMM] 下发踢人任务失败: " + ex.Message);
+            return false;
+        }
+    }
+
+    /// <summary>按 zxmmapi=host:port 建接口客户端(支持 [::1]:21200)</summary>
+    private static Zxmm.ZxmmApi CreateZxmmApi()
+    {
+        var host = "127.0.0.1";
+        var port = 21200;
+
+        var text = _zxmmApiAddress.Trim();
+
+        // IPv6 字面量必须带方括号,端口在方括号外:[::1]:21200
+        if (text.StartsWith('['))
+        {
+            var end = text.IndexOf(']');
+            if (end > 1)
+            {
+                host = text[1..end];
+                var tail = text[(end + 1)..];
+                if (tail.StartsWith(':') && int.TryParse(tail[1..], out var v6Port) && v6Port is > 0 and <= 65535)
+                {
+                    port = v6Port;
+                }
+            }
+        }
+        else
+        {
+            var colon = text.LastIndexOf(':');
+            if (colon > 0 && int.TryParse(text[(colon + 1)..], out var parsedPort) && parsedPort is > 0 and <= 65535)
+            {
+                host = text[..colon].Trim();
+                port = parsedPort;
+            }
+            else if (text.Length > 0)
+            {
+                host = text;
+            }
+        }
+
+        return new Zxmm.ZxmmApi(host, port, _zxmmToken);
+    }
+
+    /// <summary>玩家进服:全部流程都在这里判(登录数组→持久表→绑定→弹窗)</summary>
+    private static async Task HandlePlayerJoinedAsync(string player, string ip)
+    {
+        if (string.IsNullOrWhiteSpace(player))
+        {
+            return;
+        }
+
+        // 老版本模组报的是 /1.2.3.4:5678,先压成纯 IP:归属地、持久登录表、日志都用它
+        ip = GeoLookup.Normalize(ip);
+        if (ip.Length == 0)
+        {
+            ip = "unknown";
+        }
+        // ① 登录数组(5 分钟)里 → 放行,什么都不做
+        if (InLoginArray(player))
+        {
+            LoginStore.Log($"[登录数组] 玩家 {player}({ip}) 在登录数组里,放行");
+            return;
+        }
+
+        // ② 持久登录表 → 记进登录数组,放行
+        if (LoginStore.HasPersistentLogin(player))
+        {
+            AddToLoginArray(player);
+            LoginStore.Log($"[持久登录] 玩家 {player}({ip}) 在持久登录表里,放行");
+            return;
+        }
+
+        var boundAccount = LoginStore.AccountOf(player);   //绑定的账号ID
+
+        // ③ 没绑定 → 生成绑定码,直接通过执行接口把他踢去绑定
+        if (boundAccount <= 0)
+        {
+            var code = NewBindCode();   //绑定码
+            lock (BindCodes)
+            {
+                BindCodes[code] = (player, DateTime.Now);
+                LastBindByPlayer[player] = (code, DateTime.Now);
+            }
+
+            LoginStore.Log($"[未绑定] 玩家 {player}({ip}) 拿到绑定码 {code}");
+            await KickViaZxmmAsync(player,
+                "请先绑定账号。绑定码：" + code + " —— 在 ZXMC 的「小功能组 → 绑定/解绑」里输入这 6 位");
+            return;
+        }
+
+        // ④ 有绑定 → 弹窗问账号主人,等 622
+        // 同一个玩家短时间内重复上报(客户端重连 / 事件补报):只留一条待确认,别让账号主人连点两次
+        foreach (var pair in PendingLogins)
+        {
+            if (string.Equals(pair.Value.Player, player, StringComparison.OrdinalIgnoreCase) &&
+                (DateTime.Now - pair.Value.At).TotalMinutes < 5)
+            {
+                Logger.Log(LogLevel.Info, $"[ZXMM] 忽略重复上报: {player} 已挂着请求 {pair.Key}");
+                LoginStore.Log($"[登录请求] 玩家 {player} 已有待确认的请求(请求 {pair.Key}),忽略这次重复上报");
+                return;
+            }
+        }
+
+        var requestId = Interlocked.Increment(ref _loginSeq);   //请求ID
+        PendingLogins[requestId] = new PendingLogin(player, ip, boundAccount, Guid.Empty, DateTime.Now);
+        LoginStore.Log($"[登录请求] {player}({ip}) → 账号 {boundAccount},请求 {requestId}");
+
+        // 归属地是展示用的:最多等 1.2 秒,超时按"未知"发,不拖住登录弹窗
+        var geo = await GeoLookup.LookupAsync(ip);   //归属地
+        if (!await SendToAccountAsync(boundAccount, Protocol.LoginAsk,
+                $"{requestId}|{player}|{ip}|{geo}"))
+        {
+            PendingLogins.TryRemove(requestId, out _);
+            LoginStore.Log($"[登录失败] 玩家 {player}: 绑定的账号不在线");
+            await KickViaZxmmAsync(player, "绑定的 ZXMC 账号不在线，无法确认登录，请稍后再试");
+        }
+    }
+
+    /// <summary>玩家在不在登录数组里(过期的顺手清掉)。</summary>
+    private static bool InLoginArray(string player)
+    {
+        if (!LoginArray.TryGetValue(player, out var expires))
+        {
+            return false;
+        }
+
+        if (expires < DateTime.Now)
+        {
+            LoginArray.TryRemove(player, out _);
+            return false;
+        }
+
+        return true;
+    }
+
+    /// <summary>把玩家放进登录数组(默认 5 分钟)。</summary>
+    private static void AddToLoginArray(string player)
+    {
+        LoginArray[player] = DateTime.Now.AddMinutes(LoginArrayMinutes);
+    }
+
     /// <summary>生成六位绑定码(去掉容易看错的 0/O/1/I)。</summary>
     private static string NewBindCode()
     {
@@ -352,8 +528,8 @@ internal static class Program
             // ---- ZXMC(客户端)上线:负载形如 "ZXMC:SAOS"(客户端把自己的连接模式报上来) ----
             case Conline:
             {
-                var text = Encoding.UTF8.GetString(packet.Data).Trim();
-                var parts = text.Split(':', 2);
+                var text = Encoding.UTF8.GetString(packet.Data).Trim();   //包内容
+                var parts = text.Split(':', 2);   //拆分结果
                 var mode = parts.Length > 1 ? parts[1] : "-";
 
                 _server.Registry.SetRole(packet.Connection.Id, "ZXMC", mode);
@@ -386,7 +562,7 @@ internal static class Program
                     break;
                 }
 
-                var parts = Encoding.UTF8.GetString(packet.Data).Split('|');
+                var parts = Encoding.UTF8.GetString(packet.Data).Split('|');   //包内容
                 var user = parts.Length > 0 ? parts[0].Trim() : "";
                 var passwordHash = parts.Length > 1 ? parts[1] : "";
                 var level = parts.Length > 2 ? parts[2].Trim() : Protocol.RegisterLevel;
@@ -451,7 +627,7 @@ internal static class Program
             // ---- 账号:注册(负载 "名称|密码密文";等级固定 Player) ----
             case Protocol.AccountRegister:
             {
-                var parts = Encoding.UTF8.GetString(packet.Data).Split('|');
+                var parts = Encoding.UTF8.GetString(packet.Data).Split('|');   //包内容
                 var user = parts.Length > 0 ? parts[0].Trim() : "";
                 var passwordHash = parts.Length > 1 ? parts[1] : "";
                 // 第 3 段是客户端机器码(老客户端没这段,当空处理)
@@ -529,7 +705,7 @@ internal static class Program
             // ---- 卡片动作(502):客户端点了公告 / 推送卡片上的按钮 ----
             case Protocol.CardAction:
             {
-                var text = Encoding.UTF8.GetString(packet.Data);
+                var text = Encoding.UTF8.GetString(packet.Data);   //包内容
                 var who = _server?.Registry.Find(packet.Connection.Id)?.User ?? "?";
 
                 if (!MessageCard.TryParseAction(text, out var talk))
@@ -565,7 +741,7 @@ internal static class Program
             case Protocol.MessageHistoryReq:
             {
                 var who = _server?.Registry.Find(packet.Connection.Id)?.User ?? "?";
-                var intent = Encoding.UTF8.GetString(packet.Data).Trim();
+                var intent = Encoding.UTF8.GetString(packet.Data).Trim();   //包内容
                 if (intent.Length == 0)
                 {
                     intent = "client";
@@ -611,7 +787,7 @@ internal static class Program
             // ---- 官方端回包(509):-os 查询结果,唤醒等待的命令 ----
             case Protocol.MegBackAck:
             {
-                var ackText = Encoding.UTF8.GetString(packet.Data);
+                var ackText = Encoding.UTF8.GetString(packet.Data);   //包内容
                 if (MegBackWaits.TryRemove((int)packet.Id, out var pending))
                 {
                     pending.TrySetResult(ackText);
@@ -619,56 +795,17 @@ internal static class Program
                 break;
             }
 
-            // ---- 登录请求(620,来自 ZXMM):有绑定就问客户端,没绑定就发绑定码 ----
+            // ---- 620 已废:现在 ZXMM 走专用长连接推 evt|joined(见 HandlePlayerJoinedAsync) ----
             case Protocol.LoginRequest:
-            {
-                var loginText = Encoding.UTF8.GetString(packet.Data).Trim();
-                var loginParts = loginText.Split('|');
-                var player = loginParts.Length > 0 ? loginParts[0].Trim() : "";
-                var ip = loginParts.Length > 1 ? loginParts[1].Trim() : "";
-
-                if (player.Length == 0)
-                {
-                    await packet.SendAsync(Protocol.LoginResult, "err|玩家名为空", packet.Id);
-                    break;
-                }
-
-                var boundAccount = LoginStore.AccountOf(player);
-                if (boundAccount <= 0)
-                {
-                    // 没绑定:发一个绑定码,让玩家去 ZXMC 的绑定功能里绑
-                    var code = NewBindCode();
-                    lock (BindCodes)
-                    {
-                        BindCodes[code] = (player, DateTime.Now);
-                    }
-
-                    LoginStore.Log($"[未绑定] 玩家 {player}({ip}) 拿到绑定码 {code}");
-                    await packet.SendAsync(Protocol.LoginResult, $"nobind|{code}|{player}", packet.Id);
-                    break;
-                }
-
-                var requestId = Interlocked.Increment(ref _loginSeq);
-                PendingLogins[requestId] = new PendingLogin(player, ip, boundAccount, packet.Connection.Id, DateTime.Now);
-                LoginStore.Log($"[登录请求] {player}({ip}) → 账号 {boundAccount},请求 {requestId}");
-
-                var geo = GeoLookup.Lookup(ip);
-                if (!await SendToAccountAsync(boundAccount, Protocol.LoginAsk,
-                        $"{requestId}|{player}|{ip}|{geo}"))
-                {
-                    PendingLogins.TryRemove(requestId, out _);
-                    await packet.SendAsync(Protocol.LoginResult, $"err|绑定的账号不在线|{player}", packet.Id);
-                }
                 break;
-            }
 
             // ---- 客户端回答(622):同意 / 拒绝 ----
             case Protocol.LoginAnswer:
             {
-                var answerText = Encoding.UTF8.GetString(packet.Data).Trim();
-                var answerParts = answerText.Split('|');
+                var answerText = Encoding.UTF8.GetString(packet.Data).Trim();   //回答负载
+                var answerParts = answerText.Split('|');   //拆分结果
                 if (answerParts.Length < 2 || !int.TryParse(answerParts[0], out var requestId) ||
-                    !PendingLogins.TryRemove(requestId, out var pending))
+                    !PendingLogins.TryGetValue(requestId, out var pending))
                 {
                     break;
                 }
@@ -677,21 +814,40 @@ internal static class Program
                 var answerInfo = _server?.Registry.Find(packet.Connection.Id);
                 var answerIp = answerInfo?.Address ?? "?";
 
+                // 只有被问的那个账号能回答:否则任何一个登录着的 ZXMC 都能替别人点"同意",
+                // 白白给别的玩家写一条持久登录(以后免确认进服)。越权的回答不能把请求吃掉。
+                var answerAccount = Accounts.Find(answerInfo?.User ?? "")?.Id ?? 0;
+                if (answerAccount != pending.AccountId)
+                {
+                    Logger.Log(LogLevel.Warning,
+                        $"[安全] 越权回答登录请求 请求 {requestId}(属于账号 {pending.AccountId}) ← 账号 {answerAccount}({answerInfo?.User ?? "?"})");
+                    LoginStore.Log($"[登录拒绝] 请求 {requestId} 被非绑定账号(账号 {answerAccount})回答，已忽略");
+                    break;
+                }
+
+                // 认领这条请求(并发下只让一个人处理)
+                if (!PendingLogins.TryRemove(requestId, out pending))
+                {
+                    break;
+                }
+
                 LoginStore.Log(agree
                     ? $"[登录通过] 玩家 {pending.Player},账号 {pending.AccountId},发起 IP {pending.Ip},同意 IP {answerIp}"
                     : $"[登录拒绝] 玩家 {pending.Player},账号 {pending.AccountId},发起 IP {pending.Ip},拒绝 IP {answerIp}");
 
-                var origin = _server?.Connections.FirstOrDefault(c => c.Id == pending.OriginConnId);
-                if (origin is not null)
-                {
-                    var accountName = Accounts.FindById(pending.AccountId)?.Name ?? "";
-                    await origin.SendAsync(Protocol.LoginResult,
-                        $"{(agree ? "ok" : "no")}|{pending.Player}|{accountName}|{pending.AccountId}", 0, "ZXMM");
-                }
+                // ZXMM 的上报是短连接，早就关了；这里只做决策，结果不再回给它
 
                 if (agree)
                 {
+                    // 流程:允许 → 进登录数组(5 分钟) + 写持久登录表,之后直接放行
+                    AddToLoginArray(pending.Player);
                     LoginStore.AddPersistentLogin(pending.Player, pending.Ip);
+                }
+                else
+                {
+                    // 流程:拒绝 → 由 ZXMS 通过执行接口让 ZXMM 去踢
+                    // 不 await:踢人要等 ZXMM 回执(最长 10 秒),等在这儿会把整条连接的报文处理堵住
+                    _ = KickViaZxmmAsync(pending.Player, "账号主人拒绝了这次登录");
                 }
                 break;
             }
@@ -699,8 +855,8 @@ internal static class Program
             // ---- 绑定码转交(625):ZXMM 把玩家手里的码转给服务端 ----
             case Protocol.BindNotice:
             {
-                var noticeText = Encoding.UTF8.GetString(packet.Data).Trim();
-                var noticeParts = noticeText.Split('|');
+                var noticeText = Encoding.UTF8.GetString(packet.Data).Trim();   //包内容
+                var noticeParts = noticeText.Split('|');   //拆分结果
                 if (noticeParts.Length >= 2 && noticeParts[0].Trim().Length > 0)
                 {
                     lock (BindCodes)
@@ -714,7 +870,7 @@ internal static class Program
             // ---- 绑定(626):客户端用绑定码绑定 ----
             case Protocol.BindApply:
             {
-                var code = Encoding.UTF8.GetString(packet.Data).Trim().ToUpperInvariant();
+                var code = Encoding.UTF8.GetString(packet.Data).Trim().ToUpperInvariant();   //包内容
                 var bindWho = _server?.Registry.Find(packet.Connection.Id)?.User ?? "";
                 var bindAccount = Accounts.Find(bindWho)?.Id ?? 0;
                 if (bindAccount <= 0)
@@ -739,9 +895,25 @@ internal static class Program
                     break;
                 }
 
-                await packet.SendAsync(Protocol.BindAck,
-                    LoginStore.Bind(bindAccount, bindPlayer, out var bindError) ? $"ok|{bindPlayer}" : "err|" + bindError,
-                    packet.Id);
+                // 改绑：这个账号原来绑的玩家要先失去"免确认"，否则他不在任何账号名下还能直接进服
+                var previousPlayer = LoginStore.PlayerOf(bindAccount);
+
+                if (!LoginStore.Bind(bindAccount, bindPlayer, out var bindError))
+                {
+                    await packet.SendAsync(Protocol.BindAck, "err|" + bindError, packet.Id);
+                    break;
+                }
+
+                await packet.SendAsync(Protocol.BindAck, $"ok|{bindPlayer}", packet.Id);
+
+                if (previousPlayer.Length > 0 && !string.Equals(previousPlayer, bindPlayer, StringComparison.OrdinalIgnoreCase))
+                {
+                    LoginArray.TryRemove(previousPlayer, out _);
+                    LoginStore.RemovePersistentLogin(previousPlayer);
+                    LoginStore.Log($"[改绑] 账号 {bindAccount} 从 {previousPlayer} 改绑到 {bindPlayer}，旧玩家的免登录已清掉");
+                    // 踢人不 await:回执要等 ZXMM,等在这儿会把这条连接的报文处理堵住
+                    _ = KickViaZxmmAsync(previousPlayer, "账号已改绑到别的玩家，请重新绑定后再进入");                }
+
                 break;
             }
 
@@ -752,7 +924,12 @@ internal static class Program
                 var unbindAccount = Accounts.Find(unbindWho)?.Id ?? 0;
                 if (unbindAccount > 0 && LoginStore.Unbind(unbindAccount, out var removed))
                 {
+                    // 解绑要立刻失效:登录数组、持久登录表都清掉,再通过执行接口把在线的人踢掉
+                    LoginArray.TryRemove(removed, out _);
+                    LoginStore.RemovePersistentLogin(removed);
                     await packet.SendAsync(Protocol.BindAck, $"ok|{removed}", packet.Id);
+                    // 踢人不 await(同上),否则回执会被这条踢人拖到 10 秒后
+                    _ = KickViaZxmmAsync(removed, "账号已解绑，请重新绑定后再进入");
                 }
                 else
                 {
@@ -771,8 +948,30 @@ internal static class Program
                     // 客户端来查:只回自己这条(解绑页要显示"当前绑定了谁")
                     var selfId = Accounts.Find(queryInfo.User)?.Id ?? 0;
                     var selfPlayer = selfId > 0 ? LoginStore.PlayerOf(selfId) : "";
+
+                    if (selfPlayer.Length > 0)
+                    {
+                        await packet.SendAsync(Protocol.BindList, $"{selfPlayer}={queryInfo.User}", packet.Id);
+                        break;
+                    }
+
+                    // 还没绑定:把"最近进服那个玩家拿到的码"给它,ZXMC 绑定页可以直接显示/预填
+                    (string Player, string Code) latest = ("", "");
+                    var latestAt = DateTime.MinValue;
+                    lock (BindCodes)
+                    {
+                        foreach (var pair in LastBindByPlayer)
+                        {
+                            if ((DateTime.Now - pair.Value.At).TotalMinutes <= 30 && pair.Value.At > latestAt)
+                            {
+                                latest = (pair.Key, pair.Value.Code);
+                                latestAt = pair.Value.At;
+                            }
+                        }
+                    }
+
                     await packet.SendAsync(Protocol.BindList,
-                        selfPlayer.Length > 0 ? $"{selfPlayer}={queryInfo.User}" : "", packet.Id);
+                        latest.Code.Length > 0 ? $"nobind|{latest.Player}|{latest.Code}" : "nobind||", packet.Id);
                     break;
                 }
 
@@ -787,7 +986,7 @@ internal static class Program
             {
                 var ackWho = _server?.Registry.Find(packet.Connection.Id)?.User ?? "";
                 var ackId = Accounts.Find(ackWho)?.Id ?? 0;
-                var ackText = Encoding.UTF8.GetString(packet.Data).Trim();
+                var ackText = Encoding.UTF8.GetString(packet.Data).Trim();   //包内容
                 var ackIds = ackText.Split(' ', StringSplitOptions.RemoveEmptyEntries)
                     .Select(t => int.TryParse(t, out var v) ? v : 0).Where(v => v > 0).ToArray();
                 if (ackId > 0 && ackIds.Length > 0)
@@ -837,10 +1036,7 @@ internal static class Program
         Console.WriteLine("旧站(带端口) http://zxm.zincms.top:10/");
     }
 
-    /// <summary>
-    /// 读 config.ini 并把该问的问了:名称、服务端码、是否连官方、端口、消息保留天数。
-    /// 缺的项会当场交互问一次然后写回文件,下次启动就不问了。
-    /// </summary>
+    /// <summary>读 config.ini 并把该问的问了:名称、服务端码、是否连官方、端口、消息保留天数。 缺的项会当场交互问一次然后写回文件,下次启动就不问了。</summary>
     /// <returns>(config 句柄, 本端名称, 是否连官方 "1"/"0")。</returns>
     private static (ZFile Config, string ServerName, string ConnectOs) LoadConfig()
     {
@@ -856,7 +1052,7 @@ internal static class Program
             fallback: DefaultName);
 
         // 显示名与官方账号名是否联动(默认联动:玩家看到的名字 = 本端在 ZXMOS 的账号名)
-        var linkName = config.MapGet(KeyLinkName).Trim();
+        var linkName = config.MapGet(KeyLinkName).Trim();   //配置值
         if (linkName.Length == 0)
         {
             config.WriteFileMap(KeyLinkName, DefaultLinkName);
@@ -865,7 +1061,7 @@ internal static class Program
         }
 
         // 服务端码:本实例的身份证。缺失或格式不对就生成一个 32 位十六进制并写回
-        var serverCode = config.MapGet(KeyServerCode).Trim().ToLowerInvariant();
+        var serverCode = config.MapGet(KeyServerCode).Trim().ToLowerInvariant();   //配置值
         if (serverCode.Length != 32 || serverCode.Any(c => !Uri.IsHexDigit(c)))
         {
             serverCode = Convert.ToHexString(System.Security.Cryptography.RandomNumberGenerator.GetBytes(16)).ToLowerInvariant();
@@ -875,7 +1071,7 @@ internal static class Program
             // 已经配过 osuser 而且**以前连上过官方服**(config 里有 ozname)= 这是个老部署:
             // 这时缺 servercode 说明 config.ini 被整体换过,官方服记的还是老码 → 接上去会被判"身份不一致"。
             // (刚发下去、还没连过的干净 config 不提醒 —— 那种情况本来就要新生成一个码)
-            var knownUser = config.MapGet(KeyOsUser).Trim();
+            var knownUser = config.MapGet(KeyOsUser).Trim();   //配置值
             if (knownUser.Length > 0 && config.MapGet(KeyOsName).Trim().Length > 0)
             {
                 Logger.Log(LogLevel.Warning,
@@ -939,6 +1135,43 @@ internal static class Program
         // 端口落到静态字段:监听和报文方法都要用(报文里要把端口回给客户端)
         _czport = czport;
 
+        // ZXMM 执行接口地址:ZXMS 连过去下发任务(踢人 / 查玩家 / 广播)
+        var zxmmApi = config.MapGet(KeyZxmmApi).Trim();   //配置值
+        if (zxmmApi.Length == 0)
+        {
+            config.WriteFileMap(KeyZxmmApi, DefaultZxmmApi);
+            zxmmApi = DefaultZxmmApi;
+            Logger.Log(LogLevel.Info, $"[CONFIG]{KeyZxmmApi} 未配置,已写入默认值 {DefaultZxmmApi}(ZXMM 执行接口)");
+        }
+
+        _zxmmApiAddress = zxmmApi;
+        Logger.Log(LogLevel.Info, $"[ZXMM] 专用通道地址:{_zxmmApiAddress}");
+
+        // 令牌:和模组 config 里的 api.token 一致才校验。两边都空 = 不校验(默认)
+        _zxmmToken = config.MapGet(KeyZxmmToken).Trim();
+        Logger.Log(LogLevel.Info, _zxmmToken.Length > 0
+            ? "[ZXMM] 令牌校验:开(config 里 zxmmtoken 非空)"
+            : $"[ZXMM] 令牌校验:关(模组的 api.token 也留空才这样;要在 config 里补 {KeyZxmmToken}=…)");
+
+        // 和 ZXMM 建一条常驻连接:它推"玩家进服",我们下发"踢人/查询"任务
+        _zxmmApi = CreateZxmmApi();
+        _zxmmApi.PlayerJoined += (player, ip) =>
+        {
+            // 异常必须打出来:Task.Run 里的异常没人看,静默吞掉就等于这条事件凭空消失
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await HandlePlayerJoinedAsync(player, ip);
+                }
+                catch (Exception ex)
+                {
+                    Logger.Log(LogLevel.Error, $"[ZXMM] 处理进服事件异常({player}): {ex}");
+                }
+            });
+        };
+        _zxmmApi.Start();
+
         return (config, serverName, connectOS);
     }
 
@@ -974,7 +1207,7 @@ internal static class Program
 
                 await conn.WriteAsync(new Packet(0, ServerIdent, Encoding.UTF8.GetBytes("ZXMS")));
                 await conn.WriteAsync(new Packet(0, Protocol.ServerName, Encoding.UTF8.GetBytes(liveName)));
-                var squareName = config.MapGet(KeySquareName).Trim();
+                var squareName = config.MapGet(KeySquareName).Trim();   //配置值
                 if (squareName.Length == 0)
                 {
                     squareName = "服务器广场";
@@ -1046,6 +1279,9 @@ internal static class Program
                     }
 
                     await SendToAccountAsync(late.AccountId, Protocol.LoginTimeout, $"{pair.Key}|{late.Player}");
+
+                    // 新架构:ZXMS 只发配任务,踢人交给 ZXMM 的执行接口(玩家若还挂在服里就踢掉)
+                    await KickViaZxmmAsync(late.Player, "登录确认超时(5 分钟)，请重新进入服务器");
                 }
             }
         });
@@ -1103,11 +1339,7 @@ internal static class Program
         await Task.Delay(Timeout.Infinite);
     }
 
-    /// <summary>
-    /// 连接官方服务端(ZXMOS):先关掉旧连接 → 读配置 → 建连接 → 报上线 → 校验对方身份。
-    /// 启动时调用一次,"net reconnect" 命令也调它。
-    /// </summary>
-    /// <summary>本 ZXMS 在 ZXMOS 上注册的账号名(config.ini 的 osuser)。</summary>
+    /// <summary>本 ZXMS 在 ZXMOS 上注册的账号名(config.ini 的 osuser)</summary>
     private const string KeyOsUser = "osuser";
 
     /// <summary>该账号的密码密文(config.ini 的 oshash;明文不落盘)。</summary>
@@ -1116,25 +1348,19 @@ internal static class Program
     /// <summary>该账号的等级(config.ini 的 oslevel;ZXMOS 上子服务端账号是 Admin / System)。</summary>
     private const string KeyOsLevel = "oslevel";
 
-    /// <summary>
-    /// 本端自己发给 ZXMOS 的账号请求:包 Id → 等回执的等待者(601 登录 / 603 注册 / 612 改名)。
-    /// 按包 Id 存字典,登录与改名各等各的,不会互相把等待者顶掉。
-    /// </summary>
+    /// <summary>本端自己发给 ZXMOS 的账号请求:包 Id → 等回执的等待者(601 登录 / 603 注册 / 612 改名)。 按包 Id 存字典,登录与改名各等各的,不会互相把等待者顶掉。</summary>
     private static readonly ConcurrentDictionary<ulong, TaskCompletionSource<string>> OsAcks = new();
 
     /// <summary>本端自己发的包 Id 计数(从 10 万起,和"替客户端中转"的 relay Id 段分开)。</summary>
     private static ulong _osOwnPacketId = 100_000;
 
-    /// <summary>
-    /// 用 ZXMS 账号登录 ZXMOS:没注册过就顺手注册(ZXMOS 给子服务端账号 Admin 级,并记下本机 IP)。
-    /// 账号 / 密码没配过时在这里问一次,密码算成密文写回 config.ini。
-    /// </summary>
+    /// <summary>用 ZXMS 账号登录 ZXMOS:没注册过就顺手注册(ZXMOS 给子服务端账号 Admin 级,并记下本机 IP)。 账号 / 密码没配过时在这里问一次,密码算成密文写回 config.ini。</summary>
     private static async Task LoginOServerAsync(TcpClient client, ZFile config)
     {
         var user = AskOsUser(config);
 
         // 密文没有就不问明文存明文,而是问一次、当场算成密文存下来
-        var hash = config.MapGet(KeyOsHash).Trim();
+        var hash = config.MapGet(KeyOsHash).Trim();   //配置值
         if (!PasswordHash.IsHash(hash))
         {
             if (hash.Length > 0)
@@ -1151,7 +1377,7 @@ internal static class Program
 
         // 带上本机机器码:被拉黑的子服务端换个 config(改名 / 换 IP)也解不开
         var machine = MachineCode.Value;
-        var serverCode = config.MapGet(KeyServerCode).Trim().ToLowerInvariant();
+        var serverCode = config.MapGet(KeyServerCode).Trim().ToLowerInvariant();   //配置值
         Logger.Log(LogLevel.Info, $"[ZXMOS] 本机机器码:{machine}(设备)服务端码:{serverCode}(实例)");
 
         // 载荷:名称|密文|等级|端|机器码|服务端码
@@ -1252,7 +1478,7 @@ internal static class Program
             return;
         }
 
-        var fields = reply.Split('|');
+        var fields = reply.Split('|');   //拆分结果
         var name = fields.Length > 1 ? fields[1].Trim() : "";
         var level = fields.Length > 3 ? fields[3].Trim() : Protocol.RegisterLevel;
 
@@ -1288,10 +1514,7 @@ internal static class Program
         return finished == waiter.Task ? waiter.Task.Result : "err|ZXMOS 没有回执(超时)";
     }
 
-    /// <summary>
-    /// 改本端在官方服务端的账号名(顺带改密码):发 611 → 等 612 → 成功才写本地 config。
-    /// 顺序不能反:先写本地的话,服务器一旦拒绝,config 里就留了一个对不上的账号,下次接入就认证不过去。
-    /// </summary>
+    /// <summary>改本端在官方服务端的账号名(顺带改密码):发 611 → 等 612 → 成功才写本地 config。 顺序不能反:先写本地的话,服务器一旦拒绝,config 里就留了一个对不上的账号,下次接入就认证不过去。</summary>
     private static async Task<string> RenameOsAccountAsync(ZFile config, string newName, string newPassword)
     {
         var os = _os;
@@ -1300,7 +1523,7 @@ internal static class Program
             return "err|官方服务端未连接,请先 net reconnect";
         }
 
-        var oldName = config.MapGet(KeyOsUser).Trim();
+        var oldName = config.MapGet(KeyOsUser).Trim();   //配置值
         if (oldName.Length == 0)
         {
             return "err|本端还没有服务端账号(连上官方服务端会自动注册)";
@@ -1324,13 +1547,10 @@ internal static class Program
         return "ok|" + newName;
     }
 
-    /// <summary>
-    /// 问本端在 ZXMOS 上的账号名。**控制台命令不算数**:以前有人在提问里输了 `srv show`,
-    /// 结果官方端账号就叫 "srv show" —— 这里直接拒掉并重问(带空格的名字也不收)。
-    /// </summary>
+    /// <summary>问本端在 ZXMOS 上的账号名。**控制台命令不算数**:以前有人在提问里输了 `srv show`, 结果官方端账号就叫 "srv show" —— 这里直接拒掉并重问(带空格的名字也不收)。</summary>
     private static string AskOsUser(ZFile config)
     {
-        var current = config.MapGet(KeyOsUser).Trim();
+        var current = config.MapGet(KeyOsUser).Trim();   //配置值
         if (current.Length >= 2)
         {
             return current;
@@ -1427,22 +1647,13 @@ internal static class Program
         return hash;
     }
 
-    /// <summary>
-    /// 转发到 ZXMOS 的账号请求:ZXMOS 回执的包 Id → (哪个 ZXMC 连接, 它原来的包 Id)。
-    /// ZXMS 只是中转,ZXMC 完全不用知道账号到底在哪边校验的。
-    /// </summary>
+    /// <summary>转发到 ZXMOS 的账号请求:ZXMOS 回执的包 Id → (哪个 ZXMC 连接, 它原来的包 Id)。 ZXMS 只是中转,ZXMC 完全不用知道账号到底在哪边校验的。</summary>
     private static readonly ConcurrentDictionary<ulong, (Guid Connection, ulong PacketId)> AccountRelay = new();
 
-    /// <summary>
-    /// 转给 ZXMOS 的补发请求:包 Id → (哪条 ZXMC 连接要的, 它原来的包 Id, 本服先给了几条)。
-    /// ZXMOS 的 504 一条条按这个 Id 找到人转过去;506 到了把"官方条数 + 本服条数"合成一条收尾回给客户端。
-    /// </summary>
+    /// <summary>转给 ZXMOS 的补发请求:包 Id → (哪条 ZXMC 连接要的, 它原来的包 Id, 本服先给了几条)。 ZXMOS 的 504 一条条按这个 Id 找到人转过去;506 到了把"官方条数 + 本服条数"合成一条收尾回给客户端。</summary>
     private static readonly ConcurrentDictionary<ulong, (Guid Connection, ulong PacketId, int LocalSent)> HistoryRelay = new();
 
-    /// <summary>
-    /// 官方验证第二层:等官方服务端回证明(521)的等待者 + 这次发出去的 nonce。
-    /// 本端同时只连一台官方服务端,所以两个字段够用。
-    /// </summary>
+    /// <summary>官方验证第二层:等官方服务端回证明(521)的等待者 + 这次发出去的 nonce。 本端同时只连一台官方服务端,所以两个字段够用。</summary>
     private static TaskCompletionSource<string>? _officialWait;
 
     /// <summary>和 ZXMOS 协商密钥时等 381 用。</summary>
@@ -1452,12 +1663,7 @@ internal static class Program
 
     private static ulong _relayId = 1000;
 
-    /// <summary>
-    /// 这个账号请求该在哪个端处理:
-    ///   客户端明确指定了端(zxms / zxmos)就听它的;
-    ///   没指定:玩家账号(Player)官方优先 → zxmos;管理账号按 ZXMS 处理。
-    /// 载荷第 4 个字段就是"端"("名称|密文|等级|端")。
-    /// </summary>
+    /// <summary>这个账号请求该在哪个端处理: 客户端明确指定了端(zxms / zxmos)就听它的; 没指定:玩家账号(Player)官方优先 → zxmos;管理账号按 ZXMS 处理。 载荷第 4 个字段就是"端"("名称|密文|等级|端")。</summary>
     private static string DecideAccountSide(string level, string side)
     {
         side = side.Trim().ToLowerInvariant();
@@ -1607,10 +1813,7 @@ internal static class Program
         return sent;
     }
 
-    /// <summary>
-    /// 把玩家的卡片动作转交给官方服务端(负载前面加一段账号,官方端才知道是谁点的)。
-    /// 官方服务端不回执 —— 这条链路的回执只到"已转交",玩家那边已经拿到 ZXMS 的回话了。
-    /// </summary>
+    /// <summary>把玩家的卡片动作转交给官方服务端(负载前面加一段账号,官方端才知道是谁点的)。 官方服务端不回执 —— 这条链路的回执只到"已转交",玩家那边已经拿到 ZXMS 的回话了。</summary>
     private static async Task<bool> TryForwardCardActionAsync(string account, string actionPayload)
     {
         var os = _os;
@@ -1672,9 +1875,7 @@ internal static class Program
         };
     }
 
-    /// <summary>
-    /// 配置模式里改一个键:校验 → 写 config.ini → 能立刻生效的立刻生效。返回空串表示成功。
-    /// </summary>
+    /// <summary>配置模式里改一个键:校验 → 写 config.ini → 能立刻生效的立刻生效。返回空串表示成功。</summary>
     internal static string SetConfigItem(string key, string value)
     {
         var config = _config;
@@ -1830,10 +2031,7 @@ internal static class Program
         return MessageArchive.Count;
     }
 
-    /// <summary>
-    /// 控制台 notice:给本服所有客户端发一条公告;返回投递条数。来源打成 ZXMS-&lt;本服名称&gt;。
-    /// 先入库拿到本服消息号,再发<b>同一张</b>卡 —— 这样在线收到的和以后补发的能对上(去重靠来源 + 号)。
-    /// </summary>
+    /// <summary>控制台 notice:给本服所有客户端发一条公告;返回投递条数。来源打成 ZXMS-&lt;本服名称&gt;。 先入库拿到本服消息号,再发<b>同一张</b>卡 —— 这样在线收到的和以后补发的能对上(去重靠来源 + 号)。</summary>
     private static int NoticeLocal(string serverName, CardInput card)
     {
         var (_, text) = MessageArchive.Add(id => BuildCard(card, serverName, id),
@@ -1855,6 +2053,7 @@ internal static class Program
         => MessageCard.Build(card.Kind, card.Title, card.Body, MessageCard.SourceTag("ZXMS", serverName),
             card.Primary, card.Secondary, card.Options, id);
 
+    /// <summary>连官方服务端:关旧连接 → 读配置 → 建连接 → 报上线 → 验对方身份</summary>
     private static async Task ConnectOServerAsync(ZFile config)
     {
         // 重连时旧对象不能复用,先关掉
@@ -1904,7 +2103,7 @@ internal static class Program
                 // ZXMOS 自报身份:必须真的是官方服务端
                 case ServerIdent:
                 {
-                    var role = Encoding.UTF8.GetString(packet.Data).Trim();
+                    var role = Encoding.UTF8.GetString(packet.Data).Trim();   //包内容
                     if (role == "ZXMOS")
                     {
                         Logger.Log(LogLevel.Info, "[ZXMOS] 身份校验通过:ZXMOS");
@@ -1920,7 +2119,7 @@ internal static class Program
                 // 官方服务端自报名称(201):记下来给 net status 显示,也写进 config
                 case Protocol.ServerName:
                 {
-                    var osName = Encoding.UTF8.GetString(packet.Data).Trim();
+                    var osName = Encoding.UTF8.GetString(packet.Data).Trim();   //包内容
                     config.WriteFileMap(KeyOsName, osName);
                     Logger.Log(LogLevel.Info, $"[ZXMOS] 服务端名称:{osName}");
                     break;
@@ -1945,11 +2144,11 @@ internal static class Program
                 // ZXMOS 移交过来的用户账号(拉黑前移交)
                 case Protocol.AccountMigrate:
                 {
-                    var lines = Encoding.UTF8.GetString(packet.Data).Split('\n', StringSplitOptions.RemoveEmptyEntries);
+                    var lines = Encoding.UTF8.GetString(packet.Data).Split('\n', StringSplitOptions.RemoveEmptyEntries);   //包内容
                     var ok = 0;
                     foreach (var line in lines)
                     {
-                        var f = line.Trim().Split('|');
+                        var f = line.Trim().Split('|');   //拆分结果
                         if (f.Length >= 2 && Accounts.Add(f[0].Trim(), f[1].Trim(),
                                 f.Length > 2 && Accounts.IsLevel(f[2].Trim()) ? f[2].Trim() : Protocol.RegisterLevel, out _, out _))
                         {
@@ -1966,7 +2165,7 @@ internal static class Program
                 case Protocol.AccountRegisterAck:
                 case Protocol.AccountRenameAck:
                 {
-                    var text = Encoding.UTF8.GetString(packet.Data).Trim();
+                    var text = Encoding.UTF8.GetString(packet.Data).Trim();   //包内容
 
                     // ① 是替某个 ZXMC 转发的 → 用它原来的包 Id 转回去
                     if (AccountRelay.TryRemove(packet.Id, out var pending))
@@ -2006,7 +2205,7 @@ internal static class Program
                 case Protocol.MessageHistory:
                 case Protocol.MessageHistoryDone:
                 {
-                    var text = Encoding.UTF8.GetString(packet.Data);
+                    var text = Encoding.UTF8.GetString(packet.Data);   //包内容
 
                     if (!HistoryRelay.TryGetValue(packet.Id, out var pending))
                     {
@@ -2051,7 +2250,7 @@ internal static class Program
                 // 官方服务端下发的公告(500):原样转给本服所有 ZXMC 客户端
                 case Protocol.Notice:
                 {
-                    var card = Encoding.UTF8.GetString(packet.Data);
+                    var card = Encoding.UTF8.GetString(packet.Data);   //包内容
                     MessageArchive.Add(card, CardSource(card));
                     var sent = await SendToLocalClientsAsync(Protocol.Notice, card, null);
                     Logger.Log(LogLevel.Info,
@@ -2063,7 +2262,7 @@ internal static class Program
                 // 其它按玩家账号过滤(不在本服就丢弃)
                 case Protocol.Push:
                 {
-                    var text = Encoding.UTF8.GetString(packet.Data);
+                    var text = Encoding.UTF8.GetString(packet.Data);   //包内容
 
                     if (!MessageCard.TryParsePush(text, out var target, out var card))
                     {
@@ -2071,12 +2270,12 @@ internal static class Program
                         break;
                     }
 
-                    var selfName = config.MapGet(KeyOsUser).Trim();
+                    var selfName = config.MapGet(KeyOsUser).Trim();   //配置值
 
                     // ① 官方服务端点名给本端(子服自己):控制台醒目打印,不转给客户端
                     if (target.StartsWith("@server:", StringComparison.OrdinalIgnoreCase))
                     {
-                        var who = target[8..].Trim();
+                        var who = target[8..].Trim();   //玩家名
                         if (who.Length > 0 && !string.Equals(who, selfName, StringComparison.OrdinalIgnoreCase))
                         {
                             Logger.Log(LogLevel.Info, $"[消息] 这条是给子服 {who} 的,不是本端({selfName}),已忽略");
@@ -2097,7 +2296,7 @@ internal static class Program
                     // ② 给本端名下所有客户端
                     if (target.StartsWith("@clients:", StringComparison.OrdinalIgnoreCase))
                     {
-                        var who = target[9..].Trim();
+                        var who = target[9..].Trim();   //玩家名
                         if (who.Length > 0 && !string.Equals(who, selfName, StringComparison.OrdinalIgnoreCase))
                         {
                             Logger.Log(LogLevel.Info, $"[消息] 这是发给子服 {who} 名下客户端的,不是本端({selfName}),已忽略");

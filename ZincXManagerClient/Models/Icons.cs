@@ -1,8 +1,6 @@
 namespace ZincXManagerClient.Models;
 
-/// <summary>
-/// 界面图标(路径数据取自设计稿导出的 SVG,viewBox 尺寸见 W/H)。
-/// </summary>
+/// <summary>界面图标(路径数据取自设计稿导出的 SVG,viewBox 尺寸见 W/H)。</summary>
 public static class Icons
 {
     // 经济:硬币 + ¥

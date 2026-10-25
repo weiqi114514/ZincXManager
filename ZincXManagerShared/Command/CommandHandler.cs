@@ -49,9 +49,7 @@ public class CommandHandler
 
     // ---------- 对外接口 ----------
 
-    /// <summary>
-    /// 注册命令。
-    /// </summary>
+    /// <summary>注册命令。</summary>
     /// <param name="name">命令名（可带空格表示分支，如 "user add"）</param>
     /// <param name="handler">处理函数</param>
     /// <param name="description">用途说明（help 列表显示）</param>
@@ -67,10 +65,7 @@ public class CommandHandler
         _usages[key] = string.IsNullOrWhiteSpace(usage) ? key : usage;
     }
 
-    /// <summary>
-    /// 子模式拦截:设了就每一行先交给它;返回 true 表示"这一行它处理了",不再当命令分发。
-    /// config 配置模式就是靠这个进"另一个地方"操作(类似 fdisk 的子模式)。
-    /// </summary>
+    /// <summary>子模式拦截:设了就每一行先交给它;返回 true 表示"这一行它处理了",不再当命令分发。 config 配置模式就是靠这个进"另一个地方"操作(类似 fdisk 的子模式)。</summary>
     public Func<string, bool>? LineInterceptor { get; set; }
 
     /// <summary>拦截器是否处于配置模式(用于把回显标签从 [Command] 换成 [ConfigSet])。</summary>
@@ -115,7 +110,7 @@ public class CommandHandler
                 continue;
             }
 
-            var parts = input.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            var parts = input.Split(' ', StringSplitOptions.RemoveEmptyEntries);   //拆分结果
             Dispatch(parts);
         }
     }

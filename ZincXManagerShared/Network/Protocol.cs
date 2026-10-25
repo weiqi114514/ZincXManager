@@ -62,10 +62,7 @@ public static class Protocol
     /// <summary>ZXMOS → ZXMS:把某些用户账号移交给子服务端(拉黑前先移交,别让玩家丢号)。负载 "名称|密文|等级" 每行一条。</summary>
     public const ushort AccountMigrate = 610;
 
-    /// <summary>
-    /// ZXMS → ZXMOS:改本端子服务端账号的名字(顺带改密码),由控制台 osuser 命令发起。
-    /// 负载 "旧名|新名|新密文|机器码|服务端码";ZXMOS 校验账号存在 + 机器码 / 服务端码与登记一致才改。
-    /// </summary>
+    /// <summary>ZXMS → ZXMOS:改本端子服务端账号的名字(顺带改密码),由控制台 osuser 命令发起。 负载 "旧名|新名|新密文|机器码|服务端码";ZXMOS 校验账号存在 + 机器码 / 服务端码与登记一致才改。</summary>
     public const ushort AccountRename = 611;
 
     /// <summary>ZXMOS → ZXMS:改名回执,"ok|新名" 或 "err|原因"。</summary>
@@ -99,16 +96,10 @@ public static class Protocol
     /// </summary>
     public const ushort MessageHistoryReq = 505;
 
-    /// <summary>
-    /// 服务端 → 客户端:这批补发完了(负载 = 补发条数)。客户端拿它收尾报提示,
-    /// 中转端(ZXMS)拿它清掉"是哪条连接要的"那条记录。
-    /// </summary>
+    /// <summary>服务端 → 客户端:这批补发完了(负载 = 补发条数)。客户端拿它收尾报提示, 中转端(ZXMS)拿它清掉"是哪条连接要的"那条记录。</summary>
     public const ushort MessageHistoryDone = 506;
 
-    /// <summary>
-    /// 507 客户端回执:告诉服务端"这几条我已经收下并落盘了"。
-    /// 负载 = 消息号,空格分隔(可一次回多条)。服务端收到才把消息记进已发清单,以后补发不再给。
-    /// </summary>
+    /// <summary>507 客户端回执:告诉服务端"这几条我已经收下并落盘了"。 负载 = 消息号,空格分隔(可一次回多条)。服务端收到才把消息记进已发清单,以后补发不再给。</summary>
     public const ushort MessageAck = 507;
 
     /// <summary>508 ZXMS → ZXMOS:要官方端的玩家返回记录(msg backget ... -os)。负载 = 查询参数原文。</summary>
@@ -170,10 +161,7 @@ public static class Protocol
     /// </summary>
     public const ushort ServerConfig = 202;
 
-    /// <summary>
-    /// 验证方 → 服务端:要一张"你确实是官方服务端"的证明(官方验证第二层)。
-    /// 负载 = 32 位十六进制 nonce(一次性随机数);只有**已经登录过**的连接才会得到应答。
-    /// </summary>
+    /// <summary>验证方 → 服务端:要一张"你确实是官方服务端"的证明(官方验证第二层)。 负载 = 32 位十六进制 nonce(一次性随机数);只有**已经登录过**的连接才会得到应答。</summary>
     public const ushort OfficialChallenge = 520;
 
     /// <summary>
@@ -200,10 +188,7 @@ public static class Protocol
     /// <summary>ZXMOS 上自助注册(玩家)能拿到的等级。</summary>
     public const string OSRegisterLevel = "Player";
 
-    /// <summary>
-    /// 服务端账号(ZXMS 接入官方服务端用的账号)没有等级分类 —— 用这个占位符存字段位置。
-    /// 它和"用户账号"(Player / Admin / System)是两回事。
-    /// </summary>
+    /// <summary>服务端账号(ZXMS 接入官方服务端用的账号)没有等级分类 —— 用这个占位符存字段位置。 它和"用户账号"(Player / Admin / System)是两回事。</summary>
     public const string ServerAccountLevel = "-";
 
     /// <summary>服务端账号专用的等级表(只有占位符,用来复用同一套账号表实现)。</summary>

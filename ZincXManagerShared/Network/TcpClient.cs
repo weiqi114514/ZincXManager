@@ -61,9 +61,7 @@ public class TcpClient : IClient
         _dispatcher = new PacketDispatcher<Packet>(_cts.Token);
     }
 
-    /// <summary>
-    /// 按主机名(域名)连 —— 真正连的时候才做 DNS 解析,所以 config 里写域名是可以的。
-    /// </summary>
+    /// <summary>按主机名(域名)连 —— 真正连的时候才做 DNS 解析,所以 config 里写域名是可以的。</summary>
     public TcpClient(string host, ushort port)
     {
         _host = HostText.Normalize(host);
@@ -137,6 +135,12 @@ public class TcpClient : IClient
 
                 if ((packet.Flags & SessionCrypto.FlagEncrypted) != 0)
                 {
+                    // 和对端同样的道理:加密包可能比握手完成的回调先到,等一会儿再判非法
+                    for (var wait = 0; wait < 40 && Crypto is null; wait++)
+                    {
+                        await Task.Delay(50, _cts.Token);
+                    }
+
                     if (Crypto is null)
                     {
                         throw new InvalidDataException("收到加密包,但会话密钥尚未协商");

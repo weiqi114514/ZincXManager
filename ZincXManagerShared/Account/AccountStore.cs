@@ -20,10 +20,7 @@ public sealed class Account
     /// <summary>数字 ID(展示用,自增)。</summary>
     public int Id { get; init; }
 
-    /// <summary>
-    /// 注册时对方的 IP。ZXMOS 上的"ZXMS 端账号"要记这个(哪个子服务端在用);
-    /// 玩家账号留空。
-    /// </summary>
+    /// <summary>注册时对方的 IP。ZXMOS 上的"ZXMS 端账号"要记这个(哪个子服务端在用); 玩家账号留空。</summary>
     public string Ip { get; set; } = "";
 
     /// <summary>最后一次登录的 IP(封禁用户时方便连它的 IP 一起封)。</summary>
@@ -115,8 +112,7 @@ public sealed class AccountStore
         }
     }
 
-    /// <summary>按"名称或 ID"找账号(控制台命令用);没有就返回 null。</summary>
-    /// <summary>按 ID 找账号(走映射表,快)。</summary>
+    /// <summary>按 ID 找账号(走映射表,快)</summary>
     public Account? FindById(int id)
     {
         lock (_sync)
@@ -226,10 +222,7 @@ public sealed class AccountStore
     public bool TryRegisterAs(string name, string passwordHash, string level, string ip, out Account? account, out string error)
         => Add(name, passwordHash, level, ip, out account, out error);
 
-    /// <summary>
-    /// 挑战-响应登录:proof = SHA256(存储的密文 : nonce)。
-    /// 账号不存在 / 证明不匹配 / nonce 过期或重放 → 失败。
-    /// </summary>
+    /// <summary>挑战-响应登录:proof = SHA256(存储的密文 : nonce)。 账号不存在 / 证明不匹配 / nonce 过期或重放 → 失败。</summary>
     public bool TryLoginProof(string name, string nonce, string proof, string level, out Account? account, out string error)
     {
         var found = Find(name);

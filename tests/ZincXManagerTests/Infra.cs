@@ -147,6 +147,8 @@ public sealed class Probe : IDisposable
     private SessionCrypto? _crypto;
     private readonly List<(ushort Type, string Text)> _got = new();
     private readonly object _lock = new();
+    private Task? _reader;
+    private readonly SemaphoreSlim _signal = new(0);
 
     public string Name { get; }
     public string? LastAck { get; private set; }
@@ -267,6 +269,105 @@ public sealed class Probe : IDisposable
             if (p.Value.Type == type) { return text; }
         }
         return null;
+    }
+
+    /// <summary>拿走一条指定类型的包(取过就不再返回),用来验证"第二次还会不会来"。</summary>
+    public async Task<string?> TakeAsync(ushort type, int timeoutMs = 8000)
+    {
+        lock (_lock)
+        {
+            var index = _got.FindIndex(g => g.Type == type);
+            if (index >= 0)
+            {
+                var hit = _got[index].Text;
+                _got.RemoveAt(index);
+                return hit;
+            }
+        }
+
+        // 短读轮询:直接拿大超时去取消会把底层 socket 读断,后面还要继续用这条连接
+        var end = DateTime.UtcNow.AddMilliseconds(timeoutMs);
+        while (DateTime.UtcNow < end)
+        {
+            (ushort Type, byte[] Data)? p;
+            try
+            {
+                p = await ReadOneAsync(300);
+            }
+            catch (OperationCanceledException)
+            {
+                p = null;
+            }
+
+            if (p is null)
+            {
+                await Task.Delay(50);
+                continue;
+            }
+
+            var text = Encoding.UTF8.GetString(p.Value.Data);
+            if (p.Value.Type == type) { return text; }
+            lock (_lock) { _got.Add((p.Value.Type, text)); }
+        }
+        return null;
+    }
+
+    /// <summary>起后台读包线程:之后请用 <see cref="TakeQueuedAsync"/> 取包,别再混用 WaitAsync。</summary>
+    public void StartReader()
+    {
+        _reader ??= Task.Run(async () =>
+        {
+            while (true)
+            {
+                (ushort Type, byte[] Data)? packet;
+                try
+                {
+                    packet = await ReadOneAsync(600000);
+                }
+                catch
+                {
+                    return;
+                }
+
+                if (packet is null)
+                {
+                    return;
+                }
+
+                lock (_lock) { _got.Add((packet.Value.Type, Encoding.UTF8.GetString(packet.Value.Data))); }
+                try { _signal.Release(); } catch { /* 已释放 */ }
+            }
+        });
+    }
+
+    /// <summary>从后台读线程攒的队列里取一条指定类型的包(取过就没)。</summary>
+    public async Task<string?> TakeQueuedAsync(ushort type, int timeoutMs = 8000)
+    {
+        var end = DateTime.UtcNow.AddMilliseconds(timeoutMs);
+        while (DateTime.UtcNow < end)
+        {
+            lock (_lock)
+            {
+                var index = _got.FindIndex(g => g.Type == type);
+                if (index >= 0)
+                {
+                    var hit = _got[index].Text;
+                    _got.RemoveAt(index);
+                    return hit;
+                }
+            }
+
+            var left = Math.Max(50, (int)(end - DateTime.UtcNow).TotalMilliseconds);
+            try { await _signal.WaitAsync(Math.Min(left, 200)); } catch { /* 超时继续轮 */ }
+        }
+
+        return null;
+    }
+
+    /// <summary>队列里是不是已经有这种包(不消费、不读网络)。</summary>
+    public bool HasQueued(ushort type)
+    {
+        lock (_lock) { return _got.Any(g => g.Type == type); }
     }
 
     /// <summary>注册一个账号,返回服务端是否回 ok|。</summary>
