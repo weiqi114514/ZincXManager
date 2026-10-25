@@ -37,6 +37,13 @@ public sealed class ZxmmApi : IAsyncDisposable
     private CancellationTokenSource? _cts;
     private long _seq;
 
+    // 重连策略:5 秒一次,最多 5 次;用完之后停手,等 zxmm connect 手动重连
+    private const int RetryIntervalMs = 5000;
+    private const int MaxRetries = 5;
+    private int _failures;
+    private volatile bool _gaveUp;
+    private volatile bool _looping;   // 连接循环还在不在跑
+
     // 重复进服事件的去重窗口(模组侧重连重叠时同一条事件可能来两次)
     private string _lastJoinKey = "";
     private DateTime _lastJoinAt = DateTime.MinValue;
@@ -58,6 +65,29 @@ public sealed class ZxmmApi : IAsyncDisposable
         _token = token?.Trim() ?? "";
     }
 
+    /// <summary>手动重连:清掉放弃状态,重新开始连(控制台 zxmm connect 用)</summary>
+    public void Reconnect()
+    {
+        _failures = 0;
+        _gaveUp = false;
+
+        if (!_looping)
+        {
+            // 循环已经退出了,重新拉起来
+            _cts = new CancellationTokenSource();
+            _ = LoopAsync(_cts.Token);
+            _ = HeartbeatAsync(_cts.Token);
+        }
+        else
+        {
+            // 循环还在跑(只是没连上),等它下一个 5 秒自己重试
+            Log("[ZXMM] 已重置重试计数,继续尝试连接");
+        }
+    }
+
+    /// <summary>是不是已经放弃自动重连了(要手动 zxmm connect)</summary>
+    public bool GaveUp => _gaveUp;
+
     /// <summary>开始连(后台循环,断了自动重连),顺带起 30 秒一次的探活。</summary>
     public void Start()
     {
@@ -68,6 +98,20 @@ public sealed class ZxmmApi : IAsyncDisposable
 
     /// <summary>连接 + 读循环。</summary>
     private async Task LoopAsync(CancellationToken ct)
+    {
+        _looping = true;
+        try
+        {
+            await LoopCoreAsync(ct).ConfigureAwait(false);
+        }
+        finally
+        {
+            _looping = false;
+        }
+    }
+
+    /// <summary>循环本体</summary>
+    private async Task LoopCoreAsync(CancellationToken ct)
     {
         while (!ct.IsCancellationRequested)
         {
@@ -91,6 +135,8 @@ public sealed class ZxmmApi : IAsyncDisposable
                     await _writer.FlushAsync().ConfigureAwait(false);
                 }
 
+                _failures = 0;
+                _gaveUp = false;
                 Log($"[ZXMM] 专用通道已连上 {_host}:{_port}");
 
                 using var reader = new StreamReader(client.GetStream(), Encoding.UTF8);
@@ -106,7 +152,14 @@ public sealed class ZxmmApi : IAsyncDisposable
             }
             catch (Exception ex)
             {
-                Log($"[ZXMM] 专用通道断开: {ex.Message}");
+                _failures++;
+                Log($"[ZXMM] 专用通道断开({_failures}/{MaxRetries}): {ex.Message}");
+
+                if (_failures >= MaxRetries)
+                {
+                    _gaveUp = true;
+                    Log($"[ZXMM] 连了 {MaxRetries} 次都没连上 {_host}:{_port},停止自动重连;要重连执行控制台命令:zxmm connect");
+                }
             }
             finally
             {
@@ -121,7 +174,13 @@ public sealed class ZxmmApi : IAsyncDisposable
                 }
             }
 
-            await Task.Delay(3000, ct).ConfigureAwait(false);
+            if (_gaveUp)
+            {
+                // 停手:等 Reconnect() 把 _gaveUp 清掉再说
+                break;
+            }
+
+            await Task.Delay(RetryIntervalMs, ct).ConfigureAwait(false);
         }
     }
 
