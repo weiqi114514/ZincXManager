@@ -10,12 +10,12 @@
   --line:#1c2626;
   --line-2:#2a3838;
   --fg:#f2f7f4;
-  --fg-dim:#a0b5a5;
+  --fg-dim:#b3c4b8;
   --green:#4e9c9c;
   --green-2:#6ed3d3;
   --max:1280px;
 }
-*{box-sizing:border-box;margin:0;border-radius:0!important;box-shadow:none!important}
+*{box-sizing:border-box;margin:0;box-shadow:none!important}
 html{-webkit-text-size-adjust:100%}
 body{
   background:var(--ink);color:var(--fg);
@@ -556,7 +556,7 @@ body.dl-lock{overflow:hidden}
 .hero-v2 .hero-copy{padding:0;border:0}
 .hero-v2 .hero-tag{font-family:Consolas,monospace;font-size:11.5px;letter-spacing:.16em;
   color:var(--green);border:1px solid rgba(78,156,156,.35);padding:6px 12px;display:inline-block}
-.hero-title{font-size:clamp(54px,8.6vw,124px);line-height:.9;letter-spacing:-.055em;font-weight:900;margin:22px 0 20px}
+.hero-title{font-family:"Segoe UI Black","Segoe UI Semibold","Inter","Microsoft YaHei UI","Segoe UI",sans-serif;font-size:clamp(54px,8.6vw,124px);line-height:.9;letter-spacing:-.055em;font-weight:900;margin:22px 0 20px}
 .hero-title .dim{color:#2f4242}
 .hero-sub{color:var(--fg-dim);font-size:15.5px;line-height:1.95;max-width:54ch;margin:0}
 .hero-meta{display:flex;flex-wrap:wrap;gap:22px;list-style:none;margin:28px 0 0;padding:0;
@@ -579,3 +579,76 @@ body.dl-lock{overflow:hidden}
   .hero-grid{grid-template-columns:1fr 1fr}
   .admin-grid{grid-template-columns:1fr}
 }
+
+/* =====================================================================
+   v4 形态参考 corona.studio:圆角 + 柔和,配色用锌源绿
+   ===================================================================== */
+.btn,.nav-cta{border-radius:6px}
+.card,.admin-grid article,.card-block,.compare,.compare-col,.steps,.steps li,.tags span,.faq-list details,.arch,.hg-cell,.trio,.trio article,.doc-nav,.dl-box{border-radius:10px}
+.hero-shot,.shot{border-radius:10px;overflow:hidden}
+.hero-v2 .hero-tag{border-radius:4px}
+.hero-v2 .hg-cell{border-radius:8px;background:rgba(16,23,21,.78)}
+.strip-grid>div,.strip-grid>div:first-child,.strip-grid>div:last-child{border-radius:0}
+.sec-title .k,.hero-meta li,.notes b,.steps b,.compare-col h4{letter-spacing:.16em}
+
+/* =====================================================================
+   v5 交互高对比(参考 corona.studio:悬停反色/描边变强调色/文字提亮)
+   ===================================================================== */
+a,.btn,.nav-cta,.card,.hg-cell,.tags span,.steps li,.compare-col,.arch,.faq-list details{
+  transition:color .16s,background-color .16s,border-color .16s
+}
+
+/* 导航:悬停整块反色 */
+.nav-links a:hover{background:var(--green);border-color:var(--green);color:#061413}
+
+/* 按钮:主按钮悬停提亮,次按钮悬停填充 */
+.btn:hover{background:var(--green);border-color:var(--green);color:#061413}
+.btn-primary:hover{background:var(--green-2);border-color:var(--green-2);color:#061413}
+.nav-cta:hover{background:var(--green-2);border-color:var(--green-2);color:#061413}
+
+/* 卡片:边框亮起 + 背景提亮 + 标题变白 */
+.card:hover,.hg-cell:hover{border-color:var(--green);background:#13211e}
+.card:hover h3,.hg-cell:hover b{color:#fff}
+.hg-cell:hover span{color:var(--green-2)}
+
+/* 标签:悬停反色 */
+.tags span:hover{background:var(--green);border-color:var(--green);color:#061413}
+
+/* 步骤与对比:悬停提亮 */
+.steps li:hover{background:#13211e}
+.steps li:hover h4{color:#fff}
+.compare-col.us:hover{background:#13211e}
+.compare-col.them:hover{background:#101715}
+
+/* 架构图与 FAQ:边框亮起 */
+.arch:hover{border-color:var(--green)}
+.faq-list details:hover{border-color:var(--green)}
+.faq-list summary:hover{color:var(--green-2)}
+
+/* 键盘焦点:高对比描边 */
+:focus-visible{outline:2px solid var(--green-2);outline-offset:3px}
+
+/* 正文提亮一档,暗底上更好读 */
+.sec-title p,.card p,.split-copy p,.admin-grid p,.steps p,.compare-col li,.notes li,.faq-list details p{color:#c3d2c7}
+
+/* =====================================================================
+   v6 悬停整块反色(corona 项目卡效果):背景变强调色、文字全部转深
+   ===================================================================== */
+.card:hover,.hg-cell:hover,.steps li:hover,.compare-col.us:hover,.trio article:hover{
+  background:var(--green);border-color:var(--green)
+}
+.card:hover h3,.card:hover p,.card:hover li,
+.hg-cell:hover span,.hg-cell:hover b,
+.steps li:hover h4,.steps li:hover p,.steps li:hover b,
+.compare-col.us:hover h4,.compare-col.us:hover li,
+.trio article:hover h3,.trio article:hover p,.trio article:hover .idx,.trio article:hover .role{
+  color:#061413
+}
+.card:hover li::before,.steps li:hover b,
+.compare-col.us:hover li::before{background:#061413}
+.card:hover li::before,.compare-col.us:hover li::before{color:#061413}
+.hg-cell:hover span{color:#061413}
+.steps li:hover b{color:#061413}
+
+/* 端口卡悬停:文字转深(压过 .hero-v2 .hg-cell span 的高优先级) */
+.hero-v2 .hg-cell:hover span,.hero-v2 .hg-cell:hover b{color:#061413}
