@@ -1701,6 +1701,22 @@ internal static class Program
         }
 
         _server?.Registry.SetAccount(connectionId, name, level);
+
+        // 官方账号可能只存在 ZXMOS:本地补一个「壳账号」,否则绑定 / 解绑按本地表查会报「请先登录」
+        if (Accounts.Find(name) is null)
+        {
+            // 占位密文(随机 64 hex):官方账号走官方端校验,本地永远不会匹配上它
+            var placeholder = Convert.ToHexString(System.Security.Cryptography.RandomNumberGenerator.GetBytes(32)).ToLowerInvariant();
+            if (Accounts.Add(name, placeholder, level, out _, out var addError))
+            {
+                Logger.Log(LogLevel.Info, $"[账号] 官方账号 {name} 已镜像到本地(绑定 / 管理可用)");
+            }
+            else
+            {
+                Logger.Log(LogLevel.Warning, $"[账号] 镜像官方账号 {name} 失败:{addError}");
+            }
+        }
+
         Logger.Log(LogLevel.Info, $"[账号] 本服在线名单已登记中转账号:{name}({level})");
     }
 
