@@ -129,10 +129,10 @@
         </Grid>
       </Border>
 
-      <Grid Grid.Row="1" RowDefinitions="Auto,*" Margin="16,12,16,0">
+      <Grid Grid.Row="1" RowDefinitions="Auto,*" Margin="16,6,16,0">
 
         <!-- 表头(带底色,和内容区分开) -->
-        <Border Grid.Row="0" Background="{DynamicResource ThemeLight}" Padding="12,7" Margin="0,0,0,4">
+        <Border Grid.Row="0" Background="{DynamicResource ThemeMuted}" Padding="12,7" Margin="0,0,0,4">
           <Grid ColumnDefinitions="44,*,150,54,30">
             <TextBlock Grid.Column="0" Text="优先级" FontSize="12" Foreground="#4A6B78"/>
             <TextBlock Grid.Column="1" Text="镜像源地址" FontSize="12" Foreground="#4A6B78"/>
@@ -149,7 +149,8 @@
           <ListBox x:Name="MirrorList" Background="Transparent" BorderThickness="0">
             <ListBox.ItemTemplate>
               <DataTemplate x:DataType="models:MirrorItem">
-                <Border Background="{DynamicResource ThemePanel}" Margin="0,0,0,2" Padding="8,4">
+                <!-- 行底色用 ThemeLight(不透明),ThemePanel 在亚克力档是半透明的,看着像没有背景 -->
+                <Border Background="{DynamicResource ThemeLight}" Margin="0,0,0,2" Padding="8,4">
                 <Grid ColumnDefinitions="44,*,150,54,30">
                   <!-- 交换优先级:上下两个小箭头竖着叠,占一个控件位 -->
                   <StackPanel Grid.Column="0" Orientation="Vertical" Spacing="0" VerticalAlignment="Center">
