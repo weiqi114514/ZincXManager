@@ -38,22 +38,29 @@
 <main>
 
 <!-- 首屏 -->
-<section class="hero grid-bg">
-  <div class="hero-in">
+<section class="hero hero-v2">
+  <div class="hero-bg" aria-hidden="true"></div>
+  <div class="wrap hero-in">
     <div class="hero-copy">
-      <span class="hero-tag" id="hero-version">b0.1.1a · 连接阶段拦截已上线</span>
-      <h1 class="zxm-hero"><span>Zinc</span><span class="bm-slot"><span class="bm-cur">X</span><span class="bm-next"></span></span><span class="dim">Manager</span></h1>
-      <p class="lead">一个客户端，管起你的 Minecraft 服务器：公告、商店、玩家、社区。</p>
+      <span class="hero-tag" id="hero-version">[ ZXM ] / b0.1.1a · 连接阶段拦截已上线</span>
+      <h1 class="hero-title">ZINC<span class="dim">X</span>MANAGER</h1>
+      <p class="hero-sub">一个客户端，管起你的 Minecraft 服务器：公告、商店、玩家、社区。<br>四端一套栈，独立程序，不往服务端里塞插件。</p>
       <div class="hero-actions">
-        <a class="btn btn-primary" href="download.html">下载客户端（免安装）</a>
+        <a class="btn btn-primary" href="download.html">下载客户端 →</a>
         <a class="btn" href="#features">看它能干什么</a>
       </div>
-      <ul class="hero-points"><li>四端一套栈</li><li>AOT 单文件</li><li>图形界面</li></ul>
+      <ul class="hero-meta">
+        <li>ZXMC 客户端</li><li>ZXMS 子服务端</li><li>ZXMOS 官方端</li><li>ZXMM 模组</li>
+      </ul>
     </div>
-    <figure class="shot hero-shot">
-      <img src="assets/img/shot-main.png" alt="ZXMC 客户端主界面：左侧导航、社区广场与消息面板" loading="eager">
-      <figcaption>ZXMC 客户端</figcaption>
-    </figure>
+    <div class="hero-side" aria-hidden="true">
+      <div class="hero-grid">
+        <div class="hg-cell"><span>21000</span><b>ZXMC ↔ ZXMS</b></div>
+        <div class="hg-cell"><span>25000</span><b>ZXMS ↔ ZXMOS</b></div>
+        <div class="hg-cell"><span>21200</span><b>ZXMS ↔ ZXMM</b></div>
+        <div class="hg-cell"><span>25565</span><b>MC 服务端</b></div>
+      </div>
+    </div>
   </div>
 </section>
 
@@ -98,21 +105,25 @@
     <h2>管理员能用的</h2>
     <p>从 MC 服务器运维到平台运营，四层能力在同一套界面里。</p>
   </header>
-  <div class="split">
-    <div class="split-copy">
+  <div class="admin-grid">
+    <article>
       <h3>服务器运维</h3>
       <p>MCSM、RCON、文件与模组、地图备份、玩家数据——都在客户端里动手。</p>
-      <ul class="ticks"><li>MCSM / RCON / 监听控制台</li><li>文件、Mod、地图备份</li><li>玩家数据、OP、白名单</li></ul>
-    </div>
-    <figure class="shot"><img src="assets/img/shot-settings.png" alt="ZXMC 设置页：模式与数据源" loading="lazy"><figcaption>设置 · 数据源</figcaption></figure>
-  </div>
-  <div class="split reverse">
-    <figure class="shot"><img src="assets/img/shot-bind.png" alt="ZXMC 绑定 / 解绑覆盖层" loading="lazy"><figcaption>绑定 / 解绑</figcaption></figure>
-    <div class="split-copy">
+      <ul class="ticks">
+        <li>MCSM / RCON / 监听控制台</li>
+        <li>文件、Mod、地图备份</li>
+        <li>玩家数据、OP、白名单</li>
+      </ul>
+    </article>
+    <article>
       <h3>平台运营</h3>
       <p>账号、社区、组织、官方商店与金融；封禁会同步通知玩家和群。</p>
-      <ul class="ticks"><li>账号 / 社区 / 组织管理</li><li>官方商店与贷款</li><li>联 ban、群同步、留痕</li></ul>
-    </div>
+      <ul class="ticks">
+        <li>账号 / 社区 / 组织管理</li>
+        <li>官方商店与贷款</li>
+        <li>联 ban、群同步、留痕</li>
+      </ul>
+    </article>
   </div>
 </div></section>
 
