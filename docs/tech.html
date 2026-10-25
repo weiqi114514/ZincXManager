@@ -51,7 +51,7 @@ footer{color:var(--muted);border-top:1px solid var(--line);margin-top:30px;paddi
 <p class="lead">全部由源码自动生成并逐项校对:扫描 128 个类型、801 个方法(1313 个参数)、400 个属性、410 个字段;协议码取自 <span class="mono">ZincXManagerShared/Network/Protocol.cs</span>,命令取自各端命令注册表。</p>
 <p class="tips"><b>b0.1.0 更新:</b>新增 620–630「登录确认 / 账号绑定」协议(含专用长连接 21200 的说明)、<span class="mono">bind / unbind / bind list</span> 三条控制台命令、<span class="mono">ZxmmApi</span>(ZXMS↔ZXMM 长连接)与 <span class="mono">LoginRequestWindow</span> 两个类型,以及登录数组 / 持久登录表 / 解绑立即失效的流程说明。ZXMM 模组本身的文档另见 <span class="mono">ZXMM-技术文档.md</span>。</p>
 <p class="tips"><b>b0.1.1 更新:</b>绑定拆成两步 —— <span class="mono">626</span> 只校验绑定码并回 <span class="mono">pending|令牌|玩家名</span>,ZXMC 用户点「确定绑定」后发 <span class="mono">631 BindConfirm</span> 才真正落盘(令牌 2 分钟、一次性、只认发起账号);未绑定账号查询(629)只回 <span class="mono">nobind</span>,不再下发别人的玩家名与绑定码。</p>
-<p class="tips"><b>b0.1.1a 更新:</b>新增 configuration 阶段登录检查(21200 事件 <span class="mono">evt|joining</span>):未绑定 / 封禁的玩家在「正在加入世界」时就被踢出并显示理由。登录确认改成「发 621 后立刻踢走,账号主人点同意后重进」;持久登录免确认改成同玩家<b>且同 IP</b>;ZXMS 没连上时 ZXMM 完全不动作(不攒事件、不踢人、不提示)。</p>
+<p class="tips"><b>b0.1.1a 更新:</b>新增 configuration 阶段登录检查(21200 事件 <span class="mono">evt|joining</span>):未绑定 / 封禁的玩家在「正在加入世界」时就被踢出并显示理由。登录确认改成「发 621 后立刻踢走,账号主人点同意后重进」;持久登录免确认改成同玩家<b>且同 IP</b>;ZXMS 没连上时 ZXMM 完全不动作(不攒事件、不踢人、不提示)。封禁账号(`ban user <账号>`)现在会连带拦住它绑定的 MC 玩家:连接阶段和进服阶段都同时比对「玩家名」与「绑定的账号名」。</p>
 <h2 id="a050">a0.5.0 客户端怎么应对断线</h2>
 <p class="lead">这一段是纯操作说明,讲客户端在连接断开/窗口尺寸这两件事上的行为,不是自动生成的表。</p>
 <h3>断线心跳与自动重连</h3>
@@ -157,7 +157,7 @@ zxm-lic verify &lt;公钥.pem&gt; &lt;证书.lic&gt; &lt;授权码&gt;</code></p
 <h3 id="loginflow">登录确认与账号绑定(b0.1.1a)</h3>
 <table><thead><tr><th>环节</th><th>谁做</th><th>说明</th></tr></thead><tbody>
 <tr><td>玩家进服上报</td><td class="mono">ZXMM → ZXMS</td><td>走 21200 专用长连接,一行 <span class="mono">evt|joined|玩家名|IP</span>;ZXMM 不做任何判断。</td></tr>
-<tr><td>连接阶段(配置阶段)</td><td class="mono">ZXMM → ZXMS</td><td><span class="mono">evt|joining|玩家名|IP</span>:玩家还在「正在加入世界」时就问 ZXMS,未绑定 / 封禁直接踢,客户端显示理由。</td></tr>
+<tr><td>连接阶段(配置阶段)</td><td class="mono">ZXMM → ZXMS</td><td><span class="mono">evt|joining|玩家名|IP</span>:玩家还在「正在加入世界」时就问 ZXMS,未绑定 / 封禁直接踢,客户端显示理由。封禁会同时比对玩家名和它绑定的账号名。</td></tr>
 <tr><td>判断放不放行</td><td class="mono">ZXMS</td><td>依次看:登录数组(5 分钟) → <span class="mono">Data/PersistentLogin.txt</span> → 有没有绑定 → 弹窗问账号主人。</td></tr>
 <tr><td>没绑定</td><td class="mono">ZXMS → ZXMM</td><td>生成 6 位绑定码,通过执行接口 <span class="mono">kick</span> 把玩家踢出并提示绑定码。</td></tr>
 <tr><td>已绑定</td><td class="mono">ZXMS ↔ ZXMC</td><td>连接阶段发 621(玩家名 / IP / 归属地),同时把玩家踢走;账号主人点允许 → 622 → 写登录数组与持久表,玩家重进直接进。</td></tr>
@@ -446,7 +446,7 @@ msg backget d 26/10/23 26/10/24 -os          # 按日期</code></pre>
 
 <tr><td class="mono">srv show</td><td class="mono">srv show</td><td>显示本端在官方服务端上的账号名(只读,改名用 osuser)。</td><td class="mono">CmdSrvShow</td><td class="mono muted">ZincXManagerServer/Command/ZxmsCommands.cs:165</td></tr>
 <tr><td class="mono">config</td><td class="mono">config</td><td>进入配置模式:表格列出全部配置项(中文名/键名/当前值/类型/作用),可按键名或中文名改值。</td><td class="mono">—</td><td class="mono muted">ZincXManagerServer/Command/ZxmsCommands.cs:169</td></tr>
-<tr><td class="mono">ban add</td><td class="mono">ban add &lt;user|ip|machine&gt; &lt;值&gt; [perm|30d|12h] [原因]</td><td>封禁一个账号 / IP / 机器码;不带时长默认永久。</td><td class="mono">CmdBanAdd</td><td class="mono muted">ZincXManagerServer/Command/ZxmsCommands.cs:282</td></tr>
+<tr><td class="mono">ban add</td><td class="mono">ban add &lt;user|ip|machine&gt; &lt;值&gt; [perm|30d|12h] [原因]</td><td>封禁一个账号 / IP / 机器码;不带时长默认永久。封账号会连带拦住它绑定的 MC 玩家(连接阶段与进服阶段都比对账号名)。</td><td class="mono">CmdBanAdd</td><td class="mono muted">ZincXManagerServer/Command/ZxmsCommands.cs:282</td></tr>
 <tr><td class="mono">ban user</td><td class="mono">ban user &lt;名称或ID&gt; [perm|30d] [原因] [--ip] [--machine]</td><td>封一个玩家;加 --ip / --machine 会连带封他的 IP / 机器码。</td><td class="mono">CmdBanUser</td><td class="mono muted">ZincXManagerServer/Command/ZxmsCommands.cs:286</td></tr>
 <tr><td class="mono">ban del</td><td class="mono">ban del &lt;user|ip|machine&gt; &lt;值&gt;</td><td>解除封禁。</td><td class="mono">CmdBanDel</td><td class="mono muted">ZincXManagerServer/Command/ZxmsCommands.cs:290</td></tr>
 <tr><td class="mono">ban list</td><td class="mono">ban list</td><td>列出当前所有封禁项。</td><td class="mono">CmdBanList</td><td class="mono muted">ZincXManagerServer/Command/ZxmsCommands.cs:294</td></tr>
