@@ -1,0 +1,126 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="ZincXManagerClient.Views.UpdateWindow"
+        Title="更新提示"
+        Width="460" SizeToContent="Height"
+        Background="#CCFFFFFF"
+        TransparencyLevelHint="AcrylicBlur,Blur,Transparent"
+        FontFamily="Microsoft YaHei UI, Microsoft YaHei, Segoe UI"
+        WindowDecorations="None"
+        CanResize="False"
+        ShowInTaskbar="False"
+        WindowStartupLocation="CenterOwner">
+
+  <Window.Styles>
+    <Style Selector="Button.chrome">
+      <Setter Property="Background" Value="Transparent"/>
+      <Setter Property="BorderThickness" Value="0"/>
+      <Setter Property="CornerRadius" Value="0"/>
+      <Setter Property="Padding" Value="0"/>
+      <Setter Property="MinWidth" Value="0"/>
+      <Setter Property="MinHeight" Value="0"/>
+      <Setter Property="HorizontalAlignment" Value="Stretch"/>
+      <Setter Property="VerticalAlignment" Value="Stretch"/>
+      <Setter Property="HorizontalContentAlignment" Value="Center"/>
+      <Setter Property="VerticalContentAlignment" Value="Center"/>
+      <Setter Property="Cursor" Value="Hand"/>
+    </Style>
+    <Style Selector="Button.chrome /template/ ContentPresenter">
+      <Setter Property="Background" Value="Transparent"/>
+      <Setter Property="BorderThickness" Value="0"/>
+      <Setter Property="CornerRadius" Value="0"/>
+      <Setter Property="Padding" Value="0"/>
+    </Style>
+    <Style Selector="Button.chrome:pointerover /template/ ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource ThemePrimaryHover}"/>
+    </Style>
+    <Style Selector="Button.close /template/ ContentPresenter">
+      <Setter Property="Background" Value="#E81123"/>
+    </Style>
+    <Style Selector="Button.close:pointerover /template/ ContentPresenter">
+      <Setter Property="Background" Value="#F1707A"/>
+    </Style>
+
+    <Style Selector="Button.act">
+      <Setter Property="Height" Value="34"/>
+      <Setter Property="MinWidth" Value="96"/>
+      <Setter Property="CornerRadius" Value="0"/>
+      <Setter Property="BorderThickness" Value="0"/>
+      <Setter Property="FontSize" Value="13"/>
+      <Setter Property="Padding" Value="18,0"/>
+      <Setter Property="Cursor" Value="Hand"/>
+      <Setter Property="HorizontalContentAlignment" Value="Center"/>
+      <Setter Property="VerticalContentAlignment" Value="Center"/>
+    </Style>
+    <Style Selector="Button.act.cancel">
+      <Setter Property="Background" Value="{DynamicResource ThemeLight}"/>
+      <Setter Property="Foreground" Value="#1F3B3A"/>
+    </Style>
+    <Style Selector="Button.act.cancel /template/ ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource ThemeLight}"/>
+      <Setter Property="CornerRadius" Value="0"/>
+    </Style>
+    <Style Selector="Button.act.go">
+      <Setter Property="Background" Value="{DynamicResource ThemePrimary}"/>
+      <Setter Property="Foreground" Value="White"/>
+    </Style>
+    <Style Selector="Button.act.go /template/ ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource ThemePrimary}"/>
+      <Setter Property="CornerRadius" Value="0"/>
+    </Style>
+    <Style Selector="Button.act.go:pointerover /template/ ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource ThemePrimaryHover}"/>
+    </Style>
+  </Window.Styles>
+
+  <Border Background="#F7FFFFFF" BorderBrush="{DynamicResource ThemeMuted}" BorderThickness="1" Margin="1">
+    <Grid RowDefinitions="40,Auto,Auto">
+
+      <!-- 标题栏 -->
+      <Border x:Name="TitleBar" Grid.Row="0" Background="{DynamicResource ThemePrimary}"
+              PointerPressed="OnTitleBarPointerPressed">
+        <Grid ColumnDefinitions="Auto,*,Auto">
+          <TextBlock x:Name="BarTitle" Grid.Column="0" Text="更新提示" Foreground="White" FontSize="13"
+                     Margin="16,0,0,0" VerticalAlignment="Center"/>
+          <Button Grid.Column="2" Classes="chrome close" Width="52" Click="OnCancelClick">
+            <Path Data="M0,0 L12,12 M12,0 L0,12" Stroke="White" StrokeThickness="1.7"/>
+          </Button>
+        </Grid>
+      </Border>
+
+      <!-- 正文 -->
+      <StackPanel Grid.Row="1" Margin="24,20,24,4" Spacing="10">
+        <TextBlock x:Name="Headline" Text="获取到新的更新" FontSize="14" Foreground="#1F3B3A" TextWrapping="Wrap"/>
+        <TextBlock x:Name="VersionLine" Text="" FontSize="13" Foreground="#4A6B78"/>
+
+        <!-- 更新日志链接 -->
+        <StackPanel x:Name="LinkRow" Orientation="Horizontal" Spacing="6">
+          <TextBlock Text="更新日志:" FontSize="12.5" Foreground="#7A8F99" VerticalAlignment="Center"/>
+          <Button x:Name="LinkButton" Classes="chrome" Padding="0" Click="OnChangelogClick">
+            <TextBlock x:Name="LinkText" Text="查看更新日志" FontSize="12.5"
+                       Foreground="{DynamicResource ThemePrimary}" TextDecorations="Underline"
+                       VerticalAlignment="Center"/>
+          </Button>
+        </StackPanel>
+
+        <!-- 下载进度 -->
+        <StackPanel x:Name="ProgressRow" Spacing="6" IsVisible="False">
+          <ProgressBar x:Name="Progress" Height="6" Minimum="0" Maximum="100" Value="0"/>
+          <TextBlock x:Name="ProgressText" Text="正在下载…" FontSize="12" Foreground="#7A8F99"/>
+        </StackPanel>
+
+        <!-- 完成提示 -->
+        <TextBlock x:Name="DoneText" Text="" FontSize="12.5" Foreground="#4A6B78"
+                   TextWrapping="Wrap" IsVisible="False"/>
+      </StackPanel>
+
+      <!-- 按钮 -->
+      <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right"
+                  Spacing="10" Margin="24,12,24,18">
+        <Button x:Name="CancelButton" Classes="act cancel" Content="取消" Click="OnCancelClick"/>
+        <Button x:Name="UpdateButton" Classes="act go" Content="立刻更新" Click="OnUpdateClick"/>
+        <Button x:Name="OkButton" Classes="act go" Content="知道了" Click="OnCancelClick" IsVisible="False"/>
+      </StackPanel>
+    </Grid>
+  </Border>
+</Window>
