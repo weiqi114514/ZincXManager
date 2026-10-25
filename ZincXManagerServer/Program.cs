@@ -836,7 +836,7 @@ internal static class Program
                     ? (talk.CardSource.Length > 0 ? talk.CardSource : "notice")
                     : originEntry.Target;
                 CardResponses.Append(DateTime.Now, originId, originTarget,
-                    Accounts.Find(who)?.Id ?? 0, MessageCard.ActionText(text));
+                    (await ResolveAccountAsync(who))?.Id ?? 0, MessageCard.ActionText(text));
 
                 Logger.Log(LogLevel.Info,
                     $"[消息] {who} 在卡片「{talk.CardTitle}」上点了「{MessageCard.ActionText(text)}」" +
@@ -926,7 +926,7 @@ internal static class Program
 
                 // 只有被问的那个账号能回答:否则任何一个登录着的 ZXMC 都能替别人点"同意",
                 // 白白给别的玩家写一条持久登录(以后免确认进服)。越权的回答不能把请求吃掉。
-                var answerAccount = Accounts.Find(answerInfo?.User ?? "")?.Id ?? 0;
+                var answerAccount = (await ResolveAccountAsync(answerInfo?.User ?? ""))?.Id ?? 0;
                 if (answerAccount != pending.AccountId)
                 {
                     Logger.Log(LogLevel.Warning,
@@ -982,7 +982,7 @@ internal static class Program
             {
                 var code = Encoding.UTF8.GetString(packet.Data).Trim().ToUpperInvariant();   //包内容
                 var bindWho = _server?.Registry.Find(packet.Connection.Id)?.User ?? "";
-                var bindAccount = Accounts.Find(bindWho)?.Id ?? 0;
+                var bindAccount = (await ResolveAccountAsync(bindWho))?.Id ?? 0;
                 if (bindAccount <= 0)
                 {
                     await packet.SendAsync(Protocol.BindAck, "err|请先登录(这条连接没有登录态,断线重连后请重新登录一次)", packet.Id);
@@ -1026,7 +1026,7 @@ internal static class Program
             {
                 var token = Encoding.UTF8.GetString(packet.Data).Trim().ToUpperInvariant();   //包内容
                 var confirmWho = _server?.Registry.Find(packet.Connection.Id)?.User ?? "";
-                var confirmAccount = Accounts.Find(confirmWho)?.Id ?? 0;
+                var confirmAccount = (await ResolveAccountAsync(confirmWho))?.Id ?? 0;
                 if (confirmAccount <= 0)
                 {
                     await packet.SendAsync(Protocol.BindAck, "err|请先登录(这条连接没有登录态,断线重连后请重新登录一次)", packet.Id);
@@ -1080,7 +1080,7 @@ internal static class Program
             case Protocol.Unbind:
             {
                 var unbindWho = _server?.Registry.Find(packet.Connection.Id)?.User ?? "";
-                var unbindAccount = Accounts.Find(unbindWho)?.Id ?? 0;
+                var unbindAccount = (await ResolveAccountAsync(unbindWho))?.Id ?? 0;
                 if (unbindAccount > 0 && LoginStore.Unbind(unbindAccount, out var removed))
                 {
                     // 解绑要立刻失效:登录数组、持久登录表都清掉,再通过执行接口把在线的人踢掉
@@ -1105,7 +1105,7 @@ internal static class Program
                 if (queryInfo?.Role == "ZXMC")
                 {
                     // 客户端来查:只回自己这条(解绑页要显示"当前绑定了谁")
-                    var selfId = Accounts.Find(queryInfo.User)?.Id ?? 0;
+                    var selfId = (await ResolveAccountAsync(queryInfo.User))?.Id ?? 0;
                     var selfPlayer = selfId > 0 ? LoginStore.PlayerOf(selfId) : "";
 
                     if (selfPlayer.Length > 0)
@@ -1130,7 +1130,7 @@ internal static class Program
             case Protocol.MessageAck:
             {
                 var ackWho = _server?.Registry.Find(packet.Connection.Id)?.User ?? "";
-                var ackId = Accounts.Find(ackWho)?.Id ?? 0;
+                var ackId = (await ResolveAccountAsync(ackWho))?.Id ?? 0;
                 var ackText = Encoding.UTF8.GetString(packet.Data).Trim();   //包内容
                 var ackIds = ackText.Split(' ', StringSplitOptions.RemoveEmptyEntries)
                     .Select(t => int.TryParse(t, out var v) ? v : 0).Where(v => v > 0).ToArray();
@@ -1684,6 +1684,43 @@ internal static class Program
     }
 
     /// <summary>把"替客户端中转"的登录 / 注册成功回执(ok|名称|ID|等级)登记到那条客户端连接上。</summary>
+    /// <summary>官方端登录 / 注册成功后的账号信息缓存(name → 等级):本地没有时用它按需镜像。</summary>
+    private static readonly ConcurrentDictionary<string, string> OfficialAccounts = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// 取账号信息(绑定 / 解绑 / 头像 / 查询都走这里,不再直接查本地表):
+    /// 本地有 → 用本地;本地没有但官方端给过这个账号的信息 → 镜像成本地壳账号再用;两端都没有 → null。
+    /// </summary>
+    private static Task<Account?> ResolveAccountAsync(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            return Task.FromResult<Account?>(null);
+        }
+
+        var local = Accounts.Find(name);
+        if (local is not null)
+        {
+            return Task.FromResult<Account?>(local);
+        }
+
+        if (!OfficialAccounts.TryGetValue(name, out var level))
+        {
+            return Task.FromResult<Account?>(null);
+        }
+
+        // 占位密文(随机 64 hex):官方账号走官方端校验,本地永远不会匹配上它
+        var placeholder = Convert.ToHexString(System.Security.Cryptography.RandomNumberGenerator.GetBytes(32)).ToLowerInvariant();
+        if (Accounts.Add(name, placeholder, level, out var created, out var error))
+        {
+            Logger.Log(LogLevel.Info, $"[账号] 官方账号 {name} 按需镜像到本地(绑定 / 管理可用)");
+            return Task.FromResult<Account?>(created);
+        }
+
+        Logger.Log(LogLevel.Warning, $"[账号] 按需镜像官方账号 {name} 失败:{error}");
+        return Task.FromResult(Accounts.Find(name));
+    }
+
     private static void RegisterRelayedAccount(Guid connectionId, string reply)
     {
         if (!reply.StartsWith("ok|"))
@@ -1702,20 +1739,9 @@ internal static class Program
 
         _server?.Registry.SetAccount(connectionId, name, level);
 
-        // 官方账号可能只存在 ZXMOS:本地补一个「壳账号」,否则绑定 / 解绑按本地表查会报「请先登录」
-        if (Accounts.Find(name) is null)
-        {
-            // 占位密文(随机 64 hex):官方账号走官方端校验,本地永远不会匹配上它
-            var placeholder = Convert.ToHexString(System.Security.Cryptography.RandomNumberGenerator.GetBytes(32)).ToLowerInvariant();
-            if (Accounts.Add(name, placeholder, level, out _, out var addError))
-            {
-                Logger.Log(LogLevel.Info, $"[账号] 官方账号 {name} 已镜像到本地(绑定 / 管理可用)");
-            }
-            else
-            {
-                Logger.Log(LogLevel.Warning, $"[账号] 镜像官方账号 {name} 失败:{addError}");
-            }
-        }
+        // 记下官方端给过的账号信息,并立刻镜像一次:后续绑定/解绑/查询按本地 ID 正常走
+        OfficialAccounts[name] = level;
+        _ = ResolveAccountAsync(name);
 
         Logger.Log(LogLevel.Info, $"[账号] 本服在线名单已登记中转账号:{name}({level})");
     }
@@ -1952,7 +1978,7 @@ internal static class Program
         var sent = 0;
 
         // 这个用户已经收过的不再补发(客户端回执 507 之后才记进已发清单)
-        var userId = Accounts.Find(who)?.Id ?? 0;
+        var userId = (await ResolveAccountAsync(who))?.Id ?? 0;
 
         foreach (var entry in MessageArchive.Recent())
         {
