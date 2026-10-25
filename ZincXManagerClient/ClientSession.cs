@@ -15,6 +15,15 @@ internal static class ClientSession
     /// <summary>当前权限等级。</summary>
     public static string Level { get; set; } = "Player";
 
+    /// <summary>登录成功后缓存的密码密文(断线重连时自动重登用;只放内存,不落盘)。</summary>
+    public static string LoginHash { get; set; } = "";
+
+    /// <summary>登录时选的等级(重登要原样带上)。</summary>
+    public static string LoginLevel { get; set; } = "";
+
+    /// <summary>登录时选的归属端(zxms / zxmos)。</summary>
+    public static string LoginSide { get; set; } = "";
+
     /// <summary>启动时先把上次登录的账号填进会话,免得"7 天内免登录"握手还没完成的那几秒, 主界面左下角显示成「未登录」。</summary>
     public static void SeedFromConfig()
     {

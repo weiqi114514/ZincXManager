@@ -157,6 +157,9 @@ internal static class Program
     /// <summary>连向 ZXMOS 的客户端;存字段,不然会被回收(中转要用它)。</summary>
     private static TcpClient? _os;
 
+    /// <summary>官方端自动重连锁:0 = 空闲,1 = 正在重连(避免和手动 net reconnect 撞车)。</summary>
+    private static int _osAutoReconnecting;
+
     /// <summary>本端 config.ini(命令层改配置时用;启动时赋值)。</summary>
     private static ZFile? _config;
 
@@ -227,12 +230,20 @@ internal static class Program
     }
 
     /// <summary>配置检查:ini 里这个键没有"有效值"就在控制台问一次,问到合法值后写回 ini。 直接回车(空输入)或输入流已结束(管道/重定向)时用 fallback 兜底,不会死循环。</summary>
-    static string AskIfMissing(ZFile file, string key, string prompt, Func<string, bool> valid, string fallback)
+    static string AskIfMissing(ZFile file, string key, string prompt, Func<string, bool> valid, string fallback, bool interactive = true)
     {
         var value = file.MapGet(key).Trim();
         if (valid(value))
         {
             return value;
+        }
+
+        // 自动重连路径不读控制台(后台线程读输入会吃掉服主的命令),缺失就用兜底值写回配置
+        if (!interactive)
+        {
+            file.WriteFileMap(key, fallback);
+            Logger.Log(LogLevel.Warning, $"[CONFIG]{key} 缺失,自动重连用兜底值 {fallback}");
+            return fallback;
         }
 
         while (true)
@@ -711,8 +722,13 @@ internal static class Program
                 }
                 else
                 {
-                    Logger.Log(LogLevel.Warning, $"[账号] 登录失败:{user} —— {error}");
-                    await packet.SendAsync(Protocol.AccountLoginAck, "err|" + error, packet.Id);
+                    // 本该由官方端校验、但官方端掉线时,别只报「账号不存在」——玩家会以为是账号没了
+                    var reason = side == "zxmos" && _os is not { IsConnected: true }
+                        ? error + "(官方服务端未连接,暂时无法校验官方账号,请稍后再试)"
+                        : error;
+
+                    Logger.Log(LogLevel.Warning, $"[账号] 登录失败:{user} —— {reason}");
+                    await packet.SendAsync(Protocol.AccountLoginAck, "err|" + reason, packet.Id);
                 }
 
                 break;
@@ -969,7 +985,7 @@ internal static class Program
                 var bindAccount = Accounts.Find(bindWho)?.Id ?? 0;
                 if (bindAccount <= 0)
                 {
-                    await packet.SendAsync(Protocol.BindAck, "err|请先登录", packet.Id);
+                    await packet.SendAsync(Protocol.BindAck, "err|请先登录(这条连接没有登录态,断线重连后请重新登录一次)", packet.Id);
                     break;
                 }
 
@@ -1013,7 +1029,7 @@ internal static class Program
                 var confirmAccount = Accounts.Find(confirmWho)?.Id ?? 0;
                 if (confirmAccount <= 0)
                 {
-                    await packet.SendAsync(Protocol.BindAck, "err|请先登录", packet.Id);
+                    await packet.SendAsync(Protocol.BindAck, "err|请先登录(这条连接没有登录态,断线重连后请重新登录一次)", packet.Id);
                     break;
                 }
 
@@ -1399,6 +1415,51 @@ internal static class Program
         if (connectOS == "1")
         {
             await ConnectOServerAsync(config);
+
+            // 官方端断线自动重连:每 5 秒看一次,断了打日志并尝试恢复(不需要服主敲 net reconnect)
+            _ = Task.Run(async () =>
+            {
+                var hadLink = _os is { IsConnected: true };   //启动时就连上的话,后续断开才提示
+                while (true)
+                {
+                    await Task.Delay(5000);
+
+                    if (_os is { IsConnected: true })
+                    {
+                        if (!hadLink)
+                        {
+                            hadLink = true;
+                            Logger.Log(LogLevel.Info, "[ZXMOS] 官方服务端连接已恢复");
+                        }
+
+                        continue;
+                    }
+
+                    if (hadLink)
+                    {
+                        hadLink = false;
+                        Logger.Log(LogLevel.Warning, "[ZXMOS] 与官方服务端的连接已断开,正在自动重连…");
+                    }
+
+                    if (Interlocked.CompareExchange(ref _osAutoReconnecting, 1, 0) != 0)
+                    {
+                        continue;
+                    }
+
+                    try
+                    {
+                        await ConnectOServerAsync(config, interactive: false);
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.Log(LogLevel.Warning, "[ZXMOS] 自动重连失败:" + ex.Message);
+                    }
+                    finally
+                    {
+                        Interlocked.Exchange(ref _osAutoReconnecting, 0);
+                    }
+                }
+            });
         }
 
         // 登录确认超时:五分钟没人点就回 ZXMM timeout,并提醒客户端
@@ -2205,8 +2266,8 @@ internal static class Program
         => MessageCard.Build(card.Kind, card.Title, card.Body, MessageCard.SourceTag("ZXMS", serverName),
             card.Primary, card.Secondary, card.Options, id);
 
-    /// <summary>连官方服务端:关旧连接 → 读配置 → 建连接 → 报上线 → 验对方身份</summary>
-    private static async Task ConnectOServerAsync(ZFile config)
+    /// <summary>连官方服务端:关旧连接 → 读配置 → 建连接 → 报上线 → 验对方身份。<paramref name="interactive"/> = false 时(自动重连)不读控制台,缺配置直接用兜底值。</summary>
+    private static async Task ConnectOServerAsync(ZFile config, bool interactive = true)
     {
         // 重连时旧对象不能复用,先关掉
         if (_os is not null)
@@ -2217,7 +2278,7 @@ internal static class Program
 
         // 连官方端时还能改一次本端名称:只有"还是默认名"时才问,免得每次重连都打扰
         var nameNow = ResolveName(config);
-        if (nameNow.Length == 0 || nameNow == DefaultName)
+        if (interactive && (nameNow.Length == 0 || nameNow == DefaultName))
         {
             Logger.Log(LogLevel.Info,
                 $"[CONFIG]本服务端显示名称当前是「{(nameNow.Length == 0 ? DefaultName : nameNow)}」" +
@@ -2235,12 +2296,12 @@ internal static class Program
         var ozip = AskIfMissing(config, KeyOzip,
             "[CONFIG]输入官方服务端地址ozip(IP 或域名,例如 zxm.zincms.top)",
             value => HostText.IsHost(value),
-            fallback: "127.0.0.1");
+            fallback: "127.0.0.1", interactive: interactive);
 
         var ozport = AskIfMissing(config, KeyOzport,
             "[CONFIG]输入官方服务端端口ozport(1-65535)",
             value => ushort.TryParse(value, out var n) && n > 0,
-            fallback: DefaultOsPort);
+            fallback: DefaultOsPort, interactive: interactive);
 
         var osPort = ushort.Parse(ozport);
 

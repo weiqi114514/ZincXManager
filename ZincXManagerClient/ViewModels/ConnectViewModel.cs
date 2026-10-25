@@ -445,6 +445,65 @@ public partial class ConnectViewModel : ViewModelBase, IDisposable
     }
 
     /// <summary>
+    /// 断线重连后自动重登:用登录时缓存的密文 + 新的挑战-响应再发一次 600。
+    /// 没缓存(没登录过)或没连上就返回 false;回执 err 只记日志,不弹窗。
+    /// </summary>
+    public async Task<bool> ReloginAsync()
+    {
+        var user = ClientSession.User;   //账号名
+        var hash = ClientSession.LoginHash;   //登录时缓存的密码密文
+
+        if (user.Length == 0 || hash.Length == 0 || !LinkAlive)
+        {
+            return false;
+        }
+
+        var nonce = ZincXManagerShared.Account.LoginProof.NewNonce();   //本次挑战
+        var proof = ZincXManagerShared.Account.LoginProof.Compute(hash, nonce);   //挑战响应
+        var payload = $"{user}|{hash}|{ClientSession.LoginLevel}|{ClientSession.LoginSide}|" +
+                      $"{ZincXManagerShared.Account.MachineCode.Value}||{nonce}|{proof}";
+
+        var wait = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);   //等 601
+        void OnReply(ushort type, string text)
+        {
+            if (type == Protocol.AccountLoginAck)
+            {
+                wait.TrySetResult(text);
+            }
+        }
+
+        AccountReply += OnReply;
+        try
+        {
+            if (!await SendAsync(Protocol.AccountLogin, payload))
+            {
+                return false;
+            }
+
+            var done = await Task.WhenAny(wait.Task, Task.Delay(5000));
+            if (done != wait.Task)
+            {
+                Logger.Log(LogLevel.Warning, "[ZXMC] 重连后自动重登超时");
+                return false;
+            }
+
+            var reply = wait.Task.Result;   //601 回执
+            if (!reply.StartsWith("ok|"))
+            {
+                Logger.Log(LogLevel.Warning, "[ZXMC] 重连后自动重登被拒:" + reply);
+                return false;
+            }
+
+            Logger.Log(LogLevel.Info, $"[ZXMC] 重连后已自动重新登录:{user}({ClientSession.LoginLevel})");
+            return true;
+        }
+        finally
+        {
+            AccountReply -= OnReply;
+        }
+    }
+
+    /// <summary>
     /// 向服务端要一次历史消息补发(505):服务端会把保留期内还没收到的消息逐条(504)回过来,
     /// 最后回一条 506 收尾。登录成功后调用;补发的包和实时消息走同一个 <see cref="PacketReceived"/> 事件。
     /// 没连上就什么都不发。

@@ -963,6 +963,7 @@ public partial class MainWindow : Window
             {
                 _reconnectAttempt = 0;
                 Vm?.ShowToast("已重新连接服务端", ToastKind.Success);
+                _ = connect.ReloginAsync();   // 重连后自动重登,不然绑定/头像这些会报「请先登录」
             }
         }
         catch (Exception ex)

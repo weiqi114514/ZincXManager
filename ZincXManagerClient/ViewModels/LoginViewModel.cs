@@ -264,6 +264,11 @@ public partial class LoginViewModel : ViewModelBase
 
         IsLoggedIn = true;
 
+        // 缓存凭据:断线重连后自动重登(只放内存,不落盘)
+        ClientSession.LoginHash = hash;
+        ClientSession.LoginLevel = level;
+        ClientSession.LoginSide = side;
+
         if (saveRecord)
         {
             LoginRecord.Save(user, hash, level, Remember, SavePassword);
