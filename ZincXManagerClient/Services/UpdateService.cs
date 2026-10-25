@@ -382,6 +382,7 @@ public static class UpdateService
         var lines = new List<string>
         {
             "@echo off",
+            "chcp 65001 >nul",   // 目录里可能有中文,cmd 默认 GBK 会乱码
             "setlocal",
             ":wait",
             "tasklist /fi \"imagename eq ZincXManagerClient.exe\" | find /i \"ZincXManagerClient\" >nul",
@@ -401,7 +402,8 @@ public static class UpdateService
         lines.Add("del \"%~f0\"");
         lines.Add("exit /b 0");
 
-        File.WriteAllText(script, string.Join("\r\n", lines), System.Text.Encoding.Default);
+        // 写成 UTF-8 无 BOM(配合上面的 chcp 65001),免得分区/语言不同导致中文路径失效
+        File.WriteAllText(script, string.Join("\r\n", lines), new System.Text.UTF8Encoding(false));
     }
 
     /// <summary>版本比较:先比字母前缀(a &lt; b &lt; c),前缀相同再按数字段比</summary>

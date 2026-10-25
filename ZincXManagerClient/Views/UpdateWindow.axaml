@@ -73,7 +73,8 @@
     </Style>
   </Window.Styles>
 
-  <Border Background="#F7FFFFFF" BorderBrush="{DynamicResource ThemeMuted}" BorderThickness="1" Margin="1">
+  <!-- 无边框窗体,不要再加描边 -->
+  <Border Background="#F7FFFFFF" CornerRadius="0">
     <Grid RowDefinitions="40,Auto,Auto">
 
       <!-- 标题栏 -->

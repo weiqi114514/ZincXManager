@@ -73,8 +73,8 @@
       <Setter Property="Background" Value="{DynamicResource ThemePrimaryHover}"/>
     </Style>
     <Style Selector="Button.rowbtn">
-      <Setter Property="Width" Value="24"/>
-      <Setter Property="Height" Value="24"/>
+      <Setter Property="Width" Value="22"/>
+      <Setter Property="Height" Value="15"/>
       <Setter Property="Padding" Value="0"/>
       <Setter Property="MinWidth" Value="0"/>
       <Setter Property="MinHeight" Value="0"/>
@@ -92,9 +92,13 @@
     <Style Selector="Button.rowbtn:pointerover /template/ ContentPresenter">
       <Setter Property="Background" Value="{DynamicResource ThemeLight}"/>
     </Style>
+    <Style Selector="Button.arrow">
+      <Setter Property="FontSize" Value="8"/>
+    </Style>
   </Window.Styles>
 
-  <Border Background="#F7FFFFFF" BorderBrush="{DynamicResource ThemeMuted}" BorderThickness="1" Margin="1">
+  <!-- 不要描边:无边框窗体下再加一圈边框会像"莫名白框" -->
+  <Border Background="#F7FFFFFF" CornerRadius="0">
     <Grid RowDefinitions="40,*,Auto">
 
       <Border Grid.Row="0" Background="{DynamicResource ThemePrimary}" PointerPressed="OnTitleBarPointerPressed">
@@ -109,24 +113,27 @@
 
       <Grid Grid.Row="1" RowDefinitions="Auto,*" Margin="16,12,16,0">
 
-        <!-- 表头 -->
-        <Grid Grid.Row="0" ColumnDefinitions="56,*,150,54,30" Margin="0,0,0,6">
-          <TextBlock Grid.Column="0" Text="优先级" FontSize="12" Foreground="#4A6B78"/>
-          <TextBlock Grid.Column="1" Text="镜像源地址" FontSize="12" Foreground="#4A6B78"/>
-          <TextBlock Grid.Column="2" Text="名称(可选)" FontSize="12" Foreground="#4A6B78"/>
-          <TextBlock Grid.Column="3" Text="启用" FontSize="12" Foreground="#4A6B78" HorizontalAlignment="Center"/>
-        </Grid>
+        <!-- 表头(带底色,和内容区分开) -->
+        <Border Grid.Row="0" Background="#E8EEF0" Padding="8,7" Margin="0,0,0,4">
+          <Grid ColumnDefinitions="44,*,150,54,30">
+            <TextBlock Grid.Column="0" Text="优先级" FontSize="12" Foreground="#4A6B78"/>
+            <TextBlock Grid.Column="1" Text="镜像源地址" FontSize="12" Foreground="#4A6B78"/>
+            <TextBlock Grid.Column="2" Text="名称(可选)" FontSize="12" Foreground="#4A6B78"/>
+            <TextBlock Grid.Column="3" Text="启用" FontSize="12" Foreground="#4A6B78" HorizontalAlignment="Center"/>
+          </Grid>
+        </Border>
 
-        <!-- 列表 -->
-        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" MaxHeight="270">
+        <!-- 列表(整块给底色,看起来才像表格) -->
+        <Border Grid.Row="1" Background="#FFFFFF" BorderBrush="#D6E0E4" BorderThickness="1">
+        <ScrollViewer VerticalScrollBarVisibility="Auto" MaxHeight="270">
           <ListBox x:Name="MirrorList" Background="Transparent" BorderThickness="0">
             <ListBox.ItemTemplate>
               <DataTemplate x:DataType="models:MirrorItem">
-                <Grid ColumnDefinitions="56,*,150,54,30" Margin="0,2">
-                  <!-- 交换优先级 -->
-                  <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="2" VerticalAlignment="Center">
-                    <Button Classes="rowbtn" Content="▲" FontSize="10" Click="OnMoveUpClick" Tag="{Binding}"/>
-                    <Button Classes="rowbtn" Content="▼" FontSize="10" Click="OnMoveDownClick" Tag="{Binding}"/>
+                <Grid ColumnDefinitions="44,*,150,54,30" Margin="8,3">
+                  <!-- 交换优先级:上下两个小箭头竖着叠,占一个控件位 -->
+                  <StackPanel Grid.Column="0" Orientation="Vertical" Spacing="0" VerticalAlignment="Center">
+                    <Button Classes="rowbtn arrow" Content="▲" Click="OnMoveUpClick" Tag="{Binding}"/>
+                    <Button Classes="rowbtn arrow" Content="▼" Click="OnMoveDownClick" Tag="{Binding}"/>
                   </StackPanel>
 
                   <TextBox Grid.Column="1" Text="{Binding Url, Mode=TwoWay}" Height="30"
@@ -149,6 +156,7 @@
             </ListBox.ItemTemplate>
           </ListBox>
         </ScrollViewer>
+        </Border>
       </Grid>
 
       <!-- 底部:左"添加",右"取消/保存" -->

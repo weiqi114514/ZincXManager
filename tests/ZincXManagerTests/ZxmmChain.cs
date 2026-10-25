@@ -159,6 +159,7 @@ public static class ZxmmChain
                 if (Directory.Exists(path)) { Directory.Delete(path, true); }
             }
 
+            // 先起假 ZXMM(ZXMS 启动后第一次就能连上),但另起一个场景验重试:见文件末尾 RetryScenario
             using var fake = new FakeZxmm(zxmmPort);
             fake.Start();
 
@@ -174,6 +175,7 @@ public static class ZxmmChain
 
             r.Add("ZXMS 监听 " + czport, ms.WaitPort(czport));
             r.Add("ZXMS 连上假 ZXMM(21200)", await fake.WaitConnectedAsync());
+            r.Add("重连策略:日志里没有「停止自动重连」", !LastLines(ms, 40).Contains("停止自动重连"), LastLines(ms, 2));
             r.Add("日志打出专用通道已连上", await WaitOutAsync(ms, "专用通道已连上", 8000), LastLines(ms, 3));
 
             using var probe = await Probe.ConnectAsync("127.0.0.1", czport, "OS");
@@ -338,6 +340,42 @@ public static class ZxmmChain
         catch (Exception ex)
         {
             r.Add("令牌链路没跑起来", false, ex.Message);
+        }
+
+        // ⑧ 重试策略:ZXMS 先起、假 ZXMM 晚 8 秒起 → 自动重试(5 秒一轮)应该连上,不能误判成 5 次失败
+        try
+        {
+            const int czport3 = 21416;
+            const int zxmmPort3 = 21457;
+            var dir3 = Svc.PrepareBin(debugMs, Path.Combine(ws, "_zxt", "zxmm-retry"));
+
+            using var ms3 = Svc.Start(Path.Combine(dir3, "ZincXManagerServer.exe"), dir3, new Dictionary<string, string>
+            {
+                ["configver"] = "2",
+                ["connectOS"] = "0",
+                ["linkname"] = "0",
+                ["name"] = "CSharp-重试服",
+                ["czport"] = czport3.ToString(),
+                ["zxmmapi"] = "127.0.0.1:" + zxmmPort3,
+            });
+
+            r.Add("重试服监听 " + czport3, ms3.WaitPort(czport3));
+
+            // 先让它至少失败一两轮(连接被拒)
+            await Task.Delay(8000);
+            var failedOnce = LastLines(ms3, 60).Contains("专用通道断开(1/5)") || LastLines(ms3, 60).Contains("专用通道断开(2/5)");
+            r.Add("ZXMS 先行时确实在重试", failedOnce, LastLines(ms3, 2));
+
+            // 再把 ZXMM 放起来
+            using var fake3 = new FakeZxmm(zxmmPort3);
+            fake3.Start();
+            var connected = await fake3.WaitConnectedAsync(20000);
+            r.Add("假 ZXMM 后起 → 5 次重试内连上", connected, LastLines(ms3, 3));
+            r.Add("没有误判成已放弃", !LastLines(ms3, 60).Contains("停止自动重连"), LastLines(ms3, 2));
+        }
+        catch (Exception ex)
+        {
+            r.Add("重试场景没跑起来", false, ex.Message);
         }
 
         return r;
