@@ -129,10 +129,14 @@
         </Grid>
       </Border>
 
-      <Grid Grid.Row="1" RowDefinitions="Auto,*" Margin="16,8,16,0">
+      <!-- 表头和列表在同一个容器里,中间不留缝 -->
+      <Border Grid.Row="1" Background="{DynamicResource ThemeLight}"
+              BorderBrush="{DynamicResource ThemePanelBorder}" BorderThickness="1"
+              Margin="16,8,16,0">
+        <Grid RowDefinitions="Auto,*">
 
         <!-- 表头:只要字,不要底色 -->
-        <Border Grid.Row="0" Background="Transparent" Padding="12,7" Margin="0,0,0,4">
+        <Border Grid.Row="0" Background="Transparent" Padding="12,7">
           <Grid ColumnDefinitions="44,*,150,54,30">
             <TextBlock Grid.Column="0" Text="优先级" FontSize="12" Foreground="#4A6B78"/>
             <TextBlock Grid.Column="1" Text="镜像源地址" FontSize="12" Foreground="#4A6B78"/>
@@ -141,16 +145,12 @@
           </Grid>
         </Border>
 
-        <!-- 列表(整块给底色,看起来才像表格) -->
-        <!-- 表格本身有底色,行是白块,层次分得开(全走主题资源,切配色/深色会跟着变) -->
-        <Border Grid.Row="1" Background="{DynamicResource ThemeGlassLight}"
-                BorderBrush="{DynamicResource ThemePanelBorder}" BorderThickness="1" Padding="4">
-        <ScrollViewer VerticalScrollBarVisibility="Auto" MaxHeight="270">
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" MaxHeight="270">
           <ListBox x:Name="MirrorList" Background="Transparent" BorderThickness="0">
             <ListBox.ItemTemplate>
               <DataTemplate x:DataType="models:MirrorItem">
-                <!-- 行底色用 ThemeLight(不透明),ThemePanel 在亚克力档是半透明的,看着像没有背景 -->
-                <Border Background="{DynamicResource ThemeLight}" Margin="0,0,0,2" Padding="8,4">
+                <!-- 行用白块,表格底是主题淡色 —— 行和表格各是各的背景 -->
+                <Border Background="{DynamicResource ThemeGlassLight}" Margin="4,0,4,2" Padding="8,4">
                 <Grid ColumnDefinitions="44,*,150,54,30">
                   <!-- 交换优先级:上下两个小箭头竖着叠,占一个控件位 -->
                   <StackPanel Grid.Column="0" Orientation="Vertical" Spacing="0" VerticalAlignment="Center">
@@ -179,8 +179,8 @@
             </ListBox.ItemTemplate>
           </ListBox>
         </ScrollViewer>
-        </Border>
-      </Grid>
+        </Grid>
+      </Border>
 
       <!-- 底部:左"添加",右"取消/保存" -->
       <Grid Grid.Row="2" ColumnDefinitions="Auto,*,Auto" Margin="16,10,16,16">
