@@ -95,6 +95,25 @@
     <Style Selector="Button.arrow">
       <Setter Property="FontSize" Value="8"/>
     </Style>
+
+    <!-- 每行是一块浅底色,不是线框:行与行之间留 2px 空隙 -->
+    <Style Selector="ListBoxItem">
+      <Setter Property="Background" Value="Transparent"/>
+      <Setter Property="Padding" Value="0"/>
+      <Setter Property="Margin" Value="0"/>
+      <Setter Property="CornerRadius" Value="0"/>
+    </Style>
+    <Style Selector="ListBoxItem /template/ ContentPresenter">
+      <Setter Property="Background" Value="Transparent"/>
+      <Setter Property="CornerRadius" Value="0"/>
+      <Setter Property="Padding" Value="0"/>
+    </Style>
+    <Style Selector="ListBoxItem:pointerover /template/ ContentPresenter">
+      <Setter Property="Background" Value="Transparent"/>
+    </Style>
+    <Style Selector="ListBoxItem:selected /template/ ContentPresenter">
+      <Setter Property="Background" Value="Transparent"/>
+    </Style>
   </Window.Styles>
 
   <!-- 不要描边:无边框窗体下再加一圈边框会像"莫名白框" -->
@@ -114,7 +133,7 @@
       <Grid Grid.Row="1" RowDefinitions="Auto,*" Margin="16,12,16,0">
 
         <!-- 表头(带底色,和内容区分开) -->
-        <Border Grid.Row="0" Background="#E8EEF0" Padding="8,7" Margin="0,0,0,4">
+        <Border Grid.Row="0" Background="#D9E7EB" Padding="12,7" Margin="0,0,0,4">
           <Grid ColumnDefinitions="44,*,150,54,30">
             <TextBlock Grid.Column="0" Text="优先级" FontSize="12" Foreground="#4A6B78"/>
             <TextBlock Grid.Column="1" Text="镜像源地址" FontSize="12" Foreground="#4A6B78"/>
@@ -124,12 +143,14 @@
         </Border>
 
         <!-- 列表(整块给底色,看起来才像表格) -->
-        <Border Grid.Row="1" Background="#FFFFFF" BorderBrush="#D6E0E4" BorderThickness="1">
+        <!-- 表格本身有底色,行是白块,层次分得开 -->
+        <Border Grid.Row="1" Background="#EEF5F7" BorderBrush="#CBDADE" BorderThickness="1" Padding="4">
         <ScrollViewer VerticalScrollBarVisibility="Auto" MaxHeight="270">
           <ListBox x:Name="MirrorList" Background="Transparent" BorderThickness="0">
             <ListBox.ItemTemplate>
               <DataTemplate x:DataType="models:MirrorItem">
-                <Grid ColumnDefinitions="44,*,150,54,30" Margin="8,3">
+                <Border Background="#FFFFFF" Margin="0,0,0,2" Padding="8,4">
+                <Grid ColumnDefinitions="44,*,150,54,30">
                   <!-- 交换优先级:上下两个小箭头竖着叠,占一个控件位 -->
                   <StackPanel Grid.Column="0" Orientation="Vertical" Spacing="0" VerticalAlignment="Center">
                     <Button Classes="rowbtn arrow" Content="▲" Click="OnMoveUpClick" Tag="{Binding}"/>
@@ -152,6 +173,7 @@
                   <CheckBox Grid.Column="3" IsChecked="{Binding Enabled, Mode=TwoWay}"
                             HorizontalAlignment="Center" VerticalAlignment="Center"/>
                 </Grid>
+                </Border>
               </DataTemplate>
             </ListBox.ItemTemplate>
           </ListBox>
