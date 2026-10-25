@@ -132,8 +132,9 @@
     </Border>
 
     <!-- 表格:表头 + 行同处一个容器,中间没有缝 -->
+    <!-- 表格底白色,行灰色 -->
     <Border Grid.Row="1" Margin="16,10,16,0"
-            Background="{DynamicResource ThemeLight}"
+            Background="{DynamicResource ThemeGlassLight}"
             BorderBrush="{DynamicResource ThemePanelBorder}"
             BorderThickness="1">
       <Grid RowDefinitions="Auto,*">
@@ -151,8 +152,8 @@
           <ListBox x:Name="MirrorList" Background="Transparent" BorderThickness="0" Padding="6,0,6,6">
             <ListBox.ItemTemplate>
               <DataTemplate x:DataType="models:MirrorItem">
-                <!-- 每行一块白底,铺在淡色表格底上 -->
-                <Border Background="{DynamicResource ThemeGlassLight}" Margin="0,0,0,4" Padding="6,4">
+                <!-- 每行一块灰底,铺在白色表格底上 -->
+                <Border Background="{DynamicResource ThemeWindow}" Margin="0,0,0,4" Padding="6,4">
                   <Grid ColumnDefinitions="40,*,170,50,8">
                     <StackPanel Grid.Column="0" Orientation="Vertical" Spacing="0"
                                 VerticalAlignment="Center" HorizontalAlignment="Left">
