@@ -41,7 +41,7 @@
 <section class="hero grid-bg">
   <div class="hero-in">
     <div class="hero-copy">
-      <span class="hero-tag" id="hero-version">a0.5.2 · 能直接用的版本</span>
+      <span class="hero-tag" id="hero-version">b0.1.0 · 自动更新已上线</span>
       <h1 class="zxm-hero"><span>Zinc</span><span class="bm-slot"><span class="bm-cur">X</span><span class="bm-next"></span></span><span class="dim">Manager</span></h1>
       <p class="lead">
         一个客户端,把你的 Minecraft 服务器管起来:
@@ -68,6 +68,32 @@
     <span>大统一 <em>·</em> 简便 <em>·</em> 隐私 <em>·</em> 快速 <em>·</em> 管理 <em>·</em> 首发 <em>·</em> 无依赖 <em>·</em>&nbsp;</span>
   </div>
 </div>
+
+<!-- 数字带 -->
+<section class="sec" style="padding:30px 0">
+  <div class="wrap" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px">
+    <div class="card-block" style="margin:0">
+      <div style="font-size:34px;font-weight:900;line-height:1">4</div>
+      <div style="margin-top:6px;font-weight:700">端一套栈</div>
+      <div style="color:var(--fg-dim);font-size:13px">客户端 / 子服 / 官方 / 模组</div>
+    </div>
+    <div class="card-block" style="margin:0">
+      <div style="font-size:34px;font-weight:900;line-height:1">26</div>
+      <div style="margin-top:6px;font-weight:700">条控制台命令</div>
+      <div style="color:var(--fg-dim);font-size:13px">封禁、绑定、消息、通道</div>
+    </div>
+    <div class="card-block" style="margin:0">
+      <div style="font-size:34px;font-weight:900;line-height:1">100+</div>
+      <div style="margin-top:6px;font-weight:700">个协议码</div>
+      <div style="color:var(--fg-dim);font-size:13px">包头 16 字节,负载上限 8 MB</div>
+    </div>
+    <div class="card-block" style="margin:0">
+      <div style="font-size:34px;font-weight:900;line-height:1">144</div>
+      <div style="margin-top:6px;font-weight:700">项自动测试</div>
+      <div style="color:var(--fg-dim);font-size:13px">14 个套件,每次发版都跑</div>
+    </div>
+  </div>
+</section>
 
 <section class="sec" id="player">
   <div class="wrap">
@@ -199,6 +225,52 @@
 </section>
 
 <!-- 与众不同 -->
+<!-- 进服流程 -->
+<section class="sec" id="login-flow">
+  <div class="wrap">
+    <div class="sec-head">
+      <div>
+        <div class="k">How joining works</div>
+        <h2>玩家进服<br>会发生什么</h2>
+      </div>
+      <p>不是"输密码就能进":每一次进服都由服务端按顺序判断,全部在 ZXMS 侧完成。</p>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px">
+      <div class="card-block" style="margin:0">
+        <div class="k" style="margin-bottom:6px">STEP 1</div>
+        <h4 style="margin:0 0 6px">模组上报</h4>
+        <p style="margin:0;color:var(--fg-dim);font-size:13.5px">玩家连上 MC,模组把「玩家名 + IP」经 21200 推给 ZXMS。模组自己不做判断。</p>
+      </div>
+      <div class="card-block" style="margin:0">
+        <div class="k" style="margin-bottom:6px">STEP 2</div>
+        <h4 style="margin:0 0 6px">查登录数组</h4>
+        <p style="margin:0;color:var(--fg-dim);font-size:13.5px">5 分钟内确认过的玩家直接放行,不用重复弹窗。</p>
+      </div>
+      <div class="card-block" style="margin:0">
+        <div class="k" style="margin-bottom:6px">STEP 3</div>
+        <h4 style="margin:0 0 6px">查持久登录表</h4>
+        <p style="margin:0;color:var(--fg-dim);font-size:13.5px">账号主人点过「记住」的玩家,命中就写回登录数组并放行。</p>
+      </div>
+      <div class="card-block" style="margin:0">
+        <div class="k" style="margin-bottom:6px">STEP 4</div>
+        <h4 style="margin:0 0 6px">有没有绑定</h4>
+        <p style="margin:0;color:var(--fg-dim);font-size:13.5px">没绑定 → 生成 6 位绑定码,踢出并提示去客户端绑定。</p>
+      </div>
+      <div class="card-block" style="margin:0">
+        <div class="k" style="margin-bottom:6px">STEP 5</div>
+        <h4 style="margin:0 0 6px">问账号主人</h4>
+        <p style="margin:0;color:var(--fg-dim);font-size:13.5px">已绑定 → 客户端弹「登录请求」(玩家名 / IP / 归属地),允许还是拒绝由人决定。</p>
+      </div>
+      <div class="card-block" style="margin:0">
+        <div class="k" style="margin-bottom:6px">STEP 6</div>
+        <h4 style="margin:0 0 6px">放行或踢出</h4>
+        <p style="margin:0;color:var(--fg-dim);font-size:13.5px">同意才进得去;拒绝、5 分钟没人点、或者越权回答,一律由 ZXMS 指挥模组踢掉。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
 <section class="sec" id="capabilities">
   <div class="wrap">
     <div class="sec-head">
@@ -243,6 +315,48 @@
           <div><h4>数据随身走</h4><p>配置、消息、日志都在 exe 同目录,拷走即搬家。</p></div>
           <div><h4>启动快</h4><p>没有 JIT 预热,冷启动几百毫秒级。</p></div>
           <div><h4>也能正规安装</h4><p>要开始菜单和桌面图标就用 MSI。</p></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 架构 -->
+<section class="sec" id="arch">
+  <div class="wrap">
+    <div class="sec-head">
+      <div>
+        <div class="k">Architecture</div>
+        <h2>四个端<br>怎么连</h2>
+      </div>
+      <p>三条独立的连接:玩家用客户端连子服,子服连官方端,子服再用一条专用通道指挥模组。互不抢端口。</p>
+    </div>
+
+    <div class="sec-body">
+      <div class="row">
+        <div class="side"><h3>ZXMC → ZXMS</h3><p>玩家 / 管理员用的客户端,连子服务端的 21000。</p></div>
+        <div class="items">
+          <div><h4>加密会话</h4><p>ECDH(P-256) 协商后整体 AES-256-GCM,抓包只能看到密文。</p></div>
+          <div><h4>挑战-响应登录</h4><p>密码不出网:客户端发 proof = SHA256(密文:nonce),服务端自己算一遍。</p></div>
+          <div><h4>断线自愈</h4><p>5 秒一次心跳,断了自动重连,连续 5 次失败才退回连接界面。</p></div>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="side"><h3>ZXMS → ZXMOS</h3><p>子服务端接到官方端,账号、头像、消息分发走官方。</p></div>
+        <div class="items">
+          <div><h4>100 / 101 握手</h4><p>先报上线,对方回收到,之后才允许转发业务包。</p></div>
+          <div><h4>官方端做分发</h4><p>公告、推送、历史由 ZXMOS 统一发,子服只转。</p></div>
+          <div><h4>能断开单干</h4><p>连不上官方时子服照常跑,本地账号自己说了算。</p></div>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="side"><h3>ZXMS → ZXMM</h3><p>专用通道 21200,只用来让模组踢人/查在线。</p></div>
+        <div class="items">
+          <div><h4>模组只执行</h4><p>登录判断、绑定关系全在 ZXMS,模组不加任何业务逻辑。</p></div>
+          <div><h4>只听本机</h4><p>默认只绑 127.0.0.1;跨机必须配共享令牌,5 秒内不自报就断开。</p></div>
+          <div><h4>5 秒 × 5 次</h4><p>连不上就停手并报错,控制台 <span class="mono">zxmm connect</span> 手动重连。</p></div>
         </div>
       </div>
     </div>

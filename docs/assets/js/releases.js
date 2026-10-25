@@ -20,6 +20,8 @@
     if (/^ZincXManagerServer/i.test(name)) return { key: 'server', label: '子服务端' };
     if (/^ZincXManagerTests/i.test(name)) return { key: 'tests', label: '测试工具' };
     if (/^ZincXManagerLicTool/i.test(name)) return { key: 'lictool', label: '许可证工具' };
+    // 模组:ZXMM-x.y.z.jar(NeoForge 服务端模组)
+    if (/^ZXMM/i.test(name) || /\.jar$/i.test(name)) return { key: 'mod', label: '模组 ZXMM' };
     return { key: 'other', label: '其它' };
   }
 
