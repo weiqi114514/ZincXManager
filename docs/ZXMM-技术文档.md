@@ -1,6 +1,6 @@
 # ZXMM 模组端技术文档
 
-> 适用版本：ZXMM `0.1.0` / MC **1.21.1** / NeoForge **21.1.264** / JDK **21**
+> 适用版本：ZXMM **b0.1.0**（toml 机器版 `0.1.0`）/ MC **1.21.1** / NeoForge **21.1.264** / JDK **21**
 > 最后更新：2026-10-25（全链路修 bug + 实机验证后定稿，基线：回归 128 通过 / 0 失败 / 13 套件）
 
 ---
@@ -44,7 +44,7 @@ ZXMM 是跑在 **Minecraft 服务端**里的模组，是整条链路里唯一接
 
 ## 3. 部署
 
-1. 把 `ZXMM-0.1.0.jar` 放进**服务端**的 `mods/`（客户端不需要装）。
+1. 把 `ZXMM-b0.1.0.jar` 放进**服务端**的 `mods/`（客户端不需要装）。
 2. 启动一次，生成 `config/zxmm.properties`（见 §4）。
 3. 在 ZXMS 的 `config.ini` 里配两个键：
 
@@ -181,11 +181,22 @@ smoketest lost connection: 账号验证服务未连接，请稍后再进服务�
 
 | 位置 | 要求 |
 |---|---|
-| `neoforge.mods.toml` 的 `version` | **`0.1.0`**（纯数字。写成 `b0.1.0` 会崩服） |
-| `build.gradle` 的 `version` | 与上面一致 |
-| 产物 | `build/libs/ZXMM-0.1.0.jar`（约 17 KB） |
+| `neoforge.mods.toml` 的 `version` | **`0.1.0`**（纯数字。写成 `b0.1.0` 会崩服——唯一例外） |
+| `neoforge.mods.toml` 的 `displayName` | 含 **`b0.1.0`**（用户可见） |
+| `build.gradle` 的 `version` | **`b0.1.0`**（决定产物名 `ZXMM-b0.1.0.jar`，用户可见） |
+| 代码里的版本常量 | `ZxmmMod.VERSION = "b0.1.0"`，启动日志用它；改版本只改这一处 |
+| 产物 | `build/libs/ZXMM-b0.1.0.jar`（约 16 KB） |
 | 依赖 | `modId="neoforge" versionRange="[21.1.0,)"`；`modId="minecraft" versionRange="[1.21.1,1.22)"`；`side=SERVER` |
 | modid 三处一致 | `gradle.properties` 的 `mod_id`、`@Mod(ZxmmMod.MODID)`、`neoforge.mods.toml` 的 `modId` |
+
+**版本号规则**（模块 / 三端统一）：
+
+| 场合 | 写什么 | 说明 |
+|---|---|---|
+| 用户能看到的：界面 / 启动日志 / 产物名 / `displayName` | **`b0.1.0`** | 用户侧必须显示完整版本号 |
+| `neoforge.mods.toml` 的 `version` | `0.1.0` | 纯数字硬要求，写 b 会崩服 |
+| C# 三端对照 | `<Version>`/`<FileVersion>` = `0.1.0`、`<InformationalVersion>` = `b0.1.0` | 同一条规则的另一半 |
+| 启动日志 | `[ZXMM] 已加载 b0.1.0，专用通道 127.0.0.1:21200，…` | 由 `ZxmmMod.VERSION` 提供 |
 
 构建：`gradlew.bat build`（JDK 21，`org.gradle.java.home=G:/jdk21`）。
 本机无代理时 `maven.neoforged.net` 会卡在 `:createMinecraftArtifacts`，按 `gradle.properties` 注释开代理。
