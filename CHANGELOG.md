@@ -18,6 +18,7 @@ ZincXManager(锌X管理面板)的变更记录。格式参考 [Keep a Changelog](
 
 ### 修复
 - 玩家刚进服就被踢时客户端显示 `Internal Exception: Connection reset`(世界还没加载完,disconnect 包被吞):改到连接阶段踢,客户端能显示理由
+- **封禁账号拦不住绑定的 MC 玩家**:封禁检查以前只拿 MC 玩家名去比,现在同时比对玩家绑定的账号名(连接阶段与进服阶段都查),`ban user <账号>` 能拦住它绑定的玩家
 
 ### 协议
 - 21200 新增事件 `evt|joining|玩家名|IP`(configuration 阶段)

@@ -445,15 +445,17 @@ internal static class Program
             return;
         }
 
-        // ② 封禁:理由跟着踢人一起下发
-        if (Bans.Check(player, ip, "", out var ban))
+        var boundAccount = LoginStore.AccountOf(player);   //绑定的账号ID
+        var boundName = boundAccount > 0 ? Accounts.FindById(boundAccount)?.Name ?? "" : "";
+
+        // ② 封禁:玩家名和它绑定的账号名,任一被封都拦(封账号要能拦住绑定玩家)
+        if (Bans.Check(player, ip, "", out var ban) ||
+            (boundName.Length > 0 && Bans.Check(boundName, ip, "", out ban)))
         {
             Logger.Log(LogLevel.Warning, $"[配置阶段] 拒绝被封禁的玩家 {player}({ban!.Kind}={ban.Value})");
             await KickViaZxmmAsync(player, $"已被封禁:{ban.Reason}({ban.Remain})");
             return;
         }
-
-        var boundAccount = LoginStore.AccountOf(player);   //绑定的账号ID
 
         // ③ 没绑定 → 生成绑定码,踢去 ZXMC 绑定
         if (boundAccount <= 0)
@@ -502,14 +504,25 @@ internal static class Program
         {
             ip = "unknown";
         }
-        // ① 登录数组(5 分钟)里 → 放行,什么都不做
+        // ① 封禁优先:玩家名或它绑定的账号名被封都拦,登录数组/持久表不能绕过封禁
+        var boundAccount = LoginStore.AccountOf(player);   //绑定的账号ID
+        var boundName = boundAccount > 0 ? Accounts.FindById(boundAccount)?.Name ?? "" : "";
+        if (Bans.Check(player, ip, "", out var joinedBan) ||
+            (boundName.Length > 0 && Bans.Check(boundName, ip, "", out joinedBan)))
+        {
+            Logger.Log(LogLevel.Warning, $"[进服] 拒绝被封禁的玩家 {player}({joinedBan!.Kind}={joinedBan.Value})");
+            await KickViaZxmmAsync(player, $"已被封禁:{joinedBan.Reason}({joinedBan.Remain})");
+            return;
+        }
+
+        // ② 登录数组(5 分钟)里 → 放行,什么都不做
         if (InLoginArray(player))
         {
             LoginStore.Log($"[登录数组] 玩家 {player}({ip}) 在登录数组里,放行");
             return;
         }
 
-        // ② 持久登录表 → 记进登录数组,放行
+        // ③ 持久登录表 → 记进登录数组,放行
         if (LoginStore.HasPersistentLogin(player, ip))
         {
             AddToLoginArray(player);
@@ -517,9 +530,7 @@ internal static class Program
             return;
         }
 
-        var boundAccount = LoginStore.AccountOf(player);   //绑定的账号ID
-
-        // ③ 没绑定 → 生成绑定码,直接通过执行接口把他踢去绑定
+        // ④ 没绑定 → 生成绑定码,直接通过执行接口把他踢去绑定
         if (boundAccount <= 0)
         {
             var code = NewBindCode();   //绑定码
