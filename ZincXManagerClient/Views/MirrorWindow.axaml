@@ -4,7 +4,7 @@
         x:Class="ZincXManagerClient.Views.MirrorWindow"
         Title="下载镜像"
         Width="640" Height="480"
-        Background="#CCFFFFFF"
+        Background="#F7FFFFFF"
         TransparencyLevelHint="AcrylicBlur,Blur,Transparent"
         FontFamily="Microsoft YaHei UI, Microsoft YaHei, Segoe UI"
         WindowDecorations="None"
@@ -116,9 +116,8 @@
     </Style>
   </Window.Styles>
 
-  <!-- 不要描边:无边框窗体下再加一圈边框会像"莫名白框" -->
-  <Border Background="#F7FFFFFF" CornerRadius="0">
-    <Grid RowDefinitions="40,*,Auto">
+  <!-- 直接铺 Grid,别套 Border:半透明白 + 不透明白两层叠着,顶边会露出 1px 色差 -->
+  <Grid RowDefinitions="40,*,Auto">
 
       <Border Grid.Row="0" Background="{DynamicResource ThemePrimary}" PointerPressed="OnTitleBarPointerPressed">
         <Grid ColumnDefinitions="Auto,*,Auto">
@@ -133,7 +132,7 @@
       <Grid Grid.Row="1" RowDefinitions="Auto,*" Margin="16,12,16,0">
 
         <!-- 表头(带底色,和内容区分开) -->
-        <Border Grid.Row="0" Background="#D9E7EB" Padding="12,7" Margin="0,0,0,4">
+        <Border Grid.Row="0" Background="{DynamicResource ThemeLight}" Padding="12,7" Margin="0,0,0,4">
           <Grid ColumnDefinitions="44,*,150,54,30">
             <TextBlock Grid.Column="0" Text="优先级" FontSize="12" Foreground="#4A6B78"/>
             <TextBlock Grid.Column="1" Text="镜像源地址" FontSize="12" Foreground="#4A6B78"/>
@@ -143,13 +142,14 @@
         </Border>
 
         <!-- 列表(整块给底色,看起来才像表格) -->
-        <!-- 表格本身有底色,行是白块,层次分得开 -->
-        <Border Grid.Row="1" Background="#EEF5F7" BorderBrush="#CBDADE" BorderThickness="1" Padding="4">
+        <!-- 表格本身有底色,行是白块,层次分得开(全走主题资源,切配色/深色会跟着变) -->
+        <Border Grid.Row="1" Background="{DynamicResource ThemeGlassLight}"
+                BorderBrush="{DynamicResource ThemePanelBorder}" BorderThickness="1" Padding="4">
         <ScrollViewer VerticalScrollBarVisibility="Auto" MaxHeight="270">
           <ListBox x:Name="MirrorList" Background="Transparent" BorderThickness="0">
             <ListBox.ItemTemplate>
               <DataTemplate x:DataType="models:MirrorItem">
-                <Border Background="#FFFFFF" Margin="0,0,0,2" Padding="8,4">
+                <Border Background="{DynamicResource ThemePanel}" Margin="0,0,0,2" Padding="8,4">
                 <Grid ColumnDefinitions="44,*,150,54,30">
                   <!-- 交换优先级:上下两个小箭头竖着叠,占一个控件位 -->
                   <StackPanel Grid.Column="0" Orientation="Vertical" Spacing="0" VerticalAlignment="Center">
@@ -189,6 +189,5 @@
           <Button Classes="act go" Content="保存" Click="OnSaveClick"/>
         </StackPanel>
       </Grid>
-    </Grid>
-  </Border>
+  </Grid>
 </Window>
