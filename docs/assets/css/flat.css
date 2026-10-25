@@ -665,3 +665,8 @@ a,.btn,.nav-cta,.card,.hg-cell,.tags span,.steps li,.compare-col,.arch,.faq-list
 @media (max-width:1080px){
   .hero-v2 .hero-in{padding:110px 0 96px}
 }
+
+/* 首屏程序化渲染层 */
+.hero-v2 .hero-canvas{position:absolute;inset:0;width:100%;height:100%;
+  pointer-events:none;opacity:.85}
+.hero-v2 .hero-bg{opacity:.55}
