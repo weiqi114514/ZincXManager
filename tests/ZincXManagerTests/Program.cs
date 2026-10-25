@@ -796,9 +796,9 @@ var results = new List<SuiteResult>();
             // 注入能力:点击落点必须在窗口矩形内,键盘注入后窗口不能崩
             var clickOk = Win32.ClickIn(h, 0.49, 0.37);
             await Task.Delay(300);
-            Win32.TypeAscii("guiuser");
+            Win32.TypeTo(h, "guiuser");
             await Task.Delay(200);
-            r.Add("鼠标点击能落到登录窗内", clickOk);
+            r.Add("鼠标点击能落到登录窗内(后台消息,不动真实鼠标)", clickOk);
             r.Add("键盘注入后窗口还活着", !cli.HasExited);
             r.Note("完整 GUI 登录流程(点按钮/进主界面)受窗口焦点影响不稳定,只在这里验\"注入通道\",交互本身由 DSH 手测覆盖");
 
@@ -884,6 +884,7 @@ var results = new List<SuiteResult>();
 // ================= 套件 13:ZXMM 专用通道链路 =================
 {
     results.Add(await ZincXManagerTests.ZxmmChain.RunAsync(Ws, DebugMs));
+    await ZincXManagerTests.UpdateSuite.RunAsync(results, Ws, DebugMs);
 }
 
 // ================= 汇总 =================

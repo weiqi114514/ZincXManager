@@ -245,6 +245,45 @@ zxm-lic verify &lt;公钥.pem&gt; &lt;证书.lic&gt; &lt;授权码&gt;</code></p
 <tr><td>切档刷新</td><td class="mono">ApplyGlass → ApplyWindowMaterial</td><td>遍历已打开窗口重新套材质,避免「切到半透明档还是亚克力」</td></tr>
 </tbody></table>
 
+<h2 id="update">客户端自动更新(ZXMC)</h2>
+<p class="lead">客户端启动后按设置查 GitHub 最新发布版,有新版弹「更新提示」;点「立刻更新」全自动下载并按安装形态装好,用户只需关掉程序再打开。</p>
+
+<h3 id="update-flow">整条链路</h3>
+<ol>
+<li>读设置 <span class="mono">update.mode</span>:<span class="mono">off</span> = 完全不查,<span class="mono">prompt</span> = 启动时查(默认)。</li>
+<li>查 <span class="mono">api.github.com/repos/weiqi114514/ZincXManager/releases/latest</span>,24 小时内用缓存(避免限流)。</li>
+<li>版本比较:先比字母前缀(<span class="mono">a &lt; b &lt; c</span>),前缀相同再比数字段 —— 所以 <span class="mono">a0.5.1</span> 不会被当成比 <span class="mono">b0.1.0</span> 新。</li>
+<li>有新版 → 弹「更新提示」(当前版本 → 新版本 + 更新日志链接 + 取消/立刻更新);没网/接口失败 → 弹 Toast,不挡启动。</li>
+<li>点「立刻更新」→ 按表格顺序试镜像下载,SHA256 校验,按形态装。</li>
+</ol>
+
+<h3 id="update-install">两种安装形态</h3>
+<table><thead><tr><th>形态</th><th>判断依据</th><th>怎么装</th></tr></thead><tbody>
+<tr><td>MSI 安装版</td><td>exe 在 Program Files 下,或注册表卸载项里有 ZincXManager</td><td>下 <span class="mono">*.msi</span> → <span class="mono">msiexec /i /qb /norestart</span>;程序关掉后安装自动继续</td></tr>
+<tr><td>便携版(zip)</td><td>其它情况</td><td>下 <span class="mono">*-portable.zip</span> → 解压到临时目录 → 生成 <span class="mono">apply-update.cmd</span>(等进程退出 → robocopy 覆盖 → 按开关重新拉起)</td></tr>
+</tbody></table>
+<p class="tips">两种都提示「请关闭本程序,更新会在关闭后完成,重开即新版本」—— exe 运行时文件被锁,安装没法直接覆盖。</p>
+
+<h3 id="update-mirror">下载镜像(表格)</h3>
+<p>设置 → 高级 → 下载镜像 →「设置镜像…」弹表格窗:每行 = 地址 / 名称(可选) / 优先级(<span class="mono">▲▼</span> 交换) / 启用;底部「+ 添加镜像源」,右下「取消 / 保存」。</p>
+<table><thead><tr><th>规则</th><th>说明</th></tr></thead><tbody>
+<tr><td>顺序</td><td>表格从上到下就是尝试顺序,只算启用行</td></tr>
+<tr><td>拼接</td><td>下载地址 = 镜像前缀 + 原 GitHub 地址(如 <span class="mono">https://gh-proxy.com/https://github.com/...</span>)</td></tr>
+<tr><td>兜底</td><td>所有镜像都失败 → 自动退回官方源,不用用户干预</td></tr>
+<tr><td>存储</td><td><span class="mono">config.ini</span> 的 <span class="mono">update.mirrors</span>(<span class="mono">地址|名称|启用</span> 用 <span class="mono">;</span> 分隔);旧 <span class="mono">update.mirror</span> 打开窗口时自动迁移</td></tr>
+</tbody></table>
+
+<h3 id="update-settings">设置项</h3>
+<table><thead><tr><th>位置</th><th>项</th><th>作用</th></tr></thead><tbody>
+<tr><td>高级</td><td>启动时检查更新</td><td>关掉 = 完全不查(<span class="mono">update.mode=off</span>)</td></tr>
+<tr><td>高级</td><td>更新完成后自动打开程序</td><td>只对便携版生效(<span class="mono">update.relaunch</span>);MSI 版装完自己打开</td></tr>
+<tr><td>高级</td><td>下载镜像…</td><td>表格编辑镜像清单</td></tr>
+<tr><td>下载</td><td>目前版本 + 检查更新</td><td>手动查一次:检查中显示「正在检查更新…」;有新版弹提示窗,没有弹「已经是最新版本」,失败弹「无法获取更新信息」</td></tr>
+</tbody></table>
+
+<h3 id="update-zxmm">ZXMM 通道的重连策略</h3>
+<p>ZXMS 连 ZXMM 的 21200 专用通道:<b>5 秒一轮,最多 5 次</b>;5 次都连不上就<b>停止自动重连并报错</b>,之后用控制台 <span class="mono">zxmm connect</span> 手动重连,<span class="mono">zxmm status</span> 看状态。</p>
+
 <h2 id="zxmm">ZXMM 模组端(21200 专用通道)</h2>
 <p class="lead">ZXMM 是跑在 Minecraft 服务端里的 NeoForge 模组(<span class="mono">Java 21 / MC 1.21.1 / NeoForge 21.1.264</span>),不在上面这套 C# 扫描范围内,<b>这一节按 2026-10-25 实测手写</b>。</p>
 <p>它是<b>纯执行器</b>:只上报「玩家进服」、只执行 ZXMS 下发的任务。登录数组、持久登录表、绑定关系、踢不踢人,全部在 ZXMS 侧判断 —— 模组里加业务判断就是架构建反。</p>
