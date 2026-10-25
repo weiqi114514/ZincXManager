@@ -24,43 +24,16 @@
 </header>
 <main>
   <section class="doc-hero grid-bg"><div class="wrap">
-    <div class="k">Changelog</div><h1>更新日志</h1>
-    <p>每个版本单独一页,点进去看这一版的改动。</p>
+    <div class="k">Changelog</div>
+    <h1>更新日志</h1>
+    <blockquote>每个版本一条记录,点进去看这一版的改动。</blockquote>
   </div></section>
+
   <section class="doc-body"><div class="wrap">
-        <a class="card-block" href="changelog-b0.1.0.html" style="display:block;text-decoration:none;color:inherit">
-          <h3 style="margin:0 0 8px">[b0.1.0] - 2026-10-25</h3>
-          <p style="margin:0;color:var(--fg-dim);font-size:13.5px">自动更新 + 小功能组 + 账号绑定 :客户端启动检查 GitHub 最新版,有新版弹「更新提示」,一键下载并按 MSI / 便携版自动安装;下载镜像可配多条、失败自动退回官方源;ZXMM 通道重连改成 5 秒一轮最多 5 次,连不上就停手并给出 zxmm connect 命令;顺带修了下载页空白与 a/b 版本误判。</p>
-        </a>
-        <a class="card-block" href="changelog-a0.5.0.html" style="display:block;text-decoration:none;color:inherit">
-          <h3 style="margin:0 0 8px">[a0.5.0] - 2026-10-18</h3>
-          <p style="margin:0;color:var(--fg-dim);font-size:13.5px">[a0.5.0] - 2026-10-18 连接可靠性 :修掉「重复连接 / 连错目标」这一组问题,避免服务端挂一堆僵尸连接。 修复 重复点「连接」不再叠加连接 :同一目标已经连着时改为弹窗提示「已经连接」;换了地址/端口/模式才先断开再连新目标 连接前先关旧…</p>
-        </a>
-        <a class="card-block" href="changelog-a0.4.1.html" style="display:block;text-decoration:none;color:inherit">
-          <h3 style="margin:0 0 8px">[a0.4.1] - 2026-10-18</h3>
-          <p style="margin:0;color:var(--fg-dim);font-size:13.5px">[a0.4.1] - 2026-10-18 连接可靠性 :修掉「重复连接 / 连错目标」这一组问题,避免服务端挂一堆僵尸连接。 修复 重复点「连接」不再叠加连接 :同一目标已经连着时改为弹窗提示「已经连接」;换了地址/端口/模式才先断开再连新目标 连接前先关旧…</p>
-        </a>
-        <a class="card-block" href="changelog-a0.4.0.html" style="display:block;text-decoration:none;color:inherit">
-          <h3 style="margin:0 0 8px">[a0.4.0] - 2026-10-18</h3>
-          <p style="margin:0;color:var(--fg-dim);font-size:13.5px">[a0.4.0] - 2026-10-18 子功能页 + 消息渲染 + 广场 :经济/社区/组织/管理四页都改成子功能卡片;消息面板支持 Markdown 与 HTML;服务器广场与锌源广场按实际连接区分数据来源;ZXMOS 补上加密协商。 新增 子功能页 :…</p>
-        </a>
-        <a class="card-block" href="changelog-a0.3.2.html" style="display:block;text-decoration:none;color:inherit">
-          <h3 style="margin:0 0 8px">[a0.3.2] - 2026-10-17</h3>
-          <p style="margin:0;color:var(--fg-dim);font-size:13.5px">[a0.3.2] - 2026-10-17 启动流程与外观修复 :打开客户端先测数据源,连不上直接弹窗并停在连接界面;同时修掉「配色永远默认蓝」「亚克力透明度调不动」「半透明档还是亚克力」。含 a0.3.1 的加密会话与登录挑战-响应。 安全 会话加密 :握手…</p>
-        </a>
-        <a class="card-block" href="changelog-unreleased-2026-10-11.html" style="display:block;text-decoration:none;color:inherit">
-          <h3 style="margin:0 0 8px">[未发布] - 2026-10-11</h3>
-          <p style="margin:0;color:var(--fg-dim);font-size:13.5px">[未发布] - 2026-10-11 新增(续 8) 全量测试合并成一个入口 _run-all.ps1 :一条命令跑完 21 个套件(单元 + 场景 ①~⑫ + 身份码 + 官方验证 + GUI 类), 自带端口预检、每个套件明细落盘( _回归明细\*.txt…</p>
-        </a>
-        <a class="card-block" href="changelog-unreleased-2026-10-10.html" style="display:block;text-decoration:none;color:inherit">
-          <h3 style="margin:0 0 8px">[未发布] - 2026-10-10</h3>
-          <p style="margin:0;color:var(--fg-dim);font-size:13.5px">[未发布] - 2026-10-10 新增(续) 缺口③修复:经 ZXMS 中转的玩家 / 管理账号登录 ZXMS 转发登录时也追加 |relay 标记(此前只有注册带);ZXMOS 认出标记后改查 用户账号表 , 并且不再把 ZXMS 这条连接登记成玩家、也…</p>
-        </a>
-        <a class="card-block" href="changelog-unreleased-2026-10-07.html" style="display:block;text-decoration:none;color:inherit">
-          <h3 style="margin:0 0 8px">[未发布] - 2026-10-07</h3>
-          <p style="margin:0;color:var(--fg-dim);font-size:13.5px">[未发布] - 2026-10-07 新增 ZXMOS · 黑名单(srv ban)与账号归档 新文件 ZincXManagerOServer/Blacklist.cs :归档实现,把被拉黑 ZXMS 名下的玩家账号连同拉黑信息一起挪到 blacklist/z…</p>
-        </a>
+    <p style="color:var(--fg-dim);font-size:13.5px;margin:0 0 18px">列表实时来自 GitHub Releases,发新版本后这里自动更新。</p>
+    <div id="zxm-changelog-list"></div>
   </div></section>
+</main>
 </main>
 <footer class="foot">
   <div class="wrap">
@@ -99,4 +72,6 @@
     </div>
   </div>
 </footer>
-</body></html>
+
+<script src="assets/js/changelog.js"></script>
+<script>ZxmChangelog.renderList(document.getElementById("zxm-changelog-list"));</script></body></html>

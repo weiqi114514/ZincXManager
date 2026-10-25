@@ -1,104 +1,10 @@
 <!DOCTYPE html>
 <html lang="zh-CN"><head><meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>更新日志 unreleased-2026-10-10 — ZincXManager</title>
+<title>更新日志 — ZincXManager</title>
+<meta http-equiv="refresh" content="0;url=changelog-detail.html?tag=unreleased-2026-10-10">
 <link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="assets/css/flat.css">
 </head><body>
-<header class="nav">
-  <div class="wrap nav-in">
-    <a class="brand" href="index.html">
-      <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 36 9" width="104" height="26" role="img"><svg x="0" y="0" width="36" height="7" viewBox="0.756 0.541 36.472 7.899" preserveAspectRatio="none"><path d="M10.788,0.7l-9.788,0v0.6h8.134l-8.378,7h10.992l6.2,-6.864l6.983,7.004l6.079,-6.981l5.762,6.736l0.456,-0.39l-6.214,-7.264l-6.113,7.019l-6.975,-6.996l-6.445,7.136h-9.072z" fill="currentColor"/></svg><svg x="10" y="0" width="8" height="7" viewBox="0.803 0.773 8.402 7.445" preserveAspectRatio="none"><path d="M4.045,4.058l-3.242,-2.833l0.395,-0.452l3.242,2.833zM8.794,8.218c-0.782,-0.736 -1.934,-1.769 -3.456,-3.101l0.395,-0.452c1.528,1.336 2.685,2.375 3.472,3.116z" fill="currentColor" opacity="0.62"/></svg></svg></span>
-      <span>ZincXManager</span>
-    </a>
-    <nav class="nav-links">
-      <a href="#arch">架构</a>
-      <a href="#features">功能</a>
-      <a href="download.html">下载</a>
-      <a href="help.html">文档</a>
-      <a href="changelog.html">更新日志</a>
-      <a href="tech.html">技术文档</a>
-    </nav>
-    <a class="nav-cta" href="download.html">下载客户端</a>
-  </div>
-</header>
-<main>
-  <section class="doc-hero grid-bg"><div class="wrap">
-    <div class="k">Changelog · unreleased-2026-10-10</div>
-    <h1>[未发布] - 2026-10-10</h1>
-    <p>这一版改了什么;左侧可切换到其它版本。</p>
-  </div></section>
-  <section class="doc-body"><div class="wrap doc-grid">
-    <aside class="doc-nav"><div class="grp">Versions</div>
-        <a href="changelog-a0.4.1.html">[a0.4.1] - 2026-10-18</a>
-        <a href="changelog-a0.4.0.html">[a0.4.0] - 2026-10-18</a>
-        <a href="changelog-a0.3.2.html">[a0.3.2] - 2026-10-17</a>
-        <a href="changelog-unreleased-2026-10-11.html">[未发布] - 2026-10-11</a>
-        <a href="changelog-unreleased-2026-10-10.html" class="on">[未发布] - 2026-10-10</a>
-        <a href="changelog-unreleased-2026-10-07.html">[未发布] - 2026-10-07</a>
-      <div class="grp">Links</div>
-      <a href="changelog.html">全部版本</a>
-      <a href="download.html">下载</a>
-    </aside>
-    <div class="doc-main">
-<h3>[未发布] - 2026-10-10</h3>
-        <h4>新增(续)</h4>
-        <ul>
-          <li><strong>缺口③修复:经 ZXMS 中转的玩家 / 管理账号登录</strong></li>
-          <li>ZXMS 转发登录时也追加 <code>|relay</code> 标记(此前只有注册带);ZXMOS 认出标记后改查<strong>用户账号表</strong>,</li>
-          <li>并且不再把 ZXMS 这条连接登记成玩家、也不把 ZXMS 的 IP 记到玩家头上(机器码照记,连坐可用)。</li>
-          <li>测试③ <strong>13/13</strong>:中转玩家注册 → 登录成功 → 机器码落表 → 走用户表,全部通过。</li>
-          <li><strong>弹窗形态落地(填空 / 选择 / 双按钮)</strong></li>
-          <li>设置 → 模式与数据源:「改数据源地址…」= <strong>填空弹窗</strong>(预填当前地址,打开即全选;校验 <code>IP:端口</code> 且只能一个冒号);</li>
-          <li>「切换连接方式…」= <strong>选择弹窗</strong>(SAOS / OS / OOS,选完立即写 <code>config.ini</code>)。</li>
-          <li>设置 → 账户与安全:「清除本地登录记录…」= <strong>双按钮确认</strong>(清掉记住的密文与免登录设置,服务端账号不受影响)。</li>
-          <li>弹窗按钮支持 <strong>回车 = 主按钮</strong>、<strong>Esc = 取消</strong>。</li>
-        </ul>
-      </section>
-<section class="version-block">
-      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:34px;padding-top:22px;border-top:1px solid var(--line)">
-        <a class="btn" href="changelog-unreleased-2026-10-11.html">← [未发布] - 2026-10-11</a>
-        <a class="btn" href="changelog-unreleased-2026-10-07.html">[未发布] - 2026-10-07 →</a>
-        <a class="btn" href="changelog.html">全部版本</a>
-      </div>
-    </div>
-  </div></section>
-</main>
-<footer class="foot">
-  <div class="wrap">
-    <div class="foot-grid">
-      <div>
-        <a class="brand" href="index.html" style="margin-bottom:14px">
-          <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 36 9" width="104" height="26" role="img"><svg x="0" y="0" width="36" height="7" viewBox="0.756 0.541 36.472 7.899" preserveAspectRatio="none"><path d="M10.788,0.7l-9.788,0v0.6h8.134l-8.378,7h10.992l6.2,-6.864l6.983,7.004l6.079,-6.981l5.762,6.736l0.456,-0.39l-6.214,-7.264l-6.113,7.019l-6.975,-6.996l-6.445,7.136h-9.072z" fill="currentColor"/></svg><svg x="10" y="0" width="8" height="7" viewBox="0.803 0.773 8.402 7.445" preserveAspectRatio="none"><path d="M4.045,4.058l-3.242,-2.833l0.395,-0.452l3.242,2.833zM8.794,8.218c-0.782,-0.736 -1.934,-1.769 -3.456,-3.101l0.395,-0.452c1.528,1.336 2.685,2.375 3.472,3.116z" fill="currentColor" opacity="0.62"/></svg></svg></span>
-        </a>
-        <p style="color:var(--fg-dim);font-size:13.5px;max-width:34ch">面向 Minecraft 服主与社区管理员的一体化管理面板。</p>
-      </div>
-      <div>
-        <h5>产品</h5>
-        <a href="#arch">架构</a>
-        <a href="#features">功能</a>
-        <a href="download.html">下载</a>
-        <a href="changelog.html">更新日志</a>
-      </div>
-      <div>
-        <h5>文档</h5>
-        <a href="help.html">文档与帮助</a>
-        <a href="tech.html">技术文档</a>
-        <a href="zxms.html">子服务端教程</a>
-        <a href="arch.html">类与协议表</a>
-      </div>
-      <div>
-        <h5>其他</h5>
-        <a href="https://github.com/weiqi114514/ZincXManager" target="_blank" rel="noopener">GitHub</a>
-        <a href="https://github.com/weiqi114514/ZincXManager/releases" target="_blank" rel="noopener">Releases</a>
-        <a href="seq.html">时序图</a>
-        <a href="deploy.html">部署</a>
-      </div>
-    </div>
-    <div class="foot-bot">
-      <span>© 2026 ZincXManager · 锌X管理面板</span>
-      <span>交流群 (QQ) 1129776132</span>
-    </div>
-  </div>
-</footer>
+<p style="padding:40px;font-family:system-ui;color:#8ea">正在跳转到 <a href="changelog-detail.html?tag=unreleased-2026-10-10">unreleased-2026-10-10 更新日志</a>…</p>
 </body></html>
