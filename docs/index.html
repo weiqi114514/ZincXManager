@@ -14,7 +14,7 @@
 <meta property="og:url" content="https://zxm.zincms.top/">
 <link rel="stylesheet" href="assets/css/flat.css">
 </head>
-<body>
+<body class="home">
 
 <header class="nav">
   <div class="wrap nav-in">
@@ -23,7 +23,7 @@
       <span>ZincXManager</span>
     </a>
     <nav class="nav-links">
-      <a href="#who">能干什么</a>
+      <a href="#player">能干什么</a>
       <a href="#capabilities">不一样的地方</a>
       <a href="#features">功能清单</a>
       <a href="download.html">下载</a>
@@ -45,7 +45,7 @@
     <div class="hero-copy">
       <span class="hero-tag" id="hero-version">[ ZXM ] / b0.1.1a · 连接阶段拦截已上线</span>
       <h1 class="hero-title zxm-hero"><span>Zinc</span><span class="bm-slot"><span class="bm-cur">X</span><span class="bm-next"></span></span><span class="dim">Manager</span></h1>
-      <p class="hero-sub">一个客户端，管起你的 Minecraft 服务器：公告、商店、玩家、社区。<br>四端一套栈，独立程序，不往服务端里塞插件。</p>
+      <p class="hero-sub">多个定位/功能，合为一体，玩家，管理，服务器相关功能全都有<br>分离部署，不用塞一堆东西在服务器</p>
       <div class="hero-actions">
         <a class="btn btn-primary" href="download.html">下载客户端 →</a>
         <a class="btn" href="#features">看它能干什么</a>
@@ -59,10 +59,10 @@
 
 <!-- 数字 -->
 <section class="strip"><div class="wrap strip-grid">
-  <div><b>4</b><span>端一套栈</span></div>
-  <div><b>26</b><span>控制台命令</span></div>
-  <div><b>100+</b><span>协议码</span></div>
-  <div><b>144</b><span>自动测试</span></div>
+  <div><b>无依赖</b><span>AOT打包无需依赖，不需要下载.NET等</span></div>
+  <div><b>简洁</b><span>简洁设计，功能就摆在你眼前，没有学习门槛</span></div>
+  <div><b>快速</b><span>快速启动，AOT打包无需进行解释操作，机器码直接执行</span></div>
+  <div><b>分布</b><span>分布式设计，可加可减，半去中心化，没有官方服务端也能跑</span></div>
 </div></section>
 
 <!-- 玩家 -->
@@ -70,7 +70,7 @@
   <header class="sec-title">
     <div class="k">For players</div>
     <h2>玩家能用的</h2>
-    <p>社区、经济、组织——日常经营需要的东西都在客户端里，不用记指令。</p>
+    <p>社区、经济、组织，管理，绑定，功能都在一个地方。</p>
   </header>
   <div class="cards-3">
     <article class="card">
@@ -80,7 +80,7 @@
     </article>
     <article class="card">
       <h3>经济</h3>
-      <p>商店、拍卖、银行与转账，玩家自己就能经营。</p>
+      <p>商店、拍卖、银行与转账，自主市场</p>
       <ul><li>开店与拍卖</li><li>存取 / 贷款 / 债券</li><li>交易记录可查</li></ul>
     </article>
     <article class="card">
@@ -110,7 +110,7 @@
     </article>
     <article>
       <h3>平台运营</h3>
-      <p>账号、社区、组织、官方商店与金融；封禁会同步通知玩家和群。</p>
+      <p>账号、社区、组织、官方商店与金融；封禁会同步通知玩家和群(需要连接BOT)。</p>
       <ul class="ticks">
         <li>账号 / 社区 / 组织管理</li>
         <li>官方商店与贷款</li>
@@ -141,7 +141,7 @@
   <header class="sec-title">
     <div class="k">Vs. mods &amp; plugins</div>
     <h2>和别的模组 / 插件不一样</h2>
-    <p>别人是往 MC 服务端里塞插件，我们是一个独立程序加一个客户端。</p>
+    <p>别人在塞模组插件，还崩溃，我们是独立程序</p>
   </header>
   <div class="compare">
     <div class="compare-col us">
@@ -149,35 +149,20 @@
       <ul>
         <li>独立程序，不绑 MC 版本，服务端关着也能用</li>
         <li>功能一体，不需要额外插件，也没有插件冲突</li>
-        <li>图形界面操作，消息支持排版、离线补齐</li>
+        <li>分离 MC 服务端也能跑</li>
         <li>AOT 单文件，拷走即搬家，冷启动几百毫秒</li>
       </ul>
     </div>
     <div class="compare-col them">
       <h4>常见插件 / 模组</h4>
       <ul>
-        <li>跟着服务端版本与重启走</li>
-        <li>功能靠插件拼，配置分散</li>
-        <li>靠聊天框敲指令</li>
-        <li>需要对应运行时或依赖</li>
+        <li>只能在游戏或者控制台操控</li>
+        <li>想要一整套要到处找插件/模组</li>
+        <li>配置项分散</li>
+        <li>版本有限制</li>
       </ul>
     </div>
   </div>
-</div></section>
-
-<!-- 架构 -->
-<section class="sec" id="arch"><div class="wrap">
-  <header class="sec-title">
-    <div class="k">Architecture</div>
-    <h2>四个端怎么连</h2>
-    <p>三条独立连接：客户端连子服，子服连官方端，子服再用专用通道指挥模组。</p>
-  </header>
-  <figure class="arch"><img src="assets/img/arch.svg" alt="四端架构：ZXMC 连 ZXMS，ZXMS 连 ZXMOS，ZXMS 经 21200 指挥 ZXMM" loading="lazy"></figure>
-  <ul class="notes">
-    <li><b>21000</b> 客户端 ↔ 子服务端，加密会话 + 挑战响应登录</li>
-    <li><b>25000</b> 子服务端 ↔ 官方服务端，账号、头像、消息分发</li>
-    <li><b>21200</b> 子服务端 ↔ 模组，只用来踢人与查询，默认只听本机</li>
-  </ul>
 </div></section>
 
 <!-- 功能清单 -->
@@ -185,7 +170,7 @@
   <header class="sec-title">
     <div class="k">Everything you get</div>
     <h2>功能清单</h2>
-    <p>打开客户端，左侧就是这些；每个都是一件能立刻做的事。</p>
+    <p>做打开客户端，做你想做的事情</p>
   </header>
   <div class="tags">
     <span>服务器广场</span><span>官方广场</span><span>好友 / 私聊</span><span>公告与消息</span>
@@ -207,7 +192,7 @@
   <div class="trio">
     <article><div class="idx">01</div><h3>下载</h3><div class="role">30 秒</div><p>拿免安装包解压即用，或装 MSI。</p></article>
     <article><div class="idx">02</div><h3>选服</h3><div class="role">1 分钟</div><p>连官方直接进；自己的服填地址端口。</p></article>
-    <article><div class="idx">03</div><h3>开始用</h3><div class="role">立刻</div><p>登录后左侧点开就能发公告、开商店、管玩家。</p></article>
+    <article><div class="idx">03</div><h3>开始用</h3><div class="role">立刻</div><p>登录后进入主界面，即刻使用</p></article>
   </div>
   <p class="cta-row"><a class="btn btn-primary" href="download.html">下载客户端</a><a class="btn" href="help.html">看文档</a></p>
 </div></section>
@@ -221,7 +206,7 @@
   </header>
   <div class="faq-list">
     <details><summary>我没有自己的服务器，能用吗？</summary><p>能。连官方服务端就能用社区、广场、消息；商店与自建社区内容需要自己的子服务端。</p></details>
-    <details><summary>要装数据库或 .NET 吗？</summary><p>不用。客户端是单文件程序，子服务端解压即用，数据就是同目录下的文件。</p></details>
+    <details><summary>要装数据库或 .NET 吗？</summary><p>不用。数据与程序同级；AOT 打包无需.NET</p></details>
     <details><summary>换电脑或换服怎么办？</summary><p>整个文件夹拷走即可；换服在连接窗口改地址端口，不用重装。</p></details>
   </div>
 </div></section>
@@ -229,8 +214,7 @@
 <!-- CTA -->
 <section class="sec cta"><div class="wrap cta-in">
   <div>
-    <h2>现在就开始</h2>
-    <p>下载客户端，连你的服务器，几分钟后就能发第一条公告。</p>
+    <h2>现在开始</h2>
   </div>
   <div class="cta-actions"><a class="btn btn-primary" href="download.html">下载客户端</a><a class="btn" href="help.html">看文档</a></div>
 </div></section>
@@ -248,7 +232,6 @@
       </div>
       <div>
         <h5>产品</h5>
-        <a href="#arch">架构</a>
         <a href="#features">功能</a>
         <a href="download.html">下载</a>
         <a href="changelog.html">更新日志</a>

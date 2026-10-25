@@ -498,11 +498,6 @@ body.dl-lock{overflow:hidden}
 .compare-col.them li{color:var(--fg-dim)}
 .compare-col.them li::before{content:"";position:absolute;left:0;top:.62em;width:7px;height:1px;background:var(--line-2)}
 
-.arch{margin:0 0 18px;border:1px solid var(--line);background:var(--ink-2);padding:22px;overflow:auto}
-.arch img{display:block;width:100%;min-width:640px;height:auto}
-.notes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin:0;padding:0;list-style:none}
-.notes li{border-top:1px solid var(--line);padding-top:12px;font-size:13px;color:var(--fg-dim);line-height:1.8}
-.notes b{display:block;font-family:Consolas,monospace;color:var(--green);font-size:12.5px;margin-bottom:4px}
 
 .tags{display:flex;flex-wrap:wrap;gap:8px}
 .tags span{border:1px solid var(--line);background:var(--ink-2);padding:8px 14px;font-size:13px;color:#cfd8e3}
@@ -524,7 +519,6 @@ body.dl-lock{overflow:hidden}
   .split{grid-template-columns:1fr;gap:20px}
   .split.reverse .split-copy,.split.reverse .shot{order:0}
   .steps{grid-template-columns:1fr 1fr}
-  .notes{grid-template-columns:1fr}
   .strip-grid{grid-template-columns:1fr 1fr}
 }
 @media (max-width:720px){
@@ -584,17 +578,17 @@ body.dl-lock{overflow:hidden}
    v4 形态参考 corona.studio:圆角 + 柔和,配色用锌源绿
    ===================================================================== */
 .btn,.nav-cta{border-radius:6px}
-.card,.admin-grid article,.card-block,.compare,.compare-col,.steps,.steps li,.tags span,.faq-list details,.arch,.hg-cell,.trio,.trio article,.doc-nav,.dl-box{border-radius:10px}
+.card,.admin-grid article,.card-block,.compare,.compare-col,.steps,.steps li,.tags span,.faq-list details,.hg-cell,.trio,.trio article,.doc-nav,.dl-box{border-radius:10px}
 .hero-shot,.shot{border-radius:10px;overflow:hidden}
 .hero-v2 .hero-tag{border-radius:4px}
 .hero-v2 .hg-cell{border-radius:8px;background:rgba(16,23,21,.78)}
 .strip-grid>div,.strip-grid>div:first-child,.strip-grid>div:last-child{border-radius:0}
-.sec-title .k,.hero-meta li,.notes b,.steps b,.compare-col h4{letter-spacing:.16em}
+.sec-title .k,.hero-meta li,.steps b,.compare-col h4{letter-spacing:.16em}
 
 /* =====================================================================
    v5 交互高对比(参考 corona.studio:悬停反色/描边变强调色/文字提亮)
    ===================================================================== */
-a,.btn,.nav-cta,.card,.hg-cell,.tags span,.steps li,.compare-col,.arch,.faq-list details{
+a,.btn,.nav-cta,.card,.hg-cell,.tags span,.steps li,.compare-col,.faq-list details{
   transition:color .16s,background-color .16s,border-color .16s
 }
 
@@ -621,7 +615,6 @@ a,.btn,.nav-cta,.card,.hg-cell,.tags span,.steps li,.compare-col,.arch,.faq-list
 .compare-col.them:hover{background:#101715}
 
 /* 架构图与 FAQ:边框亮起 */
-.arch:hover{border-color:var(--green)}
 .faq-list details:hover{border-color:var(--green)}
 .faq-list summary:hover{color:var(--green-2)}
 
@@ -629,7 +622,7 @@ a,.btn,.nav-cta,.card,.hg-cell,.tags span,.steps li,.compare-col,.arch,.faq-list
 :focus-visible{outline:2px solid var(--green-2);outline-offset:3px}
 
 /* 正文提亮一档,暗底上更好读 */
-.sec-title p,.card p,.split-copy p,.admin-grid p,.steps p,.compare-col li,.notes li,.faq-list details p{color:#c3d2c7}
+.sec-title p,.card p,.split-copy p,.admin-grid p,.steps p,.compare-col li,.faq-list details p{color:#c3d2c7}
 
 /* =====================================================================
    v6 悬停整块反色(corona 项目卡效果):背景变强调色、文字全部转深
@@ -670,3 +663,147 @@ a,.btn,.nav-cta,.card,.hg-cell,.tags span,.steps li,.compare-col,.arch,.faq-list
 .hero-v2 .hero-canvas{position:absolute;inset:0;width:100%;height:100%;
   pointer-events:none;opacity:.85}
 .hero-v2 .hero-bg{opacity:.55}
+
+/* =====================================================================
+   v8 首页版式(参考 corona.studio 的编辑式排版):编号栏 + 大标题 + 大留白
+   只作用于 body.home,文档页不受影响
+   ===================================================================== */
+
+/* 首屏:标题再放大,底部加一条信息栏 */
+/* 首屏整体靠左:内容贴版心最左侧,不做居中缩进 */
+.home{counter-reset:sec}
+/* 整页统一靠左:取消 1280 居中版心,所有段落同一左边界 */
+.home .wrap{max-width:none}
+.home .hero-v2 .hero-in{max-width:none;padding:118px 28px 92px}
+/* 标题按最长的词条(ZincPlayer Manager)留余量,11.6vw 会溢出 */
+.home .hero-title{font-size:clamp(44px,7.4vw,116px);line-height:.9;letter-spacing:-.05em;margin:28px 0 24px}
+.home .hero-sub{font-size:18px;line-height:2;max-width:62ch}
+.home .hero-actions .btn{padding:17px 30px;font-size:15px}
+.home .hero-meta{margin-top:44px;padding-top:24px;border-top:1px solid var(--line);max-width:none;font-size:11.5px;gap:28px}
+
+/* 区段标题:左栏编号 + 右栏大标题(两栏,不再居中重复) */
+.home .sec{scroll-margin-top:76px}
+.home .sec-title{
+  counter-increment:sec;
+  display:grid;grid-template-columns:150px minmax(0,1fr);column-gap:44px;
+  align-items:start;max-width:none;
+  padding:104px 0 34px;margin-bottom:46px;
+}
+.home .sec-title .k{
+  grid-column:1;grid-row:1;
+  display:flex;flex-direction:column;gap:10px;
+  font-size:10.5px;letter-spacing:.18em;color:var(--fg-dim);margin:10px 0 0;
+}
+.home .sec-title .k::before{
+  content:counter(sec,decimal-leading-zero);
+  font-size:34px;font-weight:900;line-height:.9;letter-spacing:-.05em;
+  color:var(--green);
+}
+.home .sec-title h2{grid-column:2;grid-row:1;max-width:24ch;
+  font-size:clamp(34px,4.8vw,70px);line-height:1.02;letter-spacing:-.045em}
+.home .sec-title p{grid-column:2;grid-row:2;max-width:58ch;margin:18px 0 0;font-size:16px;line-height:1.95}
+
+/* 数字带:更大更硬 */
+.home .strip-grid>div{padding:34px 30px 38px}
+.home .strip-grid b{font-size:clamp(40px,4.8vw,70px);letter-spacing:-.05em}
+.home .strip-grid span{margin-top:14px;font-family:Consolas,"Cascadia Mono",ui-monospace,monospace;
+  font-size:11.5px;letter-spacing:.18em;text-transform:uppercase}
+
+/* 玩家三卡:去掉卡片外边距,靠 1px 网格粘成一整块 */
+.home .cards-3{counter-reset:card;gap:1px;background:var(--line);border:1px solid var(--line)}
+.home .card{
+  counter-increment:card;border:0;background:var(--ink-2);
+  padding:34px 32px 38px;position:relative;
+}
+.home .card::before{
+  content:counter(card,decimal-leading-zero);display:block;margin-bottom:24px;
+  font-family:Consolas,"Cascadia Mono",ui-monospace,monospace;
+  font-size:11.5px;letter-spacing:.2em;color:var(--green);
+}
+.home .card h3{font-size:clamp(22px,2.2vw,30px);letter-spacing:-.035em;margin:0 0 12px}
+.home .card p{font-size:14.5px;line-height:1.9}
+.home .card li{font-size:13.5px}
+
+/* 管理员两栏:同样贴成整块 + 编号,悬停整块反色 */
+.home .admin-grid{counter-reset:admin;gap:1px;background:var(--line);border:1px solid var(--line)}
+.home .admin-grid article{
+  counter-increment:admin;padding:34px 32px 38px;position:relative;
+  transition:background-color .16s,border-color .16s,color .16s;
+}
+.home .admin-grid article::before{
+  content:counter(admin,decimal-leading-zero);display:block;margin-bottom:20px;
+  font-family:Consolas,"Cascadia Mono",ui-monospace,monospace;
+  font-size:11.5px;letter-spacing:.2em;color:var(--green);
+}
+.home .admin-grid h3{font-size:clamp(22px,2.2vw,30px);letter-spacing:-.035em;margin:0 0 12px}
+.home .admin-grid p{font-size:14.5px;line-height:1.9}
+.home .admin-grid article:hover{background:var(--green)}
+.home .admin-grid article:hover h3,
+.home .admin-grid article:hover p,
+.home .admin-grid article:hover li,
+.home .admin-grid article:hover::before{color:#061413}
+.home .admin-grid article:hover li::before{background:#061413}
+
+/* 进服五步 */
+.home .steps{border:0;gap:1px;background:var(--line)}
+.home .steps li{background:var(--ink-2);padding:30px 24px 34px}
+.home .steps b{font-size:11.5px;font-weight:400;letter-spacing:.2em;line-height:1;
+  color:var(--green);opacity:1;margin-bottom:16px}
+.home .steps h4{font-size:15.5px;margin:0 0 8px}
+.home .steps p{font-size:13.5px;line-height:1.85}
+.home .steps li:hover b{color:#061413}
+
+/* 对比:标题用正文字体做大,而不是等宽小字 */
+.home .compare-col{padding:34px 32px 40px}
+.home .compare-col h4{
+  font-family:inherit;font-size:clamp(20px,2.2vw,28px);font-weight:900;
+  letter-spacing:-.035em;text-transform:none;margin:0 0 22px;
+}
+.home .compare-col li{font-size:14.5px;line-height:1.85}
+
+/* 架构端口说明:端口号放大 */
+
+/* 功能清单:标签云换成一整块标签栅格 */
+.home .tags{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));
+  gap:1px;background:var(--line);border:1px solid var(--line)}
+.home .tags span{border:0;background:var(--ink-2);padding:20px 16px;font-size:13.5px;
+  display:flex;align-items:center}
+
+/* 三步:块面加高,编号与其它段统一成小号等宽绿字 */
+.home .trio article{padding:38px 32px 42px}
+.home .trio .idx{font-size:11.5px;font-weight:400;letter-spacing:.2em;line-height:1;
+  color:var(--green);opacity:1;margin-bottom:16px}
+.home .trio .role{font-size:12.5px;letter-spacing:.06em;margin-bottom:16px}
+
+/* FAQ:行更宽 */
+.home .faq-list details{padding:20px 24px;margin-bottom:1px}
+.home .faq-list summary{font-size:15.5px}
+
+/* 悬停反色:这四段的背景在上面重新声明过,优先级相同会把:hover 盖掉,这里补回来 */
+.home .card:hover,.home .steps li:hover,.home .tags span:hover{background:var(--green);border-color:var(--green)}
+.home .card:hover::before{color:#061413}
+
+/* 收尾:整块反色,用最大字号压住版面 */
+.home .cta{background:var(--green);border-top:1px solid var(--green-2);border-bottom:0}
+.home .cta-in{padding:96px 28px 92px;align-items:flex-end;gap:36px}
+.home .cta-in h2{font-size:clamp(46px,7.4vw,104px);line-height:.94;letter-spacing:-.055em;color:#061413}
+.home .cta-in p{color:#061413;opacity:.85;font-size:15.5px;line-height:1.85;max-width:54ch;margin-top:16px}
+.home .cta .btn{border-color:#061413;color:#061413;padding:17px 30px}
+.home .cta .btn:hover{background:#061413;border-color:#061413;color:#eaf7f5}
+.home .cta .btn-primary{background:#061413;border-color:#061413;color:#eaf7f5}
+.home .cta .btn-primary:hover{background:#0d2321;border-color:#0d2321;color:#eaf7f5}
+
+@media (max-width:1080px){
+  .home .sec-title{grid-template-columns:96px minmax(0,1fr);column-gap:28px;padding-top:80px}  .home .sec-title .k::before{font-size:26px}
+  .home .tags{grid-template-columns:repeat(4,minmax(0,1fr))}
+  .home .hero-v2 .hero-in{padding:104px 28px 88px}
+}
+@media (max-width:720px){
+  .home .sec-title{grid-template-columns:1fr;row-gap:6px;padding-top:64px;margin-bottom:32px}
+  .home .sec-title .k{grid-column:1;grid-row:1;flex-direction:row;align-items:baseline;gap:12px;margin:0}
+  .home .sec-title .k::before{font-size:20px}
+  .home .sec-title h2{grid-column:1;grid-row:2}
+  .home .sec-title p{grid-column:1;grid-row:3;margin-top:14px;font-size:15px}
+  .home .tags{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .home .cta-in{padding:64px 28px 60px}
+}

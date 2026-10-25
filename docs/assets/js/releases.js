@@ -196,7 +196,7 @@
   function renderHome(rows) {
     const tag = document.getElementById('hero-version');
     if (tag && rows[0]) {
-      tag.textContent = rows[0].tag + ' · 能直接用的版本';
+      tag.textContent = ' 最新版本 · ' + rows[0].tag ;
     }
   }
 
