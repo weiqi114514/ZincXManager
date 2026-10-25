@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 310" width="760" height="310" role="img" aria-label="ZincXManager 四端架构:ZXMC 客户端 → ZXMS 子服务端 → ZXMOS 官方服务端,ZXMM 模组连 ZXMS">
+  <defs>
+    <marker id="ar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0L10 5L0 10z" fill="#22c55e"/>
+    </marker>
+    <linearGradient id="card" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#161b23"/>
+      <stop offset="1" stop-color="#0d1015"/>
+    </linearGradient>
+  </defs>
+
+  <style>
+    .box{fill:url(#card);stroke:#2a323d;stroke-width:1.2}
+    .t{fill:#ffffff;font:700 17px/1 "Segoe UI","Microsoft YaHei",sans-serif}
+    .s{fill:#9aa6b5;font:400 12.5px/1 "Segoe UI","Microsoft YaHei",sans-serif}
+    .p{fill:#4ade80;font:600 11.5px/1 ui-monospace,Consolas,monospace}
+    .ln{stroke:#22c55e;stroke-width:1.6;fill:none;marker-end:url(#ar)}
+  </style>
+
+  <!-- ZXMC -->
+  <rect class="box" x="16" y="52" width="164" height="96" rx="12"/>
+  <text class="t" x="98" y="92" text-anchor="middle">ZXMC</text>
+  <text class="s" x="98" y="113" text-anchor="middle">客户端 · 界面与交互</text>
+  <text class="s" x="98" y="131" text-anchor="middle">Avalonia · 免安装</text>
+
+  <!-- ZXMS -->
+  <rect class="box" x="290" y="52" width="180" height="96" rx="12"/>
+  <text class="t" x="380" y="92" text-anchor="middle">ZXMS</text>
+  <text class="s" x="380" y="113" text-anchor="middle">子服务端 · 全部业务决策</text>
+  <text class="s" x="380" y="131" text-anchor="middle">账号 / 绑定 / 登录数组</text>
+
+  <!-- ZXMOS -->
+  <rect class="box" x="580" y="52" width="164" height="96" rx="12"/>
+  <text class="t" x="662" y="92" text-anchor="middle">ZXMOS</text>
+  <text class="s" x="662" y="113" text-anchor="middle">官方服务端 · 账号与分发</text>
+  <text class="s" x="662" y="131" text-anchor="middle">许可证 / 头像 / 消息</text>
+
+  <!-- ZXMM -->
+  <rect class="box" x="290" y="216" width="180" height="80" rx="12"/>
+  <text class="t" x="380" y="248" text-anchor="middle">ZXMM</text>
+  <text class="s" x="380" y="269" text-anchor="middle">模组 · 只上报 / 只执行</text>
+
+  <!-- MC -->
+  <rect class="box" x="580" y="216" width="164" height="80" rx="12"/>
+  <text class="t" x="662" y="248" text-anchor="middle">MC 服务端</text>
+  <text class="s" x="662" y="269" text-anchor="middle">NeoForge 1.21.1</text>
+
+  <!-- 连线 -->
+  <path class="ln" d="M180 100H286"/>
+  <text class="p" x="233" y="90" text-anchor="middle">21000</text>
+
+  <path class="ln" d="M470 100H576"/>
+  <text class="p" x="523" y="90" text-anchor="middle">25000</text>
+
+  <path class="ln" d="M380 148V212"/>
+  <text class="p" x="392" y="184">21200</text>
+
+  <path class="ln" d="M470 256H576"/>
+  <text class="p" x="523" y="246" text-anchor="middle">事件 / 执行</text>
+
+  <!-- 说明 -->
+  <text class="s" x="16" y="30">客户端只调协议，业务判断全在 ZXMS；模组不做任何判断，踢人/查询都由 ZXMS 下发</text>
+</svg>
