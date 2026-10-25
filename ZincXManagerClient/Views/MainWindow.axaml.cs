@@ -12,6 +12,7 @@ using Avalonia.Input;  // 鼠标键盘输入
 using Avalonia.Interactivity;  // 路由事件
 using Avalonia.Media;  // 画刷 / 颜色 / 几何
 using ZincXManagerClient.Models;  // 客户端自身
+using ZincXManagerClient.Services;  // 导入 UpdateService(启动查更新)
 using ZincXManagerClient.ViewModels;  // 客户端自身
 using ZincXManagerShared.Logging;  // 共享库
 using ZincXManagerShared.Network;  // 共享库
@@ -25,6 +26,9 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         Opened += (_, _) => ScrollDrag.AttachAll(this);
+
+        // 启动后按设置查一次更新(不挡启动,失败只弹提示条)
+        Opened += (_, _) => _ = CheckUpdateOnStartupAsync();
 
         // 小功能组:点条目 → 主窗口决定打开什么
         WidgetsPage.WidgetActivated += OnWidgetActivated;
@@ -687,6 +691,36 @@ public partial class MainWindow : Window
             // 窗口关掉 / 控件已销毁:提示条跟着窗口一起没了,不当错误
             Logger.Log(LogLevel.Info, "[ZXMC] 提示条收起时打扰了一下:" + ex.Message);
         }
+    }
+
+    /// <summary>启动检查更新:设置里关了就不查,查到新版本弹更新窗</summary>
+    private async Task CheckUpdateOnStartupAsync()
+    {
+        if (ClientConfig.Get("update.mode", "prompt") == "off")
+        {
+            return;
+        }
+
+        // 等主界面稳下来再发请求,别跟首屏抢时间
+        await Task.Delay(2500);
+        if (!IsVisible)
+        {
+            return;
+        }
+
+        var info = await UpdateService.CheckAsync(useCache: true);
+        if (info is null)
+        {
+            Vm?.ShowToast("检查更新失败,可在设置→下载里手动重试", ToastKind.Warning);
+            return;
+        }
+
+        if (!info.HasUpdate)
+        {
+            return;
+        }
+
+        await UpdateWindow.ShowAsync(this, info);
     }
 
     /// <summary>标题栏拖动窗口;双击在最大化 / 还原之间切换。</summary>

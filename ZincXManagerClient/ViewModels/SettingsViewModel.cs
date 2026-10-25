@@ -325,7 +325,45 @@ public partial class SettingsViewModel : ViewModelBase
         ClientConfig.Set("msgdays", days.ToString());
         MessageDaysChanged?.Invoke(days);
     }
-    public bool IsOtherPage => !IsModePage && !IsPersonalizePage && !IsSecurityPage && !IsAdvancedPage && !IsAboutPage;
+    /// <summary>下载页:当前版本 + 检查更新</summary>
+    public bool IsDownloadPage => CurrentSection == "下载";
+
+    public bool IsOtherPage => !IsModePage && !IsPersonalizePage && !IsSecurityPage && !IsAdvancedPage && !IsDownloadPage && !IsAboutPage;
+
+    // ---------- 更新 ----------
+
+    /// <summary>更新策略:有更新就提示 / 不获取更新</summary>
+    [ObservableProperty] public partial bool UpdateOnStartup { get; set; } = true;
+
+    /// <summary>装完自动重新打开(默认开)</summary>
+    [ObservableProperty] public partial bool UpdateRelaunch { get; set; } = true;
+
+    /// <summary>正在检查更新(按钮置灰)</summary>
+    [ObservableProperty] public partial bool IsCheckingUpdate { get; set; }
+
+    /// <summary>下载镜像前缀(空 = 直连;填了就把原地址拼在后面)</summary>
+    [ObservableProperty] public partial string UpdateMirror { get; set; } = "";
+
+    /// <summary>可选镜像(给下拉提示用)</summary>
+    public string[] MirrorOptions { get; } =
+    [
+        "",
+        "https://gh-proxy.com/",
+        "https://ghfast.top/",
+        "https://ghproxy.net/",
+    ];
+
+    partial void OnUpdateMirrorChanged(string value) =>
+        ClientConfig.Set("update.mirror", (value ?? "").Trim());
+
+    /// <summary>当前客户端版本(显示用)</summary>
+    public string CurrentVersionText => Services.UpdateService.CurrentVersion;
+
+    partial void OnUpdateOnStartupChanged(bool value) =>
+        ClientConfig.Set("update.mode", value ? "prompt" : "off");
+
+    partial void OnUpdateRelaunchChanged(bool value) =>
+        ClientConfig.Set("update.relaunch", value ? "1" : "0");
 
     // ---------- 账户与安全 ----------
     /// <summary>当前账号的头像。</summary>
@@ -478,6 +516,15 @@ public partial class SettingsViewModel : ViewModelBase
     {
         // 读上次的选择(没有就写缺省值)
         MessageDays = ClientConfig.Get("msgdays", "60");
+        UpdateOnStartup = ClientConfig.Get("update.mode", "prompt") != "off";
+        UpdateRelaunch = ClientConfig.Get("update.relaunch", "1") == "1";
+        UpdateMirror = ClientConfig.GetOrEmpty("update.mirror").Trim();
+        if (UpdateMirror.Length == 0)
+        {
+            // 默认给一个能用的镜像,直连 GitHub 在国内经常下不动
+            UpdateMirror = "https://gh-proxy.com/";
+            ClientConfig.Set("update.mirror", UpdateMirror);
+        }
 
         var cats = ClientConfig.GetOrEmpty("msgcats");
         MessageCategoryLog = cats.Contains("log");

@@ -5,7 +5,9 @@ using Avalonia.Interactivity;  // 路由事件
 using Avalonia.Platform.Storage;  // 界面框架
 using ZincXManagerShared.Logging;  // 共享库
 using ZincXManagerClient.Models;  // 客户端自身
+using ZincXManagerClient.Services;  // 导入 UpdateService(检查更新)
 using ZincXManagerClient.ViewModels;  // 客户端自身
+using Avalonia.VisualTree;  // 导入 TopLevel(找拥有者窗口)
 
 namespace ZincXManagerClient.Views;
 
@@ -15,6 +17,43 @@ public partial class SettingsView : UserControl
     public SettingsView()
     {
         InitializeComponent();
+    }
+
+    /// <summary>手动检查更新:有就弹更新窗口,没有/失败各弹一个提示</summary>
+    private async void OnCheckUpdateClick(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not SettingsViewModel vm)
+        {
+            return;
+        }
+
+        if (TopLevel.GetTopLevel(this) is not Window owner)
+        {
+            return;
+        }
+
+        vm.IsCheckingUpdate = true;
+        try
+        {
+            var info = await UpdateService.CheckAsync(useCache: false);
+            if (info is null)
+            {
+                await MessageDialog.WarnAsync(owner, "检查更新失败", "无法获取更新信息,请检查网络后重试");
+                return;
+            }
+
+            if (!info.HasUpdate)
+            {
+                await MessageDialog.InfoAsync(owner, "检查更新", "已经是最新版本 " + info.CurrentVersion);
+                return;
+            }
+
+            await UpdateWindow.ShowAsync(owner, info);
+        }
+        finally
+        {
+            vm.IsCheckingUpdate = false;
+        }
     }
 
     /// <summary>

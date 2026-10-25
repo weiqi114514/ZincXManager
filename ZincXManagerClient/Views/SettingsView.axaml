@@ -368,6 +368,22 @@
             <TextBlock Classes="tips" TextWrapping="Wrap" MaxWidth="520" HorizontalAlignment="Left"
                        Text="客户端本地产的消息按这个天数保留,默认 60 天。官方服务端(ZXMOS)下发的消息固定最多保留 20 天;子服务端(ZXMS)下发的消息按子服务端自己的设置保留(默认 7 天)。过期消息在开客户端时自动清理,也可以在消息卡片上手动删除。"/>
           </StackPanel>
+
+          <Rectangle Height="1" Fill="#66E3EEF4"/>
+
+          <StackPanel Spacing="8">
+            <TextBlock Classes="panelTitle" Text="更新"/>
+            <CheckBox Content="启动时检查更新(有更新就提示)" IsChecked="{Binding UpdateOnStartup}"/>
+            <CheckBox Content="更新完成后自动打开程序" IsChecked="{Binding UpdateRelaunch}"/>
+            <TextBlock Classes="tips" TextWrapping="Wrap" MaxWidth="520" HorizontalAlignment="Left"
+                       Text="不勾选「启动时检查」= 完全不获取更新信息,仍然可以在「下载」页手动检查。自动打开只在便携版(zip)更新时生效,MSI 安装版装完需要自己打开。"/>
+
+            <TextBlock Classes="label" Text="下载镜像(更新安装包走这里)" Margin="0,4,0,0"/>
+            <ComboBox Width="320" HorizontalAlignment="Left"
+                      ItemsSource="{Binding MirrorOptions}" SelectedItem="{Binding UpdateMirror}"/>
+            <TextBlock Classes="tips" TextWrapping="Wrap" MaxWidth="520" HorizontalAlignment="Left"
+                       Text="默认 https://gh-proxy.com/ 。直连 GitHub 在国内经常下不动,镜像就是把这串地址拼在原下载地址前面。镜像失效时改成直连或换一个。"/>
+          </StackPanel>
         </StackPanel>
       </Border>
 
@@ -410,6 +426,26 @@
             <TextBlock Classes="tips" Text="© 2026 ZincXManager · 保留所有权利" Margin="0,10,0,0"/>
           </StackPanel>
         </ScrollViewer>
+      </Border>
+
+      <!-- ========== 下载:版本 + 检查更新 ========== -->
+      <Border Grid.Row="1" Margin="0,12,0,0" Background="#CCFFFFFF"
+              BorderBrush="{DynamicResource ThemeMuted}" BorderThickness="1" IsVisible="{Binding IsDownloadPage}">
+        <StackPanel Spacing="14" Margin="16">
+          <TextBlock Classes="panelTitle" Text="下载"/>
+
+          <StackPanel Orientation="Horizontal" Spacing="14">
+            <TextBlock Classes="label" Text="目前版本" VerticalAlignment="Center"/>
+            <TextBlock Classes="body" Text="{Binding CurrentVersionText}" VerticalAlignment="Center" MinWidth="90"/>
+            <Button Classes="small" Content="检查更新" Click="OnCheckUpdateClick"
+                    IsEnabled="{Binding !IsCheckingUpdate}"/>
+            <TextBlock Classes="tips" Text="正在检查更新…" VerticalAlignment="Center"
+                       IsVisible="{Binding IsCheckingUpdate}"/>
+          </StackPanel>
+
+          <TextBlock Classes="tips" TextWrapping="Wrap" MaxWidth="560" HorizontalAlignment="Left"
+                     Text="检查更新会读取 GitHub 上的最新发布版本。启动时是否自动检查,可在「高级」里设置。"/>
+        </StackPanel>
       </Border>
 
       <!-- ========== 其它还没做的页面 ========== -->
