@@ -340,16 +340,6 @@ public partial class MainWindow : Window
     // 当前账号绑定的 MC 玩家名(空 = 没绑)
     private string _boundPlayer = "";
 
-    /// <summary>把 6 位绑定码填进 6 个输入框。</summary>
-    private void FillCodeBoxes(string code)
-    {
-        var boxes = new[] { Code0, Code1, Code2, Code3, Code4, Code5 };
-        for (var i = 0; i < boxes.Length && i < code.Length; i++)
-        {
-            boxes[i].Text = code[i].ToString();
-        }
-    }
-
     /// <summary>问服务端:我这个账号绑了谁(629,回 630)。</summary>
     private async void QueryBindAsync()
     {
@@ -366,6 +356,35 @@ public partial class MainWindow : Window
         catch (Exception ex)
         {
             Logger.Log(LogLevel.Warning, "[绑定] 查询失败: " + ex.Message);
+        }
+    }
+
+    /// <summary>绑定二次确认:用户点了「确定绑定」才把令牌发回服务端(631)。</summary>
+    private async Task ConfirmBindAsync(string token, string player)
+    {
+        var connect = ClientSession.Connect;
+        if (connect is null || token.Length == 0)
+        {
+            return;
+        }
+
+        var agree = await MessageDialog.ConfirmAsync(this, "绑定确认",
+            $"确定把当前账号绑定到 MC 玩家「{player}」吗？\n绑定后这名玩家进服时，需要你在登录请求上点同意。",
+            yes: "确定绑定", no: "取消", hint: "绑定码是一次性的，确认后才会真正写入服务端");
+
+        if (!agree)
+        {
+            Logger.Log(LogLevel.Info, "[绑定] 用户取消了绑定确认");
+            return;
+        }
+
+        try
+        {
+            await connect.SendAsync(Protocol.BindConfirm, token);
+        }
+        catch (Exception ex)
+        {
+            Logger.Log(LogLevel.Warning, "[绑定] 确认发送失败: " + ex.Message);
         }
     }
 
@@ -556,27 +575,13 @@ public partial class MainWindow : Window
             {
                 var line = text.Trim();
 
-                // 服务端回 nobind|玩家名|绑定码 —— 这个账号还没绑,把最近进服那位的码给玩家看
+                // 服务端回 nobind —— 这个账号还没绑。服务端不再下发任何玩家名/绑定码:
+                // 未绑定时代码属于玩家本人,自动填进来等于把别人的绑定码送到这个账号手上
                 if (line.StartsWith("nobind", StringComparison.OrdinalIgnoreCase))
                 {
-                    var parts = line.Split('|');   //拆分结果
-                    var who = parts.Length > 1 ? parts[1].Trim() : "";
-                    var code = parts.Length > 2 ? parts[2].Trim() : "";
                     _boundPlayer = "";
-
-                    if (code.Length == 6)
-                    {
-                        UnbindInfo.Text = (who.Length > 0 ? "玩家 " + who + " 还没绑定账号。绑定码:" + code
-                                : "还没有绑定账号。绑定码:" + code)
-                            + "\n(已自动填进下面的输入框,点「绑定」就行)";
-                        FillCodeBoxes(code);
-                    }
-                    else
-                    {
-                        UnbindInfo.Text = "还没有绑定任何 MC 玩家。先让玩家进一次服,ZXMS 会给出绑定码。";
-                    }
-
-                    Logger.Log(LogLevel.Info, $"[绑定] 未绑定,最近玩家 {who} 的码 {(code.Length > 0 ? code : "无")}");
+                    UnbindInfo.Text = "还没有绑定任何 MC 玩家。先让玩家进一次服,踢人提示里会给 6 位绑定码,填到下面的输入框即可。";
+                    Logger.Log(LogLevel.Info, "[绑定] 当前账号未绑定");
                     break;
                 }
 
@@ -593,6 +598,18 @@ public partial class MainWindow : Window
             // ---- 绑定/解绑回执(627) ----
             case Protocol.BindAck:
             {
+                // 服务端只校验了绑定码:真正落盘要用户在这里亲眼点一次确定(631)
+                if (text.StartsWith("pending|", StringComparison.OrdinalIgnoreCase))
+                {
+                    var pendingParts = text.Split('|');   //拆分结果
+                    var pendingToken = pendingParts.Length > 1 ? pendingParts[1].Trim() : "";
+                    var pendingPlayer = pendingParts.Length > 2 ? pendingParts[2].Trim() : "";
+                    Logger.Log(LogLevel.Info, $"[绑定] 绑定码已校验,等待用户确认玩家 {pendingPlayer}");
+                    BindOverlay.IsVisible = false;
+                    _ = ConfirmBindAsync(pendingToken, pendingPlayer);
+                    break;
+                }
+
                 var bindOk = text.StartsWith("ok|", StringComparison.OrdinalIgnoreCase);
                 var bindDetail = text.Length > 3 ? text[3..] : text;
                 Logger.Log(LogLevel.Info, $"[绑定] 服务端回执:{(bindOk ? "成功" : "失败")} {bindDetail}");

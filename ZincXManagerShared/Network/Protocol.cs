@@ -139,7 +139,10 @@ public static class Protocol
     /// <summary>626 BindApply:ZXMC → ZXMS。客户端用绑定码绑定。负载 <c>绑定码</c>。</summary>
     public const ushort BindApply = 626;
 
-    /// <summary>627 BindAck:ZXMS → ZXMC。绑定回执 <c>ok|玩家名</c> 或 <c>err|原因</c>。</summary>
+    /// <summary>
+    /// 627 BindAck:ZXMS → ZXMC。回执三种:校验码通过但<b>还没绑</b>时回 <c>pending|确认令牌|玩家名</c>,
+    /// 用户二次确认后回 <c>ok|玩家名</c>,其它失败 <c>err|原因</c>。
+    /// </summary>
     public const ushort BindAck = 627;
 
     /// <summary>628 Unbind:ZXMC → ZXMS。解绑当前账号。负载 <c>账号ID</c> 或空(空 = 按连接账号)。</summary>
@@ -153,6 +156,12 @@ public static class Protocol
 
     /// <summary>630 BindList:ZXMS → ZXMM。绑定关系列表,一行一条 <c>玩家名=ZXM账号名</c>,没有就是空负载。</summary>
     public const ushort BindList = 630;
+
+    /// <summary>
+    /// 631 BindConfirm:ZXMC → ZXMS。绑定二次确认(626 回了 pending 之后,用户点了确定才发)。
+    /// 负载 = 确认令牌;令牌属于发起账号、2 分钟内有效、一次性。服务端收到才真正写绑定表。
+    /// </summary>
+    public const ushort BindConfirm = 631;
 
 
     /// <summary>

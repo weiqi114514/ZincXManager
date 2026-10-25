@@ -75,11 +75,14 @@ internal static class Program
     // 登录确认:正在处理数组(请求ID → 这一条)
     private static readonly System.Collections.Concurrent.ConcurrentDictionary<int, PendingLogin> PendingLogins = new();
 
+    // 绑定二次确认:待确认的绑定(确认令牌 → 这一条),用户点了确定(631)才写绑定表
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, PendingBind> PendingBinds = new();
+
+    /// <summary>绑定确认令牌有效期(分钟):超过就作废,客户端要重新输入绑定码。</summary>
+    private const int BindConfirmMinutes = 2;
+
     // 绑定码 → (玩家名, 生成时间)
     private static readonly Dictionary<string, (string Player, DateTime At)> BindCodes = new();
-
-    /// <summary>最近一次进服时拿到的绑定码(玩家名 → 码),给 ZXMC 显示用。</summary>
-    private static readonly Dictionary<string, (string Code, DateTime At)> LastBindByPlayer = new();
 
     /// <summary>登录数组(玩家名 → 到期时间):确认通过的玩家默认 5 分钟内直接放行。</summary>
     private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, DateTime> LoginArray = new();
@@ -309,6 +312,9 @@ internal static class Program
     /// <summary>一条等待客户端确认的登录请求。</summary>
     private sealed record PendingLogin(string Player, string Ip, int AccountId, Guid OriginConnId, DateTime At);
 
+    /// <summary>一条等待账号主人二次确认的绑定(绑定码已校验通过,还没写绑定表)。</summary>
+    private sealed record PendingBind(int AccountId, string Player, string Code, DateTime At);
+
     /// <summary>给指定账号的 ZXMC 连接发一条包(不在线返回 false)。</summary>
     private static async Task<bool> SendToAccountAsync(int accountId, ushort type, string payload)
     {
@@ -443,7 +449,6 @@ internal static class Program
             lock (BindCodes)
             {
                 BindCodes[code] = (player, DateTime.Now);
-                LastBindByPlayer[player] = (code, DateTime.Now);
             }
 
             LoginStore.Log($"[未绑定] 玩家 {player}({ip}) 拿到绑定码 {code}");
@@ -867,7 +872,7 @@ internal static class Program
                 break;
             }
 
-            // ---- 绑定(626):客户端用绑定码绑定 ----
+            // ---- 绑定(626):客户端提交绑定码 —— 只校验并生成确认令牌,真正写绑定要等 631 ----
             case Protocol.BindApply:
             {
                 var code = Encoding.UTF8.GetString(packet.Data).Trim().ToUpperInvariant();   //包内容
@@ -885,7 +890,6 @@ internal static class Program
                     if (BindCodes.TryGetValue(code, out var entry) && (DateTime.Now - entry.At).TotalMinutes <= 30)
                     {
                         bindPlayer = entry.Player;
-                        BindCodes.Remove(code);
                     }
                 }
 
@@ -895,24 +899,74 @@ internal static class Program
                     break;
                 }
 
-                // 改绑：这个账号原来绑的玩家要先失去"免确认"，否则他不在任何账号名下还能直接进服
-                var previousPlayer = LoginStore.PlayerOf(bindAccount);
+                // 绑定码只是"玩家本人的凭证":码可能被别人看到或转发,
+                // 所以真正落盘前还要账号主人在 ZXMC 上亲眼确认一次(631)
+                var alreadyOwner = LoginStore.AccountOf(bindPlayer);
+                if (alreadyOwner > 0 && alreadyOwner != bindAccount)
+                {
+                    await packet.SendAsync(Protocol.BindAck, $"err|这个玩家已经被账号 {alreadyOwner} 绑定了", packet.Id);
+                    break;
+                }
 
-                if (!LoginStore.Bind(bindAccount, bindPlayer, out var bindError))
+                var token = Guid.NewGuid().ToString("N")[..8].ToUpperInvariant();   //确认令牌
+                PendingBinds[token] = new PendingBind(bindAccount, bindPlayer, code, DateTime.Now);
+                await packet.SendAsync(Protocol.BindAck, $"pending|{token}|{bindPlayer}", packet.Id);
+                Logger.Log(LogLevel.Info,
+                    $"[绑定] 账号 {bindWho}(ID {bindAccount}) 提交绑定码,待确认玩家 {bindPlayer} 令牌 {token}");
+                break;
+            }
+
+            // ---- 绑定二次确认(631):用户点了"确定绑定"才真正写绑定表 ----
+            case Protocol.BindConfirm:
+            {
+                var token = Encoding.UTF8.GetString(packet.Data).Trim().ToUpperInvariant();   //包内容
+                var confirmWho = _server?.Registry.Find(packet.Connection.Id)?.User ?? "";
+                var confirmAccount = Accounts.Find(confirmWho)?.Id ?? 0;
+                if (confirmAccount <= 0)
+                {
+                    await packet.SendAsync(Protocol.BindAck, "err|请先登录", packet.Id);
+                    break;
+                }
+
+                // 令牌只给发起账号用,别让另一条连接拿着它把别人的码绑到自己名下
+                if (!PendingBinds.TryRemove(token, out var pending) ||
+                    pending.AccountId != confirmAccount ||
+                    (DateTime.Now - pending.At).TotalMinutes > BindConfirmMinutes)
+                {
+                    await packet.SendAsync(Protocol.BindAck, "err|确认已过期,请重新输入绑定码", packet.Id);
+                    break;
+                }
+
+                // 改绑：这个账号原来绑的玩家要先失去"免确认"，否则他不在任何账号名下还能直接进服
+                var previousPlayer = LoginStore.PlayerOf(confirmAccount);
+
+                if (!LoginStore.Bind(confirmAccount, pending.Player, out var bindError))
                 {
                     await packet.SendAsync(Protocol.BindAck, "err|" + bindError, packet.Id);
                     break;
                 }
 
-                await packet.SendAsync(Protocol.BindAck, $"ok|{bindPlayer}", packet.Id);
+                // 码用过就作废(一次性):只在真正绑成之后才删,取消确认的码还能重试
+                lock (BindCodes)
+                {
+                    if (BindCodes.TryGetValue(pending.Code, out var used) &&
+                        string.Equals(used.Player, pending.Player, StringComparison.OrdinalIgnoreCase))
+                    {
+                        BindCodes.Remove(pending.Code);
+                    }
+                }
 
-                if (previousPlayer.Length > 0 && !string.Equals(previousPlayer, bindPlayer, StringComparison.OrdinalIgnoreCase))
+                LoginStore.Log($"[绑定] 账号 {confirmAccount} 确认绑定玩家 {pending.Player}(令牌 {token})");
+                await packet.SendAsync(Protocol.BindAck, $"ok|{pending.Player}", packet.Id);
+
+                if (previousPlayer.Length > 0 && !string.Equals(previousPlayer, pending.Player, StringComparison.OrdinalIgnoreCase))
                 {
                     LoginArray.TryRemove(previousPlayer, out _);
                     LoginStore.RemovePersistentLogin(previousPlayer);
-                    LoginStore.Log($"[改绑] 账号 {bindAccount} 从 {previousPlayer} 改绑到 {bindPlayer}，旧玩家的免登录已清掉");
+                    LoginStore.Log($"[改绑] 账号 {confirmAccount} 从 {previousPlayer} 改绑到 {pending.Player}，旧玩家的免登录已清掉");
                     // 踢人不 await:回执要等 ZXMM,等在这儿会把这条连接的报文处理堵住
-                    _ = KickViaZxmmAsync(previousPlayer, "账号已改绑到别的玩家，请重新绑定后再进入");                }
+                    _ = KickViaZxmmAsync(previousPlayer, "账号已改绑到别的玩家，请重新绑定后再进入");
+                }
 
                 break;
             }
@@ -955,23 +1009,9 @@ internal static class Program
                         break;
                     }
 
-                    // 还没绑定:把"最近进服那个玩家拿到的码"给它,ZXMC 绑定页可以直接显示/预填
-                    (string Player, string Code) latest = ("", "");
-                    var latestAt = DateTime.MinValue;
-                    lock (BindCodes)
-                    {
-                        foreach (var pair in LastBindByPlayer)
-                        {
-                            if ((DateTime.Now - pair.Value.At).TotalMinutes <= 30 && pair.Value.At > latestAt)
-                            {
-                                latest = (pair.Key, pair.Value.Code);
-                                latestAt = pair.Value.At;
-                            }
-                        }
-                    }
-
-                    await packet.SendAsync(Protocol.BindList,
-                        latest.Code.Length > 0 ? $"nobind|{latest.Player}|{latest.Code}" : "nobind||", packet.Id);
+                    // 还没绑定:只说"没绑",不带任何别人的玩家名/绑定码 —— 绑定码是玩家的私密凭据,
+                    // 服务端在未绑定时并不知道这个账号对应哪个玩家,推"最近进服那个"就是跨玩家泄漏
+                    await packet.SendAsync(Protocol.BindList, "nobind||", packet.Id);
                     break;
                 }
 

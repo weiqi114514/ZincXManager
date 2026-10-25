@@ -7,6 +7,7 @@ using Avalonia.Controls.ApplicationLifetimes;  // 桌面应用生命周期
 using Avalonia.Markup.Xaml;  // XAML 加载
 using ZincXManagerClient.ViewModels;  // 客户端自身
 using ZincXManagerClient.Views;  // 客户端自身
+using ZincXManagerShared.Logging;  // 统一日志
 
 namespace ZincXManagerClient;
 
@@ -163,7 +164,7 @@ public partial class App : Application
     }
 
     /// <summary>启动先连数据源:连上才进登录/主界面,连不上停在连接界面</summary>
-    private static async Task StartAfterProbeAsync(IClassicDesktopStyleApplicationLifetime desktop, ConnectViewModel vm, Window waitWindow)
+    private static async Task StartAfterProbeAsync(IClassicDesktopStyleApplicationLifetime desktop, ConnectViewModel vm, StartupWindow waitWindow)
     {
         vm.SuppressErrorDialog = true;   // 探测期间的错误由这里统一弹,界面别再弹一次
         var error = await ProbeDataSourceAsync(vm);
@@ -190,20 +191,16 @@ public partial class App : Application
             return;
         }
 
-        // 连上了:进登录窗口(有免登录记录就直接主界面)
+        // 连上了:进登录窗口(有免登录记录就先自动登录,601 成功才开主界面)
         await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() =>
         {
             if (LoginRecord.CanAutoLogin())
             {
+                // 免登录会直接把账号密文发去数据源,这段时间不能让用户看到主界面 ——
+                // 先停在启动窗,等登录结果出来再决定换成主界面还是登录窗
                 var autoLogin = new LoginViewModel(vm);
-                var mainViewModel = new MainViewModel();
-                var mainWindow = new MainWindow { DataContext = mainViewModel };
-                WindowPlacement.CenterOnPrimaryScreen(mainWindow);
-                AppWindows.Register(mainWindow);
-                desktop.MainWindow = mainWindow;
-                mainWindow.Show();
-                waitWindow.Close();
-                _ = AutoLoginAsync(autoLogin, mainViewModel, mainWindow);
+                waitWindow.SetStatus($"正在免登录(登录记录 {LoginRecord.DaysLeft()} 天内有效)…");
+                _ = AutoLoginAsync(autoLogin, vm, desktop, waitWindow);
                 return;
             }
 
@@ -216,28 +213,90 @@ public partial class App : Application
         });
     }
 
-    /// <summary>用记住的密文免登录;成功就用主界面,失败就把登录窗口放出来。</summary>
-    private static async Task AutoLoginAsync(LoginViewModel login, MainViewModel main, Window mainWindow)
+    /// <summary>免登录失败的提示文本:去掉回执里的「失败:」前缀;还停在「正在…」就换成通用文案。</summary>
+    private static string FailReason(string message)
     {
-        main.StatusText = $"正在免登录(登录记录 {LoginRecord.DaysLeft()} 天内有效)…";
-
-        if (await login.AutoLoginAsync())
+        var text = message.Trim();
+        if (text.Length == 0 || text.StartsWith("正在", StringComparison.Ordinal))
         {
-            // 主界面是登录前就建好的 —— 会话数据要补推给它,否则左下角会一直停在「未登录」
-            main.SetUser(ClientSession.User, ClientSession.UserId);
-            main.RefreshAvatar();
-            _ = main.RequestMessageHistoryAsync();
-            main.StatusText = $"已登录:{ClientSession.User}({ClientSession.Level})";
-
-            // 头像(605)是登录之后才回来的:一秒后再补刷一次
-            _ = Task.Delay(1200).ContinueWith(_ => Avalonia.Threading.Dispatcher.UIThread.Post(main.RefreshAvatar));
-            return;
+            return "自动登录没有成功，请手动登录。";
         }
 
-        main.StatusText = "免登录失败,已打开登录窗口";
+        return text.StartsWith("失败:", StringComparison.Ordinal) ? text[3..] : text;
+    }
 
-        var loginWindow = new LoginWindow { DataContext = login };
-        WindowPlacement.PlaceAt(loginWindow, mainWindow);
-        loginWindow.Show();
+    /// <summary>
+    /// 用记住的密文免登录:期间停在启动窗;601 成功才建主界面。
+    /// 失败要分流:连接根本没通(或断了)回连接流程,账号被拒(密码/封禁等)开登录窗口并弹失败原因。
+    /// </summary>
+    private static async Task AutoLoginAsync(LoginViewModel login, ConnectViewModel connect,
+        IClassicDesktopStyleApplicationLifetime desktop, StartupWindow waitWindow)
+    {
+        var ok = false;
+        try
+        {
+            ok = await login.AutoLoginAsync();
+        }
+        catch (Exception ex)
+        {
+            // 免登录是后台自动跑的,异常没人接 —— 必须落日志,不然只看到"主界面没出来"
+            Logger.Log(LogLevel.Error, "[ZXMC] 免登录异常:" + ex.Message);
+        }
+
+        if (!ok)
+        {
+            // 业务状态 IsConnected 断线不会自己变,要看底层 TCP(LinkAlive)
+            Logger.Log(LogLevel.Warning,
+                $"[ZXMC] 免登录失败(连接={(connect.IsConnected && connect.LinkAlive ? "在" : "断")}):{login.Message}");
+        }
+
+        await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() =>
+        {
+            if (!ok)
+            {
+                // 连接都没通(或中途断了):和启动探测失败一个处理 —— 回连接流程,让用户改地址重连
+                if (!connect.IsConnected || !connect.LinkAlive)
+                {
+                    var connectWindow = new ConnectWindow { DataContext = connect };
+                    WindowPlacement.PlaceAt(connectWindow, waitWindow);
+                    desktop.MainWindow = connectWindow;
+                    connectWindow.Show();
+                    waitWindow.Close();
+
+                    _ = MessageDialog.InfoAsync(connectWindow, "连接失败",
+                        $"{connect.Host}:{connect.Port}\n{login.Message}",
+                        hint: "检查数据源地址、端口,确认服务端已启动后重试");
+                    return;
+                }
+
+                // 连接是好的,是账号层面被拒:开登录窗口,并把原因弹给用户
+                var loginWindow = new LoginWindow { DataContext = login };
+                WindowPlacement.PlaceAt(loginWindow, waitWindow);
+                desktop.MainWindow = loginWindow;
+                loginWindow.Show();
+                waitWindow.Close();
+
+                _ = MessageDialog.WarnAsync(loginWindow, "免登录失败", FailReason(login.Message),
+                    hint: "账号密码可能已变更或登录记录已失效;也可以直接在这里手动登录");
+                return;
+            }
+
+            // 登录成功才建主界面:会话里已经是登录后的账号,MainViewModel 构造时直接带上
+            var mainViewModel = new MainViewModel();
+            var mainWindow = new MainWindow { DataContext = mainViewModel };
+            WindowPlacement.CenterOnPrimaryScreen(mainWindow);
+            AppWindows.Register(mainWindow);
+            desktop.MainWindow = mainWindow;
+            mainWindow.Show();
+            waitWindow.Close();
+
+            mainViewModel.SetUser(ClientSession.User, ClientSession.UserId);
+            mainViewModel.RefreshAvatar();
+            _ = mainViewModel.RequestMessageHistoryAsync();
+            mainViewModel.StatusText = $"已登录:{ClientSession.User}({ClientSession.Level})";
+
+            // 头像(605)是登录之后才回来的:一秒后再补刷一次
+            _ = Task.Delay(1200).ContinueWith(_ => Avalonia.Threading.Dispatcher.UIThread.Post(mainViewModel.RefreshAvatar));
+        });
     }
 }

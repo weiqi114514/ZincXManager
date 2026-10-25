@@ -201,12 +201,27 @@ public static class ZxmmChain
                     await WaitOutAsync(ms, "下发踢人任务 mcplayer → 没有这个在线玩家", 6000), LastLines(ms, 2));
             }
 
-            // ② 用绑定码绑定
+            // ② 用绑定码绑定:626 只校验并回 pending,确认(631)之后才真正写绑定表
             if (code1.Length == 6)
             {
                 await probe.SendAsync(11, Protocol.BindApply, Encoding.UTF8.GetBytes(code1));
                 var bindAck = await probe.TakeQueuedAsync(Protocol.BindAck, 8000);
-                r.Add("绑定码绑定成功", bindAck?.StartsWith("ok|") == true, bindAck ?? "没收到回执");
+                r.Add("绑定码只校验、先回 pending", bindAck?.StartsWith("pending|") == true, bindAck ?? "没收到回执");
+                r.Add("pending 里带玩家名", bindAck?.EndsWith("|mcplayer") == true, bindAck ?? "");
+
+                var bindPath = Path.Combine(dir, "BindUser.txt");
+                var beforeConfirm = File.Exists(bindPath) ? ReadShared(bindPath) : "";
+                r.Add("未确认前不写绑定表", !beforeConfirm.Contains("mcplayer"), beforeConfirm.Trim());
+
+                var bindToken = bindAck?.Split('|') is { Length: > 1 } bindParts ? bindParts[1] : "";
+                await probe.SendAsync(15, Protocol.BindConfirm, Encoding.UTF8.GetBytes(bindToken));
+                var confirmAck = await probe.TakeQueuedAsync(Protocol.BindAck, 8000);
+                r.Add("二次确认后绑定成功", confirmAck?.StartsWith("ok|mcplayer") == true, confirmAck ?? "没收到回执");
+
+                // 令牌一次性:再发一次必须被拒
+                await probe.SendAsync(16, Protocol.BindConfirm, Encoding.UTF8.GetBytes(bindToken));
+                var reused = await probe.TakeQueuedAsync(Protocol.BindAck, 8000);
+                r.Add("确认令牌不能重复使用", reused?.StartsWith("err|") == true, reused ?? "没收到回执");
             }
 
             // ③ 已绑定再进服 → 621 弹窗，IP 必须是纯地址(证明 /ip:port 被压平了)
@@ -275,6 +290,11 @@ public static class ZxmmChain
             if (codeP2.Length == 6)
             {
                 await probe.SendAsync(14, Protocol.BindApply, Encoding.UTF8.GetBytes(codeP2));
+                var pending2 = await probe.TakeQueuedAsync(Protocol.BindAck, 8000);
+                var token2 = pending2?.Split('|') is { Length: > 1 } parts2 ? parts2[1] : "";
+                r.Add("改绑也要先 pending", pending2?.StartsWith("pending|") == true, pending2 ?? "没收到回执");
+
+                await probe.SendAsync(17, Protocol.BindConfirm, Encoding.UTF8.GetBytes(token2));
                 var rebindAck = await probe.TakeQueuedAsync(Protocol.BindAck, 8000);
                 r.Add("改绑到新玩家成功", rebindAck?.StartsWith("ok|mcplayer2") == true, rebindAck ?? "没收到回执");
             }

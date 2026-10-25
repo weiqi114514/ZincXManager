@@ -13,7 +13,7 @@
   <Border Background="{DynamicResource ThemeWindow}"
           BorderBrush="{DynamicResource ThemeMuted}" BorderThickness="1" CornerRadius="6" Margin="1">
     <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="8">
-      <TextBlock Text="正在连接数据源…" FontSize="14" HorizontalAlignment="Center"
+      <TextBlock x:Name="StatusText" Text="正在连接数据源…" FontSize="14" HorizontalAlignment="Center"
                  Foreground="{DynamicResource ThemePrimaryDark}"/>
       <TextBlock x:Name="TargetText" Text="" FontSize="11" HorizontalAlignment="Center"
                  Foreground="{DynamicResource ThemeMuted}"/>

@@ -15,4 +15,7 @@ public partial class StartupWindow : Window
     {
         TargetText.Text = target;
     }
+
+    /// <summary>换掉第一行状态文案(连上数据源之后要显示"正在免登录…")。</summary>
+    public void SetStatus(string text) => StatusText.Text = text;
 }
