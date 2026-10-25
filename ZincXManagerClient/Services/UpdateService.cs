@@ -269,8 +269,13 @@ public static class UpdateService
             return [url];
         }
 
-        var raw = ClientConfig.GetOrEmpty("update.mirror");
-        var mirrors = raw.Split([';', ',', '\n', '\r', ' '], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        // 新清单(带启用/顺序)优先;没有就用旧的 update.mirror 纯地址串
+        var mirrors = MirrorSettingsStore.EnabledUrls();
+        if (mirrors.Length == 0)
+        {
+            var raw = ClientConfig.GetOrEmpty("update.mirror");
+            mirrors = raw.Split([';', ',', '\n', '\r', ' '], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        }
 
         var list = new List<string>();
         foreach (var mirror in mirrors)
@@ -399,20 +404,35 @@ public static class UpdateService
         File.WriteAllText(script, string.Join("\r\n", lines), System.Text.Encoding.Default);
     }
 
-    /// <summary>版本比较:去字母前缀后按段比大小</summary>
+    /// <summary>版本比较:先比字母前缀(a &lt; b &lt; c),前缀相同再按数字段比</summary>
     public static int CompareVersion(string a, string b)
     {
-        static int[] Parts(string v)
+        static (char Prefix, int[] Nums) Parse(string v)
         {
             v = v.Trim().TrimStart('v', 'V');
-            v = v.TrimStart('a', 'A', 'b', 'B');
-            return v.Split('.', '-', '+')
+            var prefix = '\0';
+            if (v.Length > 0 && char.IsLetter(v[0]))
+            {
+                prefix = char.ToLowerInvariant(v[0]);
+                v = v[1..];
+            }
+
+            var nums = v.Split('.', '-', '+')
                 .Select(x => int.TryParse(x, out var n) ? n : 0)
                 .ToArray();
+            return (prefix, nums);
         }
 
-        var pa = Parts(a);
-        var pb = Parts(b);
+        var (prefixA, pa) = Parse(a);
+        var (prefixB, pb) = Parse(b);
+
+        // 一个有前缀一个没有:有前缀的算新的开发系列,没前缀的按 0 处理(比 a 还旧)
+        var keyA = prefixA == '\0' ? '\0' : prefixA;
+        var keyB = prefixB == '\0' ? '\0' : prefixB;
+        if (keyA != keyB)
+        {
+            return keyA.CompareTo(keyB);
+        }
         var len = Math.Max(pa.Length, pb.Length);
         for (var i = 0; i < len; i++)
         {

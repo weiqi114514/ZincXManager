@@ -380,7 +380,7 @@
 
             <TextBlock Classes="label" Text="下载镜像(更新安装包走这里)" Margin="0,4,0,0"/>
             <StackPanel Orientation="Horizontal" Spacing="10">
-              <TextBlock Classes="body" Text="{Binding UpdateMirror, StringFormat='{}{0}'}"
+              <TextBlock Classes="body" Text="{Binding MirrorSummary}"
                          VerticalAlignment="Center" MaxWidth="360" TextTrimming="CharacterEllipsis"/>
               <Button Classes="small" Content="设置镜像…" Click="OnEditMirrorClick"/>
             </StackPanel>

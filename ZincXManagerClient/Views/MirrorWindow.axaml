@@ -1,8 +1,9 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:models="clr-namespace:ZincXManagerClient.Models"
         x:Class="ZincXManagerClient.Views.MirrorWindow"
         Title="下载镜像"
-        Width="480" Height="420"
+        Width="640" Height="480"
         Background="#CCFFFFFF"
         TransparencyLevelHint="AcrylicBlur,Blur,Transparent"
         FontFamily="Microsoft YaHei UI, Microsoft YaHei, Segoe UI"
@@ -41,12 +42,12 @@
       <Setter Property="Background" Value="#F1707A"/>
     </Style>
     <Style Selector="Button.act">
-      <Setter Property="Height" Value="34"/>
-      <Setter Property="MinWidth" Value="96"/>
+      <Setter Property="Height" Value="32"/>
+      <Setter Property="MinWidth" Value="88"/>
       <Setter Property="CornerRadius" Value="0"/>
       <Setter Property="BorderThickness" Value="0"/>
       <Setter Property="FontSize" Value="13"/>
-      <Setter Property="Padding" Value="18,0"/>
+      <Setter Property="Padding" Value="16,0"/>
       <Setter Property="Cursor" Value="Hand"/>
       <Setter Property="HorizontalContentAlignment" Value="Center"/>
       <Setter Property="VerticalContentAlignment" Value="Center"/>
@@ -71,6 +72,26 @@
     <Style Selector="Button.act.go:pointerover /template/ ContentPresenter">
       <Setter Property="Background" Value="{DynamicResource ThemePrimaryHover}"/>
     </Style>
+    <Style Selector="Button.rowbtn">
+      <Setter Property="Width" Value="24"/>
+      <Setter Property="Height" Value="24"/>
+      <Setter Property="Padding" Value="0"/>
+      <Setter Property="MinWidth" Value="0"/>
+      <Setter Property="MinHeight" Value="0"/>
+      <Setter Property="Background" Value="Transparent"/>
+      <Setter Property="BorderThickness" Value="0"/>
+      <Setter Property="CornerRadius" Value="0"/>
+      <Setter Property="Cursor" Value="Hand"/>
+      <Setter Property="HorizontalContentAlignment" Value="Center"/>
+      <Setter Property="VerticalContentAlignment" Value="Center"/>
+    </Style>
+    <Style Selector="Button.rowbtn /template/ ContentPresenter">
+      <Setter Property="Background" Value="Transparent"/>
+      <Setter Property="CornerRadius" Value="0"/>
+    </Style>
+    <Style Selector="Button.rowbtn:pointerover /template/ ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource ThemeLight}"/>
+    </Style>
   </Window.Styles>
 
   <Border Background="#F7FFFFFF" BorderBrush="{DynamicResource ThemeMuted}" BorderThickness="1" Margin="1">
@@ -86,37 +107,58 @@
         </Grid>
       </Border>
 
-      <Grid Grid.Row="1" ColumnDefinitions="190,*" Margin="16,14,16,0">
-        <!-- 预设列表:点一下填进右边输入框 -->
-        <StackPanel Grid.Column="0" Spacing="6">
-          <TextBlock Classes="label" Text="预置镜像(点一下填入)"/>
-          <ListBox x:Name="PresetList" Height="250" SelectionChanged="OnPresetSelected">
-            <ListBoxItem Content="https://gh-proxy.com/"/>
-            <ListBoxItem Content="https://ghfast.top/"/>
-            <ListBoxItem Content="https://ghproxy.net/"/>
-            <ListBoxItem Content="gh-proxy + ghfast"/>
-            <ListBoxItem Content="三个都填(按顺序试)"/>
-          </ListBox>
-        </StackPanel>
+      <Grid Grid.Row="1" RowDefinitions="Auto,*" Margin="16,12,16,0">
 
-        <!-- 地址输入 -->
-        <StackPanel Grid.Column="1" Spacing="8" Margin="14,0,0,0">
-          <TextBlock Classes="label" Text="下载地址前缀"/>
-          <TextBox x:Name="MirrorBox" AcceptsReturn="True" TextWrapping="Wrap"
-                   Height="120" VerticalContentAlignment="Top"
-                   Watermark="留空 = 只走官方源"/>
-          <TextBlock Classes="tips" TextWrapping="Wrap"
-                     Text="可以填多个,用英文分号(;)分隔,下载时按顺序试,全连不上自动退回官方源。"/>
-          <TextBlock Classes="tips" TextWrapping="Wrap"
-                     Text="作用:下载更新包时把镜像地址拼在原下载地址前面,解决直连 GitHub 下不动的问题。"/>
-        </StackPanel>
+        <!-- 表头 -->
+        <Grid Grid.Row="0" ColumnDefinitions="56,*,150,54,30" Margin="0,0,0,6">
+          <TextBlock Grid.Column="0" Text="优先级" FontSize="12" Foreground="#4A6B78"/>
+          <TextBlock Grid.Column="1" Text="镜像源地址" FontSize="12" Foreground="#4A6B78"/>
+          <TextBlock Grid.Column="2" Text="名称(可选)" FontSize="12" Foreground="#4A6B78"/>
+          <TextBlock Grid.Column="3" Text="启用" FontSize="12" Foreground="#4A6B78" HorizontalAlignment="Center"/>
+        </Grid>
+
+        <!-- 列表 -->
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" MaxHeight="270">
+          <ListBox x:Name="MirrorList" Background="Transparent" BorderThickness="0">
+            <ListBox.ItemTemplate>
+              <DataTemplate x:DataType="models:MirrorItem">
+                <Grid ColumnDefinitions="56,*,150,54,30" Margin="0,2">
+                  <!-- 交换优先级 -->
+                  <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="2" VerticalAlignment="Center">
+                    <Button Classes="rowbtn" Content="▲" FontSize="10" Click="OnMoveUpClick" Tag="{Binding}"/>
+                    <Button Classes="rowbtn" Content="▼" FontSize="10" Click="OnMoveDownClick" Tag="{Binding}"/>
+                  </StackPanel>
+
+                  <TextBox Grid.Column="1" Text="{Binding Url, Mode=TwoWay}" Height="30"
+                           Watermark="https://gh-proxy.com/" Margin="0,0,6,0"/>
+
+                  <ComboBox Grid.Column="2" Height="30" Margin="0,0,6,0"
+                            IsEditable="True"
+                            Text="{Binding Name, Mode=TwoWay}"
+                            PlaceholderText="可空">
+                    <ComboBoxItem Content="gh-proxy"/>
+                    <ComboBoxItem Content="ghfast"/>
+                    <ComboBoxItem Content="ghproxy"/>
+                    <ComboBoxItem Content="自建"/>
+                  </ComboBox>
+
+                  <CheckBox Grid.Column="3" IsChecked="{Binding Enabled, Mode=TwoWay}"
+                            HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                </Grid>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
+        </ScrollViewer>
       </Grid>
 
-      <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right"
-                  Spacing="10" Margin="16,14,16,16">
-        <Button Classes="act cancel" Content="取消" Click="OnCancelClick"/>
-        <Button Classes="act go" Content="确定" Click="OnOkClick"/>
-      </StackPanel>
+      <!-- 底部:左"添加",右"取消/保存" -->
+      <Grid Grid.Row="2" ColumnDefinitions="Auto,*,Auto" Margin="16,10,16,16">
+        <Button Grid.Column="0" Classes="act cancel" Content="+ 添加镜像源" Click="OnAddClick"/>
+        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="10">
+          <Button Classes="act cancel" Content="取消" Click="OnCancelClick"/>
+          <Button Classes="act go" Content="保存" Click="OnSaveClick"/>
+        </StackPanel>
+      </Grid>
     </Grid>
   </Border>
 </Window>

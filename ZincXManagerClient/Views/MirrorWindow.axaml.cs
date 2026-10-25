@@ -1,63 +1,94 @@
 using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Linq;
 using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using ZincXManagerClient.Models;
+using ZincXManagerClient.Services;
+using ZincXManagerShared.Logging;
 
 namespace ZincXManagerClient.Views;
 
-/// <summary>下载镜像设置窗口:预设点选 + 手动输入,确定后回填</summary>
+/// <summary>下载镜像设置:表格式编辑(地址 / 名称 / 优先级 / 启用)</summary>
 public partial class MirrorWindow : Window
 {
-    // 预设组合(列表里那两条组合项用)
-    private static readonly string[] Presets =
+    /// <summary>表格数据</summary>
+    public ObservableCollection<MirrorItem> Items { get; }
+
+    /// <summary>名称下拉建议</summary>
+    public string[] MirrorNames { get; } =
     [
-        "https://gh-proxy.com/",
-        "https://ghfast.top/",
-        "https://ghproxy.net/",
-        "https://gh-proxy.com/;https://ghfast.top/",
-        "https://gh-proxy.com/;https://ghfast.top/;https://ghproxy.net/",
+        "gh-proxy",
+        "ghfast",
+        "ghproxy",
+        "自建",
     ];
 
-    /// <summary>用户填的地址(取消时为 null)</summary>
+    /// <summary>点保存后的新配置(取消时为 null)</summary>
     public string? Result { get; private set; }
 
     /// <summary>设计器用</summary>
-    public MirrorWindow()
+    public MirrorWindow() : this(MirrorSettingsStore.Load())
+    {
+    }
+
+    /// <summary>用现有配置打开</summary>
+    public MirrorWindow(List<MirrorItem> current)
     {
         InitializeComponent();
         ThemeManager.ApplyWindowMaterial(this);
+        Items = new ObservableCollection<MirrorItem>(current);
+        MirrorList.ItemsSource = Items;
+        DataContext = this;
     }
 
-    /// <summary>带着当前值打开</summary>
-    public MirrorWindow(string current) : this()
+    /// <summary>弹出编辑,返回新配置(null = 取消)</summary>
+    public static async Task<List<MirrorItem>?> EditAsync(Window owner)
     {
-        MirrorBox.Text = current ?? "";
-    }
-
-    /// <summary>弹出并返回新值(null = 取消)</summary>
-    public static async Task<string?> EditAsync(Window owner, string current)
-    {
-        var win = new MirrorWindow(current);
+        var win = new MirrorWindow(MirrorSettingsStore.Load());
         await win.ShowDialog(owner);
-        return win.Result;
+        return win.Result is null ? null : MirrorSettingsStore.Parse(win.Result);
     }
 
-    /// <summary>点预设:填进输入框</summary>
-    private void OnPresetSelected(object? sender, SelectionChangedEventArgs e)
+    /// <summary>添加一条空行</summary>
+    private void OnAddClick(object? sender, RoutedEventArgs e)
     {
-        var index = PresetList.SelectedIndex;
-        if (index >= 0 && index < Presets.Length)
+        Items.Add(new MirrorItem { Url = "", Name = "", Enabled = true });
+    }
+
+    /// <summary>上移(提高优先级)</summary>
+    private void OnMoveUpClick(object? sender, RoutedEventArgs e)
+    {
+        if (sender is Button { Tag: MirrorItem item })
         {
-            MirrorBox.Text = Presets[index];
-            MirrorBox.CaretIndex = MirrorBox.Text?.Length ?? 0;
+            var index = Items.IndexOf(item);
+            if (index > 0)
+            {
+                Items.Move(index, index - 1);
+            }
         }
     }
 
-    /// <summary>确定</summary>
-    private void OnOkClick(object? sender, RoutedEventArgs e)
+    /// <summary>下移</summary>
+    private void OnMoveDownClick(object? sender, RoutedEventArgs e)
     {
-        Result = (MirrorBox.Text ?? "").Trim();
+        if (sender is Button { Tag: MirrorItem item })
+        {
+            var index = Items.IndexOf(item);
+            if (index >= 0 && index < Items.Count - 1)
+            {
+                Items.Move(index, index + 1);
+            }
+        }
+    }
+
+    /// <summary>保存</summary>
+    private void OnSaveClick(object? sender, RoutedEventArgs e)
+    {
+        Result = MirrorSettingsStore.Serialize(Items);
         Close();
     }
 

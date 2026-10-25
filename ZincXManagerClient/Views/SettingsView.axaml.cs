@@ -32,10 +32,11 @@ public partial class SettingsView : UserControl
             return;
         }
 
-        var value = await MirrorWindow.EditAsync(owner, vm.UpdateMirror);
-        if (value is not null)
+        var list = await MirrorWindow.EditAsync(owner);
+        if (list is not null)
         {
-            vm.UpdateMirror = value;
+            Services.MirrorSettingsStore.Save(list);
+            vm.RefreshMirrorSummary();
         }
     }
 
