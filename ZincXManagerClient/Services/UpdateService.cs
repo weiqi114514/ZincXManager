@@ -258,30 +258,83 @@ public static class UpdateService
     }
 
     /// <summary>
-    /// 把 GitHub 下载地址套上镜像前缀。配置 update.mirror 为空 → 直连;
-    /// 填了就以镜像开头拼原地址(gh-proxy 这类服务就是这么用的)。
+    /// 候选下载地址:镜像可以配多个(分号/逗号/换行分隔),按顺序试;
+    /// 最后一个一定是官方原地址,兜底用。
     /// </summary>
-    public static string BuildDownloadUrl(string url)
+    public static string[] BuildDownloadUrls(string url)
     {
-        var mirror = ClientConfig.GetOrEmpty("update.mirror").Trim();
-        if (mirror.Length == 0 || !url.Contains("github.com", StringComparison.OrdinalIgnoreCase))
+        // 不是 GitHub 的地址(比如自己搭的源)不套镜像
+        if (!url.Contains("github.com", StringComparison.OrdinalIgnoreCase))
         {
-            return url;
+            return [url];
         }
 
-        if (!mirror.EndsWith('/'))
+        var raw = ClientConfig.GetOrEmpty("update.mirror");
+        var mirrors = raw.Split([';', ',', '\n', '\r', ' '], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+        var list = new List<string>();
+        foreach (var mirror in mirrors)
         {
-            mirror += "/";
+            if (mirror.Length == 0)
+            {
+                continue;
+            }
+
+            var prefix = mirror.EndsWith('/') ? mirror : mirror + "/";
+            var candidate = prefix + url;
+            if (!list.Contains(candidate))
+            {
+                list.Add(candidate);
+            }
         }
 
-        return mirror + url;
+        // 官方源永远最后兜底
+        if (!list.Contains(url))
+        {
+            list.Add(url);
+        }
+
+        return list.ToArray();
     }
 
-    /// <summary>下载到指定文件(带进度)</summary>
+    /// <summary>下载:按配置的镜像逐个试,全失败就走官方源</summary>
     private static async Task<bool> DownloadAsync(string url, string dest, IProgress<int>? onProgress, CancellationToken ct)
     {
-        url = BuildDownloadUrl(url);
-        Log("[更新] 下载地址: " + url);
+        var candidates = BuildDownloadUrls(url);
+        foreach (var candidate in candidates)
+        {
+            if (await TryDownloadAsync(candidate, dest, onProgress, ct))
+            {
+                // 换源成功也把进度补满,免得界面停在 99%
+                onProgress?.Report(100);
+                return true;
+            }
+
+            Log("[更新] 这个地址没下成,换下一个: " + candidate);
+        }
+
+        Log("[更新] 所有下载地址都失败");
+        return false;
+    }
+
+    /// <summary>真正下这一次;失败返回 false,由调用方决定要不要换源</summary>
+    private static async Task<bool> TryDownloadAsync(string url, string dest, IProgress<int>? onProgress, CancellationToken ct)
+    {
+        try
+        {
+            Log("[更新] 下载地址: " + url);
+            return await DownloadCoreAsync(url, dest, onProgress, ct);
+        }
+        catch (Exception ex)
+        {
+            Log("[更新] 下载异常: " + ex.Message);
+            return false;
+        }
+    }
+
+    /// <summary>下载主体(带进度)</summary>
+    private static async Task<bool> DownloadCoreAsync(string url, string dest, IProgress<int>? onProgress, CancellationToken ct)
+    {
         using var resp = await Http.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, ct);
         if (!resp.IsSuccessStatusCode)
         {

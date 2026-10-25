@@ -344,13 +344,14 @@ public partial class SettingsViewModel : ViewModelBase
     /// <summary>下载镜像前缀(空 = 直连;填了就把原地址拼在后面)</summary>
     [ObservableProperty] public partial string UpdateMirror { get; set; } = "";
 
-    /// <summary>可选镜像(给下拉提示用)</summary>
+    /// <summary>可选镜像(给下拉提示用;可以填多个,分号分隔)</summary>
     public string[] MirrorOptions { get; } =
     [
-        "",
         "https://gh-proxy.com/",
         "https://ghfast.top/",
         "https://ghproxy.net/",
+        "https://gh-proxy.com/;https://ghfast.top/",
+        "https://gh-proxy.com/;https://ghfast.top/;https://ghproxy.net/",
     ];
 
     partial void OnUpdateMirrorChanged(string value) =>
