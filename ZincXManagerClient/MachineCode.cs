@@ -4,10 +4,7 @@ using System.Text;  // 文本编码与 StringBuilder
 
 namespace ZincXManagerClient;
 
-/// <summary>
-/// 本机机器码:机器名 + 首块网卡 MAC + 系统卷序列号 一起做 SHA-256。
-/// 同一台机器不变,换机器/换硬盘才变 —— 服务端"封机器码"靠它。
-/// </summary>
+/// <summary>本机机器码:机器名 + 首块网卡 MAC + 系统卷序列号 一起做 SHA-256。 同一台机器不变,换机器/换硬盘才变 —— 服务端"封机器码"靠它。</summary>
 internal static class MachineCode
 {
     private static string? _cached;

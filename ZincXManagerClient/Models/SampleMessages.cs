@@ -2,10 +2,7 @@ using System.Collections.Generic;  // 泛型集合
 
 namespace ZincXManagerClient.Models;
 
-/// <summary>
-/// 设计稿里的示例消息,仅用于界面预览(Debug 下由 MainViewModel.LoadSampleMessages 加载)。
-/// 真实消息由服务端下发,界面不写死内容。
-/// </summary>
+/// <summary>设计稿里的示例消息,仅用于界面预览(Debug 下由 MainViewModel.LoadSampleMessages 加载)。 真实消息由服务端下发,界面不写死内容。</summary>
 public static class SampleMessages
 {
     public static IReadOnlyList<MessageItem> All { get; } = new List<MessageItem>

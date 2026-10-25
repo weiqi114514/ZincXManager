@@ -49,6 +49,7 @@ footer{color:var(--muted);border-top:1px solid var(--line);margin-top:30px;paddi
 <main>
 <h1>第 1 页:协议码 · 命令 · 类与函数</h1>
 <p class="lead">全部由源码自动生成并逐项校对:扫描 128 个类型、801 个方法(1313 个参数)、400 个属性、410 个字段;协议码取自 <span class="mono">ZincXManagerShared/Network/Protocol.cs</span>,命令取自各端命令注册表。</p>
+<p class="tips"><b>b0.1.0 更新:</b>新增 620–630「登录确认 / 账号绑定」协议(含专用长连接 21200 的说明)、<span class="mono">bind / unbind / bind list</span> 三条控制台命令、<span class="mono">ZxmmApi</span>(ZXMS↔ZXMM 长连接)与 <span class="mono">LoginRequestWindow</span> 两个类型,以及登录数组 / 持久登录表 / 解绑立即失效的流程说明。ZXMM 模组本身的文档另见 <span class="mono">ZXMM-技术文档.md</span>。</p>
 <h2 id="a050">a0.5.0 客户端怎么应对断线</h2>
 <p class="lead">这一段是纯操作说明,讲客户端在连接断开/窗口尺寸这两件事上的行为,不是自动生成的表。</p>
 <h3>断线心跳与自动重连</h3>
@@ -138,7 +139,29 @@ zxm-lic verify &lt;公钥.pem&gt; &lt;证书.lic&gt; &lt;授权码&gt;</code></p
 <tr><td class="mono">610</td><td class="mono">AccountMigrate</td><td class="mono">ZXMOS</td><td class="mono">ZXMS</td><td>ZXMOS → ZXMS:把某些用户账号移交给子服务端(拉黑前先移交,别让玩家丢号)。负载 &quot;名称|密文|等级&quot; 每行一条。</td><td class="mono muted">Network/Protocol.cs</td></tr>
 <tr><td class="mono">611</td><td class="mono">AccountRename</td><td class="mono">ZXMS</td><td class="mono">ZXMOS</td><td>ZXMS → ZXMOS:改本端子服务端账号的名字(顺带改密码),由控制台 osuser 命令发起。 负载 &quot;旧名|新名|新密文|机器码|服务端码&quot;;ZXMOS 校验账号存在 + 机器码 / 服务端码与登记一致才改。</td><td class="mono muted">Network/Protocol.cs</td></tr>
 <tr><td class="mono">612</td><td class="mono">AccountRenameAck</td><td class="mono">ZXMOS</td><td class="mono">ZXMS</td><td>ZXMOS → ZXMS:改名回执,&quot;ok|新名&quot; 或 &quot;err|原因&quot;。</td><td class="mono muted">Network/Protocol.cs</td></tr>
+<tr><td class="mono">620</td><td class="mono">LoginRequest</td><td class="mono">ZXMM</td><td class="mono">ZXMS</td><td>玩家进服通知。<b>b0.1.0 起已废</b>:ZXMM 改走 21200 专用长连接 <span class="mono">evt|joined|玩家名|IP</span>,旧的 &quot;玩家名|IP&quot; 包不再使用。</td><td class="mono muted">Network/Protocol.cs</td></tr>
+<tr><td class="mono">621</td><td class="mono">LoginAsk</td><td class="mono">ZXMS</td><td class="mono">ZXMC</td><td>ZXMS → ZXMC:有玩家进服,问账号主人放不放行。负载 &quot;请求ID|玩家名|IP|归属地&quot;;ZXMC 弹「登录请求」窗口显示这三项。</td><td class="mono muted">Network/Protocol.cs</td></tr>
+<tr><td class="mono">622</td><td class="mono">LoginAnswer</td><td class="mono">ZXMC</td><td class="mono">ZXMS</td><td>ZXMC → ZXMS:玩家的选择,负载 &quot;请求ID|yes&quot; 或 &quot;请求ID|no&quot;。允许则写登录数组 + 持久登录表,拒绝则调 ZXMM 踢人。</td><td class="mono muted">Network/Protocol.cs</td></tr>
+<tr><td class="mono">623</td><td class="mono">LoginResult</td><td class="mono">ZXMS</td><td class="mono">ZXMM</td><td>登录结果。<b>b0.1.0 起已废</b>:ZXMS 不再回包,改为直接调 ZXMM 执行接口的 <span class="mono">kick</span>。</td><td class="mono muted">Network/Protocol.cs</td></tr>
+<tr><td class="mono">624</td><td class="mono">LoginTimeout</td><td class="mono">ZXMS</td><td class="mono">ZXMC</td><td>ZXMS → ZXMC:5 分钟没人点,通知客户端弹「登录超时」;同时 ZXMS 调 ZXMM 把该玩家踢掉。</td><td class="mono muted">Network/Protocol.cs</td></tr>
+<tr><td class="mono">625</td><td class="mono">BindNotice</td><td class="mono">ZXMM</td><td class="mono">ZXMS</td><td>ZXMM → ZXMS:把玩家手里的绑定码转给服务端。负载 &quot;绑定码|玩家名&quot;。</td><td class="mono muted">Network/Protocol.cs</td></tr>
+<tr><td class="mono">626</td><td class="mono">BindApply</td><td class="mono">ZXMC</td><td class="mono">ZXMS</td><td>ZXMC → ZXMS:提交 6 位绑定码(负载 = 码)。ZXMS 按码找到玩家名,把它绑到当前账号上。</td><td class="mono muted">Network/Protocol.cs</td></tr>
+<tr><td class="mono">627</td><td class="mono">BindAck</td><td class="mono">ZXMS</td><td class="mono">ZXMC</td><td>ZXMS → ZXMC:&quot;ok|玩家名&quot; 或 &quot;err|原因&quot;(码错 / 过期 / 已被别人绑)。</td><td class="mono muted">Network/Protocol.cs</td></tr>
+<tr><td class="mono">628</td><td class="mono">Unbind</td><td class="mono">ZXMC</td><td class="mono">ZXMS</td><td>ZXMC → ZXMS:解绑本账号。ZXMS 删绑定 + 删持久登录表记录 + 清登录数组 + 调 ZXMM 踢掉在线玩家,立刻失效。</td><td class="mono muted">Network/Protocol.cs</td></tr>
+<tr><td class="mono">629</td><td class="mono">BindQuery</td><td class="mono">ZXMC, ZXMM</td><td class="mono">ZXMS</td><td>查绑定关系。ZXMC 查只回自己那条(未绑定回 &quot;nobind|最近玩家|绑定码&quot;);ZXMM 查回全部。</td><td class="mono muted">Network/Protocol.cs</td></tr>
+<tr><td class="mono">630</td><td class="mono">BindList</td><td class="mono">ZXMS</td><td class="mono">ZXMC, ZXMM</td><td>绑定列表。ZXMC:&quot;玩家名=账号名&quot; 或 &quot;nobind|玩家名|绑定码&quot;;ZXMM:每行 &quot;玩家名=账号名&quot;,没有则空负载。</td><td class="mono muted">Network/Protocol.cs</td></tr>
 </tbody></table>
+<h3 id="loginflow">登录确认与账号绑定(b0.1.0)</h3>
+<table><thead><tr><th>环节</th><th>谁做</th><th>说明</th></tr></thead><tbody>
+<tr><td>玩家进服上报</td><td class="mono">ZXMM → ZXMS</td><td>走 21200 专用长连接,一行 <span class="mono">evt|joined|玩家名|IP</span>;ZXMM 不做任何判断。</td></tr>
+<tr><td>判断放不放行</td><td class="mono">ZXMS</td><td>依次看:登录数组(5 分钟) → <span class="mono">Data/PersistentLogin.txt</span> → 有没有绑定 → 弹窗问账号主人。</td></tr>
+<tr><td>没绑定</td><td class="mono">ZXMS → ZXMM</td><td>生成 6 位绑定码,通过执行接口 <span class="mono">kick</span> 把玩家踢出并提示绑定码。</td></tr>
+<tr><td>已绑定</td><td class="mono">ZXMS ↔ ZXMC</td><td>621 弹「登录请求」(玩家名 / IP / 归属地),玩家点允许 → 622 → 写登录数组与持久表。</td></tr>
+<tr><td>拒绝 / 超时</td><td class="mono">ZXMS → ZXMM</td><td>直接调 <span class="mono">kick</span> 踢人;超时还会给 ZXMC 发 624 弹「登录超时」。</td></tr>
+<tr><td>解绑</td><td class="mono">ZXMC → ZXMS</td><td>628;ZXMS 删绑定 + 删持久表 + 清登录数组 + 踢人,下一次进服要重新绑定。</td></tr>
+</tbody></table>
+<p class="tips">绑定数据在 <span class="mono">Data/BindUser.txt</span>(每行 <span class="mono">账号ID=玩家名</span>),持久信任在 <span class="mono">Data/PersistentLogin.txt</span>,操作流水在 <span class="mono">Data/loginlog.log</span>。控制台可用 <span class="mono">bind</span> / <span class="mono">unbind</span> / <span class="mono">bind list</span> 手动管理。</p>
+<p class="tips"><b>安全要点:</b>① <span class="mono">622</span> 只有被问的那个账号能回答,别的账号回答会被忽略并记 <span class="mono">[安全] 越权回答登录请求</span>(且不吃掉请求);② 进服事件 2 秒内按「玩家名+IP」去重,避免重连时弹两次窗;③ 解绑与改绑都会清 <span class="mono">PersistentLogin.txt</span> 并踢掉在线玩家,不存在"解绑了还能进";④ 模组 <span class="mono">21200</span> 只绑 <span class="mono">127.0.0.1</span>,跨机部署必须配 <span class="mono">api.token</span> = ZXMS 的 <span class="mono">zxmmtoken</span>。</p>
 
 <h3 id="secure">会话加密与登录挑战(ZXMC ↔ ZXMS,a0.3.1 起)</h3>
 <p class="lead">以前登录请求里直接带 <span class="mono">SHA256(账号:密码)</span>,这个密文是<b>静态</b>的 —— 抓到一次就能无限重放。现在改成两层:先建加密会话,再叠加一次性挑战。</p>
@@ -222,6 +245,72 @@ zxm-lic verify &lt;公钥.pem&gt; &lt;证书.lic&gt; &lt;授权码&gt;</code></p
 <tr><td>切档刷新</td><td class="mono">ApplyGlass → ApplyWindowMaterial</td><td>遍历已打开窗口重新套材质,避免「切到半透明档还是亚克力」</td></tr>
 </tbody></table>
 
+<h2 id="zxmm">ZXMM 模组端(21200 专用通道)</h2>
+<p class="lead">ZXMM 是跑在 Minecraft 服务端里的 NeoForge 模组(<span class="mono">Java 21 / MC 1.21.1 / NeoForge 21.1.264</span>),不在上面这套 C# 扫描范围内,<b>这一节按 2026-10-25 实测手写</b>。</p>
+<p>它是<b>纯执行器</b>:只上报「玩家进服」、只执行 ZXMS 下发的任务。登录数组、持久登录表、绑定关系、踢不踢人,全部在 ZXMS 侧判断 —— 模组里加业务判断就是架构建反。</p>
+
+<h3 id="zxmm-deploy">部署与配置</h3>
+<table><thead><tr><th>项</th><th>值</th><th>说明</th></tr></thead><tbody>
+<tr><td>安装位置</td><td class="mono">mods/ZXMM-0.1.0.jar</td><td>只装<b>服务端</b>,客户端不需要</td></tr>
+<tr><td class="mono">api.host</td><td class="mono">127.0.0.1</td><td>监听地址。<b>默认只听本机</b>;改成 <span class="mono">0.0.0.0</span> 等于把「踢人」接口开到公网</td></tr>
+<tr><td class="mono">api.port</td><td class="mono">21200</td><td>专用通道端口</td></tr>
+<tr><td class="mono">api.token</td><td>空</td><td>与 ZXMS 的 <span class="mono">zxmmtoken</span> 一致才校验;空 = 不校验(只建议纯本机部署)</td></tr>
+<tr><td class="mono">check.enabled</td><td class="mono">true</td><td>总开关;false = 不上报进服事件(调试用)</td></tr>
+<tr><td class="mono">check.failopen</td><td class="mono">false</td><td>ZXMS 在 <span class="mono">check.grace</span> 内仍连不上时:false = 踢出,true = 放行并留日志</td></tr>
+<tr><td class="mono">check.grace</td><td class="mono">10</td><td>等 ZXMS 的秒数(3–300)</td></tr>
+<tr><td>ZXMS 侧</td><td class="mono">config.ini</td><td><span class="mono">zxmmapi=127.0.0.1:21200</span>(支持 <span class="mono">[::1]:21200</span>)与 <span class="mono">zxmmtoken=</span></td></tr>
+</tbody></table>
+<p class="tips">旧的 <span class="mono">zxms.host</span> / <span class="mono">zxms.port</span> / <span class="mono">check.remember</span> 从来没被读过,已删除;模组启动时会把配置文件重写成带注释的新格式,保留你改过的有效值。</p>
+
+<h3 id="zxmm-wire">行协议(UTF-8 文本,一行一条)</h3>
+<table><thead><tr><th>行</th><th>方向</th><th>说明</th></tr></thead><tbody>
+<tr><td class="mono">hello|令牌</td><td class="mono">ZXMS → ZXMM</td><td>仅当模组配了 <span class="mono">api.token</span>。<b>5 秒内没收到就断开</b>,令牌不符也断开</td></tr>
+<tr><td class="mono">evt|joined|玩家名|IP</td><td class="mono">ZXMM → ZXMS</td><td>进服事件。IP 是<b>纯地址</b>(不带 <span class="mono">/</span>、不带端口)</td></tr>
+<tr><td class="mono">req|id|方法|参数…</td><td class="mono">ZXMS → ZXMM</td><td>下发任务,id 由 ZXMS 自增</td></tr>
+<tr><td class="mono">res|id|ok|结果</td><td class="mono">ZXMM → ZXMS</td><td>任务成功</td></tr>
+<tr><td class="mono">res|id|err|原因</td><td class="mono">ZXMM → ZXMS</td><td>任务失败。<b>ZXMS 以 ok/err 判定有没有真的做成</b></td></tr>
+</tbody></table>
+<table><thead><tr><th>方法</th><th>参数</th><th>返回</th></tr></thead><tbody>
+<tr><td class="mono">kick</td><td>玩家名, 理由</td><td><span class="mono">ok</span>=已踢出;<span class="mono">err</span>=没有这个在线玩家 / 服务器主线程忙</td></tr>
+<tr><td class="mono">list</td><td>—</td><td>逗号分隔在线名单(空服给空串)</td></tr>
+<tr><td class="mono">info</td><td>玩家名</td><td><span class="mono">名|维度|X|Y|Z</span>;不在线给空串</td></tr>
+<tr><td class="mono">online</td><td>玩家名</td><td><span class="mono">1</span> / <span class="mono">0</span></td></tr>
+<tr><td class="mono">say</td><td>文本</td><td>已广播;空内容回 err</td></tr>
+<tr><td class="mono">ping</td><td>—</td><td><span class="mono">pong</span></td></tr>
+</tbody></table>
+<p class="tips">理由/广播里的 <span class="mono">|</span> 不会截断(发送前替换成 <span class="mono">/</span>);碰游戏状态的活(玩家表、坐标、踢人、广播)统一 <span class="mono">mc.submit(...)</span> 回服务器主线程执行,最多等 3 秒。</p>
+
+<h3 id="zxmm-offline">断链行为</h3>
+<table><thead><tr><th>场景</th><th>行为</th></tr></thead><tbody>
+<tr><td>进服时 ZXMS 没连上</td><td>事件进队列(最多 200 条);日志 <span class="mono">ZXMS 还没连上,&lt;玩家&gt; 的进服事件先攒着(待报 N 条)</span></td></tr>
+<tr><td>ZXMS 在 grace 内连上</td><td>立刻补报:<span class="mono">断线期间攒的 N 条进服事件已补报</span>,随后按 ZXMS 判定</td></tr>
+<tr><td>超过 grace 仍没连上</td><td><span class="mono">check.failopen=false</span>(默认)= 踢出「账号验证服务未连接,请稍后再进服务器」;true = 放行并告警</td></tr>
+<tr><td>连接维护</td><td>ZXMS 断开后每 3 秒重连;ZXMS 每 30 秒 <span class="mono">ping</span> 探活(半开连接不能只靠 10 秒超时发现);两端开 TCP keepalive</td></tr>
+<tr><td>重复事件</td><td>连接层 2 秒内按「玩家名+IP」去重;ZXMS 再按「同一玩家已有待确认请求」去重,避免弹两次窗</td></tr>
+</tbody></table>
+
+<h3 id="zxmm-trouble">排障对照</h3>
+<table><thead><tr><th>日志</th><th>含义 / 处置</th></tr></thead><tbody>
+<tr><td class="mono">专用通道监听 … 失败,3 秒后重试</td><td>端口被占用或无权限绑定;<span class="mono">netstat -ano | findstr 21200</span> 查占用</td></tr>
+<tr><td class="mono">拒绝未通过令牌校验的连接</td><td>对端没发 hello 或令牌不符;两边令牌必须一致</td></tr>
+<tr><td class="mono">连接 … 5 秒内没上报令牌,已断开</td><td>有程序连上但不自报身份(扫描/误连);若 ZXMS 一直连不上就查它的 <span class="mono">zxmmtoken</span></td></tr>
+<tr><td class="mono">ZXMS 还没连上,… 先攒着</td><td>ZXMS 没起或地址不对;对照它的 <span class="mono">专用通道已连上</span> 日志</td></tr>
+<tr><td class="mono">下发踢人任务 X → 没有这个在线玩家</td><td>人已经走了,踢不到,正常</td></tr>
+</tbody></table>
+<p class="tips">安全红线:<b>把 <span class="mono">api.host</span> 留在 <span class="mono">127.0.0.1</span></b>;跨机部署必须配令牌并用防火墙只放行 ZXMS 的 IP。执行接口能踢人、能全服广播,暴露到公网等于后门。</p>
+
+<h3 id="zxmm-rules">开发约定(Java 侧)</h3>
+<p class="lead">摘自项目规范,只保留与这个 Java 仓库相关的条目;C# 三端的条目见本站对应页面。</p>
+<table><thead><tr><th>约定</th><th>要求</th></tr></thead><tbody>
+<tr><td>注释</td><td>短但不丢信息、写成人话;变量注释只写<b>表示什么</b>,例如 <span class="mono">private static int port; //表示监听端口</span>;不写「ZXMM 令牌变量存储,用于验证登录流程」这种长句;<b>import 行尾也要注明用到了什么</b>(<span class="mono">//导入List(列表接口)</span>)</td></tr>
+<tr><td>改动范围</td><td><b>只做被要求的事</b>,一步不多做;觉得该顺手改的先问;动手前先查成熟实现(GitHub / CSDN / 官方文档),不凭记忆写 API</td></tr>
+<tr><td>构建与工具</td><td><span class="mono">gradlew.bat build</span>(JDK 21,<span class="mono">org.gradle.java.home=G:/jdk21</span>),<b>超时 10 分钟</b>(规范:JAVA 构建 10 分钟、其他 30 秒、AOT 打包 60 秒);首次构建要下 NeoForm,慢属正常。<b>已有工具/插件优先</b>:构建走 DSH 的 <span class="mono">mc_gradle</span> 插件,链路测试走 <span class="mono">tests/ZincXManagerTests</span>,不许另写一套</td></tr>
+<tr><td>测试</td><td>每个功能写完必须自测;说「全量测试」就是<b>全部函数 / 类 / 功能</b>都跑;GUI 一律用注入操控测试,不手点</td></tr>
+<tr><td>危险动作</td><td>删除文件 / AOT 打包 / 推送 / 发 Release 必须用户明确发话;打包是<b>四端一起</b>;发 Release 要写更新日志并更新官网技术文档(不同语言分开写)</td></tr>
+<tr><td>仓库</td><td>模组仓库 <span class="mono">E:\report\ZincXManagerMod</span>(本地工程,无 git);主仓 <span class="mono">E:\report\ZincXManager</span>(C# 三端 + tests + docs);官方端 <span class="mono">E:\report\ZincXManager-Official</span></td></tr>
+</tbody></table>
+
+
 <h2 id="msgcmd">消息命令参数(msg notice / msg push)</h2>
 <p class="lead">消息卡片现在统一走 <span class="mono">msg</span> 父命令,参数用空格分开。<b>标题和正文里不能带空格</b> —— 空格就是参数分隔符,要空格用下划线或全角空格替代。</p>
 
@@ -293,7 +382,7 @@ msg backget d 26/10/23 26/10/24 -os          # 按日期</code></pre>
 
 <h2 id="cmd">② 各端命令表</h2>
 <p class="lead">控制台命令(ZXMC 是图形客户端,没有控制台命令)。参数写法里的 <span class="mono">&lt;...&gt;</span> 表示必填位。</p>
-<h3>ZXMS 子服务端 · 21 条</h3>
+<h3>ZXMS 子服务端 · 24 条</h3>
 <table><thead><tr><th>命令</th><th>参数/用法</th><th>作用</th><th>处理函数</th><th>定义位置</th></tr></thead><tbody>
 <tr><td class="mono">net status</td><td class="mono">net status</td><td>打印当前网络状态:监听状态、官方端地址与名称、在线客户端数量。</td><td class="mono">CmdNetStatus</td><td class="mono muted">ZincXManagerServer/Command/ZxmsCommands.cs:78</td></tr>
 <tr><td class="mono">net clients</td><td class="mono">net clients</td><td>打印连接登记表(连上来但还没完成握手的连接也在里面)。</td><td class="mono">CmdClients</td><td class="mono muted">ZincXManagerServer/Command/ZxmsCommands.cs:82</td></tr>
@@ -316,6 +405,9 @@ msg backget d 26/10/23 26/10/24 -os          # 按日期</code></pre>
 <tr><td class="mono">ban user</td><td class="mono">ban user &lt;名称或ID&gt; [perm|30d] [原因] [--ip] [--machine]</td><td>封一个玩家;加 --ip / --machine 会连带封他的 IP / 机器码。</td><td class="mono">CmdBanUser</td><td class="mono muted">ZincXManagerServer/Command/ZxmsCommands.cs:286</td></tr>
 <tr><td class="mono">ban del</td><td class="mono">ban del &lt;user|ip|machine&gt; &lt;值&gt;</td><td>解除封禁。</td><td class="mono">CmdBanDel</td><td class="mono muted">ZincXManagerServer/Command/ZxmsCommands.cs:290</td></tr>
 <tr><td class="mono">ban list</td><td class="mono">ban list</td><td>列出当前所有封禁项。</td><td class="mono">CmdBanList</td><td class="mono muted">ZincXManagerServer/Command/ZxmsCommands.cs:294</td></tr>
+<tr><td class="mono">bind list</td><td class="mono">bind list [账号ID|账号名|玩家名]</td><td>不带参数列出全部绑定;带参数按账号 ID / 账号名 / 玩家名查一条,查不到返回「无绑定信息」。</td><td class="mono">CmdBindList</td><td class="mono muted">ZincXManagerServer/Command/ZxmsCommands.cs</td></tr>
+<tr><td class="mono">bind</td><td class="mono">bind &lt;账号名或ID&gt; &lt;玩家名&gt;</td><td>手动把某个 MC 玩家名绑到 ZXM 账号上(账号在前)。一个玩家只能绑一个账号,已绑别的会提示先 unbind。</td><td class="mono">CmdBind</td><td class="mono muted">ZincXManagerServer/Command/ZxmsCommands.cs</td></tr>
+<tr><td class="mono">unbind</td><td class="mono">unbind &lt;玩家名|账号名|账号ID&gt;</td><td>解绑:删绑定 + 删持久登录表记录,该玩家再进服要重新走确认。三种参数形式都能用。</td><td class="mono">CmdUnbind</td><td class="mono muted">ZincXManagerServer/Command/ZxmsCommands.cs</td></tr>
 <tr><td class="mono">config</td><td class="mono">config</td><td>进入配置模式(打印 14 项配置表;只能改表内已有项;exitc 退出;模式内拒绝其它命令)。</td><td class="mono">ConfigMode.Enter</td><td class="mono muted">ZincXManagerServer/Command/ConfigMode.cs</td></tr>
 </tbody></table>
 <h3>ZXMOS 官方服务端 · 21 条</h3>
@@ -507,6 +599,8 @@ msg backget d 26/10/23 26/10/24 -os          # 按日期</code></pre>
 <tr><td>共享库 ZincXManagerShared</td><td class="mono muted">ZincXManagerShared/Verify/OfficialLicense.cs</td><td class="mono">OfficialLicense</td><td class="mono">public static</td><td class="mono muted">—</td><td>ZXMOS 的官方(正版)验证:一张由官方私钥签发的 official.lic ,绑定机器码、带有效期。 信任模型(别指望混淆能挡住破解,要认清秘密在哪): 签名用的 私钥永不出厂 —— 只在你自己的签发工具里( zxm-lic ); 程序里只内置 公钥 (打散存放,见 ),它只能 验签 ,不能签发; 许可证绑定 机器码 —— 拷到别的机器上验不过; 够狠的一步是&quot;结果参与运行&quot;(见 ) —— 光把 if 删掉,后面就处处对不上。 许可证是纯文本 键=值 ,一行一个字段,签名盖在&quot;规范化后的负载&quot;上,所以手改任何一个字段都会验签失败。</td><td class="mono">0</td><td class="mono">9</td></tr>
 <tr><td>共享库 ZincXManagerShared</td><td class="mono muted">ZincXManagerShared/Verify/OfficialLicense.cs</td><td class="mono">OfficialVerdict</td><td class="mono">public sealed</td><td class="mono muted">—</td><td>官方验证的结论(校验通过 / 哪一种不通过)。</td><td class="mono">9</td><td class="mono">0</td></tr>
 <tr><td>共享库 ZincXManagerShared</td><td class="mono muted">ZincXManagerShared/Verify/OfficialLicense.cs</td><td class="mono">OfficialVerdict</td><td class="mono">public sealed</td><td class="mono muted">—</td><td>官方验证的结论(校验通过 / 哪一种不通过)。</td><td class="mono">9</td><td class="mono">0</td></tr>
+<tr><td>ZXMS 子服务端</td><td class="mono muted">ZincXManagerServer/Zxmm/ZxmmApi.cs</td><td class="mono">ZxmmApi</td><td class="mono">public sealed</td><td class="mono muted">IAsyncDisposable</td><td>与 ZXMM 的专用长连接(21200):收「玩家进服」事件、下发踢人/查询任务、断线 3 秒自动重连。</td><td class="mono">Connected; PlayerJoined(事件)</td><td class="mono">Start; KickAsync; ListPlayersAsync; InfoAsync; OnlineAsync; SayAsync; PingAsync; DisposeAsync</td></tr>
+<tr><td>ZXMC 客户端</td><td class="mono muted">ZincXManagerClient/Views/LoginRequestWindow.axaml.cs</td><td class="mono">LoginRequestWindow</td><td class="mono">public partial</td><td class="mono muted">Window</td><td>「登录请求」专用弹窗:显示登录账号 / IP / 归属地,按钮「允许进服」「拒绝」。</td><td class="mono">Agreed</td><td class="mono">OnAgreeClick; OnDenyClick; OnTitleBarPointerPressed</td></tr>
 </tbody></table>
 <h2 id="props">④ 属性与字段表</h2>
 <p class="lead">“属性”= 有 get/set/init 的成员;“字段”= 直接存值的成员(多为私有状态)。</p>
@@ -1657,6 +1751,28 @@ msg backget d 26/10/23 26/10/24 -os          # 按日期</code></pre>
 <tr><td class="mono">OfficialVerdict</td><td class="mono">Pepper</td><td class="mono">byte[]</td><td class="mono">public</td><td>属性</td><td>只有校验通过才有:由许可证算出来的 32 字节 pepper。 给&quot;第二层&quot;用 —— 把验证结果混进握手 / 运行逻辑,光把检查注释掉是没用的。</td></tr>
 <tr><td class="mono">OfficialVerdict</td><td class="mono">LicenseText</td><td class="mono">string</td><td class="mono">public</td><td>属性</td><td>通过校验的那张许可证原文(第二层要把它出示给对端)。</td></tr>
 </tbody></table></details>
+<details><summary>b0.1.0 新增 · 登录确认与账号绑定 <span class="count">· 12 项 · ZXMS 侧</span></summary>
+<table><thead><tr><th>成员</th><th>名字</th><th>类型</th><th>访问修饰符</th><th>类别</th><th>存什么/干啥</th></tr></thead><tbody>
+<tr><td class="mono">ZXMS 主程序类(Program)</td><td class="mono">LoginArray</td><td class="mono">ConcurrentDictionary&lt;string, DateTime&gt;</td><td class="mono">private static readonly</td><td>字段</td><td>登录数组:玩家名 → 过期时间。确认通过后 5 分钟内直接放行,不用再问账号主人。</td></tr>
+<tr><td class="mono">ZXMS 主程序类(Program)</td><td class="mono">LastBindByPlayer</td><td class="mono">Dictionary&lt;string, (string Code, DateTime At)&gt;</td><td class="mono">private static readonly</td><td>字段</td><td>最近一次进服拿到的绑定码(玩家名 → 码),给 ZXMC 绑定页显示/预填用,30 分钟有效。</td></tr>
+<tr><td class="mono">ZXMS 主程序类(Program)</td><td class="mono">_zxmmApi</td><td class="mono">Zxmm.ZxmmApi?</td><td class="mono">private static</td><td>字段</td><td>与 ZXMM 的执行接口连接(懒创建),启动时按 config 的 zxmmapi 建好并常驻。</td></tr>
+<tr><td class="mono">ZXMS 主程序类(Program)</td><td class="mono">_zxmmApiAddress</td><td class="mono">string</td><td class="mono">private static</td><td>字段</td><td>config.ini 里读出来的 ZXMM 地址(host:port),默认 127.0.0.1:21200。</td></tr>
+<tr><td class="mono">ZXMS 主程序类(Program)</td><td class="mono">KeyZxmmApi / DefaultZxmmApi</td><td class="mono">string</td><td class="mono">private const</td><td>字段</td><td>配置键名 <span class="mono">zxmmapi</span> 与默认值 <span class="mono">127.0.0.1:21200</span>。</td></tr>
+<tr><td class="mono">ZXMS 主程序类(Program)</td><td class="mono">LoginArrayMinutes</td><td class="mono">int</td><td class="mono">private const</td><td>字段</td><td>登录数组有效期(分钟),当前 5。</td></tr>
+<tr><td class="mono">ZxmmApi</td><td class="mono">PlayerJoined</td><td class="mono">Action&lt;string, string&gt;?</td><td class="mono">public</td><td>事件</td><td>ZXMM 推来「玩家进服」时触发,参数 (玩家名, IP);ZXMS 在这里接 <span class="mono">HandlePlayerJoinedAsync</span>。</td></tr>
+<tr><td class="mono">ZxmmApi</td><td class="mono">Connected</td><td class="mono">bool</td><td class="mono">public</td><td>属性</td><td>专用通道当前有没有连上。</td></tr>
+<tr><td class="mono">ZxmmApi</td><td class="mono">_host / _port</td><td class="mono">string / int</td><td class="mono">private readonly</td><td>字段</td><td>ZXMM 的地址与端口(默认 127.0.0.1:21200)。</td></tr>
+<tr><td class="mono">ZxmmApi</td><td class="mono">_pending</td><td class="mono">ConcurrentDictionary&lt;long, TaskCompletionSource&lt;(bool, string)&gt;&gt;</td><td class="mono">private</td><td>字段</td><td>等待回包的任务表:请求 id → 等待者,收到 <span class="mono">res|id|…</span> 后唤醒。</td></tr>
+<tr><td class="mono">ZxmmApi</td><td class="mono">_writeLock</td><td class="mono">SemaphoreSlim</td><td class="mono">private</td><td>字段</td><td>写锁:多个线程同时调方法时保证一行不被打断。</td></tr>
+<tr><td class="mono">ZxmmApi</td><td class="mono">_client / _writer / _cts / _seq</td><td class="mono">TcpClient? / StreamWriter? / CancellationTokenSource? / long</td><td class="mono">private</td><td>字段</td><td>当前连接、写入器、取消源、请求序号。</td></tr>
+</tbody></table></details>
+<details><summary>b0.1.0 修复轮 · 日志共享写 / 去重 / 令牌 <span class="count">· 4 项 · ZXMS 侧</span></summary>
+<table><thead><tr><th>成员</th><th>名字</th><th>类型</th><th>访问修饰符</th><th>类别</th><th>存什么/干啥</th></tr></thead><tbody>
+<tr><td class="mono">ZXMS 主程序类(Program)</td><td class="mono">KeyZxmmToken</td><td class="mono">string</td><td class="mono">private const</td><td>字段</td><td>配置键 <span class="mono">zxmmtoken</span>:与模组 <span class="mono">api.token</span> 一致才校验令牌,空 = 不校验(默认只听回环)。</td></tr>
+<tr><td class="mono">ZxmmApi</td><td class="mono">_lastJoinKey / _lastJoinAt</td><td class="mono">string / DateTime</td><td class="mono">private</td><td>字段</td><td>进服事件去重:模组重连重叠时同一条 <span class="mono">evt|joined</span> 可能来两次,2 秒内同「玩家名+IP」只处理第一次。</td></tr>
+<tr><td class="mono">GeoLookup</td><td class="mono">Http</td><td class="mono">HttpClient</td><td class="mono">private static readonly</td><td>字段</td><td>归属地查询复用的 HttpClient(端到端超时另由 <span class="mono">LookupAsync</span> 的令牌控制,默认 1.2 秒)。</td></tr>
+<tr><td class="mono">LoginStore</td><td class="mono">_lock</td><td class="mono">object</td><td class="mono">private static readonly</td><td>字段</td><td>绑定表 / 持久登录表 / 日志文件的统一锁;所有读写走 <span class="mono">AppendLine / ReadLines / WriteLines</span>(<span class="mono">FileShare.ReadWrite</span>)。</td></tr>
+</tbody></table></details>
 <h2 id="methods">⑤ 函数表</h2>
 <p class="lead">每个函数都列出:所在类、函数名、访问修饰符、返回类型、参数(名字/类型/默认值/含义)、作用、代码位置。</p>
 <h3>ZXMC 客户端</h3>
@@ -2758,6 +2874,30 @@ msg backget d 26/10/23 26/10/24 -os          # 按日期</code></pre>
 <tr><td class="mono">OfficialLicense</td><td class="mono">TryRead</td><td class="mono">private static</td><td class="mono">bool</td><td><b>text</b> : <span class="mono">string</span> — 文本内容<br><b>fields</b> : <span class="mono">Dictionary&lt;string, string&gt;</span> — —</td><td>读 键=值 的行; # 开头的行和空行跳过, [节] 也跳过。<div class="count mono">ZincXManagerShared/Verify/OfficialLicense.cs</div></td></tr>
 <tr><td class="mono">OfficialLicense</td><td class="mono">Field</td><td class="mono">private static</td><td class="mono">string</td><td><b>fields</b> : <span class="mono">Dictionary&lt;string, string&gt;</span> — —<br><b>name</b> : <span class="mono">string</span> — 名称(账号名/服务端名/配置名)</td><td>—<div class="count mono">ZincXManagerShared/Verify/OfficialLicense.cs</div></td></tr>
 <tr><td class="mono">OfficialLicense</td><td class="mono">Short</td><td class="mono">private static</td><td class="mono">string</td><td><b>machine</b> : <span class="mono">string</span> — 机器码(许可证绑定用)</td><td>—<div class="count mono">ZincXManagerShared/Verify/OfficialLicense.cs</div></td></tr>
+</tbody></table></details>
+<details><summary>b0.1.0 新增 · 登录确认与账号绑定 <span class="count">· 11 个函数 · ZXMS 侧</span></summary>
+<table><thead><tr><th>所在类</th><th>函数</th><th>访问修饰符</th><th>返回类型</th><th>参数(名字 / 类型 / 含义 / 默认)</th><th>作用</th><th>位置</th></tr></thead><tbody>
+<tr><td class="mono">ZXMS 主程序类(Program)</td><td class="mono">HandlePlayerJoinedAsync</td><td class="mono">private static async</td><td class="mono">Task</td><td><b>player</b> : <span class="mono">string</span> — MC 玩家名;<br><b>ip</b> : <span class="mono">string</span> — 玩家 IP</td><td>ZXMM 经 21200 推来「玩家进服」后的全部判断:①登录数组命中→放行 ②持久登录表命中→写登录数组→放行 ③没绑定→生成绑定码并调 ZXMM 踢人 ④已绑定→发 621 给 ZXMC 等 622。</td><td class="mono muted">ZincXManagerServer/Program.cs</td></tr>
+<tr><td class="mono">ZXMS 主程序类(Program)</td><td class="mono">KickViaZxmmAsync</td><td class="mono">private static async</td><td class="mono">Task&lt;bool&gt;</td><td><b>player</b> : <span class="mono">string</span>;<br><b>reason</b> : <span class="mono">string</span></td><td>通过 ZXMM 执行接口下发「踢人」任务(拒绝、超时、未绑定、解绑时都走它)。失败只记日志,不影响调用方。</td><td class="mono muted">ZincXManagerServer/Program.cs</td></tr>
+<tr><td class="mono">ZXMS 主程序类(Program)</td><td class="mono">CreateZxmmApi</td><td class="mono">private static</td><td class="mono">Zxmm.Api</td><td><span class="muted">(无参)</span></td><td>按 <span class="mono">config.ini</span> 的 <span class="mono">zxmmapi=host:port</span> 建一个指向 ZXMM 的接口客户端。</td><td class="mono muted">ZincXManagerServer/Program.cs</td></tr>
+<tr><td class="mono">LoginStore</td><td class="mono">RemovePersistentLogin</td><td class="mono">public static</td><td class="mono">void</td><td><b>player</b> : <span class="mono">string</span> — MC 玩家名</td><td>从 <span class="mono">Data/PersistentLogin.txt</span> 删掉该玩家的记录,让「已信任」立刻失效(解绑时调用)。</td><td class="mono muted">ZincXManagerShared/Login/LoginStore.cs</td></tr>
+<tr><td class="mono">ZxmsCommands</td><td class="mono">CmdBindList</td><td class="mono">private static</td><td class="mono">void</td><td><b>accounts</b> : <span class="mono">AccountStore</span>;<br><b>args</b> : <span class="mono">string[]</span> — 可空,给账号ID/账号名/玩家名查单条</td><td>列出全部绑定;带参数时查一条,查不到回「无绑定信息」。</td><td class="mono muted">ZincXManagerServer/Command/ZxmsCommands.cs</td></tr>
+<tr><td class="mono">ZxmsCommands</td><td class="mono">CmdBind</td><td class="mono">private static</td><td class="mono">void</td><td><b>accounts</b> : <span class="mono">AccountStore</span>;<br><b>args</b> : <span class="mono">string[]</span> — <span class="mono">[账号名或ID, 玩家名]</span></td><td>手动绑定:账号名或 ID 都认;一个玩家只能绑一个账号,冲突时提示先 unbind。</td><td class="mono muted">ZincXManagerServer/Command/ZxmsCommands.cs</td></tr>
+<tr><td class="mono">ZxmsCommands</td><td class="mono">CmdUnbind</td><td class="mono">private static</td><td class="mono">void</td><td><b>accounts</b> : <span class="mono">AccountStore</span>;<br><b>args</b> : <span class="mono">string[]</span> — <span class="mono">[玩家名|账号名|账号ID]</span></td><td>解绑:依次按账号名 → 账号 ID → 玩家名找;解完同时删持久登录表记录。</td><td class="mono muted">ZincXManagerServer/Command/ZxmsCommands.cs</td></tr>
+<tr><td class="mono">ZxmmApi</td><td class="mono">Start</td><td class="mono">public</td><td class="mono">void</td><td><span class="muted">(无参)</span></td><td>启动与 ZXMM 的常驻连接(后台循环,断了 3 秒重连)。</td><td class="mono muted">ZincXManagerServer/Zxmm/ZxmmApi.cs</td></tr>
+<tr><td class="mono">ZxmmApi</td><td class="mono">KickAsync</td><td class="mono">public async</td><td class="mono">Task&lt;bool&gt;</td><td><b>player</b> : <span class="mono">string</span>;<br><b>reason</b> : <span class="mono">string</span></td><td>让 ZXMM 踢人,10 秒超时;ZXMM 回「没有这个在线玩家」也算成功返回 false 由调用方判断。</td><td class="mono muted">ZincXManagerServer/Zxmm/ZxmmApi.cs</td></tr>
+<tr><td class="mono">ZxmmApi</td><td class="mono">ListPlayersAsync / InfoAsync / OnlineAsync / SayAsync / PingAsync</td><td class="mono">public async</td><td class="mono">Task&lt;...&gt;</td><td>见各方法签名</td><td>在线列表 / 玩家信息 / 是否在线 / 全服广播 / 探活,都是同一个 <span class="mono">req|id|方法|参数</span> 协议的封装。</td><td class="mono muted">ZincXManagerServer/Zxmm/ZxmmApi.cs</td></tr>
+<tr><td class="mono">ZxmmApi</td><td class="mono">HandleLine</td><td class="mono">private</td><td class="mono">void</td><td><b>line</b> : <span class="mono">string</span></td><td>解析一行:先当任务结果(<span class="mono">res|id|ok|…</span>)匹配等待者,否则当事件(<span class="mono">evt|joined|玩家|IP</span>)触发 <span class="mono">PlayerJoined</span>。</td><td class="mono muted">ZincXManagerServer/Zxmm/ZxmmApi.cs</td></tr>
+</tbody></table></details>
+<details><summary>b0.1.0 修复轮 · 异步归属地 / 共享写日志 / 越权校验 <span class="count">· 7 个函数 · ZXMS 侧</span></summary>
+<table><thead><tr><th>所在类</th><th>函数</th><th>访问修饰符</th><th>返回类型</th><th>参数(名字 / 类型 / 含义 / 默认)</th><th>作用</th><th>位置</th></tr></thead><tbody>
+<tr><td class="mono">GeoLookup</td><td class="mono">LookupAsync</td><td class="mono">public static async</td><td class="mono">Task&lt;string&gt;</td><td><b>ip</b> : <span class="mono">string</span>;<br><b>timeoutMs</b> : <span class="mono">int</span> = 1200</td><td>异步查 IP 归属地,硬上限 1.2 秒,超时按「未知」放行 —— 避免外网玩家点确认弹窗前干等 4 秒(旧实现是同步 HTTP)。</td><td class="mono muted">ZincXManagerServer/Login/GeoLookup.cs</td></tr>
+<tr><td class="mono">GeoLookup</td><td class="mono">Normalize</td><td class="mono">public static</td><td class="mono">string</td><td><b>ip</b> : <span class="mono">string?</span></td><td>把 IP 归一成纯地址:去掉旧模组带来的 <span class="mono">/</span> 前缀和 <span class="mono">:端口</span>;空/非法返回空串。</td><td class="mono muted">ZincXManagerServer/Login/GeoLookup.cs</td></tr>
+<tr><td class="mono">LoginStore</td><td class="mono">AppendLine</td><td class="mono">private static</td><td class="mono">void</td><td><b>path</b> : <span class="mono">string</span>;<br><b>line</b> : <span class="mono">string</span></td><td>追加一行,用 <span class="mono">FileShare.ReadWrite | Delete</span> 打开:别人正 tail 日志或用面板看日志时,不会把这次写入顶掉(默认 <span class="mono">AppendAllText</span> 会抛 IOException 丢日志)。</td><td class="mono muted">ZincXManagerShared/Login/LoginStore.cs</td></tr>
+<tr><td class="mono">LoginStore</td><td class="mono">ReadLines</td><td class="mono">private static</td><td class="mono">string[]</td><td><b>path</b> : <span class="mono">string</span></td><td>整文件读取(同样共享打开),不存在返回空数组。</td><td class="mono muted">ZincXManagerShared/Login/LoginStore.cs</td></tr>
+<tr><td class="mono">LoginStore</td><td class="mono">WriteLines</td><td class="mono">private static</td><td class="mono">void</td><td><b>path</b> : <span class="mono">string</span>;<br><b>lines</b> : <span class="mono">IEnumerable&lt;string&gt;</span></td><td>整文件重写(共享打开,自动建目录):解绑/改绑时清持久登录表、同一玩家只留一行都走它。</td><td class="mono muted">ZincXManagerShared/Login/LoginStore.cs</td></tr>
+<tr><td class="mono">ZXMS 主程序类(Program)</td><td class="mono">(622 分支) 越权校验</td><td class="mono">—</td><td class="mono">—</td><td><b>requestId</b> 对应请求的 <b>AccountId</b> 与应答账号比对</td><td>只有被问的那个账号能回答登录请求;别的账号发 <span class="mono">622 id|yes</span> 会被忽略并记 <span class="mono">[安全] 越权回答登录请求</span>,且<b>不吃掉</b>这条请求。</td><td class="mono muted">ZincXManagerServer/Program.cs</td></tr>
+<tr><td class="mono">LoginStore</td><td class="mono">Bind(改绑清理)</td><td class="mono">public static</td><td class="mono">bool</td><td><b>accountId</b> : <span class="mono">int</span>;<br><b>player</b> : <span class="mono">string</span>;<br><b>error</b> : <span class="mono">out string</span></td><td>绑定/改绑:一个玩家只绑一个账号;某账号从 A 改绑到 B 时,会清掉 A 的免登录记录并踢掉在线 A(否则被解绑的人还能免确认进服)。</td><td class="mono muted">ZincXManagerShared/Login/LoginStore.cs</td></tr>
 </tbody></table></details>
 </div></main><footer class="foot">
   <div class="wrap">

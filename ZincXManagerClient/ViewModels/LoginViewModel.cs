@@ -278,7 +278,7 @@ public partial class LoginViewModel : ViewModelBase
     private void OnAccountReply(ushort type, string text)
     {
         // 负载:"ok|名称|ID|等级" 或 "err|原因"
-        var parts = text.Split('|');
+        var parts = text.Split('|');   //拆分结果
         var ok = parts.Length > 0 && parts[0] == "ok";
         var message = ok
             ? $"登录成功:{parts[1]}({parts[3]})"
@@ -312,7 +312,7 @@ public partial class LoginViewModel : ViewModelBase
         }
 
         // 全是可打印文本且以 ok/err 开头 → 是"设置头像"的回执,不当图片处理
-        var text = System.Text.Encoding.UTF8.GetString(packet.Data);
+        var text = System.Text.Encoding.UTF8.GetString(packet.Data);   //包内容
         if (text.StartsWith("ok") || text.StartsWith("err"))
         {
             Message = text.StartsWith("ok") ? "头像已更新" : text;

@@ -12,10 +12,7 @@ public enum ToastKind
     Error
 }
 
-/// <summary>
-/// 左上角滑出来的那条提示(toast)。一次说一件事,几秒后自己滑回去。
-/// 样子跟着消息卡片走:左边一条强调色,右边一句话 + 一行小字(口气 · 时间)。
-/// </summary>
+/// <summary>左上角滑出来的那条提示(toast)。一次说一件事,几秒后自己滑回去。 样子跟着消息卡片走:左边一条强调色,右边一句话 + 一行小字(口气 · 时间)。</summary>
 public partial class ToastItem : ObservableObject
 {
     /// <summary>提示内容(一句话,别写实现细节)。</summary>

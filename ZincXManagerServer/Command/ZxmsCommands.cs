@@ -5,6 +5,7 @@ using System.Linq;  // LINQ 查询
 using ZincXManagerShared.Command;  // 共享库
 using ZincXManagerShared.Logging;  // 共享库
 using ZincXManagerShared.History;  // megback 查询
+using ZincXManagerShared.Login;  // 绑定关系(手动 bind / unbind 用)
 using ZincXManagerShared.Network;  // 共享库
 
 // 与 BCL 的 TcpClient 同名,起个别名
@@ -121,6 +122,19 @@ public static class ZxmsCommands
 
         RegisterBanCommands(cmd, accountProvider, banProvider);
 
+        // ---- 账号绑定(手动给某个 MC 玩家绑上 ZXM 账号,或解掉) ----
+        cmd.Register("bind list", args => CmdBindList(accountProvider(), args),
+            "列出全部绑定;带参数时按账号ID / 账号名 / 玩家名查一条",
+            "bind list [账号ID|账号名|玩家名]");
+
+        cmd.Register("bind", args => CmdBind(accountProvider(), args),
+            "手动绑定:先写账号(名称或 ID),再写 MC 玩家名",
+            "bind <账号名或ID> <玩家名>");
+
+        cmd.Register("unbind", args => CmdUnbind(accountProvider(), args),
+            "解绑:玩家名 / 账号名 / 账号ID 都能用,解绑后该玩家再进服要重新走确认",
+            "unbind <玩家名|账号名|账号ID>");
+
         // ---- 本端的服务端账号(用于接入官方服务端;和用户账号是两个东西) ----
         cmd.Register("info", _ => CmdInfo(identity, osProvider(), osTargetProvider()),
             "查看本端身份:名称 / 账号 / 服务端码 / 机器码 / 连接状态",
@@ -180,7 +194,7 @@ public static class ZxmsCommands
                 case "backget":
                 {
                     // 尾部带 -os 就查官方端的记录(必须是本服账号)
-                    var query = args[1..];
+                    var query = args[1..];   //查询关键字
                     var wantOs = query.Length > 0 &&
                                  string.Equals(query[^1], "-os", StringComparison.OrdinalIgnoreCase);
                     if (wantOs)
@@ -237,7 +251,7 @@ public static class ZxmsCommands
             return false;
         }
 
-        var first = trimmed.Split(' ', StringSplitOptions.RemoveEmptyEntries)[0].ToLowerInvariant();
+        var first = trimmed.Split(' ', StringSplitOptions.RemoveEmptyEntries)[0].ToLowerInvariant();   //拆分结果
         return Array.IndexOf(CommandWords, first) >= 0;
     }
 
@@ -326,7 +340,150 @@ public static class ZxmsCommands
     }
 
 
-    /// <summary>ban del &lt;类型&gt; &lt;值&gt; / ban list / ban add / ban user</summary>
+    /// <summary>列绑定:不带参数全列,带参数按 ID/账号名/玩家名 查一条</summary>
+    private static void CmdBindList(AccountStore accounts, string[] args)
+    {
+        var query = args.Length > 0 ? args[0].Trim() : "";
+        if (query.Length == 0)
+        {
+            var binds = LoginStore.AllBinds();   //全部绑定
+            if (binds.Count == 0)
+            {
+                Logger.Log(LogLevel.Info, "[绑定] 无绑定信息(玩家进服会被踢并拿到绑定码)");
+                return;
+            }
+
+            Logger.Log(LogLevel.Info, $"[绑定] 共 {binds.Count} 条:");
+            foreach (var pair in binds.OrderBy(p => p.Key))
+            {
+                var name = accounts.FindById(pair.Key)?.Name ?? "?";   //账号名
+                Logger.Log(LogLevel.Info, $"  玩家 {pair.Value}  ↔  账号 {name}(ID {pair.Key})");
+            }
+
+            return;
+        }
+
+        // 单条查询:账号名 → 账号 ID → 玩家名
+        var accountId = accounts.Find(query)?.Id ?? 0;   //账号ID
+        if (accountId <= 0 && int.TryParse(query, out var byId))   //byId 当ID解析
+        {
+            accountId = accounts.FindById(byId)?.Id ?? 0;
+        }
+
+        if (accountId <= 0)
+        {
+            accountId = LoginStore.AccountOf(query);
+        }
+
+        if (accountId <= 0)
+        {
+            Logger.Log(LogLevel.Info, $"[绑定] 无绑定信息:{query} 既不是账号名/ID,也不是已绑定的玩家名");
+            return;
+        }
+
+        var accountName = accounts.FindById(accountId)?.Name ?? "?";   //账号名
+        var playerName = LoginStore.PlayerOf(accountId);                 //绑定的玩家名
+
+        if (playerName.Length == 0)
+        {
+            Logger.Log(LogLevel.Info, $"[绑定] 无绑定信息:账号 {accountName}(ID {accountId}) 没有绑定任何玩家");
+            return;
+        }
+
+        Logger.Log(LogLevel.Info, $"[绑定] 账号 {accountName}(ID {accountId})  ↔  玩家 {playerName}");
+    }
+
+    /// <summary>绑定:先账号(名或 ID),再玩家名</summary>
+    private static void CmdBind(AccountStore accounts, string[] args)
+    {
+        if (args.Length < 2)
+        {
+            Logger.Log(LogLevel.Warning, "[绑定] 用法:bind <账号名或ID> <玩家名>    例:bind localplayer weiqi_wq");
+            return;
+        }
+
+        var key = args[0].Trim();
+        var player = args[1].Trim();   //玩家名
+
+        // 账号名或 ID 都行:先按名字找,找不到再当 ID
+        var account = accounts.Find(key);
+        if (account is null && int.TryParse(key, out var byId))
+        {
+            account = accounts.FindById(byId);
+        }
+
+        if (account is null)
+        {
+            Logger.Log(LogLevel.Warning, $"[绑定] 没有账号 {key}(名称或 ID 都行,可用 user list 查)");
+            return;
+        }
+
+        // 一个玩家只能绑一个账号
+        var existing = LoginStore.AccountOf(player);   //绑定的账号ID
+        if (existing > 0 && existing != account.Id)
+        {
+            var other = accounts.FindById(existing)?.Name ?? "?";
+            Logger.Log(LogLevel.Warning, $"[绑定] 玩家 {player} 已经绑在账号 {other} 上,先 unbind {player} 再绑");
+            return;
+        }
+
+        if (LoginStore.Bind(account.Id, player, out var error))
+        {
+            LoginStore.Log($"[手动绑定] 玩家 {player} ↔ 账号 {account.Name}(ID {account.Id})");
+            Logger.Log(LogLevel.Info, $"[绑定] 成功:{player} ↔ {account.Name}(ID {account.Id})");
+        }
+        else
+        {
+            Logger.Log(LogLevel.Warning, "[绑定] 失败:" + error);
+        }
+    }
+
+    /// <summary>解绑:玩家名/账号名/ID 都行,顺手清掉免登录记录</summary>
+    private static void CmdUnbind(AccountStore accounts, string[] args)
+    {
+        if (args.Length < 1)
+        {
+            Logger.Log(LogLevel.Warning, "[绑定] 用法:unbind <玩家名或账号名>    例:unbind weiqi_wq");
+            return;
+        }
+
+        var key = args[0].Trim();
+
+        // 依次按:账号名 → 账号 ID → 玩家名 找
+        var accountId = accounts.Find(key)?.Id ?? 0;   //账号ID
+        if (accountId <= 0 && int.TryParse(key, out var byId))
+        {
+            accountId = accounts.FindById(byId)?.Id ?? 0;
+        }
+
+        if (accountId <= 0)
+        {
+            accountId = LoginStore.AccountOf(key);
+        }
+
+        if (accountId <= 0)
+        {
+            Logger.Log(LogLevel.Warning, $"[绑定] 找不到号:{key} 既不是账号名,也不是已绑定的玩家名");
+            return;
+        }
+
+        var accountName = accounts.FindById(accountId)?.Name ?? "?";   //账号名
+
+        if (!LoginStore.Unbind(accountId, out var player))
+        {
+            Logger.Log(LogLevel.Warning, $"[绑定] 账号 {accountName} 没有绑定记录");
+            return;
+        }
+
+        // 解绑必须立刻生效:持久登录表里的"已信任"记录一起删掉
+        LoginStore.RemovePersistentLogin(player);
+        LoginStore.Log($"[手动解绑] 玩家 {player} ↔ 账号 {accountName}(ID {accountId})");
+
+        Logger.Log(LogLevel.Info, $"[绑定] 已解绑:{player} ↔ {accountName}(ID {accountId})");
+        Logger.Log(LogLevel.Info, $"[绑定] 该玩家再进服会重新走确认流程");
+    }
+
+    /// <summary>注册封禁命令(ban add / user / del / list)</summary>
     private static void RegisterBanCommands(CommandHandler cmd, Func<AccountStore> accountProvider, Func<BanStore> banProvider)
     {
         cmd.Register("ban add", args => CmdBanAdd(banProvider(), args),
@@ -392,9 +549,7 @@ public static class ZxmsCommands
             $"[网络] 已接入客户端 {clientCount} 个");
     }
 
-    /// <summary>
-    /// 多行信息输出:先空一行再打印,免得第一行贴着命令行/提示符导致"错位"。
-    /// </summary>
+    /// <summary>多行信息输出:先空一行再打印,免得第一行贴着命令行/提示符导致"错位"。</summary>
     private static void LogBlock(string text) => Logger.Log(LogLevel.Info, Environment.NewLine + text);
 
     /// <summary>net clients:打印连接登记表(表格格式由共享库统一生成)</summary>

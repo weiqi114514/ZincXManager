@@ -24,10 +24,7 @@ public static class OfficialGuard
     /// <summary>上一次校验的结论(给日志/命令用)。</summary>
     public static OfficialVerdict Last => _last;
 
-    /// <summary>
-    /// 校验通过才有的 32 字节 pepper。<b>没通过时返回的是随机数</b> ——
-    /// 这样"跳过校验"的一方握手/派生出来的值必然和别人对不上,不会静默地"看起来正常"。
-    /// </summary>
+    /// <summary>校验通过才有的 32 字节 pepper。<b>没通过时返回的是随机数</b> —— 这样"跳过校验"的一方握手/派生出来的值必然和别人对不上,不会静默地"看起来正常"。</summary>
     public static byte[] Pepper => _last.Ok ? _last.Pepper : RandomPepper();
 
     /// <summary>

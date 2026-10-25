@@ -147,7 +147,7 @@ public partial class SettingsViewModel : ViewModelBase
             return "格式应为 IP 或域名:端口,例如 zxm.zincms.top:25000";
         }
 
-        var ip = text[..colon].Trim();
+        var ip = text[..colon].Trim();   //玩家IP
         var port = text[(colon + 1)..].Trim();
         if (!HostText.IsHost(ip))
         {

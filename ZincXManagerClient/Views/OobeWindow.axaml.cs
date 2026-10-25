@@ -286,8 +286,7 @@ public partial class OobeWindow : Window
     /// <summary>清除壁纸。</summary>
     private void OnClearWallpaperClick(object? sender, RoutedEventArgs e) => Vm?.ClearWallpaper();
 
-    /// <summary>个性化 → 切换配色。</summary>
-    /// <summary>选透明样式:毛玻璃(亚克力)/ 半透明。</summary>
+    /// <summary>选透明样式:毛玻璃(亚克力)/ 半透明</summary>
     private void OnGlassPick(object? sender, PointerPressedEventArgs e)
     {
         if (Vm is null || sender is not Control c || c.Tag is not string tag)
@@ -308,8 +307,7 @@ public partial class OobeWindow : Window
         }
     }
 
-    /// <summary>切换连接方式。</summary>
-    /// <summary>把联排按钮的高亮块移到第 index 个(每个 92 宽)。</summary>
+    /// <summary>把联排按钮的高亮块移到第 index 个(每个 92 宽)</summary>
     private void MoveModeHighlight(int index, bool animate = true)
     {
         if (this.FindControl<Border>("ModeHighlight")?.RenderTransform is not TranslateTransform t)
@@ -343,7 +341,7 @@ public partial class OobeWindow : Window
         timer.Start();
     }
 
-    /// <summary>选连接模式。</summary>
+    /// <summary>切换连接方式</summary>
     private void OnModeClick(object? sender, RoutedEventArgs e)
     {
         if (sender is Button { Tag: string mode })

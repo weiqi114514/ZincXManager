@@ -57,13 +57,10 @@ public partial class ConnectViewModel : ViewModelBase, IDisposable
 
     public string ConnectedMode { get; private set; } = string.Empty;
 
-    /// <summary>已经连着且地址/端口/模式都没变 —— 这时再点连接就是重复。</summary>
-    /// <summary>
-    /// 底层连接是否真的还活着(心跳用)。
-    /// IsConnected 是界面状态,断线时不一定立刻变;这里直接问 TCP 层。
-    /// </summary>
+    /// <summary>底层连接还活着没(心跳用),直接问 TCP 层</summary>
     public bool LinkAlive => _client?.IsConnected == true;
 
+    /// <summary>已经连着且地址/端口/模式都没变,再点连接就是重复</summary>
     public bool IsConnectedToSameTarget =>
         IsConnected
         && ConnectedHost == Host.Trim()
@@ -187,10 +184,7 @@ public partial class ConnectViewModel : ViewModelBase, IDisposable
         ApplyModeTarget();
     }
 
-    /// <summary>
-    /// 按当前模式把目标地址重填成配置里的值。
-    /// 点模式按钮时调用 —— 重复点同一个模式也重新填一次,避免"模式没变、端口还是上一个"的坑。
-    /// </summary>
+    /// <summary>按当前模式把目标地址重填成配置里的值。 点模式按钮时调用 —— 重复点同一个模式也重新填一次,避免"模式没变、端口还是上一个"的坑。</summary>
     public void ApplyModeTarget()
     {
         if (Mode == "OOS")
@@ -229,10 +223,7 @@ public partial class ConnectViewModel : ViewModelBase, IDisposable
         }
     }
 
-    /// <summary>
-    /// 连接:建连接 → 双方互发身份/上线包 → 收到服务端身份包后按模式校验。
-    /// 校验放在连上之后做,不匹配就立刻断开。
-    /// </summary>
+    /// <summary>连接:建连接 → 双方互发身份/上线包 → 收到服务端身份包后按模式校验。 校验放在连上之后做,不匹配就立刻断开。</summary>
     public async Task ConnectAsync()
     {
         if (IsBusy) return;
@@ -284,7 +275,7 @@ public partial class ConnectViewModel : ViewModelBase, IDisposable
             {
                 PacketReceived?.Invoke(packet);
 
-                var text = Encoding.UTF8.GetString(packet.Data);
+                var text = Encoding.UTF8.GetString(packet.Data);   //包内容
 
                 switch (packet.Type)
                 {
@@ -385,9 +376,7 @@ public partial class ConnectViewModel : ViewModelBase, IDisposable
         }
     }
 
-    /// <summary>
-    /// 身份校验:服务端自报的端类型必须与模式要求一致,否则立刻断开。
-    /// </summary>
+    /// <summary>身份校验:服务端自报的端类型必须与模式要求一致,否则立刻断开。</summary>
     private void CheckServerIdent(TcpClient client, string role, string host, ushort port)
     {
         if (role == ExpectRole)

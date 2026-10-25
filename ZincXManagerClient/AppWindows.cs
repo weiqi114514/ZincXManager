@@ -82,9 +82,7 @@ internal static class AppWindows
         next.Position = new PixelPoint(x, y);
     }
 
-    /// <summary>
-    /// 重连彻底失败:关掉主界面,切回连接流程窗体,并弹窗把失败原因告诉用户。
-    /// </summary>
+    /// <summary>重连彻底失败:关掉主界面,切回连接流程窗体,并弹窗把失败原因告诉用户。</summary>
     public static void ShowConnectWithError(string error)
     {
         var vm = ClientSession.Connect ?? new ViewModels.ConnectViewModel();

@@ -4,10 +4,7 @@ using Avalonia.Interactivity;  // 路由事件
 
 namespace ZincXManagerClient.Views;
 
-/// <summary>
-/// 经济页:小功能选择(商店 / 银行)。
-/// 卡片整块可点,右下角「进入」也能点;功能本身还没做,先弹占位提示。
-/// </summary>
+/// <summary>经济页:小功能选择(商店 / 银行)。 卡片整块可点,右下角「进入」也能点;功能本身还没做,先弹占位提示。</summary>
 public partial class EconomyView : UserControl
 {
     public EconomyView()

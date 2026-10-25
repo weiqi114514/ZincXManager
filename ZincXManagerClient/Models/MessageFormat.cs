@@ -8,10 +8,7 @@ using Avalonia.Media;  // 画刷 / 颜色 / 几何
 
 namespace ZincXManagerClient.Models;
 
-/// <summary>
-/// 消息正文的轻量渲染:支持 Markdown 和简单 HTML,解析成 Avalonia 控件。
-/// 只做"看得懂"的级别 —— 标题 / 段落 / 粗体 / 列表 / 代码,不追求完整规范。
-/// </summary>
+/// <summary>消息渲染:Markdown / 简单 HTML → 控件,只做标题/段落/粗体/列表/代码</summary>
 public static class MessageFormat
 {
     private static readonly Regex HtmlTag = new("<[a-zA-Z/!][^>]*>", RegexOptions.Compiled);
@@ -95,7 +92,7 @@ public static class MessageFormat
             tb.Foreground = brush;
         }
 
-        var parts = Regex.Split(text, @"(\*\*[^*]+\*\*|`[^`]+`)");
+        var parts = Regex.Split(text, @"(\*\*[^*]+\*\*|`[^`]+`)");   //拆分结果
         foreach (var part in parts)
         {
             if (part.Length == 0)
@@ -129,7 +126,7 @@ public static class MessageFormat
     private static List<(string kind, int level, string content)> ParseMarkdown(string text)
     {
         var list = new List<(string, int, string)>();
-        var lines = text.Replace("\r\n", "\n").Split('\n');
+        var lines = text.Replace("\r\n", "\n").Split('\n');   //拆分结果
         var inCode = false;
         var code = new List<string>();
 

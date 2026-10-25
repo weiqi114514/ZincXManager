@@ -71,10 +71,7 @@ public static class MessageCard
     /// <summary>501 的负载:目标账号 + 卡片(每一跳都带着目标,方便逐跳过滤)。</summary>
     public static string BuildPush(string target, string card) => Safe(target) + Separator + card;
 
-    /// <summary>
-    /// 补发去重用的键:「来源 + 消息号」。消息号 ≤ 0(老格式卡片 / 本地消息)返回空串 ——
-    /// 空串表示这条不参与去重,照旧显示。
-    /// </summary>
+    /// <summary>补发去重用的键:「来源 + 消息号」。消息号 ≤ 0(老格式卡片 / 本地消息)返回空串 —— 空串表示这条不参与去重,照旧显示。</summary>
     public static string DedupeKey(string source, int id)
         => id > 0 ? (source ?? "").Trim() + "#" + id : "";
 
@@ -110,7 +107,7 @@ public static class MessageCard
             return false;
         }
 
-        var fields = text.Split(Separator);
+        var fields = text.Split(Separator);   //拆分结果
         if (fields.Length < FieldCount)
         {
             return false;
@@ -276,10 +273,7 @@ public static class MessageCard
     public static string BuildAction(string action, string input, string card)
         => Safe(action) + Separator + Safe(input) + Separator + card;
 
-    /// <summary>
-    /// 拆卡片动作的负载。原卡片一起带上,服务端不用引入"卡片序号"就知道是哪张卡片、
-    /// 是谁发的(来源段)、点了什么(动作段)、填空填了什么(输入段)。
-    /// </summary>
+    /// <summary>拆卡片动作的负载。原卡片一起带上,服务端不用引入"卡片序号"就知道是哪张卡片、 是谁发的(来源段)、点了什么(动作段)、填空填了什么(输入段)。</summary>
     public static bool TryParseAction(string text, out CardActionFields action)
     {
         action = new CardActionFields();

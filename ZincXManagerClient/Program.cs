@@ -49,10 +49,7 @@ sealed class Program
         }
     }
 
-    /// <summary>
-    /// 打开默认日志文件(文件名自动带 ZXMC 前缀和启动时间)。
-    /// 返回 false 表示文件没打开 —— 但这不会阻止界面启动,只是那之后没有落盘日志。
-    /// </summary>
+    /// <summary>打开默认日志文件(文件名自动带 ZXMC 前缀和启动时间)。 返回 false 表示文件没打开 —— 但这不会阻止界面启动,只是那之后没有落盘日志。</summary>
     private static bool OpenLog()
     {
         // 客户端是 GUI,没有控制台可以看,所以别往 stdout 回显
@@ -71,9 +68,7 @@ sealed class Program
         return ok;
     }
 
-    /// <summary>
-    /// 起 Avalonia 桌面应用,直到主窗口关掉才返回。
-    /// </summary>
+    /// <summary>起 Avalonia 桌面应用,直到主窗口关掉才返回。</summary>
     /// <param name="args">命令行参数,交给 Avalonia 处理。</param>
     private static void RunDesktop(string[] args)
         => BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);

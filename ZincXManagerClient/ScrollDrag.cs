@@ -7,10 +7,7 @@ using Avalonia.VisualTree;  // 界面框架
 
 namespace ZincXManagerClient;
 
-/// <summary>
-/// 给 ScrollViewer 加"按住拖动滚动"(滚动条隐藏时用)。
-/// 用隧道路由:连按钮之类的子控件也能当拖动介质;拖动超过阈值时吞掉事件,不会误触发点击。
-/// </summary>
+/// <summary>给 ScrollViewer 加"按住拖动滚动"(滚动条隐藏时用)。 用隧道路由:连按钮之类的子控件也能当拖动介质;拖动超过阈值时吞掉事件,不会误触发点击。</summary>
 public static class ScrollDrag
 {
     private const double Threshold = 6;

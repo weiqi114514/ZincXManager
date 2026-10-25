@@ -108,10 +108,7 @@ public partial class App : Application
         base.OnFrameworkInitializationCompleted();
     }
 
-    /// <summary>
-    /// 判断配置里有没有"数据源连接参数":按当前连接方式取对应那一组地址 + 端口。
-    /// 用 GetOrEmpty,不会顺手把缺省值写进 config.ini,所以"配过"和"没配过"分得清。
-    /// </summary>
+    /// <summary>判断配置里有没有"数据源连接参数":按当前连接方式取对应那一组地址 + 端口。 用 GetOrEmpty,不会顺手把缺省值写进 config.ini,所以"配过"和"没配过"分得清。</summary>
     private static bool HasDataSourceConfig()
     {
         var official = ClientConfig.GetOrEmpty("mode") == "OOS";
@@ -122,10 +119,7 @@ public partial class App : Application
         return ip.Length > 0 && port.Length > 0;
     }
 
-    /// <summary>
-    /// 打开客户端时的数据源自检:连得上返回 null,连不上返回错误说明。
-    /// 探测期间把 ErrorRaised 收走,避免和界面自己的弹窗重复。
-    /// </summary>
+    /// <summary>打开客户端时的数据源自检:连得上返回 null,连不上返回错误说明。 探测期间把 ErrorRaised 收走,避免和界面自己的弹窗重复。</summary>
     private static async Task<string?> ProbeDataSourceAsync(ConnectViewModel vm)
     {
         if (vm.IsConnected)
@@ -168,10 +162,7 @@ public partial class App : Application
         }
     }
 
-    /// <summary>
-    /// 启动时先把数据源连上:连上了才进登录界面 / 主界面;连不上就停在连接界面,
-    /// 由 ConnectWindow 自己弹窗给出「无法连接到数据源 + host:port + 具体异常」。
-    /// </summary>
+    /// <summary>启动先连数据源:连上才进登录/主界面,连不上停在连接界面</summary>
     private static async Task StartAfterProbeAsync(IClassicDesktopStyleApplicationLifetime desktop, ConnectViewModel vm, Window waitWindow)
     {
         vm.SuppressErrorDialog = true;   // 探测期间的错误由这里统一弹,界面别再弹一次

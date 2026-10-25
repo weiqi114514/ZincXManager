@@ -5,10 +5,7 @@ using Avalonia.Controls;  // 窗口与控件
 
 namespace ZincXManagerClient;
 
-/// <summary>
-/// 新窗口的位置:出现在"上一个窗口现在所在的位置"上(居中于它),
-/// 而不是每次都回到系统默认点或上一个窗口最初被创建的位置。
-/// </summary>
+/// <summary>新窗口的位置:出现在"上一个窗口现在所在的位置"上(居中于它), 而不是每次都回到系统默认点或上一个窗口最初被创建的位置。</summary>
 internal static class WindowPlacement
 {
     /// <summary>把 <paramref name="next"/> 摆到 <paramref name="previous"/> 现在的位置上(居中);没有上一个就不动。</summary>
@@ -27,11 +24,7 @@ internal static class WindowPlacement
 
         next.Position = new PixelPoint(origin.X + offsetX, origin.Y + offsetY);
     }
-    /// <summary>
-    /// 把窗口摆到"用户主屏的正中心"(第一个窗口用)。
-    /// 用 Screens.Primary 的工作区算,比 WindowStartupLocation=CenterScreen 更明确;
-    /// 分辨率缩放也一起算进去,否则高 DPI 下会偏。
-    /// </summary>
+    /// <summary>摆到主屏正中(第一个窗口用),按工作区算,高 DPI 不偏</summary>
     public static void CenterOnPrimaryScreen(Window window)
     {
         var screen = window.Screens.Primary;
