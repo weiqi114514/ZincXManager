@@ -1,6 +1,7 @@
 using System;  // 基础类型 / 常用静态方法
 using System.Collections.ObjectModel;  // 可观察集合(界面绑定用)
 using System.IO;  // 文件与目录读写
+using System.Linq;  // LINQ(镜像清单过滤)
 using System.Threading.Tasks;  // async / await 异步
 using Avalonia.Media;  // 画刷 / 颜色 / 几何
 using Avalonia.Media.Imaging;  // 位图
@@ -194,7 +195,7 @@ public partial class SettingsViewModel : ViewModelBase
 
     /// <summary>内容区当前显示的页面。</summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsModePage), nameof(IsPersonalizePage), nameof(IsSecurityPage), nameof(IsAdvancedPage), nameof(IsAboutPage), nameof(IsOtherPage))]
+    [NotifyPropertyChangedFor(nameof(IsModePage), nameof(IsPersonalizePage), nameof(IsSecurityPage), nameof(IsAdvancedPage), nameof(IsDownloadPage), nameof(IsAboutPage), nameof(IsOtherPage))]
     public partial string CurrentSection { get; set; } = "模式与数据源";
 
     public bool IsModePage => CurrentSection == "模式与数据源";
@@ -341,20 +342,21 @@ public partial class SettingsViewModel : ViewModelBase
     /// <summary>正在检查更新(按钮置灰)</summary>
     [ObservableProperty] public partial bool IsCheckingUpdate { get; set; }
 
-    /// <summary>下载镜像前缀(空 = 直连;填了就把原地址拼在后面)</summary>
-    [ObservableProperty] public partial string UpdateMirror { get; set; } = "";
+    /// <summary>镜像清单摘要(设置页那行显示用)</summary>
+    [ObservableProperty] public partial string MirrorSummary { get; set; } = "";
 
-    /// <summary>可选镜像(给下拉提示用)</summary>
-    public string[] MirrorOptions { get; } =
-    [
-        "",
-        "https://gh-proxy.com/",
-        "https://ghfast.top/",
-        "https://ghproxy.net/",
-    ];
-
-    partial void OnUpdateMirrorChanged(string value) =>
-        ClientConfig.Set("update.mirror", (value ?? "").Trim());
+    /// <summary>刷新摘要</summary>
+    public void RefreshMirrorSummary()
+    {
+        var items = Services.MirrorSettingsStore.Load();
+        var on = items.Where(i => i.Enabled && i.Url.Trim().Length > 0).ToList();
+        MirrorSummary = on.Count switch
+        {
+            0 => "未启用任何镜像(只走官方源)",
+            1 => on[0].Url,
+            _ => $"{on[0].Url} 等 {on.Count} 个",
+        };
+    }
 
     /// <summary>当前客户端版本(显示用)</summary>
     public string CurrentVersionText => Services.UpdateService.CurrentVersion;
@@ -518,13 +520,7 @@ public partial class SettingsViewModel : ViewModelBase
         MessageDays = ClientConfig.Get("msgdays", "60");
         UpdateOnStartup = ClientConfig.Get("update.mode", "prompt") != "off";
         UpdateRelaunch = ClientConfig.Get("update.relaunch", "1") == "1";
-        UpdateMirror = ClientConfig.GetOrEmpty("update.mirror").Trim();
-        if (UpdateMirror.Length == 0)
-        {
-            // 默认给一个能用的镜像,直连 GitHub 在国内经常下不动
-            UpdateMirror = "https://gh-proxy.com/";
-            ClientConfig.Set("update.mirror", UpdateMirror);
-        }
+        RefreshMirrorSummary();
 
         var cats = ClientConfig.GetOrEmpty("msgcats");
         MessageCategoryLog = cats.Contains("log");

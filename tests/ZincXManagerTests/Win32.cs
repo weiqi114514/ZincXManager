@@ -16,6 +16,13 @@ public static class Win32
     [DllImport("user32.dll")] private static extern bool SetWindowPos(IntPtr h, IntPtr after, int x, int y, int cx, int cy, uint flags);
     [DllImport("user32.dll", CharSet = CharSet.Unicode)] private static extern ushort VkKeyScan(char ch);
     [DllImport("user32.dll")] private static extern void keybd_event(byte vk, byte scan, uint flags, UIntPtr extra);
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)] private static extern int GetWindowTextW(IntPtr h, System.Text.StringBuilder sb, int max);
+    [DllImport("user32.dll")] private static extern bool EnumWindows(EnumProc cb, IntPtr param);
+    [DllImport("user32.dll")] private static extern uint GetWindowThreadProcessId(IntPtr h, out uint pid);
+    [DllImport("user32.dll")] private static extern bool IsWindowVisible(IntPtr h);
+
+
+    private delegate bool EnumProc(IntPtr h, IntPtr param);
 
     [StructLayout(LayoutKind.Sequential)]
     private struct RECT { public int Left, Top, Right, Bottom; }
@@ -48,47 +55,130 @@ public static class Win32
         Thread.Sleep(300);
     }
 
-    /// <summary>把鼠标移到屏幕坐标点一下(给 GUI 注入用)。</summary>
-    public static void ClickAt(int x, int y)
-    {
-        SetForegroundWindow(GetForegroundWindow());
-        SetCursorPos(x, y);
-        Thread.Sleep(120);
-        mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, UIntPtr.Zero);
-        Thread.Sleep(60);
-        mouse_event(MOUSEEVENTF_LEFTUP, 0, 0, 0, UIntPtr.Zero);
-        Thread.Sleep(200);
-    }
+    [DllImport("user32.dll")] private static extern bool PostMessage(IntPtr h, uint msg, IntPtr wParam, IntPtr lParam);
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)] private static extern IntPtr SendMessage(IntPtr h, uint msg, IntPtr wParam, IntPtr lParam);
+    [DllImport("user32.dll")] private static extern bool GetClientRect(IntPtr h, out RECT r);
+    [DllImport("user32.dll")] private static extern bool ClientToScreen(IntPtr h, ref POINT p);
 
-    [DllImport("user32.dll")] private static extern IntPtr GetForegroundWindow();
+    [StructLayout(LayoutKind.Sequential)]
+    private struct POINT { public int X, Y; }
 
-    /// <summary>按窗口矩形 + 相对坐标点一下。</summary>
+    // 后台消息:只发给目标窗口,不动真实鼠标/键盘
+    private const uint WM_MOUSEMOVE = 0x0200;
+    private const uint WM_LBUTTONDOWN = 0x0201;
+    private const uint WM_LBUTTONUP = 0x0202;
+    private const uint WM_CHAR = 0x0102;
+    private const uint WM_KEYDOWN = 0x0100;
+    private const uint WM_KEYUP = 0x0101;
+
+    /// <summary>
+    /// 往窗口客户区(相对坐标 0..1)发一次点击。
+    /// 用 PostMessage 直接投递,<b>不移动真实鼠标、不抢焦点</b>。
+    /// </summary>
     public static bool ClickIn(IntPtr h, double rx, double ry)
     {
-        if (!TryRect(h, out var x, out var y, out var w, out var hgt)) { return false; }
-        SetForegroundWindow(h);
-        Thread.Sleep(200);
-        ClickAt(x + (int)(w * rx), y + (int)(hgt * ry));
+        if (!GetClientRect(h, out var cr))
+        {
+            return false;
+        }
+
+        var w = cr.Right - cr.Left;
+        var hgt = cr.Bottom - cr.Top;
+        if (w <= 0 || hgt <= 0)
+        {
+            return false;
+        }
+
+        var cx = (int)(w * rx);
+        var cy = (int)(hgt * ry);
+        var lp = (IntPtr)((cy << 16) | (cx & 0xFFFF));
+
+        // SendMessage(同步)比 PostMessage 稳:Avalonia 的窗口过程要在自己的循环里拿到消息
+        SendMessage(h, WM_MOUSEMOVE, IntPtr.Zero, lp);
+        Thread.Sleep(40);
+        SendMessage(h, WM_LBUTTONDOWN, (IntPtr)1, lp);
+        Thread.Sleep(60);
+        SendMessage(h, WM_LBUTTONUP, IntPtr.Zero, lp);
+        Thread.Sleep(120);
         return true;
     }
 
-    /// <summary>往当前焦点敲一串 ASCII 字符。</summary>
-    public static void TypeAscii(string text)
+    /// <summary>往窗口发一串 ASCII(走 WM_CHAR,不碰真实键盘;窗口要有焦点才能进输入框)</summary>
+    public static void TypeTo(IntPtr h, string text)
     {
         foreach (var ch in text)
         {
-            var vk = VkKeyScan(ch);
-            var key = (byte)(vk & 0xFF);
-            var shift = (vk & 0x0100) != 0;
-            if (shift) { keybd_event(0x10, 0, 0, UIntPtr.Zero); }
-            keybd_event(key, 0, 0, UIntPtr.Zero);
-            Thread.Sleep(20);
-            keybd_event(key, 0, KEYEVENTF_KEYUP, UIntPtr.Zero);
-            if (shift) { keybd_event(0x10, 0, KEYEVENTF_KEYUP, UIntPtr.Zero); }
+            SendMessage(h, WM_CHAR, (IntPtr)ch, IntPtr.Zero);
             Thread.Sleep(25);
         }
     }
 
-    /// <summary>P/Invoke:发一次按键(按下/抬起)。</summary>
-    public static void PressEnter() { keybd_event(0x0D, 0, 0, UIntPtr.Zero); Thread.Sleep(30); keybd_event(0x0D, 0, KEYEVENTF_KEYUP, UIntPtr.Zero); }
+    /// <summary>发一次回车</summary>
+    public static void PressEnterTo(IntPtr h)
+    {
+        PostMessage(h, WM_KEYDOWN, (IntPtr)0x0D, IntPtr.Zero);
+        Thread.Sleep(30);
+        PostMessage(h, WM_KEYUP, (IntPtr)0x0D, IntPtr.Zero);
+    }
+
+    /// <summary>把窗口提到前台拿焦点(不动鼠标;某些输入需要焦点才能进控件)</summary>
+    public static void Focus(IntPtr h)
+    {
+        ShowWindow(h, 9);
+        SetForegroundWindow(h);
+        Thread.Sleep(250);
+    }
+
+    /// <summary>取某个进程所有可见窗口的标题(找弹窗用)</summary>
+    public static List<(IntPtr Hwnd, string Title)> WindowsOf(int processId)
+    {
+        var list = new List<(IntPtr, string)>();
+        EnumWindows((h, _) =>
+        {
+            GetWindowThreadProcessId(h, out var pid);
+            if (pid != (uint)processId || !IsWindowVisible(h))
+            {
+                return true;
+            }
+
+            var sb = new System.Text.StringBuilder(256);
+            GetWindowTextW(h, sb, sb.Capacity);
+            var title = sb.ToString();
+            if (title.Length > 0)
+            {
+                list.Add((h, title));
+            }
+
+            return true;
+        }, IntPtr.Zero);
+        return list;
+    }
+
+    /// <summary>按标题片段找窗口(找不到返回 IntPtr.Zero)</summary>
+    public static IntPtr FindWindowByTitle(int processId, string part)
+    {
+        foreach (var (h, title) in WindowsOf(processId))
+        {
+            if (title.Contains(part, StringComparison.OrdinalIgnoreCase))
+            {
+                return h;
+            }
+        }
+
+        return IntPtr.Zero;
+    }
+
+    /// <summary>窗口尺寸(验证弹窗真的开出来了)</summary>
+    public static bool SizeOf(IntPtr h, out int w, out int hgt)
+    {
+        w = hgt = 0;
+        if (!GetWindowRect(h, out var r))
+        {
+            return false;
+        }
+
+        w = r.Right - r.Left;
+        hgt = r.Bottom - r.Top;
+        return w > 0 && hgt > 0;
+    }
 }

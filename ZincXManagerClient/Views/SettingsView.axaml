@@ -379,10 +379,13 @@
                        Text="不勾选「启动时检查」= 完全不获取更新信息,仍然可以在「下载」页手动检查。自动打开只在便携版(zip)更新时生效,MSI 安装版装完需要自己打开。"/>
 
             <TextBlock Classes="label" Text="下载镜像(更新安装包走这里)" Margin="0,4,0,0"/>
-            <ComboBox Width="320" HorizontalAlignment="Left"
-                      ItemsSource="{Binding MirrorOptions}" SelectedItem="{Binding UpdateMirror}"/>
+            <StackPanel Orientation="Horizontal" Spacing="10">
+              <TextBlock Classes="body" Text="{Binding MirrorSummary}"
+                         VerticalAlignment="Center" MaxWidth="360" TextTrimming="CharacterEllipsis"/>
+              <Button Classes="small" Content="设置镜像…" Click="OnEditMirrorClick"/>
+            </StackPanel>
             <TextBlock Classes="tips" TextWrapping="Wrap" MaxWidth="520" HorizontalAlignment="Left"
-                       Text="默认 https://gh-proxy.com/ 。直连 GitHub 在国内经常下不动,镜像就是把这串地址拼在原下载地址前面。镜像失效时改成直连或换一个。"/>
+                       Text="点「设置镜像…」选或填地址。可以填多个,用英文分号隔开,下载时按顺序试,全连不上会自动退回官方源;留空 = 只走官方源。"/>
           </StackPanel>
         </StackPanel>
       </Border>

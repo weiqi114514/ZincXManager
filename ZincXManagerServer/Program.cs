@@ -1328,7 +1328,8 @@ internal static class Program
             localPush: (target, card) => PushLocal(ResolveName(config), target, card),
             banProvider: () => Bans,
             serverAccountNameProvider: () => config.MapGet(KeyOsUser).Trim(),
-            enterConfig: Command.ConfigMode.Enter);
+            enterConfig: Command.ConfigMode.Enter,
+            zxmmProvider: () => _zxmmApi);
 
         // 配置模式:进入后每一行都交给它,不再当命令分发
         cmd.LineInterceptor = line => Command.ConfigMode.Handle(line);

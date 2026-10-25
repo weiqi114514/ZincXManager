@@ -3,7 +3,7 @@
         x:Class="ZincXManagerClient.Views.UpdateWindow"
         Title="更新提示"
         Width="460" SizeToContent="Height"
-        Background="#CCFFFFFF"
+        Background="#F7FFFFFF"
         TransparencyLevelHint="AcrylicBlur,Blur,Transparent"
         FontFamily="Microsoft YaHei UI, Microsoft YaHei, Segoe UI"
         WindowDecorations="None"
@@ -73,8 +73,8 @@
     </Style>
   </Window.Styles>
 
-  <Border Background="#F7FFFFFF" BorderBrush="{DynamicResource ThemeMuted}" BorderThickness="1" Margin="1">
-    <Grid RowDefinitions="40,Auto,Auto">
+  <!-- 直接铺 Grid:半透明白窗口 + 不透明白 Border 两层叠着,顶边会露出 1px 色差 -->
+  <Grid RowDefinitions="40,Auto,Auto">
 
       <!-- 标题栏 -->
       <Border x:Name="TitleBar" Grid.Row="0" Background="{DynamicResource ThemePrimary}"
@@ -121,6 +121,5 @@
         <Button x:Name="UpdateButton" Classes="act go" Content="立刻更新" Click="OnUpdateClick"/>
         <Button x:Name="OkButton" Classes="act go" Content="知道了" Click="OnCancelClick" IsVisible="False"/>
       </StackPanel>
-    </Grid>
-  </Border>
+  </Grid>
 </Window>

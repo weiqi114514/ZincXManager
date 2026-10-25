@@ -74,13 +74,23 @@ public static class ZxmsCommands
         Func<string, CardInput, int> localPush,
         Func<BanStore> banProvider,
         Func<string> serverAccountNameProvider,
-        Action enterConfig)
+        Action enterConfig,
+        Func<Zxmm.ZxmmApi?>? zxmmProvider = null)
     {
         // 记住本端的服务端账号名:用户账号不能和它重名(和 config 里的 osuser 同步)
         _serverAccountName = serverAccountNameProvider();
 
         // 账号表(给 megback p 按名字查 ID 用,也用来把玩家 ID 翻成名字)
         var accounts = accountProvider;
+
+        // ---- ZXMM 专用通道(连不上时靠它手动重连) ----
+        cmd.Register("zxmm connect", _ => CmdZxmmConnect(zxmmProvider?.Invoke()),
+            "手动重连 ZXMM 专用通道(自动重连 5 次失败后用它)",
+            "zxmm connect");
+
+        cmd.Register("zxmm status", _ => CmdZxmmStatus(zxmmProvider?.Invoke()),
+            "查看 ZXMM 专用通道状态",
+            "zxmm status");
 
         cmd.Register("net status", _ => CmdNetStatus(osProvider(), osTargetProvider(), osNameProvider(), clientCountProvider()),
             "查看 ZXMOS 连接与客户端接入情况",
@@ -339,6 +349,32 @@ public static class ZxmsCommands
         }
     }
 
+
+    /// <summary>手动重连 ZXMM 通道</summary>
+    private static void CmdZxmmConnect(Zxmm.ZxmmApi? api)
+    {
+        if (api is null)
+        {
+            Logger.Log(LogLevel.Warning, "[ZXMM] 还没初始化(启动流程没走到),等启动完再试");
+            return;
+        }
+
+        api.Reconnect();
+        Logger.Log(LogLevel.Info, "[ZXMM] 已手动触发重连,5 秒一轮,最多 5 次");
+    }
+
+    /// <summary>看 ZXMM 通道状态</summary>
+    private static void CmdZxmmStatus(Zxmm.ZxmmApi? api)
+    {
+        if (api is null)
+        {
+            Logger.Log(LogLevel.Info, "[ZXMM] 未初始化");
+            return;
+        }
+
+        var state = api.Connected ? "已连接" : api.GaveUp ? "已放弃自动重连(用 zxmm connect)" : "未连接,自动重连中";
+        Logger.Log(LogLevel.Info, $"[ZXMM] 专用通道:{state}");
+    }
 
     /// <summary>列绑定:不带参数全列,带参数按 ID/账号名/玩家名 查一条</summary>
     private static void CmdBindList(AccountStore accounts, string[] args)

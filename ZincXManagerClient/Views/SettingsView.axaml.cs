@@ -19,6 +19,27 @@ public partial class SettingsView : UserControl
         InitializeComponent();
     }
 
+    /// <summary>设置下载镜像:开独立小窗口,确定后写回</summary>
+    private async void OnEditMirrorClick(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not SettingsViewModel vm)
+        {
+            return;
+        }
+
+        if (TopLevel.GetTopLevel(this) is not Window owner)
+        {
+            return;
+        }
+
+        var list = await MirrorWindow.EditAsync(owner);
+        if (list is not null)
+        {
+            Services.MirrorSettingsStore.Save(list);
+            vm.RefreshMirrorSummary();
+        }
+    }
+
     /// <summary>手动检查更新:有就弹更新窗口,没有/失败各弹一个提示</summary>
     private async void OnCheckUpdateClick(object? sender, RoutedEventArgs e)
     {
