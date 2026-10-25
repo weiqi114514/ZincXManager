@@ -3,7 +3,7 @@
         xmlns:models="clr-namespace:ZincXManagerClient.Models"
         x:Class="ZincXManagerClient.Views.MirrorWindow"
         Title="下载镜像"
-        Width="640" Height="480"
+        Width="660" Height="460"
         Background="#F7FFFFFF"
         TransparencyLevelHint="AcrylicBlur,Blur,Transparent"
         FontFamily="Microsoft YaHei UI, Microsoft YaHei, Segoe UI"
@@ -41,6 +41,7 @@
     <Style Selector="Button.close:pointerover /template/ ContentPresenter">
       <Setter Property="Background" Value="#F1707A"/>
     </Style>
+
     <Style Selector="Button.act">
       <Setter Property="Height" Value="32"/>
       <Setter Property="MinWidth" Value="88"/>
@@ -55,11 +56,11 @@
     <Style Selector="Button.act /template/ ContentPresenter">
       <Setter Property="CornerRadius" Value="0"/>
     </Style>
-    <Style Selector="Button.act.cancel">
+    <Style Selector="Button.act.plain">
       <Setter Property="Background" Value="{DynamicResource ThemeLight}"/>
       <Setter Property="Foreground" Value="#1F3B3A"/>
     </Style>
-    <Style Selector="Button.act.cancel /template/ ContentPresenter">
+    <Style Selector="Button.act.plain /template/ ContentPresenter">
       <Setter Property="Background" Value="{DynamicResource ThemeLight}"/>
     </Style>
     <Style Selector="Button.act.go">
@@ -72,9 +73,12 @@
     <Style Selector="Button.act.go:pointerover /template/ ContentPresenter">
       <Setter Property="Background" Value="{DynamicResource ThemePrimaryHover}"/>
     </Style>
-    <Style Selector="Button.rowbtn">
-      <Setter Property="Width" Value="22"/>
-      <Setter Property="Height" Value="15"/>
+
+    <!-- 行内上下箭头:两个叠在一起,占一列 -->
+    <Style Selector="Button.arrow">
+      <Setter Property="Width" Value="20"/>
+      <Setter Property="Height" Value="14"/>
+      <Setter Property="FontSize" Value="7"/>
       <Setter Property="Padding" Value="0"/>
       <Setter Property="MinWidth" Value="0"/>
       <Setter Property="MinHeight" Value="0"/>
@@ -85,28 +89,25 @@
       <Setter Property="HorizontalContentAlignment" Value="Center"/>
       <Setter Property="VerticalContentAlignment" Value="Center"/>
     </Style>
-    <Style Selector="Button.rowbtn /template/ ContentPresenter">
+    <Style Selector="Button.arrow /template/ ContentPresenter">
       <Setter Property="Background" Value="Transparent"/>
       <Setter Property="CornerRadius" Value="0"/>
     </Style>
-    <Style Selector="Button.rowbtn:pointerover /template/ ContentPresenter">
-      <Setter Property="Background" Value="{DynamicResource ThemeLight}"/>
-    </Style>
-    <Style Selector="Button.arrow">
-      <Setter Property="FontSize" Value="8"/>
+    <Style Selector="Button.arrow:pointerover /template/ ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource ThemeMuted}"/>
     </Style>
 
-    <!-- 每行是一块浅底色,不是线框:行与行之间留 2px 空隙 -->
+    <!-- 列表项自身不要背景,背景由行里的 Border 出 -->
     <Style Selector="ListBoxItem">
-      <Setter Property="Background" Value="Transparent"/>
       <Setter Property="Padding" Value="0"/>
       <Setter Property="Margin" Value="0"/>
       <Setter Property="CornerRadius" Value="0"/>
+      <Setter Property="Background" Value="Transparent"/>
     </Style>
     <Style Selector="ListBoxItem /template/ ContentPresenter">
       <Setter Property="Background" Value="Transparent"/>
-      <Setter Property="CornerRadius" Value="0"/>
       <Setter Property="Padding" Value="0"/>
+      <Setter Property="CornerRadius" Value="0"/>
     </Style>
     <Style Selector="ListBoxItem:pointerover /template/ ContentPresenter">
       <Setter Property="Background" Value="Transparent"/>
@@ -116,79 +117,80 @@
     </Style>
   </Window.Styles>
 
-  <!-- 直接铺 Grid,别套 Border:半透明白 + 不透明白两层叠着,顶边会露出 1px 色差 -->
+  <!-- 窗口内容直接从 Grid 起,不套 Border:套了会在顶边露 1px 色差 -->
   <Grid RowDefinitions="40,*,Auto">
 
-      <Border Grid.Row="0" Background="{DynamicResource ThemePrimary}" PointerPressed="OnTitleBarPointerPressed">
-        <Grid ColumnDefinitions="Auto,*,Auto">
-          <TextBlock Grid.Column="0" Text="下载镜像" Foreground="White" FontSize="13"
-                     Margin="16,0,0,0" VerticalAlignment="Center"/>
-          <Button Grid.Column="2" Classes="chrome close" Width="52" Click="OnCancelClick">
-            <Path Data="M0,0 L12,12 M12,0 L0,12" Stroke="White" StrokeThickness="1.7"/>
-          </Button>
+    <!-- 标题栏 -->
+    <Border Grid.Row="0" Background="{DynamicResource ThemePrimary}" PointerPressed="OnTitleBarPointerPressed">
+      <Grid ColumnDefinitions="Auto,*,Auto">
+        <TextBlock Grid.Column="0" Text="下载镜像" Foreground="White" FontSize="13"
+                   Margin="16,0,0,0" VerticalAlignment="Center"/>
+        <Button Grid.Column="2" Classes="chrome close" Width="52" Click="OnCancelClick">
+          <Path Data="M0,0 L12,12 M12,0 L0,12" Stroke="White" StrokeThickness="1.7"/>
+        </Button>
+      </Grid>
+    </Border>
+
+    <!-- 表格:表头 + 行同处一个容器,中间没有缝 -->
+    <Border Grid.Row="1" Margin="16,10,16,0"
+            Background="{DynamicResource ThemeLight}"
+            BorderBrush="{DynamicResource ThemePanelBorder}"
+            BorderThickness="1">
+      <Grid RowDefinitions="Auto,*">
+
+        <!-- 表头:只要字 -->
+        <Grid Grid.Row="0" ColumnDefinitions="40,*,170,50,8" Margin="10,8,10,8">
+          <TextBlock Grid.Column="0" Text="排序" FontSize="12" Foreground="#4A6B78"/>
+          <TextBlock Grid.Column="1" Text="镜像源地址" FontSize="12" Foreground="#4A6B78"/>
+          <TextBlock Grid.Column="2" Text="名称(可选)" FontSize="12" Foreground="#4A6B78"/>
+          <TextBlock Grid.Column="3" Text="启用" FontSize="12" Foreground="#4A6B78" HorizontalAlignment="Center"/>
         </Grid>
-      </Border>
 
-      <!-- 表头和列表在同一个容器里,中间不留缝 -->
-      <Border Grid.Row="1" Background="{DynamicResource ThemeLight}"
-              BorderBrush="{DynamicResource ThemePanelBorder}" BorderThickness="1"
-              Margin="16,8,16,0">
-        <Grid RowDefinitions="Auto,*">
-
-        <!-- 表头:只要字,不要底色 -->
-        <Border Grid.Row="0" Background="Transparent" Padding="12,7">
-          <Grid ColumnDefinitions="44,*,150,54,30">
-            <TextBlock Grid.Column="0" Text="优先级" FontSize="12" Foreground="#4A6B78"/>
-            <TextBlock Grid.Column="1" Text="镜像源地址" FontSize="12" Foreground="#4A6B78"/>
-            <TextBlock Grid.Column="2" Text="名称(可选)" FontSize="12" Foreground="#4A6B78"/>
-            <TextBlock Grid.Column="3" Text="启用" FontSize="12" Foreground="#4A6B78" HorizontalAlignment="Center"/>
-          </Grid>
-        </Border>
-
-        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" MaxHeight="270">
-          <ListBox x:Name="MirrorList" Background="Transparent" BorderThickness="0">
+        <!-- 行 -->
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+          <ListBox x:Name="MirrorList" Background="Transparent" BorderThickness="0" Padding="6,0,6,6">
             <ListBox.ItemTemplate>
               <DataTemplate x:DataType="models:MirrorItem">
-                <!-- 行用白块,表格底是主题淡色 —— 行和表格各是各的背景 -->
-                <Border Background="{DynamicResource ThemeGlassLight}" Margin="4,0,4,2" Padding="8,4">
-                <Grid ColumnDefinitions="44,*,150,54,30">
-                  <!-- 交换优先级:上下两个小箭头竖着叠,占一个控件位 -->
-                  <StackPanel Grid.Column="0" Orientation="Vertical" Spacing="0" VerticalAlignment="Center">
-                    <Button Classes="rowbtn arrow" Content="▲" Click="OnMoveUpClick" Tag="{Binding}"/>
-                    <Button Classes="rowbtn arrow" Content="▼" Click="OnMoveDownClick" Tag="{Binding}"/>
-                  </StackPanel>
+                <!-- 每行一块白底,铺在淡色表格底上 -->
+                <Border Background="{DynamicResource ThemeGlassLight}" Margin="0,0,0,4" Padding="6,4">
+                  <Grid ColumnDefinitions="40,*,170,50,8">
+                    <StackPanel Grid.Column="0" Orientation="Vertical" Spacing="0"
+                                VerticalAlignment="Center" HorizontalAlignment="Left">
+                      <Button Classes="arrow" Content="▲" Click="OnMoveUpClick" Tag="{Binding}"/>
+                      <Button Classes="arrow" Content="▼" Click="OnMoveDownClick" Tag="{Binding}"/>
+                    </StackPanel>
 
-                  <TextBox Grid.Column="1" Text="{Binding Url, Mode=TwoWay}" Height="30"
-                           Watermark="https://gh-proxy.com/" Margin="0,0,6,0"/>
+                    <TextBox Grid.Column="1" Text="{Binding Url, Mode=TwoWay}" Height="30"
+                             Watermark="https://gh-proxy.com/" Margin="0,0,8,0"/>
 
-                  <ComboBox Grid.Column="2" Height="30" Margin="0,0,6,0"
-                            IsEditable="True"
-                            Text="{Binding Name, Mode=TwoWay}"
-                            PlaceholderText="可空">
-                    <ComboBoxItem Content="gh-proxy"/>
-                    <ComboBoxItem Content="ghfast"/>
-                    <ComboBoxItem Content="ghproxy"/>
-                    <ComboBoxItem Content="自建"/>
-                  </ComboBox>
+                    <ComboBox Grid.Column="2" Height="30" Margin="0,0,8,0"
+                              IsEditable="True"
+                              Text="{Binding Name, Mode=TwoWay}"
+                              PlaceholderText="可空">
+                      <ComboBoxItem Content="gh-proxy"/>
+                      <ComboBoxItem Content="ghfast"/>
+                      <ComboBoxItem Content="ghproxy"/>
+                      <ComboBoxItem Content="自建"/>
+                    </ComboBox>
 
-                  <CheckBox Grid.Column="3" IsChecked="{Binding Enabled, Mode=TwoWay}"
-                            HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                </Grid>
+                    <CheckBox Grid.Column="3" IsChecked="{Binding Enabled, Mode=TwoWay}"
+                              HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                  </Grid>
                 </Border>
               </DataTemplate>
             </ListBox.ItemTemplate>
           </ListBox>
         </ScrollViewer>
-        </Grid>
-      </Border>
-
-      <!-- 底部:左"添加",右"取消/保存" -->
-      <Grid Grid.Row="2" ColumnDefinitions="Auto,*,Auto" Margin="16,10,16,16">
-        <Button Grid.Column="0" Classes="act cancel" Content="+ 添加镜像源" Click="OnAddClick"/>
-        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="10">
-          <Button Classes="act cancel" Content="取消" Click="OnCancelClick"/>
-          <Button Classes="act go" Content="保存" Click="OnSaveClick"/>
-        </StackPanel>
       </Grid>
+    </Border>
+
+    <!-- 底部:左添加,右取消/保存 -->
+    <Grid Grid.Row="2" ColumnDefinitions="Auto,*,Auto" Margin="16,10,16,14">
+      <Button Grid.Column="0" Classes="act plain" Content="+ 添加镜像源" Click="OnAddClick"/>
+      <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="10">
+        <Button Classes="act plain" Content="取消" Click="OnCancelClick"/>
+        <Button Classes="act go" Content="保存" Click="OnSaveClick"/>
+      </StackPanel>
+    </Grid>
   </Grid>
 </Window>
