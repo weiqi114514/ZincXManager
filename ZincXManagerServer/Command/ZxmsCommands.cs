@@ -142,8 +142,8 @@ public static class ZxmsCommands
             "bind <账号名或ID> <玩家名>");
 
         cmd.Register("unbind", args => CmdUnbind(accountProvider(), args),
-            "解绑:玩家名 / 账号名 / 账号ID 都能用,解绑后该玩家再进服要重新走确认",
-            "unbind <玩家名|账号名|账号ID>");
+            "解绑:MC玩家名 / ZXM账号名 / ZXM账号ID 都能用,解绑后该玩家再进服要重新走确认",
+            "unbind weiqi_wq");
 
         // ---- 本端的服务端账号(用于接入官方服务端;和用户账号是两个东西) ----
         cmd.Register("info", _ => CmdInfo(identity, osProvider(), osTargetProvider()),
@@ -474,19 +474,30 @@ public static class ZxmsCommands
         }
     }
 
-    /// <summary>解绑:玩家名/账号名/ID 都行,顺手清掉免登录记录</summary>
+    /// <summary>
+    /// 解绑:MC 玩家名 / ZXM 账号名 / ZXM 账号 ID 都能当参数。
+    /// 先按玩家名精确找(输入的是玩家名就解这个玩家),找不到再按账号名、账号 ID。
+    /// </summary>
     private static void CmdUnbind(AccountStore accounts, string[] args)
     {
         if (args.Length < 1)
         {
-            Logger.Log(LogLevel.Warning, "[绑定] 用法:unbind <玩家名或账号名>    例:unbind weiqi_wq");
+            Logger.Log(LogLevel.Warning, "[绑定] 用法:unbind <MC玩家名|ZXM账号名|ZXM账号ID>    例:unbind weiqi_wq / unbind testuser / unbind 5");
             return;
         }
 
         var key = args[0].Trim();
 
-        // 依次按:账号名 → 账号 ID → 玩家名 找
-        var accountId = accounts.Find(key)?.Id ?? 0;   //账号ID
+        // ① 玩家名(MC 账号名称):绑定表里这个玩家归哪个账号
+        var accountId = LoginStore.AccountOf(key);
+
+        // ② ZXM 账号名(ZM 账号名称)
+        if (accountId <= 0)
+        {
+            accountId = accounts.Find(key)?.Id ?? 0;
+        }
+
+        // ③ ZXM 账号 ID
         if (accountId <= 0 && int.TryParse(key, out var byId))
         {
             accountId = accounts.FindById(byId)?.Id ?? 0;
@@ -494,12 +505,8 @@ public static class ZxmsCommands
 
         if (accountId <= 0)
         {
-            accountId = LoginStore.AccountOf(key);
-        }
-
-        if (accountId <= 0)
-        {
-            Logger.Log(LogLevel.Warning, $"[绑定] 找不到号:{key} 既不是账号名,也不是已绑定的玩家名");
+            Logger.Log(LogLevel.Warning,
+                $"[绑定] 找不到 {key}:既不是已绑定的 MC 玩家名,也不是 ZXM 账号名 / 账号 ID(可用 bind list 查)");
             return;
         }
 
@@ -507,7 +514,7 @@ public static class ZxmsCommands
 
         if (!LoginStore.Unbind(accountId, out var player))
         {
-            Logger.Log(LogLevel.Warning, $"[绑定] 账号 {accountName} 没有绑定记录");
+            Logger.Log(LogLevel.Warning, $"[绑定] 账号 {accountName}(ID {accountId}) 没有绑定记录");
             return;
         }
 
