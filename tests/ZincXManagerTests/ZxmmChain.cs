@@ -77,6 +77,13 @@ public sealed class FakeZxmm : IDisposable
         w.WriteLine($"evt|joined|{player}|{ip}");
     }
 
+    /// <summary>推一条 connection 阶段事件:真模组在 configuration 阶段就上报,ZXMS 这时就能踢人并显示理由。</summary>
+    public void PushJoining(string player, string ip)
+    {
+        var w = _writer ?? throw new InvalidOperationException("ZXMS 还没连上假 ZXMM");
+        w.WriteLine($"evt|joining|{player}|{ip}");
+    }
+
     /// <summary>是不是收到了含 key 的请求(看一眼，不消费)。</summary>
     public bool Contains(string key)
     {

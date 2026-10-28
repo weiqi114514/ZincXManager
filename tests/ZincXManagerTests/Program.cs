@@ -887,6 +887,11 @@ var results = new List<SuiteResult>();
     await ZincXManagerTests.UpdateSuite.RunAsync(results, Ws, DebugMs);
 }
 
+// ================= 套件 15:官方账号绑定 + 621 在线同意 + 改绑 =================
+{
+    results.Add(await ZincXManagerTests.OfficialBindChain.RunAsync(Ws, DebugMs, DebugOs));
+}
+
 // ================= 汇总 =================
 Console.WriteLine();
 Console.WriteLine("================= 总表 =================");
