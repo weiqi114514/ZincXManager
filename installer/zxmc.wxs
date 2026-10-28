@@ -1,6 +1,5 @@
 <Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
-     xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui"
-     xmlns:util="http://wixtoolset.org/schemas/v4/wxs/util">
+     xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui">
   <!--
     ZincXManager 客户端(ZXMC)安装包定义 —— 供 _build-installer.ps1 调用:
       wix build installer\zxmc.wxs -o out\...msi -d Version=... -d StageDir=... -d IconPath=...
@@ -29,11 +28,16 @@
 
     <Launch Condition="Installed OR VersionNT64" Message="ZincXManager 客户端需要 64 位 Windows。" />
 
-    <!-- 安装界面:允许改安装目录;默认放 D 盘(可改) -->
-    <ui:WixUI Id="WixUI_InstallDir" InstallDirectory="INSTALLFOLDER" />
-
-    <!-- 默认装到 D 盘(界面里可改);必须在 ui 序列前改,否则界面显示的还是 C 盘 -->
+    <!-- 安装界面:默认装到 D:\ZincXManager,向导里可以改成任意位置 -->
+    <!-- 默认值用 SetDirectory 设(必须在 WixUI 之前);INSTALLFOLDER 本身仍定义在目录表里,
+         用户在目录页输入的路径会经 SetTargetPath 写回这个目录属性,执行序列按它安装。 -->
     <SetDirectory Id="INSTALLFOLDER" Value="D:\ZincXManager" Sequence="ui" />
+
+    <!-- 关掉 WixUI 的严格路径校验:默认路径(以及用户手输的路径)可能不在目录表里,
+         开着校验会弹"无效目录"把用户卡住,结果就是"改不了安装位置"。 -->
+    <Property Id="WIXUI_DONTVALIDATEPATH" Value="1" />
+
+    <ui:WixUI Id="WixUI_InstallDir" InstallDirectory="INSTALLFOLDER" />
 
     <StandardDirectory Id="ProgramFiles64Folder">
       <Directory Id="INSTALLFOLDER" Name="ZincXManager">
