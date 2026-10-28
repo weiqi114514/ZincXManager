@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using ZincXManagerShared.Update;  // VersionRules:客户端自动更新用的同一份版本比较规则
 
 namespace ZincXManagerTests;
 
@@ -31,11 +32,18 @@ public static class UpdateSuite
         var legacy = ParseMirrors("https://gh-proxy.com/;https://ghproxy.net/|x|1");
         r.Add("旧格式(纯地址)也能读", legacy.Count >= 1);
 
-        // ---- 单测:版本比较规则(a < b,数字分段) ----
-        r.Add("b0.1.0 > a0.5.1", CompareVersion("b0.1.0", "a0.5.1") > 0, "b 系列比 a 新");
-        r.Add("b0.2.0 > b0.1.0", CompareVersion("b0.2.0", "b0.1.0") > 0);
-        r.Add("b0.1.0 == b0.1.0", CompareVersion("b0.1.0", "b0.1.0") == 0);
-        r.Add("a0.5.2 > a0.5.1", CompareVersion("a0.5.2", "a0.5.1") > 0);
+        // ---- 版本比较:直接测客户端用的那份实现(Shared.VersionRules),不再抄一份规则 ----
+        r.Add("b0.1.0 > a0.5.1", VersionRules.Compare("b0.1.0", "a0.5.1") > 0, "b 系列比 a 新");
+        r.Add("b0.2.0 > b0.1.0", VersionRules.Compare("b0.2.0", "b0.1.0") > 0);
+        r.Add("b0.1.0 == b0.1.0", VersionRules.Compare("b0.1.0", "b0.1.0") == 0);
+        r.Add("a0.5.2 > a0.5.1", VersionRules.Compare("a0.5.2", "a0.5.1") > 0);
+        r.Add("b0.1.2b > b0.1.2a(字母后缀参与比较)", VersionRules.Compare("b0.1.2b", "b0.1.2a") > 0,
+            "以前的后缀被当成非数字丢掉,两者被判相等,发新版客户端收不到更新");
+        r.Add("b0.1.2a > b0.1.2(修订号比无后缀新)", VersionRules.Compare("b0.1.2a", "b0.1.2") > 0);
+        r.Add("b0.1.2a > b0.1.1a(带后缀的小版本升级)", VersionRules.Compare("b0.1.2a", "b0.1.1a") > 0,
+            "以前 b0.1.1a 被判得比 b0.1.2a 还新");
+        r.Add("b0.1.1a > b0.1.1", VersionRules.Compare("b0.1.1a", "b0.1.1") > 0);
+        r.Add("b0.1.10 > b0.1.9(数字按值比)", VersionRules.Compare("b0.1.10", "b0.1.9") > 0);
 
         // ---- 单测:下载候选顺序(镜像按序 + 官方兜底) ----
         var urls = BuildCandidates("https://github.com/a/b.msi", new[] { "https://gh-proxy.com/", "https://ghfast.top/", "" });
@@ -164,43 +172,6 @@ public static class UpdateSuite
     /// <summary>镜像串序列化</summary>
     private static string SerializeMirrors(IEnumerable<(string Url, string Name, bool Enabled)> items) =>
         string.Join(";", items.Where(i => i.Url.Length > 0).Select(i => $"{i.Url}|{i.Name}|{(i.Enabled ? 1 : 0)}"));
-
-    /// <summary>版本比较(与客户端 UpdateService.CompareVersion 同规则)</summary>
-    private static int CompareVersion(string a, string b)
-    {
-        static (char Prefix, int[] Nums) Parse(string v)
-        {
-            v = v.Trim().TrimStart('v', 'V');
-            var prefix = '\0';
-            if (v.Length > 0 && char.IsLetter(v[0]))
-            {
-                prefix = char.ToLowerInvariant(v[0]);
-                v = v[1..];
-            }
-
-            return (prefix, v.Split('.', '-', '+').Select(x => int.TryParse(x, out var n) ? n : 0).ToArray());
-        }
-
-        var (pa, na) = Parse(a);
-        var (pb, nb) = Parse(b);
-        if (pa != pb)
-        {
-            return pa.CompareTo(pb);
-        }
-
-        var len = Math.Max(na.Length, nb.Length);
-        for (var i = 0; i < len; i++)
-        {
-            var x = i < na.Length ? na[i] : 0;
-            var y = i < nb.Length ? nb[i] : 0;
-            if (x != y)
-            {
-                return x.CompareTo(y);
-            }
-        }
-
-        return 0;
-    }
 
     /// <summary>下载候选地址</summary>
     private static string[] BuildCandidates(string url, string[] mirrors)

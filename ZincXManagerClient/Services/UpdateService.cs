@@ -406,48 +406,11 @@ public static class UpdateService
         File.WriteAllText(script, string.Join("\r\n", lines), new System.Text.UTF8Encoding(false));
     }
 
-    /// <summary>版本比较:先比字母前缀(a &lt; b &lt; c),前缀相同再按数字段比</summary>
-    public static int CompareVersion(string a, string b)
-    {
-        static (char Prefix, int[] Nums) Parse(string v)
-        {
-            v = v.Trim().TrimStart('v', 'V');
-            var prefix = '\0';
-            if (v.Length > 0 && char.IsLetter(v[0]))
-            {
-                prefix = char.ToLowerInvariant(v[0]);
-                v = v[1..];
-            }
-
-            var nums = v.Split('.', '-', '+')
-                .Select(x => int.TryParse(x, out var n) ? n : 0)
-                .ToArray();
-            return (prefix, nums);
-        }
-
-        var (prefixA, pa) = Parse(a);
-        var (prefixB, pb) = Parse(b);
-
-        // 一个有前缀一个没有:有前缀的算新的开发系列,没前缀的按 0 处理(比 a 还旧)
-        var keyA = prefixA == '\0' ? '\0' : prefixA;
-        var keyB = prefixB == '\0' ? '\0' : prefixB;
-        if (keyA != keyB)
-        {
-            return keyA.CompareTo(keyB);
-        }
-        var len = Math.Max(pa.Length, pb.Length);
-        for (var i = 0; i < len; i++)
-        {
-            var x = i < pa.Length ? pa[i] : 0;
-            var y = i < pb.Length ? pb[i] : 0;
-            if (x != y)
-            {
-                return x.CompareTo(y);
-            }
-        }
-
-        return 0;
-    }
+    /// <summary>
+    /// 版本比较:规则在 Shared 的 <see cref="ZincXManagerShared.Update.VersionRules"/>(测试直接测那份实现)。
+    /// 字母后缀参与比较,否则 b0.1.2a 与 b0.1.2b 会被判成相等。
+    /// </summary>
+    public static int CompareVersion(string a, string b) => ZincXManagerShared.Update.VersionRules.Compare(a, b);
 
     /// <summary>读缓存(上次检查到的版本 + 时间)</summary>
     private static bool TryReadCache(out string version, out DateTime at)
