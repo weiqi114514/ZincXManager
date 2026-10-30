@@ -8,10 +8,10 @@
     <AssemblyName>ZincXManagerShared</AssemblyName>
     <!-- 三个端(ZXMC/ZXMS/ZXMOS)共用,必须兼容 AOT 发布 -->
     <IsAotCompatible>true</IsAotCompatible>
-    <!-- 版本跟着主版本走:显示用 b0.1.1,文件版本必须纯数字 -->
-    <Version>0.1.1</Version>
-    <FileVersion>0.1.1.0</FileVersion>
-    <InformationalVersion>b0.1.1</InformationalVersion>
+    <!-- 版本跟着主版本走:显示用 b0.1.3,文件版本必须纯数字 -->
+    <Version>0.1.3</Version>
+    <FileVersion>0.1.3.0</FileVersion>
+    <InformationalVersion>b0.1.3</InformationalVersion>
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
   </PropertyGroup>
 

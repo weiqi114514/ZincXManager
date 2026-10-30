@@ -1,8 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <Version>0.1.2</Version>
-    <FileVersion>0.1.2.0</FileVersion>
-    <InformationalVersion>b0.1.2b</InformationalVersion>
+    <Version>0.1.3</Version>
+    <FileVersion>0.1.3.0</FileVersion>
+    <InformationalVersion>b0.1.3</InformationalVersion>
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
     <ApplicationIcon>..\assets\zxm.ico</ApplicationIcon>
     <RootNamespace>ZincXManagerClient</RootNamespace>

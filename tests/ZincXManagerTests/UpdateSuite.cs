@@ -45,6 +45,22 @@ public static class UpdateSuite
         r.Add("b0.1.1a > b0.1.1", VersionRules.Compare("b0.1.1a", "b0.1.1") > 0);
         r.Add("b0.1.10 > b0.1.9(数字按值比)", VersionRules.Compare("b0.1.10", "b0.1.9") > 0);
 
+        // ---- 版本号命名规则:[版本类型][大版本][中版本][小版本][极小更新/修复更新] ----
+        r.Add("b0.1.3 > b0.1.2b(小版本升级压过修复号)", VersionRules.Compare("b0.1.3", "b0.1.2b") > 0);
+        r.Add("b0.1.3a > b0.1.3(极小更新比无修复号新)", VersionRules.Compare("b0.1.3a", "b0.1.3") > 0);
+        r.Add("b0.1.3 == b0.1.3", VersionRules.Compare("b0.1.3", "b0.1.3") == 0);
+        r.Add("a0.9.9 < b0.1.3(类型优先于任何数字)", VersionRules.Compare("a0.9.9", "b0.1.3") < 0,
+            "版本类型是第一段,类型不同时后面的数字再大也不算新");
+
+        var levelPatch = VersionRules.Level("b0.1.2b", "b0.1.3");   // 小版本
+        var levelFix = VersionRules.Level("b0.1.3", "b0.1.3a");     // 极小更新
+        var levelType = VersionRules.Level("a0.9.9", "b0.1.3");     // 类型变更
+        var levelNone = VersionRules.Level("b0.1.3", "b0.1.3");
+        r.Add("更新级别:小版本", levelPatch == UpdateLevel.Patch, VersionRules.LevelName(levelPatch));
+        r.Add("更新级别:极小更新", levelFix == UpdateLevel.Fix, VersionRules.LevelName(levelFix));
+        r.Add("更新级别:类型变更", levelType == UpdateLevel.Type, VersionRules.LevelName(levelType));
+        r.Add("更新级别:无更新", levelNone == UpdateLevel.None, VersionRules.LevelName(levelNone));
+
         // ---- 单测:下载候选顺序(镜像按序 + 官方兜底) ----
         var urls = BuildCandidates("https://github.com/a/b.msi", new[] { "https://gh-proxy.com/", "https://ghfast.top/", "" });
         r.Add("候选 = 2 镜像 + 官方", urls.Length == 3, string.Join(" , ", urls));

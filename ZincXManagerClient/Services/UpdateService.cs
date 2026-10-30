@@ -157,7 +157,8 @@ public static class UpdateService
             WriteCache(tag, DateTime.Now);
 
             var hasUpdate = CompareVersion(tag, current) > 0;
-            Log($"[更新] 当前 {current},远端 {tag},有更新={hasUpdate}");
+            var level = ZincXManagerShared.Update.VersionRules.Level(current, tag);
+            Log($"[更新] 当前 {current},远端 {tag},有更新={hasUpdate},级别={ZincXManagerShared.Update.VersionRules.LevelName(level)}");
             return new UpdateInfo(current, tag, notes.Length > 0 ? notes : ChangelogUrl, msiUrl, zipUrl, msiSha, zipSha, hasUpdate);
         }
         catch (Exception ex)
