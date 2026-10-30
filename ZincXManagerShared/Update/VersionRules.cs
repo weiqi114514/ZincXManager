@@ -26,7 +26,11 @@ public enum UpdateLevel
 
 /// <summary>
 /// 版本号规则:<c>[版本类型][大版本][中版本][小版本][极小更新/修复更新]</c>,
-/// 例如 <c>b0.1.3</c>、<c>b0.1.2a</c>、<c>a0.5.1</c>。
+/// 例如 <c>b0.1.3</c>、<c>b0.1.2a</c>、<c>r0.2.0</c>。
+/// <para>
+/// 版本类型只有四个:<c>a &lt; b &lt; c &lt; r</c>;大 / 中 / 小版本是数字;
+/// 极小更新 / 修复更新从 <c>a</c> 排到 <c>z</c>(无修复号最旧)。
+/// </para>
 /// <para>
 /// 比较顺序固定为:类型 → 大版本 → 中版本 → 小版本 → 极小更新,前一段分出大小就不再往后比。
 /// 客户端自动更新、服务端版本查询与回归测试共用这一份实现(各抄一份会把同一个错误复制到所有地方)。
@@ -43,8 +47,8 @@ public static class VersionRules
     public readonly record struct Parts(char Type, int Major, int Minor, int Patch, char Fix);
 
     /// <summary>
-    /// 比较两个版本号:先比版本类型(无类型 &lt; a &lt; b &lt; c),
-    /// 再比大 / 中 / 小版本数字,最后比极小更新号(无 &lt; a &lt; b,所以 b0.1.2 &lt; b0.1.2a &lt; b0.1.2b)。
+    /// 比较两个版本号:先比版本类型(<c>a &lt; b &lt; c &lt; r</c>,无类型最旧),
+    /// 再比大 / 中 / 小版本数字,最后比极小更新号(<c>a</c> 到 <c>z</c>,无修复号最旧)。
     /// </summary>
     /// <returns>小于 0 表示 a 旧,等于 0 表示相同,大于 0 表示 a 新。</returns>
     public static int Compare(string a, string b)
@@ -54,7 +58,7 @@ public static class VersionRules
 
         if (typeA != typeB)
         {
-            return typeA.CompareTo(typeB);
+            return TypeRank(typeA).CompareTo(TypeRank(typeB));
         }
 
         var length = Math.Max(numbersA.Length, numbersB.Length);
@@ -68,8 +72,21 @@ public static class VersionRules
             }
         }
 
-        return fixA.CompareTo(fixB);
+        return FixRank(fixA).CompareTo(FixRank(fixB));
     }
+
+    /// <summary>版本类型的次序:<c>a=1 &lt; b=2 &lt; c=3 &lt; r=4</c>,无类型或规则外的字母算 0(最旧,不会被当成新版本)。</summary>
+    private static int TypeRank(char type) => type switch
+    {
+        'a' => 1,
+        'b' => 2,
+        'c' => 3,
+        'r' => 4,
+        _ => 0,
+    };
+
+    /// <summary>极小更新 / 修复更新的次序:<c>a=1 … z=26</c>,无修复号算 0。</summary>
+    private static int FixRank(char fix) => fix is >= 'a' and <= 'z' ? fix - 'a' + 1 : 0;
 
     /// <summary>按命名规则拆成五段,给需要单独读某一段的地方用(如更新提示里说明跨了几级)。</summary>
     public static Parts Parse(string version)

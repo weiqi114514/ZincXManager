@@ -51,6 +51,10 @@ public static class UpdateSuite
         r.Add("b0.1.3 == b0.1.3", VersionRules.Compare("b0.1.3", "b0.1.3") == 0);
         r.Add("a0.9.9 < b0.1.3(类型优先于任何数字)", VersionRules.Compare("a0.9.9", "b0.1.3") < 0,
             "版本类型是第一段,类型不同时后面的数字再大也不算新");
+        r.Add("b9.9.9 < c0.1.0(类型 c 压过任何 b)", VersionRules.Compare("b9.9.9", "c0.1.0") < 0);
+        r.Add("c9.9.9 < r0.1.0(类型 r 最高)", VersionRules.Compare("c9.9.9", "r0.1.0") < 0);
+        r.Add("b0.1.3y < b0.1.3z(修复号 a 到 z)", VersionRules.Compare("b0.1.3y", "b0.1.3z") < 0);
+        r.Add("b0.1.3a < b0.1.3f(修复号按字母顺)", VersionRules.Compare("b0.1.3a", "b0.1.3f") < 0);
 
         var levelPatch = VersionRules.Level("b0.1.2b", "b0.1.3");   // 小版本
         var levelFix = VersionRules.Level("b0.1.3", "b0.1.3a");     // 极小更新
