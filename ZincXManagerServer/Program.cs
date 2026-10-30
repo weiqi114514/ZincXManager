@@ -469,7 +469,23 @@ internal static class Program
             LoginStore.Log($"[白名单] 玩家 {player}({ip}) 通过白名单");
         }
 
-        // ② 登录数组 / 持久登录表(同玩家 + 同 IP)→ 放行,交给 play 阶段
+        // ② 封禁:玩家名和它绑定的账号名(含官方账号)任一被封都拦 —— 必须排在登录数组/持久表前面,
+        //    否则在数组里的玩家会先被放行,封禁只能等 play 阶段才生效
+        var boundAccount = LoginStore.AccountOf(player);   //绑定的账号ID
+        var boundAccountEntity = boundAccount > 0
+            ? Accounts.FindById(boundAccount) ?? await ResolveAccountAsync(player)
+            : await ResolveAccountAsync(player);   //本地没有就按账号路由去 ZXMOS
+        var boundName = boundAccountEntity?.Name ?? "";
+        if (Bans.Check(player, ip, "", out var ban) ||
+            (boundName.Length > 0 && Bans.Check(boundName, ip, "", out ban)))
+        {
+            Logger.Log(LogLevel.Warning, $"[配置阶段] 拒绝被封禁的玩家 {player}({ban!.Kind}={ban.Value})");
+            LoginStore.Log($"[配置阶段] 拒绝被封禁的玩家 {player}({ip}):{ban.Kind}={ban.Value}");
+            await KickViaZxmmAsync(player, $"已被封禁:{ban.Reason}({ban.Remain})");
+            return;
+        }
+
+        // ③ 登录数组 / 持久登录表(同玩家 + 同 IP)→ 放行,交给 play 阶段
         if (InLoginArray(player))
         {
             LoginStore.Log($"[配置阶段] 玩家 {player}({ip}) 在登录数组里,放行");
@@ -479,18 +495,6 @@ internal static class Program
         if (LoginStore.HasPersistentLogin(player, ip))
         {
             LoginStore.Log($"[配置阶段] 玩家 {player}({ip}) 在持久登录表里(同 IP),放行");
-            return;
-        }
-
-        var boundAccount = LoginStore.AccountOf(player);   //绑定的账号ID
-        var boundName = boundAccount > 0 ? Accounts.FindById(boundAccount)?.Name ?? "" : "";
-
-        // ② 封禁:玩家名和它绑定的账号名,任一被封都拦(封账号要能拦住绑定玩家)
-        if (Bans.Check(player, ip, "", out var ban) ||
-            (boundName.Length > 0 && Bans.Check(boundName, ip, "", out ban)))
-        {
-            Logger.Log(LogLevel.Warning, $"[配置阶段] 拒绝被封禁的玩家 {player}({ban!.Kind}={ban.Value})");
-            await KickViaZxmmAsync(player, $"已被封禁:{ban.Reason}({ban.Remain})");
             return;
         }
 
