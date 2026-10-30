@@ -120,6 +120,13 @@ public partial class MainWindow : Window
         Opened += (_, _) => AttachSession();
         Closed += (_, _) => DetachSession();
 
+        // 窗口关掉就停心跳:否则关了主界面还在后台重连,连不上又弹一个新窗口出来
+        Closed += (_, _) =>
+        {
+            _heartbeat?.Stop();
+            _heartbeat = null;
+        };
+
         // 调试 / 自动化(和 skipauth / startpage 一个路子):config 里 testaction=customaddress
         // 就直接走一遍"改用第三方官方服务端"的流程,用来测 5 秒阅读确认
         Opened += async (_, _) =>

@@ -14,6 +14,7 @@ namespace ZincXManagerClient;
 internal static class AppWindows
 {
     private static MainWindow? _main;
+    private static ConnectWindow? _connect;
 
     /// <summary>当前主界面;没开就是 null。</summary>
     public static MainWindow? Main => _main;
@@ -85,11 +86,27 @@ internal static class AppWindows
     /// <summary>重连彻底失败:关掉主界面,切回连接流程窗体,并弹窗把失败原因告诉用户。</summary>
     public static void ShowConnectWithError(string error)
     {
+        // 只切一次:已经回到连接流程就不再造新窗口 —— 心跳/多次失败重复调用时,
+        // 以前每次都会新建一个一模一样的连接窗口,还会在同一个 ViewModel 上挂出重复弹窗
+        if (_connect is not null)
+        {
+            return;
+        }
+
         var vm = ClientSession.Connect ?? new ViewModels.ConnectViewModel();
         ClientSession.Connect = vm;
+        vm.SuppressErrorDialog = true;   //失败原因由下面这个弹窗讲清楚,别再让重试时一次次弹
 
         var from = _main;
         var connect = new ConnectWindow { DataContext = vm };
+        _connect = connect;
+        connect.Closed += (_, _) =>
+        {
+            if (ReferenceEquals(_connect, connect))
+            {
+                _connect = null;
+            }
+        };
         PlaceAtTopLeft(connect, from);
         connect.Show();
 

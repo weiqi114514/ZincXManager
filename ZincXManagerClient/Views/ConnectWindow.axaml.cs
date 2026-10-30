@@ -1,3 +1,4 @@
+using System;  // Action / EventArgs
 using System.Collections.Specialized;  // 集合变更通知
 using Avalonia.Controls;  // 窗口与控件
 using ZincXManagerShared;  // 共享库
@@ -10,6 +11,9 @@ namespace ZincXManagerClient.Views;
 
 public partial class ConnectWindow : Window
 {
+    private ConnectViewModel? _boundVm;   //已经挂过 ErrorRaised 的那个 ViewModel
+    private Action<string, string>? _errorHandler;   //挂上去的处理函数(关窗时要摘掉)
+
     /// <summary>连接窗口的构造函数:初始化界面与事件。</summary>
     public ConnectWindow()
     {
@@ -19,9 +23,14 @@ public partial class ConnectWindow : Window
         // 连不上 / 模式不匹配:弹窗告诉用户
         DataContextChanged += (_, _) =>
         {
+            // 同一个 ViewModel 会被新的连接窗口复用(重连失败切回连接流程时),
+            // 换绑前先摘掉旧处理函数,否则每次进流程都多挂一个弹窗
+            DetachErrorHandler();
+
             if (DataContext is ConnectViewModel vm)
             {
-                vm.ErrorRaised += (title, text) =>
+                _boundVm = vm;
+                _errorHandler = (title, text) =>
                 {
                     if (vm.SuppressErrorDialog)
                     {
@@ -30,8 +39,21 @@ public partial class ConnectWindow : Window
 
                     _ = MessageDialog.InfoAsync(this, title, text, hint: "检查数据源地址与连接方式");
                 };
+                vm.ErrorRaised += _errorHandler;
             }
         };
+    }
+
+    /// <summary>摘掉挂在 ViewModel 上的弹窗处理函数(幂等)。</summary>
+    private void DetachErrorHandler()
+    {
+        if (_boundVm is not null && _errorHandler is not null)
+        {
+            _boundVm.ErrorRaised -= _errorHandler;
+        }
+
+        _boundVm = null;
+        _errorHandler = null;
     }
 
     private ConnectViewModel? Vm => DataContext as ConnectViewModel;
@@ -50,6 +72,8 @@ public partial class ConnectWindow : Window
     /// <summary>窗口关闭时摘掉日志目标,避免 Logger 继续往已销毁的界面写。</summary>
     protected override void OnClosed(System.EventArgs e)
     {
+        DetachErrorHandler();
+
         if (Vm is not null)
         {
             Vm.Logs.CollectionChanged -= OnLogsChanged;
@@ -118,6 +142,7 @@ public partial class ConnectWindow : Window
         }
 
         // 连在别的目标上:ConnectAsync 会先断开旧连接再连新目标
+        Vm.SuppressErrorDialog = false;   //重新试连时恢复「失败就弹窗」,别被重连失败那次的抑制一直带下去
         await Vm.ConnectAsync();
     }
 
