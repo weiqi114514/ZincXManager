@@ -73,6 +73,7 @@ public static class ZxmsCommands
         Func<CardInput, int> localNotice,
         Func<string, CardInput, int> localPush,
         Func<BanStore> banProvider,
+        Func<WhitelistStore> whitelistProvider,
         Func<string> serverAccountNameProvider,
         Action enterConfig,
         Func<Zxmm.ZxmmApi?>? zxmmProvider = null)
@@ -131,6 +132,27 @@ public static class ZxmsCommands
             "user rel <名称或ID> <新等级>");
 
         RegisterBanCommands(cmd, accountProvider, banProvider);
+
+        // ---- 白名单(通联标 = MC 玩家名 / ZXM 账号名 / ZXM 账号 ID) ----
+        cmd.Register("wl add", args => CmdWhitelistAdd(whitelistProvider(), args),
+            "添加白名单:wl add <通联标(MC玩家名|ZXM账号名|ZXM账号ID)>",
+            "wl add XDH1234");
+
+        cmd.Register("wl rm", args => CmdWhitelistRemove(whitelistProvider(), args),
+            "删除白名单:wl rm <通联标>",
+            "wl rm XDH1234");
+
+        cmd.Register("wl on", _ => CmdWhitelistSwitch(whitelistProvider(), true),
+            "开启白名单(进服先查白名单,不在就黄字踢出)",
+            "wl on");
+
+        cmd.Register("wl off", _ => CmdWhitelistSwitch(whitelistProvider(), false),
+            "关闭白名单",
+            "wl off");
+
+        cmd.Register("wl", args => CmdWhitelistQuery(whitelistProvider(), args),
+            "查看白名单:wl 显示全部;wl <通联标> 查这一条",
+            "wl XDH1234");
 
         // ---- 账号绑定(手动给某个 MC 玩家绑上 ZXM 账号,或解掉) ----
         cmd.Register("bind list", args => CmdBindList(accountProvider(), args),
@@ -524,6 +546,84 @@ public static class ZxmsCommands
 
         Logger.Log(LogLevel.Info, $"[绑定] 已解绑:{player} ↔ {accountName}(ID {accountId})");
         Logger.Log(LogLevel.Info, $"[绑定] 该玩家再进服会重新走确认流程");
+    }
+
+    /// <summary>加白名单条目(通联标:MC 玩家名 / ZXM 账号名 / ZXM 账号 ID)。</summary>
+    private static void CmdWhitelistAdd(WhitelistStore whitelist, string[] args)
+    {
+        if (args.Length < 1 || string.IsNullOrWhiteSpace(args[0]))
+        {
+            Logger.Log(LogLevel.Warning, "[白名单] 用法:wl add <MC玩家名|ZXM账号名|ZXM账号ID>");
+            return;
+        }
+
+        var key = args[0].Trim();
+        if (whitelist.Add(key, out var error))
+        {
+            Logger.Log(LogLevel.Info, $"[白名单] 已添加:{key}(当前 {whitelist.All.Length} 条)");
+        }
+        else
+        {
+            Logger.Log(LogLevel.Warning, "[白名单] 添加失败:" + error);
+        }
+    }
+
+    /// <summary>删白名单条目。</summary>
+    private static void CmdWhitelistRemove(WhitelistStore whitelist, string[] args)
+    {
+        if (args.Length < 1 || string.IsNullOrWhiteSpace(args[0]))
+        {
+            Logger.Log(LogLevel.Warning, "[白名单] 用法:wl rm <MC玩家名|ZXM账号名|ZXM账号ID>");
+            return;
+        }
+
+        var key = args[0].Trim();
+        if (whitelist.Remove(key))
+        {
+            Logger.Log(LogLevel.Info, $"[白名单] 已删除:{key}(当前 {whitelist.All.Length} 条)");
+        }
+        else
+        {
+            Logger.Log(LogLevel.Warning, $"[白名单] 没有这条:{key}");
+        }
+    }
+
+    /// <summary>开 / 关白名单。</summary>
+    private static void CmdWhitelistSwitch(WhitelistStore whitelist, bool on)
+    {
+        whitelist.SetEnabled(on);
+        Logger.Log(LogLevel.Info, on
+            ? $"[白名单] 已开启(进服会先查白名单,共 {whitelist.All.Length} 条)"
+            : "[白名单] 已关闭(不再检查)");
+    }
+
+    /// <summary>查看白名单:不带参数显示开关与全部条目;带通联标时只查这一条。</summary>
+    private static void CmdWhitelistQuery(WhitelistStore whitelist, string[] args)
+    {
+        var list = whitelist.All;
+
+        if (args.Length > 0 && !string.IsNullOrWhiteSpace(args[0]))
+        {
+            var key = args[0].Trim();
+            var hit = whitelist.Contains(key);
+            Logger.Log(LogLevel.Info,
+                $"[白名单] 查询 {key}:{(hit ? "在白名单里" : "不在白名单里")}" +
+                $"(开关:{(whitelist.Enabled ? "开启" : "关闭")},总共 {list.Length} 条)");
+            return;
+        }
+
+        Logger.Log(LogLevel.Info, $"[白名单] 状态:{(whitelist.Enabled ? "开启" : "关闭")},共 {list.Length} 条");
+
+        if (list.Length == 0)
+        {
+            Logger.Log(LogLevel.Info, "[白名单] 空(用 wl add <通联标> 添加)");
+            return;
+        }
+
+        foreach (var item in list)
+        {
+            Logger.Log(LogLevel.Info, "  " + item);
+        }
     }
 
     /// <summary>注册封禁命令(ban add / user / del / list)</summary>

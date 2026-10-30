@@ -172,6 +172,9 @@ internal static class Program
     /// <summary>封禁表:账号 / IP / 机器码,永久或定时。</summary>
     private static readonly BanStore Bans = new("bans.json");
 
+    /// <summary>白名单表:通联标(MC 玩家名 / ZXM 账号名 / ZXM 账号 ID),进服时先查它。</summary>
+    private static readonly WhitelistStore Whitelist = new("Data/Whitelist.txt");
+
     static void OpenLog()
     {
         if (!Logger.OpenDefaultLogFile("ZXMS", out var logFile))
@@ -443,7 +446,30 @@ internal static class Program
             ip = "unknown";
         }
 
-        // ① 登录数组 / 持久登录表(同玩家 + 同 IP)→ 放行,交给 play 阶段
+        // ① 白名单(开启时):按通联标比对(玩家名 / 绑定账号名 / 绑定账号ID),未命中直接黄字踢出
+        if (Whitelist.Enabled)
+        {
+            var wlBound = LoginStore.AccountOf(player);   //这个玩家绑的账号ID(没绑定就是 0)
+            var wlAccount = wlBound > 0
+                ? (Accounts.FindById(wlBound) ?? await ResolveAccountAsync(player))
+                : await ResolveAccountAsync(player);   //本地没有就按账号路由去 ZXMOS
+
+            var hit = Whitelist.Contains(player)
+                      || (wlAccount is not null
+                          && (Whitelist.Contains(wlAccount.Name) || Whitelist.Contains(wlAccount.Id.ToString())));
+
+            if (!hit)
+            {
+                Logger.Log(LogLevel.Warning, $"[白名单] 拒绝玩家 {player}({ip}):不在白名单");
+                LoginStore.Log($"[白名单] 拒绝玩家 {player}({ip}):不在白名单");
+                await KickViaZxmmAsync(player, "§e你未在白名单中");
+                return;
+            }
+
+            LoginStore.Log($"[白名单] 玩家 {player}({ip}) 通过白名单");
+        }
+
+        // ② 登录数组 / 持久登录表(同玩家 + 同 IP)→ 放行,交给 play 阶段
         if (InLoginArray(player))
         {
             LoginStore.Log($"[配置阶段] 玩家 {player}({ip}) 在登录数组里,放行");
@@ -1539,6 +1565,7 @@ internal static class Program
             localNotice: card => NoticeLocal(ResolveName(config), card),
             localPush: (target, card) => PushLocal(ResolveName(config), target, card),
             banProvider: () => Bans,
+            whitelistProvider: () => Whitelist,
             serverAccountNameProvider: () => config.MapGet(KeyOsUser).Trim(),
             enterConfig: Command.ConfigMode.Enter,
             zxmmProvider: () => _zxmmApi);
