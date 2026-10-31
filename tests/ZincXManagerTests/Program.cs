@@ -897,6 +897,11 @@ var results = new List<SuiteResult>();
     await ZincXManagerTests.StoreSuite.RunAsync(results, Ws);
 }
 
+// ================= 套件 17:玩家 ID + 好友列表存储(存储单测) =================
+{
+    await ZincXManagerTests.FriendSuite.RunAsync(results, Ws);
+}
+
 // ================= 汇总 =================
 Console.WriteLine();
 Console.WriteLine("================= 总表 =================");
