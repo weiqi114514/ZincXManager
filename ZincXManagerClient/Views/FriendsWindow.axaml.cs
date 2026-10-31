@@ -61,6 +61,43 @@ public partial class FriendsWindow : Window
         }
     }
 
+    /// <summary>好友条的右键菜单:只有一个「删除好友」。</summary>
+    private MenuFlyout BuildFriendMenu(PlayerId id, string remark)
+    {
+        var remove = new MenuItem { Header = "删除好友" };
+        remove.Click += async (_, _) => await RemoveFriendAsync(id, remark);
+
+        var flyout = new MenuFlyout();
+        flyout.Items.Add(remove);
+        return flyout;
+    }
+
+    /// <summary>确认后发 660 删好友,两边列表由服务端一起删。</summary>
+    private async System.Threading.Tasks.Task RemoveFriendAsync(PlayerId id, string remark)
+    {
+        var name = remark.Length > 0 ? remark : id.Full;   //二次确认里显示的名字
+        var yes = await MessageDialog.ConfirmAsync(this, "删除好友", $"确定把「{name}」从好友里删掉吗?两边的好友列表都会删。", "删除", "算了");
+        if (!yes)
+        {
+            return;
+        }
+
+        var connect = ClientSession.Connect;   //当前连接
+        if (connect is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await connect.SendAsync(Protocol.FriendRemove, id.Full);
+        }
+        catch
+        {
+            //连接断了,661 不会来,等下次打开好友窗再刷
+        }
+    }
+
     /// <summary>把 651 的负载(&lt;完整玩家ID&gt;	&lt;备注&gt; 按行)解析成好友条。</summary>
     internal void FillList(string payload)
     {
@@ -145,6 +182,7 @@ public partial class FriendsWindow : Window
         };   //一行好友
         row.Classes.Add("friendRow");
         row.DoubleTapped += OnFriendDoubleTapped;
+        row.ContextFlyout = BuildFriendMenu(id, remark);
         return row;
     }
 
