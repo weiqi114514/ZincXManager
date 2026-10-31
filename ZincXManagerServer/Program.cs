@@ -1312,21 +1312,6 @@ internal static class Program
                 break;
             }
 
-            // ---- 跨服好友中转(615):ZXMOS 转过来的操作,目标服务端不是本服就忽略 ----
-            case Protocol.FriendRelay:
-            {
-                try
-                {
-                    await HandleFriendRelayAsync(Encoding.UTF8.GetString(packet.Data), config);
-                }
-                catch (Exception ex)
-                {
-                    Logger.Log(LogLevel.Warning, "[好友] 处理跨服指令出错:" + ex.Message);
-                }
-
-                break;
-            }
-
             // ---- 解绑(628) ----
             case Protocol.Unbind:
             {
@@ -3166,6 +3151,24 @@ internal static class Program
                     Logger.Log(LogLevel.Info, sent > 0
                         ? $"[消息] 定向推送 → {target}:已投给本服 {sent} 个客户端 {MessageCard.Summary(card)}"
                         : $"[消息] 定向推送 → {target}:本服没有这个玩家,已忽略");
+                    break;
+                }
+
+                // ---- 好友跨服中转(615):ZXMOS 转来的操作,只有目标服务端处理 ----
+                case Protocol.FriendRelay:
+                {
+                    if (_config is not null)
+                    {
+                        try
+                        {
+                            await HandleFriendRelayAsync(Encoding.UTF8.GetString(packet.Data), _config);
+                        }
+                        catch (Exception ex)
+                        {
+                            Logger.Log(LogLevel.Warning, "[好友] 处理跨服指令出错:" + ex.Message);
+                        }
+                    }
+
                     break;
                 }
 
