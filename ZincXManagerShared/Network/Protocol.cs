@@ -69,6 +69,18 @@ public static class Protocol
     public const ushort AccountRenameAck = 612;
 
     /// <summary>
+    /// ZXMS → ZXMOS:本服账号表有变动(注册、改名、删号、官方号镜像),把整份用户列表重新报上去。
+    /// 负载每行 <c>ID|名称|等级</c>,一次全量,不做增量。
+    /// </summary>
+    public const ushort UserListUp = 613;
+
+    /// <summary>
+    /// ZXMOS → ZXMS:官方端账号表有变动,把整份用户列表重新下发。
+    /// 负载每行 <c>ID|名称|等级</c>,和 <see cref="UserListUp"/> 同一个格式。
+    /// </summary>
+    public const ushort UserListDown = 614;
+
+    /// <summary>
     /// ZXMC → 服务端:玩家点了消息卡片上的按钮 / 选了下拉框。负载 <c>动作|输入|原卡片</c>
     /// (见 <see cref="MessageCard.BuildAction"/>):动作 = 按钮文案(下拉框固定"选择"),
     /// 输入 = 填空卡片填的内容,原卡片 = 收到的那张卡片原文 —— 服务端据此知道是哪张卡片,不用另加卡片序号。

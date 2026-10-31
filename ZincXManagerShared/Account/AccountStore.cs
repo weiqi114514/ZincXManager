@@ -17,8 +17,12 @@ public sealed class Account
     /// <summary>权限等级:ZXMS 是 Player / LAdmin / HAdmin / System;ZXMOS 是 Player / Admin / System。</summary>
     public string Level { get; set; } = Protocol.RegisterLevel;
 
-    /// <summary>数字 ID(展示用,自增)。</summary>
-    public int Id { get; init; }
+    /// <summary>
+    /// 数字 ID(展示与好友编码用)。
+    /// <para>本地账号由 ZXMS 自增分配;官方账号由 ZXMOS 分配,镜像到本地时用官方那个号,
+    /// 所以 <see cref="AccountStore.AlignId"/> 要能改它。除账号表本身外不要写这个属性。</para>
+    /// </summary>
+    public int Id { get; set; }
 
     /// <summary>注册时对方的 IP。ZXMOS 上的"ZXMS 端账号"要记这个(哪个子服务端在用); 玩家账号留空。</summary>
     public string Ip { get; set; } = "";
@@ -154,6 +158,13 @@ public sealed class AccountStore
 
     /// <summary>新建账号,并记下注册方的 IP(ZXMOS 上的 ZXMS 端账号用)。</summary>
     public bool Add(string name, string passwordHash, string level, string ip, out Account? account, out string error)
+        => Add(name, passwordHash, level, ip, 0, out account, out error);
+
+    /// <summary>
+    /// 新建账号并指定数字 ID(账号数据在官方端时,ID 由 ZXMOS 分配,本端照抄)。
+    /// <paramref name="id"/> 为 0 表示自增分配;指定的 ID 已被别的账号占用则失败。
+    /// </summary>
+    public bool Add(string name, string passwordHash, string level, string ip, int id, out Account? account, out string error)
     {
         account = null;
         name = name.Trim();
@@ -191,12 +202,18 @@ public sealed class AccountStore
                 return false;
             }
 
+            if (id > 0 && _byId.ContainsKey(id))
+            {
+                error = $"ID {id} 已被账号 {_byId[id].Name} 占用";
+                return false;
+            }
+
             var created = new Account
             {
                 Name = name,
                 Password = passwordHash,
                 Level = level,
-                Id = _map.Count == 0 ? 1 : _map.Values.Max(a => a.Id) + 1,
+                Id = id > 0 ? id : (_map.Count == 0 ? 1 : _map.Values.Max(a => a.Id) + 1),
                 Ip = ip,
             };
 
@@ -206,6 +223,55 @@ public sealed class AccountStore
             account = created;
             error = "";
             Logger.Log(LogLevel.Info, $"[账号] 新建 {created.Name}({created.Level}) ID={created.Id}{(created.Ip.Length > 0 ? " IP=" + created.Ip : "")}");
+            return true;
+        }
+    }
+
+    /// <summary>
+    /// 把已有账号的数字 ID 改成官方端给的那个号(账号数据在 ZXMOS 上时以官方为准)。
+    /// 目标 ID 已被别的账号占用则失败。
+    /// </summary>
+    /// <param name="name">账号名。</param>
+    /// <param name="id">官方端的账号 ID。</param>
+    /// <param name="oldId">改动前的 ID(没变就是原值)。</param>
+    /// <param name="error">失败原因。</param>
+    public bool AlignId(string name, int id, out int oldId, out string error)
+    {
+        oldId = 0;
+
+        if (id <= 0)
+        {
+            error = "目标 ID 不合法";
+            return false;
+        }
+
+        lock (_sync)
+        {
+            if (!_map.TryGetValue(name.Trim(), out var account))
+            {
+                error = "账号不存在";
+                return false;
+            }
+
+            oldId = account.Id;
+            if (account.Id == id)
+            {
+                error = "";
+                return true;   // 已经一致
+            }
+
+            if (_byId.TryGetValue(id, out var taken) && !ReferenceEquals(taken, account))
+            {
+                error = $"ID {id} 已被账号 {taken.Name} 占用";
+                return false;
+            }
+
+            _byId.Remove(account.Id);
+            account.Id = id;
+            _byId[id] = account;
+            Save();
+            error = "";
+            Logger.Log(LogLevel.Info, $"[账号] {account.Name} 的本地 ID {oldId} 对齐成官方 ID {id}");
             return true;
         }
     }

@@ -3,6 +3,7 @@ using System.Collections.Generic;  // 列表
 using System.Globalization;  // 数字格式化
 using System.IO;  // 读写文件
 using System.Text;  // UTF-8
+using ZincXManagerShared.Logging;  // Logger:搬目录时记日志
 
 namespace ZincXManagerShared.Account;
 
@@ -36,6 +37,52 @@ public static class FriendStore
     {
         var server = SafeName(owner.ServerId);
         return Path.Combine(RootDir, server, owner.Code.ToString(CultureInfo.InvariantCulture));
+    }
+
+    /// <summary>
+    /// 账号编码变了(本地编号对齐官方账号 ID)时,把整个好友目录搬到新编码下:
+    /// 列表 / 申请 / 聊天记录都跟着走,不然等于换了一个人。
+    /// </summary>
+    /// <param name="serverId">服务端 ID。</param>
+    /// <param name="fromId">原编码。</param>
+    /// <param name="toId">新编码。</param>
+    /// <returns>搬好了、或者原本就没有老数据,返回 true;目标目录已经有数据则返回 false(不覆盖)。</returns>
+    public static bool MoveAccountDir(string serverId, int fromId, int toId)
+    {
+        if (fromId <= 0 || toId <= 0 || fromId == toId)
+        {
+            return true;
+        }
+
+        var from = DirectoryOf(new PlayerId(serverId, fromId));   //老编码目录
+        var to = DirectoryOf(new PlayerId(serverId, toId));       //新编码目录
+
+        lock (_lock)
+        {
+            if (!Directory.Exists(from))
+            {
+                return true;   //本来就没好友数据
+            }
+
+            if (Directory.Exists(to))
+            {
+                Logger.Log(LogLevel.Warning, $"[好友] 编码 {serverId}-{fromId} 要改成 {toId},但 {to} 已经有数据,没搬");
+                return false;
+            }
+
+            try
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(to)!);
+                Directory.Move(from, to);
+                Logger.Log(LogLevel.Info, $"[好友] 编码 {serverId}-{fromId} 改成 {toId},好友目录已搬过去");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Logger.Log(LogLevel.Warning, $"[好友] 搬好友目录失败({serverId}-{fromId} → {toId}):{ex.Message}");
+                return false;
+            }
+        }
     }
 
     /// <summary>某个玩家的好友列表文件路径。</summary>

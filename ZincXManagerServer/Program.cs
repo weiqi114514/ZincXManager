@@ -2,6 +2,7 @@ using System;  // 基础类型 / 常用静态方法
 using System.IO;  // 好友日志落盘
 using System.Linq;  // LINQ 查询
 using System.Collections.Concurrent;  // 并发集合(多线程共享)
+using System.Collections.Generic;  // List:用户列表按行拼装
 using System.Net;  // IP 地址与网络端点
 using System.Text;  // 文本编码与 StringBuilder
 using System.Threading;  // 线程 / 取消 / 定时
@@ -801,6 +802,8 @@ internal static class Program
 
                     await packet.SendAsync(Protocol.AccountRegisterAck,
                         $"ok|{account.Name}|{account.Id}|{account.Level}", packet.Id);
+
+                    UserListChanged();   //本服账号表变了,整份重新报给 ZXMOS
                 }
                 else
                 {
@@ -1805,6 +1808,7 @@ internal static class Program
         {
             Logger.Log(LogLevel.Info, $"[ZXMOS] 账号认证通过:{reply[3..]}");
             RememberOsId(config, reply);
+            UserListChanged();   //刚连上:把本服现有账号整份补报一次,免得断线期间的变动漏掉
 
             // 第二层:向官方服务端要一张官方证明(登录成功才要,免得谁都能来收集许可证)
             await CheckOfficialAsync(client, config);
@@ -1884,8 +1888,8 @@ internal static class Program
     }
 
     /// <summary>把"替客户端中转"的登录 / 注册成功回执(ok|名称|ID|等级)登记到那条客户端连接上。</summary>
-    /// <summary>官方端登录 / 注册成功后的账号信息缓存(name → 等级):本地没有时用它按需镜像。</summary>
-    private static readonly ConcurrentDictionary<string, string> OfficialAccounts = new(StringComparer.OrdinalIgnoreCase);
+    /// <summary>官方端登录 / 注册成功后的账号信息缓存(name → 官方 ID + 等级):本地没有时用它按需镜像。</summary>
+    private static readonly ConcurrentDictionary<string, (int Id, string Level)> OfficialAccounts = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
     /// 取账号信息(绑定 / 解绑 / 头像 / 查询都走这里,不再直接查本地表):
@@ -1901,24 +1905,74 @@ internal static class Program
         var local = Accounts.Find(name);
         if (local is not null)
         {
+            // 账号数据在官方端时,数字 ID 以 ZXMOS 分配的为准:本地编号每次重登录都会重新分配,
+            // 好友 / 聊天按编码分目录,编号一变就等于换了一个人。
+            if (OfficialAccounts.TryGetValue(name, out var known) && known.Id > 0 && known.Id != local.Id)
+            {
+                AlignLocalAccountId(name, local.Id, known.Id);
+                return Task.FromResult(Accounts.FindById(known.Id) ?? local);
+            }
+
             return Task.FromResult<Account?>(local);
         }
 
-        if (!OfficialAccounts.TryGetValue(name, out var level))
+        if (!OfficialAccounts.TryGetValue(name, out var official))
         {
             return Task.FromResult<Account?>(null);
         }
 
         // 占位密文(随机 64 hex):官方账号走官方端校验,本地永远不会匹配上它
         var placeholder = Convert.ToHexString(System.Security.Cryptography.RandomNumberGenerator.GetBytes(32)).ToLowerInvariant();
-        if (Accounts.Add(name, placeholder, level, out var created, out var error))
+        if (Accounts.Add(name, placeholder, official.Level, "", official.Id, out var created, out var error))
         {
-            Logger.Log(LogLevel.Info, $"[账号] 官方账号 {name} 按需镜像到本地(绑定 / 管理可用)");
+            Logger.Log(LogLevel.Info, $"[账号] 官方账号 {name} 按需镜像到本地(ID 用官方 {official.Id},绑定 / 管理可用)");
+            UserListChanged();   //镜像出来的账号也算本服用户
+            return Task.FromResult<Account?>(created);
+        }
+
+        // 官方 ID 已被别的本地账号占用:退回自增,至少功能可用
+        if (Accounts.Add(name, placeholder, official.Level, "", 0, out created, out error))
+        {
+            Logger.Log(LogLevel.Warning, $"[账号] 官方账号 {name} 用官方 ID {official.Id} 镜像失败({error}),改成本地自增 ID={created!.Id}");
+            UserListChanged();   //镜像出来的账号也算本服用户
             return Task.FromResult<Account?>(created);
         }
 
         Logger.Log(LogLevel.Warning, $"[账号] 按需镜像官方账号 {name} 失败:{error}");
         return Task.FromResult(Accounts.Find(name));
+    }
+
+    /// <summary>
+    /// 把本地壳账号的数字 ID 对齐成官方端分配的那个号,并把好友目录一起搬到新编码下
+    /// (不然换了号,原来的好友列表 / 聊天记录就找不到了)。
+    /// </summary>
+    /// <param name="name">账号名。</param>
+    /// <param name="oldId">当前本地 ID。</param>
+    /// <param name="newId">官方端 ID。</param>
+    private static void AlignLocalAccountId(string name, int oldId, int newId)
+    {
+        if (!Accounts.AlignId(name, newId, out var before, out var error))
+        {
+            Logger.Log(LogLevel.Warning, $"[账号] {name} 的 ID 从 {oldId} 对齐到官方 ID {newId} 失败:{error}");
+            return;
+        }
+
+        Logger.Log(LogLevel.Info, $"[账号] {name} 的本地 ID {before} 已对齐官方 ID {newId}");
+
+        var config = _config;   //当前配置
+        if (config is null)
+        {
+            return;
+        }
+
+        var serverId = SelfServerId(config);   //本服服务端 ID
+        if (serverId.Length == 0)
+        {
+            return;
+        }
+
+        FriendStore.MoveAccountDir(serverId, before, newId);
+        UserListChanged();   //编码变了,用户列表跟着改
     }
 
     private static void RegisterRelayedAccount(Guid connectionId, string reply)
@@ -1930,6 +1984,7 @@ internal static class Program
 
         var fields = reply.Split('|');   //拆分结果
         var name = fields.Length > 1 ? fields[1].Trim() : "";
+        var officialId = fields.Length > 2 && int.TryParse(fields[2].Trim(), out var parsedId) ? parsedId : 0;   //官方分配的账号 ID
         var level = fields.Length > 3 ? fields[3].Trim() : Protocol.RegisterLevel;
 
         if (name.Length == 0)
@@ -1939,16 +1994,75 @@ internal static class Program
 
         _server?.Registry.SetAccount(connectionId, name, level);
 
-        // 记下官方端给过的账号信息,并立刻镜像一次:后续绑定/解绑/查询按本地 ID 正常走
-        OfficialAccounts[name] = level;
+        // 记下官方端给过的账号信息(含官方 ID),并立刻镜像一次:后续绑定/解绑/查询按本地 ID 正常走
+        OfficialAccounts[name] = (officialId, level);
         _ = ResolveAccountAsync(name);
 
         Logger.Log(LogLevel.Info, $"[账号] 本服在线名单已登记中转账号:{name}({level})");
     }
 
+    /// <summary>本服账号表有变动(注册 / 改名 / 删号 / 官方号镜像 / ID 对齐)的统一入口:把整份用户列表重新报给 ZXMOS。</summary>
+    private static void UserListChanged()
+    {
+        _ = PushUserListToOsAsync();
+    }
+
     /// <summary>
-    /// 把回执里的账号 ID 记进 config(<c>osid</c>)。
-    /// <para>好友与图片的完整玩家 ID 要用它拼 <c>ZXMS-&lt;osuser&gt;-&lt;osid&gt;</c>,所以只在这两个地方登录/注册成功时回填。</para>
+    /// 把本服整份用户列表(613)报给 ZXMOS。没连上就跳过 —— 重连时登录成功后会补一次全量,
+    /// 所以这里不攒队列。
+    /// </summary>
+    private static async Task PushUserListToOsAsync()
+    {
+        var os = _os;
+        if (os is null || !os.IsConnected)
+        {
+            return;
+        }
+
+        var payload = BuildUserListPayload();
+        try
+        {
+            await os.WriteAsync(new Packet((ulong)Interlocked.Increment(ref _osOwnPacketId), Protocol.UserListUp,
+                Encoding.UTF8.GetBytes(payload)));
+            Logger.Log(LogLevel.Info, $"[用户列表] 已上报给 ZXMOS:{Accounts.All.Count} 个账号");
+        }
+        catch (Exception ex)
+        {
+            Logger.Log(LogLevel.Warning, "[用户列表] 上报失败:" + ex.Message);
+        }
+    }
+
+    /// <summary>账号表拼成用户列表负载:每行 <c>ID|名称|等级</c>,按 ID 升序。</summary>
+    private static string BuildUserListPayload()
+    {
+        var lines = new List<string>();   //一行一个账号
+        foreach (var account in Accounts.All.OrderBy(a => a.Id))
+        {
+            lines.Add($"{account.Id}|{account.Name}|{account.Level}");
+        }
+
+        return string.Join('\n', lines);
+    }
+
+    /// <summary>把 ZXMOS 下发的用户列表存到 <c>Data/&lt;本服ID&gt;/UserList.dat</c>(按名称 / 编号搜索用),返回账号行数。</summary>
+    private static int SaveUserList(string payload)
+    {
+        var serverId = _config is null ? "" : SelfServerId(_config);   //本服服务端 ID
+        var dir = Path.Combine("Data", serverId.Length > 0 ? serverId : "ZXMS-local");   //用户列表目录
+        Directory.CreateDirectory(dir);
+        File.WriteAllText(Path.Combine(dir, "UserList.dat"), payload);
+        return payload.Split('\n', StringSplitOptions.RemoveEmptyEntries).Length;
+    }
+
+    /// <summary>
+    /// 本服在官方端的账号 ID(<c>osid</c>)。只从 ZXMOS 的登录 / 注册回执里取,存在内存,不落盘。
+    /// </summary>
+    private static int _osId;
+
+    /// <summary>
+    /// 记住回执里的账号 ID(只存内存)。
+    /// <para>好友与图片的完整玩家 ID 要用它拼 <c>ZXMS-&lt;osuser&gt;-&lt;osid&gt;</c>,所以只在这两个地方登录/注册成功时回填;</para>
+    /// <para>旧版本会把它写进 config,这里顺手把老的 <c>osid</c> 键清掉。</para>
     /// </summary>
     private static void RememberOsId(ZFile config, string reply)
     {
@@ -1959,22 +2073,28 @@ internal static class Program
             return;
         }
 
-        var text = osid.ToString();
-        if (config.MapGet(KeyOsId).Trim() == text)
+        // 老配置里存过的 osid 不再用,删掉免得以后被误读
+        if (config.MapGet(KeyOsId).Trim().Length > 0)
+        {
+            config.RemoveFileMap(KeyOsId);
+            Logger.Log(LogLevel.Info, "[账号] 已清掉配置里的 osid(改成每次从 ZXMOS 拉取)");
+        }
+
+        if (_osId == osid)
         {
             return;
         }
 
-        config.WriteFileMap(KeyOsId, text);
-        Logger.Log(LogLevel.Info, $"[账号] 已记录本服账号 ID:osid={text}(好友与图片的完整 ID 用它拼)");
+        _osId = osid;
+        Logger.Log(LogLevel.Info, $"[账号] ZXMOS 下发本服账号 ID:osid={osid}(好友与图片的完整 ID 用它拼)");
     }
 
-    /// <summary>本服自己的服务端 ID(<c>ZXMS-&lt;osuser&gt;-&lt;osid&gt;</c>);还没拿到 osid 时返回空串。</summary>
+    /// <summary>本服自己的服务端 ID(<c>ZXMS-&lt;osuser&gt;-&lt;osid&gt;</c>);还没从 ZXMOS 拿到 osid 时返回空串。</summary>
     private static string SelfServerId(ZFile config)
     {
         var user = config.MapGet(KeyOsUser).Trim();
-        var idText = config.MapGet(KeyOsId).Trim();
-        return user.Length > 0 && int.TryParse(idText, out var osid) && osid > 0
+        var osid = _osId;   //只认 ZXMOS 下发的
+        return user.Length > 0 && osid > 0
             ? PlayerId.ChildServerId(user, osid)
             : "";
     }
@@ -2679,6 +2799,15 @@ internal static class Program
                     Logger.Log(LogLevel.Info, "[ZXMOS] 握手成功: " + Encoding.UTF8.GetString(packet.Data));
                     break;
 
+                // 官方端账号表有变动(614):整份用户列表重新下发,落一份到 Data/<本服ID>/UserList.dat
+                case Protocol.UserListDown:
+                {
+                    var payload = Encoding.UTF8.GetString(packet.Data);   //包内容,每行 ID|名称|等级
+                    var count = SaveUserList(payload);
+                    Logger.Log(LogLevel.Info, $"[用户列表] 收到 ZXMOS 下发的用户列表:{count} 个账号");
+                    break;
+                }
+
                 // ZXMOS 移交过来的用户账号(拉黑前移交)
                 case Protocol.AccountMigrate:
                 {
@@ -2695,6 +2824,11 @@ internal static class Program
                     }
 
                     Logger.Log(LogLevel.Info, $"[账号] 官方服务端移交 {lines.Length} 个账号,新建 {ok} 个");
+                    if (ok > 0)
+                    {
+                        UserListChanged();   //本地账号表多出人了,整份重新报给 ZXMOS
+                    }
+
                     break;
                 }
 
