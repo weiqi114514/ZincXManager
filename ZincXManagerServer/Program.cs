@@ -1159,7 +1159,17 @@ internal static class Program
 
                 if (target.ServerId != self.Value.ServerId)
                 {
-                    await packet.SendAsync(Protocol.FriendRequestAck, "err|跨服好友还没接通(现在只能加本服的玩家)", packet.Id);
+                    // 跨服:对方的表不在本服,交给 ZXMOS 转给目标服务端那台 ZXMS 去落盘
+                    if (await RelayFriendAsync("request", self.Value, target, message))
+                    {
+                        await packet.SendAsync(Protocol.FriendRequestAck, "ok|", packet.Id);
+                        Logger.Log(LogLevel.Info, $"[好友] {self.Value.Full} 跨服把申请转给 ZXMOS → {target.Full}");
+                    }
+                    else
+                    {
+                        await packet.SendAsync(Protocol.FriendRequestAck, "err|官方服务端未连接,跨服申请暂时发不出去", packet.Id);
+                    }
+
                     break;
                 }
 
@@ -1221,6 +1231,7 @@ internal static class Program
                 }
 
                 var accept = parts.Length > 1 && parts[1].Trim().Equals("accept", StringComparison.OrdinalIgnoreCase);   //是否同意
+                var answerCross = from.ServerId != self.Value.ServerId;   //发起者在别的服
                 if (!FriendStore.RemoveRequest(self.Value, from))
                 {
                     await packet.SendAsync(Protocol.FriendAnswerAck, "err|没有这条申请(可能已经处理过)", packet.Id);
@@ -1229,11 +1240,17 @@ internal static class Program
 
                 if (accept)
                 {
-                    // 好友关系是双向的:同意后两个人的 FriendList.dat 都写上对方
+                    // 好友关系是双向的:同意后两个人的 FriendList.dat 都写上对方。
+                    // 跨服时对方的表在对方那台 ZXMS 上,本端只写自己的,对方由中转指令去写
                     FriendStore.Add(self.Value, from);
-                    FriendStore.Add(from, self.Value);
+                    if (!answerCross)
+                    {
+                        FriendStore.Add(from, self.Value);
+                    }
+
                     LogFriend("agree", self.Value, from);
-                    Logger.Log(LogLevel.Info, $"[好友] {self.Value.Full} 同意 {from.Full} 的申请,双方列表都已写入");
+                    Logger.Log(LogLevel.Info,
+                        $"[好友] {self.Value.Full} 同意 {from.Full} 的申请,{(answerCross ? "本端列表已写入,对方走中转" : "双方列表都已写入")}");
                 }
                 else
                 {
@@ -1244,7 +1261,15 @@ internal static class Program
                 await packet.SendAsync(Protocol.FriendAnswerAck,
                     $"ok|{from.Full}|{(accept ? "accept" : "reject")}", packet.Id);
                 // 申请方如果在线,让他那边不用重开窗口就能看到结果
-                await PushFriendEventAsync(from, accept ? "accept" : "reject", self.Value.Full, config);
+                if (answerCross)
+                {
+                    await RelayFriendAsync("answer", self.Value, from, accept ? "accept" : "reject");
+                }
+                else
+                {
+                    await PushFriendEventAsync(from, accept ? "accept" : "reject", self.Value.Full, config);
+                }
+
                 break;
             }
 
@@ -1265,12 +1290,40 @@ internal static class Program
                     break;
                 }
 
+                var removeCross = other.ServerId != self.Value.ServerId;   //对方在别的服
                 var removed = FriendStore.Remove(self.Value, other);
-                FriendStore.Remove(other, self.Value);
+                if (!removeCross)
+                {
+                    FriendStore.Remove(other, self.Value);
+                }
+
                 LogFriend("remove", self.Value, other);
                 Logger.Log(LogLevel.Info, $"[好友] {self.Value.Full} 删除好友 {other.Full}(本端删到={removed})");
                 await packet.SendAsync(Protocol.FriendRemoveAck, $"ok|{other.Full}", packet.Id);
-                await PushFriendEventAsync(other, "remove", self.Value.Full, config);   //对方在线就立刻把列表刷掉
+                if (removeCross)
+                {
+                    await RelayFriendAsync("remove", self.Value, other, "");
+                }
+                else
+                {
+                    await PushFriendEventAsync(other, "remove", self.Value.Full, config);   //对方在线就立刻把列表刷掉
+                }
+
+                break;
+            }
+
+            // ---- 跨服好友中转(615):ZXMOS 转过来的操作,目标服务端不是本服就忽略 ----
+            case Protocol.FriendRelay:
+            {
+                try
+                {
+                    await HandleFriendRelayAsync(Encoding.UTF8.GetString(packet.Data), config);
+                }
+                catch (Exception ex)
+                {
+                    Logger.Log(LogLevel.Warning, "[好友] 处理跨服指令出错:" + ex.Message);
+                }
+
                 break;
             }
 
@@ -2145,6 +2198,100 @@ internal static class Program
 
             await connection.SendAsync(Protocol.FriendEvent, $"{kind}|{otherFull}");
             Logger.Log(LogLevel.Info, $"[好友] 推送 {kind} 给 {target.Full}(对方 {otherFull})");
+        }
+    }
+
+    /// <summary>
+    /// 把一次好友操作交给 ZXMOS 转给目标服务端那台 ZXMS(跨服好友用)。
+    /// ZXMOS 没连上就返回 false —— 跨服操作发不出去,调用方要回 err。
+    /// </summary>
+    private static async Task<bool> RelayFriendAsync(string action, PlayerId self, PlayerId target, string extra)
+    {
+        var os = _os;   //官方端连接
+        if (os is null || !os.IsConnected)
+        {
+            Logger.Log(LogLevel.Warning, $"[好友] 跨服 {action} 发不出去:ZXMOS 未连接({self.Full} → {target.Full})");
+            return false;
+        }
+
+        var payload = $"{target.ServerId}|{action}|{self.Full}|{target.Full}|{extra}";   //中转指令
+        await os.WriteAsync(new Packet((ulong)Interlocked.Increment(ref _osOwnPacketId), Protocol.FriendRelay,
+            Encoding.UTF8.GetBytes(payload)));
+        Logger.Log(LogLevel.Info, $"[好友] 跨服 {action} 已交给 ZXMOS:{self.Full} → {target.Full}");
+        return true;
+    }
+
+    /// <summary>
+    /// 处理 ZXMOS 转来的跨服好友操作(615):只有目标服务端 ID 是本服才执行,别的服直接忽略。
+    /// 本服只写本服玩家的表,对方那台 ZXMS 各自写自己的。
+    /// </summary>
+    private static async Task HandleFriendRelayAsync(string payload, ZFile config)
+    {
+        var parts = payload.Split('|');   //拆指令
+        if (parts.Length < 4)
+        {
+            Logger.Log(LogLevel.Warning, $"[好友] 跨服指令格式不对:{payload}");
+            return;
+        }
+
+        var targetServer = parts[0].Trim();   //这条指令该由哪个服务端处理
+        var action = parts[1].Trim();   //request / answer / remove
+        var selfServer = SelfServerId(config);   //本服服务端 ID
+        if (selfServer.Length == 0 || !selfServer.Equals(targetServer, StringComparison.OrdinalIgnoreCase))
+        {
+            return;   //不是发给本服的
+        }
+
+        if (!PlayerId.TryParse(parts[2].Trim(), out var from) || !PlayerId.TryParse(parts[3].Trim(), out var to))
+        {
+            Logger.Log(LogLevel.Warning, $"[好友] 跨服指令里的玩家 ID 不对:{payload}");
+            return;
+        }
+
+        var extra = parts.Length > 4 ? parts[4].Trim() : "";   //附加参数
+
+        switch (action)
+        {
+            case "request":
+                // 别的服来加我:落到我的 Requests.dat,我查 656 就能看到
+                if (!FriendStore.AreFriends(to, from))
+                {
+                    FriendStore.AppendRequest(to, new FriendStore.FriendRequest(from, extra, DateTime.Now));
+                }
+
+                LogFriend("request", from, to, "跨服");
+                await PushFriendEventAsync(to, "request", from.Full, config);
+                Logger.Log(LogLevel.Info, $"[好友] 收到跨服好友申请:{from.Full} → {to.Full}");
+                break;
+
+            case "answer":
+                FriendStore.RemoveRequest(to, from);
+                if (extra.Equals("accept", StringComparison.OrdinalIgnoreCase))
+                {
+                    FriendStore.Add(to, from);
+                    LogFriend("agree", to, from, "跨服");
+                    await PushFriendEventAsync(to, "accept", from.Full, config);
+                    Logger.Log(LogLevel.Info, $"[好友] 跨服申请被同意:{from.Full} → {to.Full}");
+                }
+                else
+                {
+                    LogFriend("reject", to, from, "跨服");
+                    await PushFriendEventAsync(to, "reject", from.Full, config);
+                    Logger.Log(LogLevel.Info, $"[好友] 跨服申请被拒绝:{from.Full} → {to.Full}");
+                }
+
+                break;
+
+            case "remove":
+                FriendStore.Remove(to, from);
+                LogFriend("remove", to, from, "跨服");
+                await PushFriendEventAsync(to, "remove", from.Full, config);
+                Logger.Log(LogLevel.Info, $"[好友] 跨服好友已解除:{from.Full} → {to.Full}");
+                break;
+
+            default:
+                Logger.Log(LogLevel.Warning, $"[好友] 不认识的跨服动作:{action}");
+                break;
         }
     }
 

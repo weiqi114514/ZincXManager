@@ -81,6 +81,13 @@ public static class Protocol
     public const ushort UserListDown = 614;
 
     /// <summary>
+    /// 好友跨服中转(ZXMS ↔ ZXMOS 共用一个码):发起方把操作交给 ZXMOS,ZXMOS 转给目标服务端那台 ZXMS。
+    /// 负载 <c>目标服务端ID|动作|来源完整ID|目标完整ID|附加</c>,动作是 request / answer / remove;
+    /// answer 的附加是 accept 或 reject,request 的附加是验证消息。
+    /// </summary>
+    public const ushort FriendRelay = 615;
+
+    /// <summary>
     /// ZXMC → 服务端:玩家点了消息卡片上的按钮 / 选了下拉框。负载 <c>动作|输入|原卡片</c>
     /// (见 <see cref="MessageCard.BuildAction"/>):动作 = 按钮文案(下拉框固定"选择"),
     /// 输入 = 填空卡片填的内容,原卡片 = 收到的那张卡片原文 —— 服务端据此知道是哪张卡片,不用另加卡片序号。
