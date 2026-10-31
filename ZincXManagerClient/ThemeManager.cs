@@ -235,6 +235,7 @@ internal static class ThemeManager
             resources["ThemeGlass"] = Solid(Alpha(theme.Primary, Scale(0xCC)));       // 侧边栏 基准 80%
             resources["ThemeGlassLight"] = Solid(Alpha("FFFFFF", Scale(0xE6)));      // 卡片   基准 90%
             resources["ThemePanel"] = Solid(Alpha("FFFFFF", Scale(0x5C)));           // 面板   基准 36%
+            resources["ThemePanelSolid"] = Solid("#FFFFFFFF");                        // 不透明面板(滑出的侧栏用它,不然会透出底下的聊天)
             resources["ThemePage"] = Solid(Alpha("FFFFFF", Scale(0x5C)));            // 设置页 基准 36%
             resources["ThemeContentVeil"] = Solid(Alpha("E9EFF3", Scale(0x66)));     // 内容磨砂 基准 40%
             resources["ThemeWindowVeil"] = Solid(Alpha("FFFFFF", Scale(0x99)));      // 入口窗口白幕 基准 60%
@@ -245,6 +246,7 @@ internal static class ThemeManager
         resources["ThemeGlass"] = Solid(Alpha(theme.Primary, railByte));
         resources["ThemeGlassLight"] = Solid(Alpha("FFFFFF", 0xFF));
         resources["ThemePanel"] = Solid(Alpha("FFFFFF", 0xFF));
+        resources["ThemePanelSolid"] = Solid("#FFFFFFFF");  //滑出的侧栏:始终不透明
         resources["ThemePage"] = Solid(Alpha("FFFFFF", 0xFF));
         resources["ThemeContentVeil"] = Solid("#99E9EFF3");
         resources["ThemeWindowVeil"] = Solid("#FFFFFFFF");

@@ -1,40 +1,263 @@
-﻿<Window xmlns="https://github.com/avaloniaui"
+<Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         x:Class="ZincXManagerClient.Views.ChatWindow"
         Title="ZincXManagerClient · 聊天"
-        Width="560" Height="440" MinWidth="420" MinHeight="320"
+        Width="720" Height="560" MinWidth="480" MinHeight="360"
         Background="{DynamicResource ThemeWindowVeil}"
         TransparencyLevelHint="AcrylicBlur,Blur,Transparent"
         FontFamily="Microsoft YaHei UI, Microsoft YaHei, Segoe UI"
+        KeyDown="OnWindowKeyDown"
         WindowDecorations="None">
 
-  <Grid RowDefinitions="33,*,Auto">
+  <Window.Styles>
+    <!-- 功能栏/输入栏上的小图标按钮:无边框、悬停浅底 -->
+    <Style Selector="Button.flatIcon">
+      <Setter Property="Background" Value="Transparent"/>
+      <Setter Property="BorderThickness" Value="0"/>
+      <Setter Property="CornerRadius" Value="14"/>
+      <Setter Property="Padding" Value="0"/>
+      <Setter Property="Width" Value="28"/>
+      <Setter Property="Height" Value="28"/>
+      <Setter Property="MinWidth" Value="0"/>
+      <Setter Property="MinHeight" Value="0"/>
+      <Setter Property="Cursor" Value="Hand"/>
+      <Setter Property="HorizontalContentAlignment" Value="Center"/>
+      <Setter Property="VerticalContentAlignment" Value="Center"/>
+      <Setter Property="Foreground" Value="{DynamicResource ThemePrimaryDark}"/>
+    </Style>
+    <Style Selector="Button.flatIcon:pointerover /template/ ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource ThemeLight}"/>
+    </Style>
+
+    <!-- 消息气泡 -->
+    <Style Selector="Border.avatarMini">
+      <Setter Property="Background" Value="{DynamicResource ThemeSecondary}"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource ThemePanelBorder}"/>
+    </Style>
+    <Style Selector="Border.avatarMini > TextBlock">
+      <Setter Property="Foreground" Value="{DynamicResource ThemePrimaryDark}"/>
+    </Style>
+    <Style Selector="Border.bubbleIn">
+      <Setter Property="Background" Value="White"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource ThemePanelBorder}"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="CornerRadius" Value="0"/>
+      <Setter Property="Padding" Value="12,9"/>
+      <Setter Property="MaxWidth" Value="420"/>
+    </Style>
+    <Style Selector="Border.bubbleOut">
+      <Setter Property="Background" Value="{DynamicResource ThemePrimary}"/>
+      <Setter Property="CornerRadius" Value="0"/>
+      <Setter Property="Padding" Value="12,9"/>
+      <Setter Property="MaxWidth" Value="420"/>
+    </Style>
+
+    <!-- 图片气泡:直角、无内边距,悬停时描边提示可点 -->
+    <Style Selector="Border.bubbleImg">
+      <Setter Property="Background" Value="Transparent"/>
+      <Setter Property="BorderBrush" Value="Transparent"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="CornerRadius" Value="0"/>
+      <Setter Property="Padding" Value="0"/>
+      <Setter Property="Cursor" Value="Hand"/>
+    </Style>
+    <Style Selector="Border.bubbleImg:pointerover">
+      <Setter Property="BorderBrush" Value="{DynamicResource ThemePrimary}"/>
+    </Style>
+
+    <!-- 预览层的缩放按钮:没有背景,只有半透明白色符号 -->
+    <Style Selector="Button.zoomBtn">
+      <Setter Property="Background" Value="Transparent"/>
+      <Setter Property="BorderThickness" Value="0"/>
+      <Setter Property="Padding" Value="0"/>
+      <Setter Property="Width" Value="28"/>
+      <Setter Property="Height" Value="28"/>
+      <Setter Property="MinWidth" Value="0"/>
+      <Setter Property="MinHeight" Value="0"/>
+      <Setter Property="Cursor" Value="Hand"/>
+      <Setter Property="HorizontalContentAlignment" Value="Center"/>
+      <Setter Property="VerticalContentAlignment" Value="Center"/>
+      <Setter Property="Foreground" Value="#E6FFFFFF"/>
+    </Style>
+    <Style Selector="Button.zoomBtn:pointerover /template/ ContentPresenter">
+      <Setter Property="Background" Value="Transparent"/>
+      <Setter Property="TextElement.Foreground" Value="#FFFFFFFF"/>
+    </Style>
+  </Window.Styles>
+
+  <!-- 根:RowSpan 最后一行留给设置侧边栏浮层 -->
+  <Grid x:Name="Root" RowDefinitions="33,44,*,Auto">
+
+    <!-- ① 标题栏:只有三大金刚键(最小化 / 最大化 / 关闭) -->
     <Border Grid.Row="0" Background="{DynamicResource ThemePrimary}" PointerPressed="OnTitleBarPointerPressed">
-      <Grid ColumnDefinitions="Auto,*,Auto,Auto">
-        <Rectangle Grid.Column="0" Width="1.5" Height="16" Fill="#80FFFFFF" Margin="16,0,0,0" VerticalAlignment="Center"/>
-        <TextBlock x:Name="TitleText" Grid.Column="1" Text="与好友聊天" Foreground="White" FontSize="13"
-                   Margin="14,0,0,0" VerticalAlignment="Center"/>
-        <Button Grid.Column="2" Classes="chrome" Width="40" Click="OnMinimizeClick">
+      <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+        <Button Classes="chrome" Width="40" Click="OnMinimizeClick">
           <Rectangle Width="12" Height="1.5" Fill="White"/>
         </Button>
-        <Button Grid.Column="3" Classes="chrome close" Width="44" Click="OnCloseClick">
+        <Button Classes="chrome" Width="40" Click="OnMaximizeClick">
+          <Rectangle Width="10" Height="10" Stroke="White" StrokeThickness="1.4"/>
+        </Button>
+        <Button Classes="chrome close" Width="44" Click="OnCloseClick">
           <Path Data="M0,0 L11,11 M11,0 L0,11" Stroke="White" StrokeThickness="1.6"/>
+        </Button>
+      </StackPanel>
+    </Border>
+
+    <!-- ② 功能栏:对象名称(左) + 三个点菜单(最右,垂直居中) -->
+    <Border Grid.Row="1" Background="{DynamicResource ThemePanel}"
+            BorderBrush="{DynamicResource ThemePanelBorder}" BorderThickness="0,0,0,1" Padding="12,0">
+      <Grid ColumnDefinitions="*,Auto">
+        <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Spacing="8">
+          <TextBlock x:Name="FriendNameText" Text="对象名称" FontSize="14" FontWeight="SemiBold"
+                     VerticalAlignment="Center"
+                     Foreground="{DynamicResource ThemePrimaryDark}" TextTrimming="CharacterEllipsis"/>
+          <TextBlock x:Name="SourceText" Text="ZXMS-锌能源" FontSize="11"
+                     VerticalAlignment="Center" Foreground="{DynamicResource ThemeMuted}"/>
+        </StackPanel>
+        <Button Grid.Column="1" Classes="flatIcon" VerticalAlignment="Center"
+                HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
+                Click="OnToggleSettings" ToolTip.Tip="会话设置">
+          <TextBlock Text="⋯" FontSize="19" VerticalAlignment="Center" HorizontalAlignment="Center"/>
         </Button>
       </Grid>
     </Border>
 
-    <ScrollViewer Grid.Row="1" Margin="14,12,14,10" VerticalScrollBarVisibility="Auto">
-      <StackPanel Spacing="10">
-        <TextBlock Text="聊天记录(预留)" FontSize="12" HorizontalAlignment="Center" Margin="0,40,0,0"
+    <!-- ③ 聊天记录 -->
+    <ScrollViewer Grid.Row="2" x:Name="MessageScroll" Background="{DynamicResource ThemeContentVeil}"
+                  VerticalScrollBarVisibility="Auto">
+      <StackPanel x:Name="MessageList" Margin="18,16" Spacing="12">
+
+        <TextBlock Text="今天 14:30" FontSize="10.5" HorizontalAlignment="Center"
                    Foreground="{DynamicResource ThemeMuted}"/>
+
+        <!-- 示例消息由 ChatWindow.axaml.cs 生成(头像要按 ZXM 账号头像加载) -->
       </StackPanel>
     </ScrollViewer>
 
-    <Border Grid.Row="2" BorderBrush="{DynamicResource ThemePanelBorder}" BorderThickness="0,1,0,0" Padding="12,10">
-      <Grid ColumnDefinitions="*,Auto">
-        <TextBox Grid.Column="0" Watermark="输入消息…" FontSize="12.5"/>
-        <Button Grid.Column="1" Classes="small" Content="发送" Margin="8,0,0,0"/>
+    <!-- ④ 输入栏:输入框(左) + 发送 + 汉堡菜单(最右,垂直居中) -->
+    <Border Grid.Row="3" Background="{DynamicResource ThemePanel}"
+            BorderBrush="{DynamicResource ThemePanelBorder}" BorderThickness="0,1,0,0" Padding="10,9">
+      <Grid ColumnDefinitions="*,Auto,Auto">
+        <TextBox Grid.Column="0" x:Name="InputBox" Margin="0,0,10,0" FontSize="12.5" MinHeight="34"
+                 VerticalContentAlignment="Center"
+                 Watermark="输入消息…" AcceptsReturn="False" KeyDown="OnInputKeyDown"/>
+
+        <Button Grid.Column="1" MinWidth="66" MinHeight="34" Padding="0"
+                HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
+                VerticalAlignment="Center" Click="OnSendClick">
+          <TextBlock Text="发送" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+        </Button>
+
+        <Button Grid.Column="2" x:Name="HamburgerButton" Classes="flatIcon" VerticalAlignment="Center"
+                HorizontalContentAlignment="Center" VerticalContentAlignment="Center" Margin="10,0,0,0">
+          <Button.Flyout>
+            <MenuFlyout Placement="TopEdgeAlignedRight">
+              <MenuItem Header="发红包" Click="OnRedPacketClick"/>
+              <MenuItem Header="发送文件" Click="OnSendFileClick"/>
+            </MenuFlyout>
+          </Button.Flyout>
+          <Path Data="M0,2 L14,2 M0,7 L14,7 M0,12 L14,12" Stroke="{DynamicResource ThemePrimaryDark}"
+                StrokeThickness="1.6"/>
+        </Button>
       </Grid>
     </Border>
+
+    <!-- ⑤ 会话设置侧边栏(点 ⋯ 从右侧滑出):外层宽度 0→286 拉动,内层固定宽度靠右 -->
+    <Border x:Name="DrawerHost" Grid.Row="1" Grid.RowSpan="3" Width="0" HorizontalAlignment="Right"
+            ZIndex="20" ClipToBounds="True">
+      <Border.Transitions>
+        <Transitions>
+          <DoubleTransition Property="Width" Duration="0:0:0.22" Easing="CubicEaseOut"/>
+        </Transitions>
+      </Border.Transitions>
+      <Border x:Name="SettingsPanel" Width="286" HorizontalAlignment="Right"
+              Background="{DynamicResource ThemePanelSolid}"
+              BorderBrush="{DynamicResource ThemePanelBorder}" BorderThickness="1,0,0,0">
+      <Grid RowDefinitions="44,*,Auto">
+        <Border Grid.Row="0" BorderBrush="{DynamicResource ThemePanelBorder}" BorderThickness="0,0,0,1" Padding="14,0">
+          <Grid ColumnDefinitions="*,Auto">
+            <TextBlock Grid.Column="0" Text="会话设置" FontSize="13" FontWeight="SemiBold"
+                       VerticalAlignment="Center" Foreground="{DynamicResource ThemePrimaryDark}"/>
+            <Button Grid.Column="1" Classes="flatIcon" Click="OnToggleSettings" ToolTip.Tip="收起">
+              <Path Data="M0,0 L10,10 M10,0 L0,10" Stroke="{DynamicResource ThemePrimaryDark}" StrokeThickness="1.5"/>
+            </Button>
+          </Grid>
+        </Border>
+
+        <StackPanel Grid.Row="1" Margin="14,14" Spacing="14">
+          <StackPanel Spacing="6">
+            <TextBlock Text="对象备注" FontSize="11.5" Foreground="{DynamicResource ThemeMuted}"/>
+            <TextBox x:Name="RemarkBox" FontSize="12.5" Watermark="给这个好友起个备注"/>
+          </StackPanel>
+
+          <StackPanel Spacing="6">
+            <TextBlock Text="来源服务端" FontSize="11.5" Foreground="{DynamicResource ThemeMuted}"/>
+            <Border Background="{DynamicResource ThemeLight}" BorderBrush="{DynamicResource ThemePanelBorder}"
+                    BorderThickness="1" Padding="10,8">
+              <TextBlock x:Name="SourceText2" Text="ZXMS-锌能源" FontSize="12"
+                         Foreground="{DynamicResource ThemePrimaryDark}"/>
+            </Border>
+          </StackPanel>
+
+          <StackPanel Spacing="6">
+            <TextBlock Text="对象 ID(ZXM 账号 ID)" FontSize="11.5" Foreground="{DynamicResource ThemeMuted}"/>
+            <Border Background="{DynamicResource ThemeLight}" BorderBrush="{DynamicResource ThemePanelBorder}"
+                    BorderThickness="1" Padding="10,8">
+              <TextBlock x:Name="ObjectIdText" Text="5" FontSize="12"
+                         FontFamily="Consolas, Cascadia Mono, monospace"
+                         Foreground="{DynamicResource ThemePrimaryDark}" TextWrapping="Wrap"/>
+            </Border>
+          </StackPanel>
+        </StackPanel>
+
+        <Border Grid.Row="2" BorderBrush="{DynamicResource ThemePanelBorder}" BorderThickness="0,1,0,0" Padding="14,10">
+          <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+            <Button MinWidth="66" MinHeight="34" Padding="0"
+                    HorizontalContentAlignment="Center" VerticalContentAlignment="Center" Click="OnToggleSettings">
+              <TextBlock Text="取消" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+            </Button>
+            <Button MinWidth="66" MinHeight="34" Padding="0"
+                    HorizontalContentAlignment="Center" VerticalContentAlignment="Center" Click="OnToggleSettings">
+              <TextBlock Text="保存" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+            </Button>
+          </StackPanel>
+        </Border>
+        </Grid>
+      </Border>
+    </Border>
+
+    <!-- ⑥ 图片预览层:半透明黑遮罩(单独一层,不影响图片亮度)+ 无背景缩放条 -->
+    <Grid x:Name="PreviewLayer" Grid.Row="0" Grid.RowSpan="4" ZIndex="40" IsVisible="False"
+          Background="#B3000000">
+      <Border Background="#B3000000"/>
+      <Grid RowDefinitions="36,*,40">
+        <Button Grid.Row="0" Classes="flatIcon" HorizontalAlignment="Right" Margin="0,4,8,0"
+                Click="OnPreviewCloseClick" ToolTip.Tip="关闭(Esc)">
+          <Path Data="M0,0 L11,11 M11,0 L0,11" Stroke="White" StrokeThickness="1.6"/>
+        </Button>
+
+        <Grid Grid.Row="1" x:Name="PreviewStage" ClipToBounds="True">
+          <Image x:Name="PreviewImage" Stretch="Uniform"
+                 HorizontalAlignment="Center" VerticalAlignment="Center"
+                 PointerWheelChanged="OnPreviewWheel"
+                 DoubleTapped="OnPreviewDoubleTapped"
+                 ToolTip.Tip="滚轮缩放,双击用系统看图器打开"/>
+        </Grid>
+
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Center"
+                    VerticalAlignment="Center" Spacing="16">
+          <Button x:Name="ZoomOutButton" Classes="zoomBtn" Click="OnZoomOutClick">
+            <TextBlock Text="−" FontSize="15" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+          </Button>
+          <Button x:Name="ZoomResetButton" Classes="zoomBtn" Click="OnZoomResetClick" ToolTip.Tip="重置到 100%">
+            <TextBlock x:Name="ZoomText" Text="100%" FontSize="13" VerticalAlignment="Center"
+                       HorizontalAlignment="Center" Foreground="#E6FFFFFF"/>
+          </Button>
+          <Button x:Name="ZoomInButton" Classes="zoomBtn" Click="OnZoomInClick">
+            <TextBlock Text="+" FontSize="15" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+          </Button>
+        </StackPanel>
+      </Grid>
+    </Grid>
   </Grid>
 </Window>

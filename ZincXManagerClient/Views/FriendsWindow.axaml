@@ -1,24 +1,53 @@
-﻿<Window xmlns="https://github.com/avaloniaui"
+<Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         x:Class="ZincXManagerClient.Views.FriendsWindow"
         Title="ZincXManagerClient · 好友"
-        Width="240" Height="660" MinWidth="320" MinHeight="400"
+        Width="280" Height="680" MinWidth="280" MaxWidth="280" MinHeight="400"
         Background="{DynamicResource ThemeWindowVeil}"
         TransparencyLevelHint="AcrylicBlur,Blur,Transparent"
         FontFamily="Microsoft YaHei UI, Microsoft YaHei, Segoe UI"
         WindowDecorations="None">
 
   <Window.Styles>
+    <!-- 加号:不要底色,悬停也不要高亮 -->
+    <Style Selector="Button.bareAdd /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="Transparent"/>
+      <Setter Property="BorderThickness" Value="0"/>
+    </Style>
+    <Style Selector="Button.bareAdd:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="Transparent"/>
+    </Style>
+    <Style Selector="Button.bareAdd:pressed /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="Transparent"/>
+    </Style>
+    <!-- 好友条:整行可点,悬停只是浅底 -->
     <Style Selector="Border.friendRow">
       <Setter Property="Cursor" Value="Hand"/>
+      <Setter Property="Background" Value="Transparent"/>
     </Style>
     <Style Selector="Border.friendRow:pointerover">
       <Setter Property="Background" Value="{DynamicResource ThemeLight}"/>
     </Style>
+    <!-- 头像:圆形,里面放名字首字 -->
+    <Style Selector="Border.avatar">
+      <Setter Property="Width" Value="38"/>
+      <Setter Property="Height" Value="38"/>
+      <Setter Property="CornerRadius" Value="0"/>
+      <Setter Property="Background" Value="{DynamicResource ThemeSecondary}"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource ThemePanelBorder}"/>
+      <Setter Property="BorderThickness" Value="1"/>
+    </Style>
+    <Style Selector="Border.avatar > TextBlock">
+      <Setter Property="FontSize" Value="15"/>
+      <Setter Property="FontWeight" Value="SemiBold"/>
+      <Setter Property="Foreground" Value="{DynamicResource ThemePrimaryDark}"/>
+      <Setter Property="HorizontalAlignment" Value="Center"/>
+      <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
   </Window.Styles>
 
-  <Grid RowDefinitions="33,Auto,*,Auto">
-    <!-- 标题栏 -->
+  <Grid RowDefinitions="33,Auto,Auto,*,Auto">
+    <!-- 标题栏:左「好友」,右最小化 + 关闭 -->
     <Border Grid.Row="0" Background="{DynamicResource ThemePrimary}" PointerPressed="OnTitleBarPointerPressed">
       <Grid ColumnDefinitions="Auto,*,Auto,Auto">
         <Rectangle Grid.Column="0" Width="1.5" Height="16" Fill="#80FFFFFF" Margin="16,0,0,0" VerticalAlignment="Center"/>
@@ -32,35 +61,100 @@
       </Grid>
     </Border>
 
+    <!-- 个人信息:和标题栏同色,左头像右昵称 -->
+    <Border Grid.Row="1" Background="{DynamicResource ThemePrimary}" Padding="14,12">
+      <Grid ColumnDefinitions="44,*">
+        <Border Grid.Column="0" Width="44" Height="44" Background="#33FFFFFF"
+                BorderBrush="#66FFFFFF" BorderThickness="1">
+          <Grid>
+            <TextBlock x:Name="SelfAvatarInitial" Text="我" FontSize="17" FontWeight="SemiBold" Foreground="White"
+                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            <Image x:Name="SelfAvatarImage" IsVisible="False" Stretch="UniformToFill"/>
+          </Grid>
+        </Border>
+        <TextBlock Grid.Column="1" x:Name="SelfNameText" Text="未登录" FontSize="14" FontWeight="SemiBold"
+                   Foreground="White" Margin="12,0,0,0" VerticalAlignment="Center"
+                   TextTrimming="CharacterEllipsis"/>
+      </Grid>
+    </Border>
+
     <!-- 搜索 -->
-    <TextBox Grid.Row="1" Margin="12,10,12,6" Watermark="搜索好友" FontSize="12"/>
+    <Grid Grid.Row="2" ColumnDefinitions="*,Auto" Margin="12,10,12,6">
+      <TextBox Grid.Column="0" Watermark="搜索好友" FontSize="12"/>
+      <Button Grid.Column="1" Classes="bareAdd" Width="30" Padding="0" Margin="6,0,0,0"
+              Background="Transparent" BorderThickness="0" Click="OnAddFriendClick" ToolTip.Tip="添加好友">
+        <Path Data="M6,0 L6,12 M0,6 L12,6" Stroke="{DynamicResource ThemePrimaryDark}" StrokeThickness="1.6"
+              HorizontalAlignment="Center" VerticalAlignment="Center"/>
+      </Button>
+    </Grid>
 
-    <!-- 好友列表(占位;以后接真实数据) -->
-    <ScrollViewer Grid.Row="2" Margin="0,4,0,0" VerticalScrollBarVisibility="Auto">
-      <StackPanel Margin="10,4,10,10" Spacing="2">
+    <!-- 好友条列表:左头像 / 右名字,名字下面是最后一条聊天记录(灰色);没有记录时那一行不出现 -->
+    <ScrollViewer Grid.Row="3" Margin="0,4,0,0" VerticalScrollBarVisibility="Auto">
+      <StackPanel Margin="8,4,8,10" Spacing="2">
 
-        <!-- 占位好友:双击打开聊天窗体(接真实数据时换成 ItemsControl) -->
-        <Border Classes="friendRow" Padding="10,8" Background="Transparent" DoubleTapped="OnFriendDoubleTapped" Tag="示例好友">
-          <StackPanel Orientation="Horizontal" Spacing="10">
-            <Border Width="28" Height="28" Background="{DynamicResource ThemeLight}" BorderBrush="{DynamicResource ThemePanelBorder}" BorderThickness="1">
-              <TextBlock Text="?" FontSize="13" HorizontalAlignment="Center" VerticalAlignment="Center"
-                         Foreground="{DynamicResource ThemeMuted}"/>
+        <!-- 有聊天记录 -->
+        <Border Classes="friendRow" Padding="8,8" DoubleTapped="OnFriendDoubleTapped" Tag="阿岚">
+          <Grid ColumnDefinitions="38,*">
+            <Border Grid.Column="0" Classes="avatar">
+              <TextBlock Text="岚"/>
             </Border>
-            <StackPanel VerticalAlignment="Center" Spacing="1">
-              <TextBlock Text="示例好友" FontSize="12.5" Foreground="{DynamicResource ThemePrimaryDark}"/>
-              <TextBlock Text="占位 · 双击打开聊天" FontSize="11" Foreground="{DynamicResource ThemeMuted}"/>
+            <StackPanel Grid.Column="1" Margin="10,0,0,0" VerticalAlignment="Center" Spacing="3">
+              <Grid ColumnDefinitions="*,Auto">
+                <TextBlock Grid.Column="0" Text="阿岚" FontSize="13" Foreground="{DynamicResource ThemePrimaryDark}"/>
+                <TextBlock Grid.Column="1" Text="14:32" FontSize="10.5" Foreground="{DynamicResource ThemeMuted}"/>
+              </Grid>
+              <TextBlock Text="晚上七点开服,记得提前十分钟上线" FontSize="11.5"
+                         Foreground="{DynamicResource ThemeMuted}" TextTrimming="CharacterEllipsis"/>
             </StackPanel>
-          </StackPanel>
+          </Grid>
         </Border>
 
-        <TextBlock Text="暂无其它好友" FontSize="12" HorizontalAlignment="Center" Margin="0,20,0,0"
+        <!-- 有聊天记录(自己发的带「我:」前缀) -->
+        <Border Classes="friendRow" Padding="8,8" DoubleTapped="OnFriendDoubleTapped" Tag="ZXMS-锌能源">
+          <Grid ColumnDefinitions="38,*">
+            <Border Grid.Column="0" Classes="avatar">
+              <TextBlock Text="锌"/>
+            </Border>
+            <StackPanel Grid.Column="1" Margin="10,0,0,0" VerticalAlignment="Center" Spacing="3">
+              <Grid ColumnDefinitions="*,Auto">
+                <TextBlock Grid.Column="0" Text="ZXMS-锌能源" FontSize="13" Foreground="{DynamicResource ThemePrimaryDark}"/>
+                <TextBlock Grid.Column="1" Text="昨天" FontSize="10.5" Foreground="{DynamicResource ThemeMuted}"/>
+              </Grid>
+              <TextBlock Text="我:主界面能开了,晚上我再看日志" FontSize="11.5"
+                         Foreground="{DynamicResource ThemeMuted}" TextTrimming="CharacterEllipsis"/>
+            </StackPanel>
+          </Grid>
+        </Border>
+
+        <!-- 没有聊天记录:名字下那一行整块不出现 -->
+        <Border Classes="friendRow" Padding="8,8" DoubleTapped="OnFriendDoubleTapped" Tag="新区服主">
+          <Grid ColumnDefinitions="38,*">
+            <Border Grid.Column="0" Classes="avatar">
+              <TextBlock Text="新"/>
+            </Border>
+            <StackPanel Grid.Column="1" Margin="10,0,0,0" VerticalAlignment="Center">
+              <TextBlock Text="新区服主" FontSize="13" Foreground="{DynamicResource ThemePrimaryDark}"/>
+            </StackPanel>
+          </Grid>
+        </Border>
+
+        <TextBlock Text="没有更多好友了" FontSize="11" HorizontalAlignment="Center" Margin="0,16,0,0"
                    Foreground="{DynamicResource ThemeMuted}"/>
       </StackPanel>
     </ScrollViewer>
 
-    <!-- 底:提示 -->
-    <Border Grid.Row="3" BorderBrush="{DynamicResource ThemePanelBorder}" BorderThickness="0,1,0,0" Padding="12,8">
-      <TextBlock Text="双击好友打开聊天窗口" FontSize="11" Foreground="{DynamicResource ThemeMuted}"/>
+    <!-- 底:好友通知(有申请时带红点) + 提示 -->
+    <Border Grid.Row="4" BorderBrush="{DynamicResource ThemePanelBorder}" BorderThickness="0,1,0,0" Padding="8,6">
+      <Grid ColumnDefinitions="Auto,*,Auto">
+        <Button Grid.Column="0" Padding="8,3" Click="OnNotificationsClick" ToolTip.Tip="好友通知">
+          <StackPanel Orientation="Horizontal" Spacing="6">
+            <TextBlock Text="好友通知" FontSize="11.5" VerticalAlignment="Center"/>
+            <Ellipse x:Name="NoticeDot" Width="7" Height="7" Fill="#E53935" VerticalAlignment="Center"/>
+          </StackPanel>
+        </Button>
+        <TextBlock Grid.Column="2" Text="双击好友打开聊天窗口" FontSize="10.5" VerticalAlignment="Center"
+                   Foreground="{DynamicResource ThemeMuted}"/>
+      </Grid>
     </Border>
   </Grid>
 </Window>

@@ -1,0 +1,76 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="ZincXManagerClient.Views.AddFriendWindow"
+        Title="ZincXManagerClient · 添加好友"
+        Width="460" Height="520" MinWidth="380" MinHeight="360"
+        Background="{DynamicResource ThemeWindowVeil}"
+        TransparencyLevelHint="AcrylicBlur,Blur,Transparent"
+        FontFamily="Microsoft YaHei UI, Microsoft YaHei, Segoe UI"
+        WindowDecorations="None">
+
+  <Window.Styles>
+    <!-- 结果行:整行悬停高亮 -->
+    <Style Selector="Border.resultRow">
+      <Setter Property="Cursor" Value="Hand"/>
+      <Setter Property="Background" Value="Transparent"/>
+    </Style>
+    <Style Selector="Border.resultRow:pointerover">
+      <Setter Property="Background" Value="{DynamicResource ThemeLight}"/>
+    </Style>
+    <Style Selector="Border.avatar">
+      <Setter Property="Width" Value="34"/>
+      <Setter Property="Height" Value="34"/>
+      <Setter Property="CornerRadius" Value="0"/>
+      <Setter Property="Background" Value="{DynamicResource ThemeSecondary}"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource ThemePanelBorder}"/>
+      <Setter Property="BorderThickness" Value="1"/>
+    </Style>
+    <Style Selector="Border.avatar > TextBlock">
+      <Setter Property="FontSize" Value="14"/>
+      <Setter Property="FontWeight" Value="SemiBold"/>
+      <Setter Property="Foreground" Value="{DynamicResource ThemePrimaryDark}"/>
+      <Setter Property="HorizontalAlignment" Value="Center"/>
+      <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+  </Window.Styles>
+
+  <Grid RowDefinitions="33,Auto,Auto,*,Auto">
+    <!-- 标题栏:左「添加好友」,右最小化 + 关闭 -->
+    <Border Grid.Row="0" Background="{DynamicResource ThemePrimary}" PointerPressed="OnTitleBarPointerPressed">
+      <Grid ColumnDefinitions="Auto,*,Auto,Auto">
+        <Rectangle Grid.Column="0" Width="1.5" Height="16" Fill="#80FFFFFF" Margin="16,0,0,0" VerticalAlignment="Center"/>
+        <TextBlock Grid.Column="1" Text="添加好友" Foreground="White" FontSize="13" Margin="14,0,0,0" VerticalAlignment="Center"/>
+        <Button Grid.Column="2" Classes="chrome" Width="40" Click="OnMinimizeClick">
+          <Rectangle Width="12" Height="1.5" Fill="White"/>
+        </Button>
+        <Button Grid.Column="3" Classes="chrome close" Width="44" Click="OnCloseClick">
+          <Path Data="M0,0 L11,11 M11,0 L0,11" Stroke="White" StrokeThickness="1.6"/>
+        </Button>
+      </Grid>
+    </Border>
+
+    <!-- 搜索框:完整 ID / 账户名 / 编号 三种输入 -->
+    <TextBox Grid.Row="1" x:Name="SearchBox" Margin="14,14,14,6" FontSize="12.5"
+             Watermark="输入完整 ID、账户名或账户编号" TextChanged="OnSearchTextChanged"/>
+
+    <!-- 解析提示:告诉玩家这次会去哪个服务端找 -->
+    <TextBlock Grid.Row="2" x:Name="HintText" Margin="16,0,16,8" FontSize="11"
+               Foreground="{DynamicResource ThemeMuted}" TextWrapping="Wrap"
+               Text="输入 ZXMS-ZES-1-14 按 ID 找;输入账户名或编号在本服用户列表里找"/>
+
+    <!-- 结果列表 -->
+    <ScrollViewer Grid.Row="3" Margin="0,4,0,0" VerticalScrollBarVisibility="Auto">
+      <StackPanel x:Name="ResultList" Margin="8,2,8,10" Spacing="2">
+        <TextBlock x:Name="EmptyHint" Text="输入内容开始搜索" FontSize="11.5"
+                   HorizontalAlignment="Center" Margin="0,24,0,0"
+                   Foreground="{DynamicResource ThemeMuted}"/>
+      </StackPanel>
+    </ScrollViewer>
+
+    <!-- 底部说明 -->
+    <Border Grid.Row="4" BorderBrush="{DynamicResource ThemePanelBorder}" BorderThickness="0,1,0,0" Padding="14,8">
+      <TextBlock x:Name="StatusText" Text="界面阶段:搜索结果先写死演示数据,还没接服务端"
+                 FontSize="10.5" TextWrapping="Wrap" Foreground="{DynamicResource ThemeMuted}"/>
+    </Border>
+  </Grid>
+</Window>
