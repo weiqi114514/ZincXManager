@@ -217,7 +217,7 @@ public partial class FriendsWindow : Window
     {
         if (sender is Control { Tag: string name } && name.Length > 0)
         {
-            var chat = new ChatWindow(name);
+            var chat = new ChatWindow(name, name);
             WindowPlacement.PlaceAt(chat, this);
             chat.Show();
         }

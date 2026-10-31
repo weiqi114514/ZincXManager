@@ -14,6 +14,7 @@ using Avalonia.Platform.Storage;  // IStorageFile:拖入与粘贴的文件
 using Avalonia.Threading;  // Dispatcher:异步回到界面线程
 
 using ZincXManagerShared.Account;  // AvatarStore:读账号头像缓存
+using ZincXManagerShared.Network;  // Protocol:删好友协议码
 
 namespace ZincXManagerClient.Views;
 
@@ -30,6 +31,8 @@ public partial class ChatWindow : Window
     private bool _dragging;  //是否正在拖图
     private Point _dragFrom;  //按下时鼠标所在位置
     private Vector _panFrom;  //按下时的平移量
+
+    private readonly string _peerFullId = "";  //当前会话对象的完整玩家 ID(删好友用)
 
     private const double MinScale = 0.25;  //最小缩放 25%
     private const double MaxScale = 4;  //最大缩放 400%
@@ -69,6 +72,43 @@ public partial class ChatWindow : Window
         {
             SendImageFile(demo);
         }
+    }
+
+    /// <summary>带完整玩家 ID 的构造:聊天窗上的「删除好友」要靠它发 660。</summary>
+    public ChatWindow(string friendName, string fullId) : this(friendName)
+    {
+        _peerFullId = fullId;
+    }
+
+    /// <summary>侧栏「删除好友」:确认后发 660,两边列表由服务端一起删,删完把这个聊天窗关掉。</summary>
+    private async void OnRemoveFriendClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        if (_peerFullId.Length == 0)
+        {
+            return;
+        }
+
+        var name = string.IsNullOrWhiteSpace(FriendNameText.Text) ? _peerFullId : FriendNameText.Text;   //确认框里显示的名字
+        var yes = await MessageDialog.ConfirmAsync(this, "删除好友", $"确定把「{name}」从好友里删掉吗?两边的好友列表都会删。", "删除", "算了");
+        if (!yes)
+        {
+            return;
+        }
+
+        var connect = ClientSession.Connect;   //当前连接
+        if (connect is not null)
+        {
+            try
+            {
+                await connect.SendAsync(Protocol.FriendRemove, _peerFullId);
+            }
+            catch
+            {
+                //连接断了就算了,661 不会来,下次打开好友窗再刷
+            }
+        }
+
+        Close();   //好友关系没了,这个会话窗也没意义
     }
 
     /// <summary>对象 ID 按「数据源名称-ID」显示;官方服务端固定用 ZXMOS 打头。来源服务端不动,仍是 XAML 里写的那样。</summary>

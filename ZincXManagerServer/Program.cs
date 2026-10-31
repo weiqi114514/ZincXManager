@@ -1183,8 +1183,9 @@ internal static class Program
                     break;
                 }
 
+                var pending = FriendStore.ReadRequests(self.Value);   //待处理申请
                 var lines = new StringBuilder();   //回包内容
-                foreach (var request in FriendStore.ReadRequests(self.Value))
+                foreach (var request in pending)
                 {
                     lines.Append(request.From.Full).Append('\t')
                         .Append(request.Message).Append('\t')
@@ -1192,6 +1193,7 @@ internal static class Program
                         .Append('\n');
                 }
 
+                Logger.Log(LogLevel.Info, $"[好友] {self.Value.Full} 查申请:{pending.Count} 条");
                 await packet.SendAsync(Protocol.FriendRequestsReply, lines.ToString().TrimEnd('\n'), packet.Id);
                 break;
             }

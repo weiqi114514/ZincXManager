@@ -29,6 +29,28 @@
       <Setter Property="Background" Value="{DynamicResource ThemeLight}"/>
     </Style>
 
+    <!-- 侧栏底部的危险操作按钮:红底白字,悬停加深 -->
+    <Style Selector="Button.dangerBtn">
+      <Setter Property="Background" Value="#C62828"/>
+      <Setter Property="Foreground" Value="White"/>
+      <Setter Property="BorderThickness" Value="0"/>
+      <Setter Property="CornerRadius" Value="4"/>
+      <Setter Property="MinWidth" Value="0"/>
+      <Setter Property="MinHeight" Value="0"/>
+      <Setter Property="Padding" Value="14,0"/>
+      <Setter Property="Height" Value="34"/>
+      <Setter Property="Cursor" Value="Hand"/>
+      <Setter Property="HorizontalContentAlignment" Value="Center"/>
+      <Setter Property="VerticalContentAlignment" Value="Center"/>
+      <Setter Property="FontSize" Value="12.5"/>
+    </Style>
+    <Style Selector="Button.dangerBtn:pointerover /template/ ContentPresenter">
+      <Setter Property="Background" Value="#D32F2F"/>
+    </Style>
+    <Style Selector="Button.dangerBtn:pressed /template/ ContentPresenter">
+      <Setter Property="Background" Value="#B71C1C"/>
+    </Style>
+
     <!-- 消息气泡 -->
     <Style Selector="Border.avatarMini">
       <Setter Property="Background" Value="{DynamicResource ThemeSecondary}"/>
@@ -211,7 +233,9 @@
         </StackPanel>
 
         <Border Grid.Row="2" BorderBrush="{DynamicResource ThemePanelBorder}" BorderThickness="0,1,0,0" Padding="14,10">
-          <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+          <Grid ColumnDefinitions="Auto,*,Auto">
+            <Button Grid.Column="0" Classes="dangerBtn" Click="OnRemoveFriendClick">删除好友</Button>
+            <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8">
             <Button MinWidth="66" MinHeight="34" Padding="0"
                     HorizontalContentAlignment="Center" VerticalContentAlignment="Center" Click="OnToggleSettings">
               <TextBlock Text="取消" VerticalAlignment="Center" HorizontalAlignment="Center"/>
@@ -220,7 +244,8 @@
                     HorizontalContentAlignment="Center" VerticalContentAlignment="Center" Click="OnToggleSettings">
               <TextBlock Text="保存" VerticalAlignment="Center" HorizontalAlignment="Center"/>
             </Button>
-          </StackPanel>
+            </StackPanel>
+          </Grid>
         </Border>
         </Grid>
       </Border>
