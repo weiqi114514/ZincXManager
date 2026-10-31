@@ -1891,6 +1891,9 @@ internal static class Program
     /// <summary>官方端登录 / 注册成功后的账号信息缓存(name → 官方 ID + 等级):本地没有时用它按需镜像。</summary>
     private static readonly ConcurrentDictionary<string, (int Id, string Level)> OfficialAccounts = new(StringComparer.OrdinalIgnoreCase);
 
+    /// <summary>对不上的本地账号(名字 → 当时要转成的官方 ID):本次进程里已经确认撞号,不再重试、不再刷日志。</summary>
+    private static readonly ConcurrentDictionary<string, int> IdAlignFailures = new(StringComparer.OrdinalIgnoreCase);
+
     /// <summary>
     /// 取账号信息(绑定 / 解绑 / 头像 / 查询都走这里,不再直接查本地表):
     /// 本地有 → 用本地;本地没有但官方端给过这个账号的信息 → 镜像成本地壳账号再用;两端都没有 → null。
@@ -1923,7 +1926,7 @@ internal static class Program
 
         // 占位密文(随机 64 hex):官方账号走官方端校验,本地永远不会匹配上它
         var placeholder = Convert.ToHexString(System.Security.Cryptography.RandomNumberGenerator.GetBytes(32)).ToLowerInvariant();
-        if (Accounts.Add(name, placeholder, official.Level, "", official.Id, out var created, out var error))
+        if (Accounts.Add(name, placeholder, official.Level, "", official.Id, out var created, out var idError))
         {
             Logger.Log(LogLevel.Info, $"[账号] 官方账号 {name} 按需镜像到本地(ID 用官方 {official.Id},绑定 / 管理可用)");
             UserListChanged();   //镜像出来的账号也算本服用户
@@ -1931,14 +1934,15 @@ internal static class Program
         }
 
         // 官方 ID 已被别的本地账号占用:退回自增,至少功能可用
-        if (Accounts.Add(name, placeholder, official.Level, "", 0, out created, out error))
+        if (Accounts.Add(name, placeholder, official.Level, "", 0, out created, out _))
         {
-            Logger.Log(LogLevel.Warning, $"[账号] 官方账号 {name} 用官方 ID {official.Id} 镜像失败({error}),改成本地自增 ID={created!.Id}");
+            IdAlignFailures[name] = official.Id;   //退回自增后也对不上官方号,记下来别再试
+            Logger.Log(LogLevel.Warning, $"[账号] 官方账号 {name} 用官方 ID {official.Id} 镜像失败({idError}),改成本地自增 ID={created!.Id}");
             UserListChanged();   //镜像出来的账号也算本服用户
             return Task.FromResult<Account?>(created);
         }
 
-        Logger.Log(LogLevel.Warning, $"[账号] 按需镜像官方账号 {name} 失败:{error}");
+        Logger.Log(LogLevel.Warning, $"[账号] 按需镜像官方账号 {name} 失败:{idError}");
         return Task.FromResult(Accounts.Find(name));
     }
 
@@ -1951,11 +1955,23 @@ internal static class Program
     /// <param name="newId">官方端 ID。</param>
     private static void AlignLocalAccountId(string name, int oldId, int newId)
     {
-        if (!Accounts.AlignId(name, newId, out var before, out var error))
+        // 撞号是配置/脏数据问题,改不了;已经确认过的别再每次解析都刷一条 Warn
+        if (IdAlignFailures.TryGetValue(name, out var failedId) && failedId == newId)
         {
-            Logger.Log(LogLevel.Warning, $"[账号] {name} 的 ID 从 {oldId} 对齐到官方 ID {newId} 失败:{error}");
             return;
         }
+
+        if (!Accounts.AlignId(name, newId, out var before, out var error))
+        {
+            // 并发解析同一账号时只留一条日志(谁先 TryAdd 成功谁打)
+            if (IdAlignFailures.TryAdd(name, newId))
+            {
+                Logger.Log(LogLevel.Warning, $"[账号] {name} 的 ID 从 {oldId} 对齐到官方 ID {newId} 失败:{error}(本次运行内不再重试)");
+            }
+            return;
+        }
+
+        IdAlignFailures.TryRemove(name, out _);
 
         Logger.Log(LogLevel.Info, $"[账号] {name} 的本地 ID {before} 已对齐官方 ID {newId}");
 
