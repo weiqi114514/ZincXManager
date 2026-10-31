@@ -10,6 +10,7 @@ namespace ZincXManagerShared.Account;
 /// 好友关系的落盘(<c>User/Friend/&lt;服务端ID&gt;/&lt;编码&gt;/</c>):
 /// <list type="bullet">
 ///   <item><c>FriendList.dat</c> —— 好友列表,一行一个 <c>&lt;服务端ID&gt; &lt;编码&gt;</c></item>
+///   <item><c>Requests.dat</c> —— 收到的好友申请,一行 <c>&lt;申请者完整ID&gt;\t&lt;留言&gt;\t&lt;时间&gt;</c></item>
 ///   <item><c>Ch/&lt;对方完整玩家ID&gt;.dat</c> —— 与该好友的聊天记录(一人一个文件)</item>
 /// </list>
 /// <para>文件一律 UTF-8 无 BOM + CRLF;读取时容忍空行、行首行尾空格、末行有无换行。</para>
@@ -39,6 +40,15 @@ public static class FriendStore
 
     /// <summary>某个玩家的好友列表文件路径。</summary>
     public static string ListPathOf(PlayerId owner) => Path.Combine(DirectoryOf(owner), ListFile);
+
+    /// <summary>好友申请文件名(放在被申请人的目录下)。</summary>
+    public const string RequestFile = "Requests.dat";
+
+    /// <summary>好友申请文件路径。</summary>
+    public static string RequestPathOf(PlayerId owner) => Path.Combine(DirectoryOf(owner), RequestFile);
+
+    /// <summary>一条好友申请:谁发的、留言、什么时候。</summary>
+    public readonly record struct FriendRequest(PlayerId From, string Message, DateTime At);
 
     /// <summary>与某个好友的聊天记录文件路径:<c>Ch/&lt;对方完整玩家ID&gt;.dat</c>。</summary>
     public static string ChatPathOf(PlayerId owner, PlayerId friend)
@@ -151,6 +161,113 @@ public static class FriendStore
         => ReadList(left).Contains(right);
 
     /// <summary>读一个文件的全部行(允许别人同时写)。</summary>
+    /// <summary>读收到的好友申请;文件不存在返回空列表。</summary>
+    public static List<FriendRequest> ReadRequests(PlayerId owner)
+    {
+        var list = new List<FriendRequest>();
+        var path = RequestPathOf(owner);
+        if (!File.Exists(path))
+        {
+            return list;
+        }
+
+        lock (_lock)
+        {
+            foreach (var line in ReadLines(path))
+            {
+                var parts = line.Split('\t');
+                if (parts.Length < 2 || !PlayerId.TryParse(parts[0].Trim(), out var from))
+                {
+                    continue;
+                }
+
+                var at = parts.Length > 2 &&
+                         DateTime.TryParse(parts[2].Trim(), CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsed)
+                    ? parsed
+                    : DateTime.MinValue;
+                list.Add(new FriendRequest(from, parts[1].Trim(), at));
+            }
+        }
+
+        return list;
+    }
+
+    /// <summary>整份写回好友申请(内部先排序去重)。</summary>
+    public static void WriteRequests(PlayerId owner, IEnumerable<FriendRequest> requests)
+    {
+        lock (_lock)
+        {
+            Directory.CreateDirectory(DirectoryOf(owner));
+
+            var text = new StringBuilder();
+            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var request in requests)
+            {
+                if (!seen.Add(request.From.Full))
+                {
+                    continue;
+                }
+
+                text.Append(request.From.Full).Append('\t')
+                    .Append(Clean(request.Message)).Append('\t')
+                    .Append(request.At.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture))
+                    .Append("\r\n");
+            }
+
+            var path = RequestPathOf(owner);
+            var temp = path + ".tmp";
+            File.WriteAllText(temp, text.ToString(), Utf8NoBom);
+            if (File.Exists(path))
+            {
+                File.Replace(temp, path, null);
+            }
+            else
+            {
+                File.Move(temp, path);
+            }
+        }
+    }
+
+    /// <summary>记一条申请:同一个人重复申请就更新留言与时间,返回 true 表示这是新申请。</summary>
+    public static bool AppendRequest(PlayerId owner, FriendRequest request)
+    {
+        lock (_lock)
+        {
+            var list = ReadRequests(owner);
+            var index = list.FindIndex(r => r.From.Full.Equals(request.From.Full, StringComparison.OrdinalIgnoreCase));
+            if (index >= 0)
+            {
+                list[index] = request;
+                WriteRequests(owner, list);
+                return false;
+            }
+
+            list.Add(request);
+            WriteRequests(owner, list);
+            return true;
+        }
+    }
+
+    /// <summary>删掉某个人的申请(同意或拒绝后调用);没有这条返回 false。</summary>
+    public static bool RemoveRequest(PlayerId owner, PlayerId from)
+    {
+        lock (_lock)
+        {
+            var list = ReadRequests(owner);
+            var removed = list.RemoveAll(r => r.From.Full.Equals(from.Full, StringComparison.OrdinalIgnoreCase)) > 0;
+            if (removed)
+            {
+                WriteRequests(owner, list);
+            }
+
+            return removed;
+        }
+    }
+
+    /// <summary>字段里不许出现 Tab 与换行(一行一条记录)。</summary>
+    private static string Clean(string text) => text.Replace('\t', ' ').Replace('\r', ' ').Replace('\n', ' ');
+
+    /// <summary>逐行读出(跳过空行与 # 注释),好友列表与申请共用。</summary>
     private static IEnumerable<string> ReadLines(string path)
     {
         using var stream = new FileStream(path, FileMode.Open, FileAccess.Read,

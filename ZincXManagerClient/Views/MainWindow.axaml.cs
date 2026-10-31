@@ -577,6 +577,52 @@ public partial class MainWindow : Window
                 break;
             }
 
+            // ---- 好友列表(651):转给打开着的好友条去渲染 ----
+            case Protocol.FriendListReply:
+                FriendsWindow.Current?.FillList(text);
+                Logger.Log(LogLevel.Info, "[好友] 收到好友列表:" + text.Split('\n').Length + " 行");
+                break;
+
+            // ---- 好友申请列表(657) ----
+            case Protocol.FriendRequestsReply:
+                FriendRequestsWindow.Current?.FillRequests(text);
+                Logger.Log(LogLevel.Info, "[好友] 收到申请列表:" + text.Split('\n').Length + " 行");
+                break;
+
+            // ---- 发申请回执(655) ----
+            case Protocol.FriendRequestAck:
+                if (text.StartsWith("err|", StringComparison.OrdinalIgnoreCase))
+                {
+                    Logger.Log(LogLevel.Warning, "[好友] 发申请失败:" + text[4..]);
+                    _ = MessageDialog.WarnAsync(this, "发送失败", text[4..]);
+                }
+                else
+                {
+                    Logger.Log(LogLevel.Info, "[好友] 好友申请已发出");
+                    _ = MessageDialog.InfoAsync(this, "已发送", "好友申请已经发过去了,等对方在「好友通知」里处理。");
+                }
+                break;
+
+            // ---- 处理申请回执(659) ----
+            case Protocol.FriendAnswerAck:
+                if (text.StartsWith("err|", StringComparison.OrdinalIgnoreCase))
+                {
+                    Logger.Log(LogLevel.Warning, "[好友] 处理申请失败:" + text[4..]);
+                }
+                else
+                {
+                    Logger.Log(LogLevel.Info, "[好友] 申请已处理:" + text);
+                }
+                FriendsWindow.Current?.RefreshAsync();
+                FriendRequestsWindow.Current?.RefreshAsync();
+                break;
+
+            // ---- 删好友回执(661) ----
+            case Protocol.FriendRemoveAck:
+                Logger.Log(LogLevel.Info, "[好友] 删除结果:" + text);
+                FriendsWindow.Current?.RefreshAsync();
+                break;
+
             // ---- 绑定关系(630):回答"我这个账号绑了谁" ----
             case Protocol.BindList:
             {
@@ -804,9 +850,10 @@ public partial class MainWindow : Window
     /// <summary>打开(或激活)好友条窗体。</summary>
     private void ShowFriendsWindow()
     {
-        if (_friendsWindow is { IsVisible: true })
+        if (_friendsWindow is { IsVisible: true } window)
         {
-            _friendsWindow.Activate();
+            window.Activate();
+            _ = window.RefreshAsync();
             return;
         }
 

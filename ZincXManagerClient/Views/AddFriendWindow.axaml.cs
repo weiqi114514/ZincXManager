@@ -78,6 +78,11 @@ public partial class AddFriendWindow : Window
             _mode = SearchMode.Id;
             HintText.Text = $"按完整 ID 搜索:服务端 {serverId},编码 {code}";
             hits = DemoUsers.Where(u => u.ServerId == serverId && u.Code == code).ToList();
+            //本地用户列表还没同步时,完整 ID 本身就是唯一凭据:直接给出可添加的一行
+            if (hits.Count == 0 && ZincXManagerShared.Account.PlayerId.TryParse(raw, out var direct))
+            {
+                hits.Add(new DemoUser(direct.ServerId, direct.Code.ToString(System.Globalization.CultureInfo.InvariantCulture), "#" + direct.Code.ToString(System.Globalization.CultureInfo.InvariantCulture)));
+            }
         }
         else if (raw.All(char.IsDigit))
         {
@@ -188,9 +193,7 @@ public partial class AddFriendWindow : Window
             var sent = await request.ShowDialog<bool>(this);
             if (sent)
             {
-                //界面阶段只回显,协议接上后这里换成发 646/好友申请
-                StatusText.Text = $"界面阶段:申请已填好但没发出去 —— {user.Name}"
-                                  + (request.Remark.Length > 0 ? $",备注「{request.Remark}」" : "");
+                StatusText.Text = await SendRequestAsync(fullId, request.Message);
             }
         };
 
@@ -218,4 +221,25 @@ public partial class AddFriendWindow : Window
             Margin = new Thickness(0, 24, 0, 0),
             Foreground = Brushes.Gray,
         };
+
+    /// <summary>发好友申请(654):&lt;对方完整ID&gt;|&lt;验证消息&gt;,回一句话给状态栏。</summary>
+    private async System.Threading.Tasks.Task<string> SendRequestAsync(string fullId, string message)
+    {
+        var connect = ClientSession.Connect;   //当前连接
+        if (connect is null)
+        {
+            return "还没连上服务端,连上再点一次添加。";
+        }
+
+        try
+        {
+            var payload = fullId + "|" + message;   //负载
+            await connect.SendAsync(ZincXManagerShared.Network.Protocol.FriendRequest, payload);
+            return "申请已发出,等对方在「好友通知」里处理。";
+        }
+        catch
+        {
+            return "发送失败:连接断了,连上再点一次添加。";
+        }
+    }
 }

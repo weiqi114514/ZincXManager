@@ -163,6 +163,54 @@ public static class Protocol
     /// </summary>
     public const ushort BindConfirm = 631;
 
+    /// <summary>客户端 → 子服务端:查自己的好友列表。负载为空。</summary>
+    public const ushort FriendListQuery = 650;
+
+    /// <summary>
+    /// 子服务端 → 客户端:好友列表。负载按行,每行 <c>&lt;完整玩家ID&gt;\t&lt;备注&gt;</c>;没有好友时负载为空串。
+    /// </summary>
+    public const ushort FriendListReply = 651;
+
+    /// <summary>客户端 → 子服务端:加好友。负载 <c>&lt;对方完整玩家ID&gt;|&lt;备注&gt;</c>。</summary>
+    public const ushort FriendAdd = 652;
+
+    /// <summary>子服务端 → 客户端:加好友结果。<c>ok|&lt;对方完整玩家ID&gt;</c> 或 <c>err|&lt;原因&gt;</c>。</summary>
+    public const ushort FriendAddAck = 653;
+
+    /// <summary>客户端 → 子服务端:发好友申请。负载 <c>&lt;对方完整玩家ID&gt;|&lt;验证消息&gt;</c>。</summary>
+    public const ushort FriendRequest = 654;
+
+    /// <summary>子服务端 → 客户端:申请已送出。<c>ok|</c> 或 <c>err|&lt;原因&gt;</c>。</summary>
+    public const ushort FriendRequestAck = 655;
+
+    /// <summary>客户端 → 子服务端:查好友申请列表。负载为空。</summary>
+    public const ushort FriendRequestsQuery = 656;
+
+    /// <summary>
+    /// 子服务端 → 客户端:好友申请列表。负载按行,每行 <c>&lt;申请者完整玩家ID&gt;\t&lt;验证消息&gt;\t&lt;时间&gt;</c>。
+    /// </summary>
+    public const ushort FriendRequestsReply = 657;
+
+    /// <summary>客户端 → 子服务端:处理好友申请。负载 <c>&lt;申请者完整玩家ID&gt;|accept</c> 或 <c>...|reject</c>。</summary>
+    public const ushort FriendAnswer = 658;
+
+    /// <summary>子服务端 → 客户端:处理结果。<c>ok|&lt;申请者完整玩家ID&gt;|accept</c> 或 <c>err|&lt;原因&gt;</c>。</summary>
+    public const ushort FriendAnswerAck = 659;
+
+    /// <summary>客户端 → 子服务端:删好友。负载 <c>&lt;对方完整玩家ID&gt;</c>。</summary>
+    public const ushort FriendRemove = 660;
+
+    /// <summary>子服务端 → 客户端:删好友结果。<c>ok|&lt;对方完整玩家ID&gt;</c> 或 <c>err|&lt;原因&gt;</c>。</summary>
+    public const ushort FriendRemoveAck = 661;
+
+    /// <summary>
+    /// 子服务端 → 客户端:好友事件推送(不请自来)。
+    /// <c>request|&lt;申请者完整玩家ID&gt;|&lt;验证消息&gt;</c>(有人申请加你)、
+    /// <c>agree|&lt;对方完整玩家ID&gt;</c>(对方同意了你的申请)、
+    /// <c>remove|&lt;对方完整玩家ID&gt;</c>(对方把你删了)。
+    /// </summary>
+    public const ushort FriendEvent = 662;
+
 
     /// <summary>
     /// 服务端 → 客户端:服务端配置(客户端连上后下发一次),负载按行 <c>键=值</c>。

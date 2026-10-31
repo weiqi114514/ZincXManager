@@ -1,5 +1,6 @@
 using System.Collections.Generic;  // List:演示申请
 using Avalonia;  // Thickness
+using System;  // StringComparison
 using Avalonia.Controls;  // 窗口与控件
 using Avalonia.Input;  // PointerPressedEventArgs
 using Avalonia.Interactivity;  // RoutedEventArgs
@@ -16,6 +17,9 @@ public partial class FriendRequestsWindow : Window
     /// <summary>一条申请:对方名称 + 完整 ID + 来源服务端 + 添加信息。</summary>
     private sealed record Request(string Name, string FullId, string ServerId, string Message);
 
+    /// <summary>当前打开着的申请列表(同时只允许一个),主窗口收到 657 时往这里塞数据。</summary>
+    internal static FriendRequestsWindow? Current;
+
     /// <summary>演示申请;接协议后换成服务端下发的待处理列表。</summary>
     private static readonly List<Request> DemoRequests =
     [
@@ -26,6 +30,19 @@ public partial class FriendRequestsWindow : Window
 
     public FriendRequestsWindow()
     {
+        Opened += (_, _) =>
+        {
+            Current = this;
+            _ = RefreshAsync();
+        };
+        Closed += (_, _) =>
+        {
+            if (ReferenceEquals(Current, this))
+            {
+                Current = null;
+            }
+        };
+
         InitializeComponent();
 
         foreach (var request in DemoRequests)
@@ -73,6 +90,13 @@ public partial class FriendRequestsWindow : Window
         }
 
         var accepted = button.Name == "accept";
+
+        // 把申请者 ID 从 Tag 上取回来(建按钮时写的是 request)
+        var fullId = (button.Tag as Request)?.FullId ?? "";
+        if (fullId.Length > 0)
+        {
+            _ = SendAnswerAsync(fullId, accepted);
+        }
         button.Content = new TextBlock
         {
             Text = accepted ? "已同意" : "已拒绝",
@@ -153,5 +177,73 @@ public partial class FriendRequestsWindow : Window
         var box = new Border { Child = grid };
         box.Classes.Add("requestRow");
         return box;
+    }
+
+    /// <summary>向服务端要申请列表(656)。</summary>
+    internal async System.Threading.Tasks.Task RefreshAsync()
+    {
+        var connect = ClientSession.Connect;   //当前连接
+        if (connect is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await connect.SendAsync(ZincXManagerShared.Network.Protocol.FriendRequestsQuery, string.Empty);
+        }
+        catch
+        {
+            //连接没了就算了
+        }
+    }
+
+    /// <summary>把 657 的负载(&lt;申请者ID&gt;\t&lt;留言&gt;\t&lt;时间&gt; 按行)渲染成申请列表。</summary>
+    internal void FillRequests(string payload)
+    {
+        RequestList.Children.Clear();
+
+        var count = 0;   //有效申请数
+        foreach (var raw in payload.Replace("\r", "").Split('\n'))
+        {
+            var line = raw.Trim();
+            if (line.Length == 0 || line.StartsWith("err|", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            var parts = line.Split('\t');   //[0]=申请者ID [1]=留言 [2]=时间
+            if (!ZincXManagerShared.Account.PlayerId.TryParse(parts[0].Trim(), out var from))
+            {
+                continue;
+            }
+
+            var message = parts.Length > 1 ? parts[1].Trim() : "";   //留言
+            var at = parts.Length > 2 ? parts[2].Trim() : "";   //时间
+            RequestList.Children.Add(BuildRow(new Request("#" + from.Code.ToString(), from.Full, from.ServerId, message)));
+            count++;
+        }
+
+        StatusText.IsVisible = count == 0;
+    }
+
+    /// <summary>把同意/拒绝发回服务端(658):&lt;申请者完整ID&gt;|accept 或 |reject。</summary>
+    private static async System.Threading.Tasks.Task SendAnswerAsync(string fullId, bool accepted)
+    {
+        var connect = ClientSession.Connect;   //当前连接
+        if (connect is null)
+        {
+            return;
+        }
+
+        try
+        {
+            var payload = fullId + (accepted ? "|accept" : "|reject");   //负载
+            await connect.SendAsync(ZincXManagerShared.Network.Protocol.FriendAnswer, payload);
+        }
+        catch
+        {
+            //连接没了就算了,主窗口那边会提示
+        }
     }
 }

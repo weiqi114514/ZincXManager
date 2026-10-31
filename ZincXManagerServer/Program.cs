@@ -1,4 +1,5 @@
 using System;  // 基础类型 / 常用静态方法
+using System.IO;  // 好友日志落盘
 using System.Linq;  // LINQ 查询
 using System.Collections.Concurrent;  // 并发集合(多线程共享)
 using System.Net;  // IP 地址与网络端点
@@ -1106,6 +1107,164 @@ internal static class Program
                 break;
             }
 
+            // ---- 好友列表(650):读自己目录下的 FriendList.dat,按行回 完整ID\t备注 ----
+            case Protocol.FriendListQuery:
+            {
+                var self = await SelfPlayerAsync(packet.Connection.Id, config);
+                if (self is null)
+                {
+                    await packet.SendAsync(Protocol.FriendListReply, "err|请先登录,并且本服已拿到官方账号 ID(重启 ZXMS 让它认证一次 osuser)", packet.Id);
+                    break;
+                }
+
+                var lines = new StringBuilder();   //回包内容
+                foreach (var friend in FriendStore.ReadList(self.Value))
+                {
+                    lines.Append(friend.Full).Append('\t').Append('\n');
+                }
+
+                await packet.SendAsync(Protocol.FriendListReply, lines.ToString().TrimEnd('\n'), packet.Id);
+                Logger.Log(LogLevel.Info, $"[好友] {self.Value.Full} 查好友列表:{FriendStore.ReadList(self.Value).Count} 个");
+                break;
+            }
+
+            // ---- 发好友申请(654):落到对方的 Requests.dat,对方上线后查 656 就能看到 ----
+            case Protocol.FriendRequest:
+            {
+                var self = await SelfPlayerAsync(packet.Connection.Id, config);
+                if (self is null)
+                {
+                    await packet.SendAsync(Protocol.FriendRequestAck,
+                        "err|请先登录,并且本服已拿到官方账号 ID(重启 ZXMS 让它认证一次 osuser)", packet.Id);
+                    break;
+                }
+
+                var text = Encoding.UTF8.GetString(packet.Data).Trim();   //包内容
+                var parts = text.Split('|', 2);   //拆分结果
+                if (!PlayerId.TryParse(parts[0].Trim(), out var target))
+                {
+                    await packet.SendAsync(Protocol.FriendRequestAck, "err|对方 ID 不对(要完整玩家 ID,例如 ZXMS-ZES-1-14)", packet.Id);
+                    break;
+                }
+
+                var message = parts.Length > 1 ? parts[1].Trim() : "";   //验证消息
+                if (target.Full.Equals(self.Value.Full, StringComparison.OrdinalIgnoreCase))
+                {
+                    await packet.SendAsync(Protocol.FriendRequestAck, "err|不能加自己", packet.Id);
+                    break;
+                }
+
+                if (target.ServerId != self.Value.ServerId)
+                {
+                    await packet.SendAsync(Protocol.FriendRequestAck, "err|跨服好友还没接通(现在只能加本服的玩家)", packet.Id);
+                    break;
+                }
+
+                if (FriendStore.AreFriends(self.Value, target))
+                {
+                    await packet.SendAsync(Protocol.FriendRequestAck, "err|你们已经是好友了", packet.Id);
+                    break;
+                }
+
+                FriendStore.AppendRequest(target, new FriendStore.FriendRequest(self.Value, message, DateTime.Now));
+                LogFriend("request", self.Value, target, message);
+                await packet.SendAsync(Protocol.FriendRequestAck, "ok|", packet.Id);
+                Logger.Log(LogLevel.Info, $"[好友] {self.Value.Full} 向 {target.Full} 发出好友申请");
+                break;
+            }
+
+            // ---- 查好友申请(656):读自己的 Requests.dat ----
+            case Protocol.FriendRequestsQuery:
+            {
+                var self = await SelfPlayerAsync(packet.Connection.Id, config);
+                if (self is null)
+                {
+                    await packet.SendAsync(Protocol.FriendRequestsReply, "err|请先登录,并且本服已拿到官方账号 ID", packet.Id);
+                    break;
+                }
+
+                var lines = new StringBuilder();   //回包内容
+                foreach (var request in FriendStore.ReadRequests(self.Value))
+                {
+                    lines.Append(request.From.Full).Append('\t')
+                        .Append(request.Message).Append('\t')
+                        .Append(request.At.ToString("yyyy-MM-dd HH:mm:ss"))
+                        .Append('\n');
+                }
+
+                await packet.SendAsync(Protocol.FriendRequestsReply, lines.ToString().TrimEnd('\n'), packet.Id);
+                break;
+            }
+
+            // ---- 处理好友申请(658):同意则双方都写好友列表,拒绝只删申请 ----
+            case Protocol.FriendAnswer:
+            {
+                var self = await SelfPlayerAsync(packet.Connection.Id, config);
+                if (self is null)
+                {
+                    await packet.SendAsync(Protocol.FriendAnswerAck, "err|请先登录,并且本服已拿到官方账号 ID", packet.Id);
+                    break;
+                }
+
+                var text = Encoding.UTF8.GetString(packet.Data).Trim();   //包内容
+                var parts = text.Split('|', 2);   //拆分结果
+                if (!PlayerId.TryParse(parts[0].Trim(), out var from))
+                {
+                    await packet.SendAsync(Protocol.FriendAnswerAck, "err|申请者 ID 不对", packet.Id);
+                    break;
+                }
+
+                var accept = parts.Length > 1 && parts[1].Trim().Equals("accept", StringComparison.OrdinalIgnoreCase);   //是否同意
+                if (!FriendStore.RemoveRequest(self.Value, from))
+                {
+                    await packet.SendAsync(Protocol.FriendAnswerAck, "err|没有这条申请(可能已经处理过)", packet.Id);
+                    break;
+                }
+
+                if (accept)
+                {
+                    // 好友关系是双向的:同意后两个人的 FriendList.dat 都写上对方
+                    FriendStore.Add(self.Value, from);
+                    FriendStore.Add(from, self.Value);
+                    LogFriend("agree", self.Value, from);
+                    Logger.Log(LogLevel.Info, $"[好友] {self.Value.Full} 同意 {from.Full} 的申请,双方列表都已写入");
+                }
+                else
+                {
+                    LogFriend("reject", self.Value, from);
+                    Logger.Log(LogLevel.Info, $"[好友] {self.Value.Full} 拒绝了 {from.Full} 的申请");
+                }
+
+                await packet.SendAsync(Protocol.FriendAnswerAck,
+                    $"ok|{from.Full}|{(accept ? "accept" : "reject")}", packet.Id);
+                break;
+            }
+
+            // ---- 删好友(660):两边列表一起删 ----
+            case Protocol.FriendRemove:
+            {
+                var self = await SelfPlayerAsync(packet.Connection.Id, config);
+                if (self is null)
+                {
+                    await packet.SendAsync(Protocol.FriendRemoveAck, "err|请先登录,并且本服已拿到官方账号 ID", packet.Id);
+                    break;
+                }
+
+                var text = Encoding.UTF8.GetString(packet.Data).Trim();   //包内容
+                if (!PlayerId.TryParse(text, out var other))
+                {
+                    await packet.SendAsync(Protocol.FriendRemoveAck, "err|对方 ID 不对", packet.Id);
+                    break;
+                }
+
+                var removed = FriendStore.Remove(self.Value, other);
+                FriendStore.Remove(other, self.Value);
+                LogFriend("remove", self.Value, other);
+                Logger.Log(LogLevel.Info, $"[好友] {self.Value.Full} 删除好友 {other.Full}(本端删到={removed})");
+                await packet.SendAsync(Protocol.FriendRemoveAck, $"ok|{other.Full}", packet.Id);
+                break;
+            }
+
             // ---- 解绑(628) ----
             case Protocol.Unbind:
             {
@@ -1592,6 +1751,9 @@ internal static class Program
     /// <summary>该账号的等级(config.ini 的 oslevel;ZXMOS 上子服务端账号是 Admin / System)。</summary>
     private const string KeyOsLevel = "oslevel";
 
+    /// <summary>本服账号在官方端的账号 ID(config.ini 的 osid;由 601/603 回执第三段回填,只读)。</summary>
+    private const string KeyOsId = "osid";
+
     /// <summary>本端自己发给 ZXMOS 的账号请求:包 Id → 等回执的等待者(601 登录 / 603 注册 / 612 改名)。 按包 Id 存字典,登录与改名各等各的,不会互相把等待者顶掉。</summary>
     private static readonly ConcurrentDictionary<ulong, TaskCompletionSource<string>> OsAcks = new();
 
@@ -1636,6 +1798,7 @@ internal static class Program
         if (reply.StartsWith("ok|"))
         {
             Logger.Log(LogLevel.Info, $"[ZXMOS] 账号认证通过:{reply[3..]}");
+            RememberOsId(config, reply);
 
             // 第二层:向官方服务端要一张官方证明(登录成功才要,免得谁都能来收集许可证)
             await CheckOfficialAsync(client, config);
@@ -1775,6 +1938,69 @@ internal static class Program
         _ = ResolveAccountAsync(name);
 
         Logger.Log(LogLevel.Info, $"[账号] 本服在线名单已登记中转账号:{name}({level})");
+    }
+
+    /// <summary>
+    /// 把回执里的账号 ID 记进 config(<c>osid</c>)。
+    /// <para>好友与图片的完整玩家 ID 要用它拼 <c>ZXMS-&lt;osuser&gt;-&lt;osid&gt;</c>,所以只在这两个地方登录/注册成功时回填。</para>
+    /// </summary>
+    private static void RememberOsId(ZFile config, string reply)
+    {
+        // 回执形如 ok|名称|ID|等级
+        var fields = reply[3..].Split('|');
+        if (fields.Length < 2 || !int.TryParse(fields[1].Trim(), out var osid) || osid <= 0)
+        {
+            return;
+        }
+
+        var text = osid.ToString();
+        if (config.MapGet(KeyOsId).Trim() == text)
+        {
+            return;
+        }
+
+        config.WriteFileMap(KeyOsId, text);
+        Logger.Log(LogLevel.Info, $"[账号] 已记录本服账号 ID:osid={text}(好友与图片的完整 ID 用它拼)");
+    }
+
+    /// <summary>本服自己的服务端 ID(<c>ZXMS-&lt;osuser&gt;-&lt;osid&gt;</c>);还没拿到 osid 时返回空串。</summary>
+    private static string SelfServerId(ZFile config)
+    {
+        var user = config.MapGet(KeyOsUser).Trim();
+        var idText = config.MapGet(KeyOsId).Trim();
+        return user.Length > 0 && int.TryParse(idText, out var osid) && osid > 0
+            ? PlayerId.ChildServerId(user, osid)
+            : "";
+    }
+
+    /// <summary>
+    /// 这条连接的主人(ZXMC 登录的那个账号)在本服的完整玩家 ID。
+    /// 没登录、或本服还没拿到 <c>osid</c> 时返回 null。
+    /// </summary>
+    private static async Task<PlayerId?> SelfPlayerAsync(Guid connectionId, ZFile config)
+    {
+        var who = _server?.Registry.Find(connectionId)?.User ?? "";   //账号名
+        var account = (await ResolveAccountAsync(who))?.Id ?? 0;   //账号编码
+        var serverId = SelfServerId(config);   //本服服务端 ID
+
+        return serverId.Length > 0 && account > 0 ? new PlayerId(serverId, account) : null;
+    }
+
+    /// <summary>写一条好友日志:<c>logs/friend/&lt;yyyy-MM-dd&gt;.dat</c>,一行 <c>时间\t动作\t操作者\t对方\t备注</c>。</summary>
+    private static void LogFriend(string action, PlayerId actor, PlayerId other, string note = "")
+    {
+        try
+        {
+            var dir = Path.Combine("logs", "friend");   //好友日志目录
+            Directory.CreateDirectory(dir);
+            var path = Path.Combine(dir, DateTime.Now.ToString("yyyy-MM-dd") + ".dat");   //当天那份
+            var line = $"{DateTime.Now:yyyy-MM-dd HH:mm:ss}\t{action}\t{actor.Full}\t{other.Full}\t{note}\r\n";   //一行记录
+            File.AppendAllText(path, line, new UTF8Encoding(false));
+        }
+        catch (Exception ex)
+        {
+            Logger.Log(LogLevel.Warning, "[好友] 写好友日志失败:" + ex.Message);
+        }
     }
 
     /// <summary>发账号包并等回执(超时 5 秒)。每个请求一个包 Id,回执不会被别的请求认领走。</summary>

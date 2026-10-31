@@ -92,54 +92,11 @@
     <ScrollViewer Grid.Row="3" Margin="0,4,0,0" VerticalScrollBarVisibility="Auto">
       <StackPanel Margin="8,4,8,10" Spacing="2">
 
-        <!-- 有聊天记录 -->
-        <Border Classes="friendRow" Padding="8,8" DoubleTapped="OnFriendDoubleTapped" Tag="阿岚">
-          <Grid ColumnDefinitions="38,*">
-            <Border Grid.Column="0" Classes="avatar">
-              <TextBlock Text="岚"/>
-            </Border>
-            <StackPanel Grid.Column="1" Margin="10,0,0,0" VerticalAlignment="Center" Spacing="3">
-              <Grid ColumnDefinitions="*,Auto">
-                <TextBlock Grid.Column="0" Text="阿岚" FontSize="13" Foreground="{DynamicResource ThemePrimaryDark}"/>
-                <TextBlock Grid.Column="1" Text="14:32" FontSize="10.5" Foreground="{DynamicResource ThemeMuted}"/>
-              </Grid>
-              <TextBlock Text="晚上七点开服,记得提前十分钟上线" FontSize="11.5"
-                         Foreground="{DynamicResource ThemeMuted}" TextTrimming="CharacterEllipsis"/>
-            </StackPanel>
-          </Grid>
-        </Border>
+        <!-- 好友条由 code-behind 按服务端下发的列表生成(650/651) -->
+        <StackPanel x:Name="FriendListPanel" Spacing="2"/>
 
-        <!-- 有聊天记录(自己发的带「我:」前缀) -->
-        <Border Classes="friendRow" Padding="8,8" DoubleTapped="OnFriendDoubleTapped" Tag="ZXMS-锌能源">
-          <Grid ColumnDefinitions="38,*">
-            <Border Grid.Column="0" Classes="avatar">
-              <TextBlock Text="锌"/>
-            </Border>
-            <StackPanel Grid.Column="1" Margin="10,0,0,0" VerticalAlignment="Center" Spacing="3">
-              <Grid ColumnDefinitions="*,Auto">
-                <TextBlock Grid.Column="0" Text="ZXMS-锌能源" FontSize="13" Foreground="{DynamicResource ThemePrimaryDark}"/>
-                <TextBlock Grid.Column="1" Text="昨天" FontSize="10.5" Foreground="{DynamicResource ThemeMuted}"/>
-              </Grid>
-              <TextBlock Text="我:主界面能开了,晚上我再看日志" FontSize="11.5"
-                         Foreground="{DynamicResource ThemeMuted}" TextTrimming="CharacterEllipsis"/>
-            </StackPanel>
-          </Grid>
-        </Border>
-
-        <!-- 没有聊天记录:名字下那一行整块不出现 -->
-        <Border Classes="friendRow" Padding="8,8" DoubleTapped="OnFriendDoubleTapped" Tag="新区服主">
-          <Grid ColumnDefinitions="38,*">
-            <Border Grid.Column="0" Classes="avatar">
-              <TextBlock Text="新"/>
-            </Border>
-            <StackPanel Grid.Column="1" Margin="10,0,0,0" VerticalAlignment="Center">
-              <TextBlock Text="新区服主" FontSize="13" Foreground="{DynamicResource ThemePrimaryDark}"/>
-            </StackPanel>
-          </Grid>
-        </Border>
-
-        <TextBlock Text="没有更多好友了" FontSize="11" HorizontalAlignment="Center" Margin="0,16,0,0"
-                   Foreground="{DynamicResource ThemeMuted}"/>
+        <TextBlock x:Name="FriendsEmptyText" Text="还没有好友,点右上角 + 加一个" FontSize="11"
+                   HorizontalAlignment="Center" Margin="0,16,0,0" Foreground="{DynamicResource ThemeMuted}"/>
       </StackPanel>
     </ScrollViewer>
 
