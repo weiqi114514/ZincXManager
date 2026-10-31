@@ -14,7 +14,7 @@
     <!-- 版本跟着主版本走:显示用 b0.2.0a,文件版本必须纯数字 -->
     <Version>0.2.0</Version>
     <FileVersion>0.2.0.0</FileVersion>
-    <InformationalVersion>b0.2.0a</InformationalVersion>
+    <InformationalVersion>b0.2.0b</InformationalVersion>
   </PropertyGroup>
 
   <!-- 共享协议/加密/账号/验证:直接引用同仓的 Shared 项目,不复制源码 -->

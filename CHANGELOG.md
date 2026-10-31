@@ -3,6 +3,17 @@
 ZincXManager(锌X管理面板)的变更记录。格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 版本号与 GitHub Release 标签对应(如 `v0.1.1`);未发布的改动记在「未发布」下,发布时归档为版本号。
 
+## [b0.2.0b] - 2026-10-31
+
+> **本版本主题**:跨平台发布——客户端与子服务端都能出 Linux 与 macOS 包了。
+
+### 新增
+- **Linux 构建**:客户端与子服务端各出一份 linux-x64 的单文件 AOT 包(`tar.gz`),在 WSL 的 Ubuntu 26.04 上编出并实测启动、界面渲染与交互正常
+- **macOS 构建**:客户端与子服务端各出 arm64 / x64 两份自包含包;客户端封成 `ZincXManager.app`(内含 `Info.plist`),并对 app 与二进制做 ad-hoc 签名,解决未签名 bundle 被 Gatekeeper 判「文件已损坏」的问题
+
+### 变更
+- 版本号统一 b0.2.0b(ZXMS / ZXMC / ZXMOS / ZXMM)
+
 ## [b0.2.0a] - 2026-10-31
 
 > **本版本主题**:中版本号升到 0.2.0 —— 封禁统一在进服的配置阶段判定;ZXMC 重连失败的弹窗与窗口不再重复。
