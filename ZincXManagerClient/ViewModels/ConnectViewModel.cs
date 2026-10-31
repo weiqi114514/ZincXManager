@@ -319,6 +319,9 @@ public partial class ConnectViewModel : ViewModelBase, IDisposable
                             ConnectedMode = Mode;
                             IsConnected = true;
                             SetState($"已连接 {ExpectRole} {host}:{port}", "#22A05A");
+
+                            // 连上了才写回配置:地址填错、模式不匹配的连接不该覆盖已经存好的那组
+                            SaveTarget(host, port);
                         }
                         break;
 
@@ -374,6 +377,27 @@ public partial class ConnectViewModel : ViewModelBase, IDisposable
         {
             IsBusy = false;
         }
+    }
+
+    /// <summary>
+    /// 把这次真正连上的地址写回 config.ini,下次启动直接用。
+    /// 按当前模式决定写哪一组:OOS 写 ozip/ozport,OS 与 SAOS 连的都是子服务端,写 czip/czport。
+    /// </summary>
+    private void SaveTarget(string host, ushort port)
+    {
+        var text = port.ToString();
+        if (Mode == "OOS")
+        {
+            ClientConfig.Set(KeyOzip, host);
+            ClientConfig.Set(KeyOzport, text);
+        }
+        else
+        {
+            ClientConfig.Set(KeyCzip, host);
+            ClientConfig.Set(KeyCzport, text);
+        }
+
+        Logger.Log(LogLevel.Info, $"[ZXMC] 连接目标已保存到 config.ini:{host}:{text}(模式 {Mode})");
     }
 
     /// <summary>身份校验:服务端自报的端类型必须与模式要求一致,否则立刻断开。</summary>

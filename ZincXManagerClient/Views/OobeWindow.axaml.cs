@@ -216,8 +216,18 @@ public partial class OobeWindow : Window
 
             if (ok)
             {
-                ClientConfig.Set("czip", Vm.CzIp.Trim());
-                ClientConfig.Set("czport", Vm.CzPort.Trim());
+                // 按模式决定写哪一组:OOS 连的是官方端,其余模式连子服务端
+                if (Vm.Mode == "OOS")
+                {
+                    ClientConfig.Set("ozip", Vm.OzIp.Trim());
+                    ClientConfig.Set("ozport", Vm.OzPort.Trim());
+                }
+                else
+                {
+                    ClientConfig.Set("czip", Vm.CzIp.Trim());
+                    ClientConfig.Set("czport", Vm.CzPort.Trim());
+                }
+
                 ClientConfig.Set("mode", Vm.Mode);
                 return;
             }

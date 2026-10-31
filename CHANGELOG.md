@@ -3,6 +3,19 @@
 ZincXManager(锌X管理面板)的变更记录。格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 版本号与 GitHub Release 标签对应(如 `v0.1.1`);未发布的改动记在「未发布」下,发布时归档为版本号。
 
+## [b0.2.0c] - 2026-10-31
+
+> **本版本主题**:客户端连接成功后把地址真正写回配置;打包脚本重建,一条命令出全端与安装包。
+
+### 修复
+- **客户端不保存连接地址**:手动改端口连上后 `czip`/`czport` 从未落盘,重开客户端又回到旧地址。现在收到上线确认(301)才写回配置,连接失败或身份不匹配不覆盖已存地址;OOS 模式写 `ozip`/`ozport`,OS 与 SAOS 写 `czip`/`czport`
+- **首次引导写错键**:引导页不论什么模式都只写 `czip`/`czport`,OOS 模式下等于没保存,改为按模式分组写入
+
+### 变更
+- 连接页提示「ZXMOS 一般是 20000」改为 25000(与实际默认端口一致)
+- 重建 `_publish-aot.ps1`:一条命令出 ZXMOS / ZXMS / ZXMC / ZXMTL / 测试的 Windows AOT,加 ZXMS / ZXMC 的 Linux AOT(走 WSL),再打 MSI、便携 zip 与 Linux tar.gz,并刷新桌面目录
+- 版本号统一 b0.2.0c(ZXMS / ZXMC / ZXMOS / ZXMM)
+
 ## [b0.2.0b] - 2026-10-31
 
 > **本版本主题**:跨平台发布——客户端与子服务端都能出 Linux 与 macOS 包了。

@@ -200,7 +200,7 @@
               </StackPanel>
             </Grid>
             <TextBlock Classes="label" TextWrapping="Wrap"
-                       Text="端口:ZXMS 一般是 21000,ZXMOS 一般是 20000。连接时按模式校验目标,不匹配直接拒绝。"/>
+                       Text="端口:ZXMS 一般是 21000,ZXMOS 一般是 25000。连接时按模式校验目标,不匹配直接拒绝。"/>
           </StackPanel>
 
           <!-- 三个按钮横排:连上之后"进入主界面"就在眼前,不用往下翻 -->

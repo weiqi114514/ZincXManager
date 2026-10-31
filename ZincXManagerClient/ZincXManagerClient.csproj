@@ -2,7 +2,7 @@
   <PropertyGroup>
     <Version>0.2.0</Version>
     <FileVersion>0.2.0.0</FileVersion>
-    <InformationalVersion>b0.2.0b</InformationalVersion>
+    <InformationalVersion>b0.2.0c</InformationalVersion>
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
     <ApplicationIcon>..\assets\zxm.ico</ApplicationIcon>
     <RootNamespace>ZincXManagerClient</RootNamespace>
