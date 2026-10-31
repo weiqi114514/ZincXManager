@@ -1170,6 +1170,7 @@ internal static class Program
                 LogFriend("request", self.Value, target, message);
                 await packet.SendAsync(Protocol.FriendRequestAck, "ok|", packet.Id);
                 Logger.Log(LogLevel.Info, $"[好友] {self.Value.Full} 向 {target.Full} 发出好友申请");
+                await PushFriendEventAsync(target, "request", self.Value.Full, config);
                 break;
             }
 
@@ -1239,6 +1240,8 @@ internal static class Program
 
                 await packet.SendAsync(Protocol.FriendAnswerAck,
                     $"ok|{from.Full}|{(accept ? "accept" : "reject")}", packet.Id);
+                // 申请方如果在线,让他那边不用重开窗口就能看到结果
+                await PushFriendEventAsync(from, accept ? "accept" : "reject", self.Value.Full, config);
                 break;
             }
 
@@ -1264,6 +1267,7 @@ internal static class Program
                 LogFriend("remove", self.Value, other);
                 Logger.Log(LogLevel.Info, $"[好友] {self.Value.Full} 删除好友 {other.Full}(本端删到={removed})");
                 await packet.SendAsync(Protocol.FriendRemoveAck, $"ok|{other.Full}", packet.Id);
+                await PushFriendEventAsync(other, "remove", self.Value.Full, config);   //对方在线就立刻把列表刷掉
                 break;
             }
 
@@ -1986,6 +1990,26 @@ internal static class Program
         var serverId = SelfServerId(config);   //本服服务端 ID
 
         return serverId.Length > 0 && account > 0 ? new PlayerId(serverId, account) : null;
+    }
+
+    /// <summary>给某个玩家在线的连接推一条好友事件(662)。对方不在线就静默跳过。</summary>
+    /// <param name="target">事件要送给谁。</param>
+    /// <param name="kind">事件类型:request / accept / reject / remove。</param>
+    /// <param name="otherFull">事件里提到的另一方完整玩家 ID。</param>
+    /// <param name="config">本服配置,取服务端 ID 用。</param>
+    private static async Task PushFriendEventAsync(PlayerId target, string kind, string otherFull, ZFile config)
+    {
+        var server = _server;   //监听中的服务端
+        if (server is null) { return; }
+
+        foreach (var connection in server.Connections)   //在线连接快照
+        {
+            var self = await SelfPlayerAsync(connection.Id, config);   //这条连接对应哪个玩家
+            if (self is null || self.Value != target) { continue; }
+
+            await connection.SendAsync(Protocol.FriendEvent, $"{kind}|{otherFull}");
+            Logger.Log(LogLevel.Info, $"[好友] 推送 {kind} 给 {target.Full}(对方 {otherFull})");
+        }
     }
 
     /// <summary>写一条好友日志:<c>logs/friend/&lt;yyyy-MM-dd&gt;.dat</c>,一行 <c>时间\t动作\t操作者\t对方\t备注</c>。</summary>

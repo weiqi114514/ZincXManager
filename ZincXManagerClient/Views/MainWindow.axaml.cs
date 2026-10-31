@@ -623,6 +623,24 @@ public partial class MainWindow : Window
                 FriendsWindow.Current?.RefreshAsync();
                 break;
 
+            // ---- 好友事件推送(662):别人发申请/同意/拒绝/删了我,不用重开窗口 ----
+            case Protocol.FriendEvent:
+            {
+                var eventParts = text.Split('|', 2);   //kind|对方完整 ID
+                var kind = eventParts.Length > 0 ? eventParts[0].Trim() : "";   //事件类型
+                var other = eventParts.Length > 1 ? eventParts[1].Trim() : "";  //对方完整 ID
+
+                Logger.Log(LogLevel.Info, $"[好友] 收到事件 {kind}:{other}");
+                _ = FriendsWindow.Current?.RefreshAsync();
+                _ = FriendRequestsWindow.Current?.RefreshAsync();
+
+                if (kind.Equals("remove", StringComparison.OrdinalIgnoreCase))
+                {
+                    _ = MessageDialog.InfoAsync(this, "好友已解除", $"「{other}」把你从好友里删掉了。");
+                }
+                break;
+            }
+
             // ---- 绑定关系(630):回答"我这个账号绑了谁" ----
             case Protocol.BindList:
             {
