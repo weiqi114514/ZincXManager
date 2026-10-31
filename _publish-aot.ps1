@@ -20,6 +20,7 @@ param(
     [int]$Jobs = 0,
     [string[]]$WindowsOnly = @(),
     [switch]$SkipLinux,
+    [switch]$SkipMac,
     [switch]$SkipInstaller,
     [switch]$Force
 )
@@ -191,6 +192,44 @@ if ($linuxJobs.Count -gt 0) {
     Step "2/6 跳过 Linux"
 }
 
+# macOS:.NET 的 AOT 不能跨操作系统编译,所以 mac 走「自包含单文件 + ad-hoc 签名」,
+# 客户端再套一层 .app 结构(macOS 上双击才有窗口,裸二进制只能命令行跑)
+if (-not $SkipMac) {
+    Step "2.5/6 macOS(自包含单文件,osx-arm64 + osx-x64)"
+    $macProjects = @(
+        [pscustomobject]@{ Name = 'ZXMS'; Project = (Join-Path $root 'ZincXManagerServer\ZincXManagerServer.csproj') },
+        [pscustomobject]@{ Name = 'ZXMC'; Project = (Join-Path $root 'ZincXManagerClient\ZincXManagerClient.csproj') }
+    )
+    $macRids = @(@{ Rid = 'osx-arm64'; Tag = 'macOS-arm64' }, @{ Rid = 'osx-x64'; Tag = 'macOS-x64' })
+    $macPairs = foreach ($p in $macProjects) { foreach ($r in $macRids) { [pscustomobject]@{ Name = $p.Name; Project = $p.Project; Rid = $r.Rid; Tag = $r.Tag; Hash = (Get-SourceHash $p.Project $root) + "|" + $r.Rid } } }
+    $macPairs | ForEach-Object -Parallel {
+        $sw = [System.Diagnostics.Stopwatch]::StartNew()
+        $target = Join-Path $using:outDir "$($_.Name)-$($_.Tag)"
+        $stamp = Join-Path $target '.buildhash'
+        if (-not $using:forceBuild -and (Test-Path $stamp) -and ((Get-Content $stamp -Raw).Trim() -eq $_.Hash)) {
+            Write-Host ("    {0,-6} {1} 源码没变,跳过" -f $_.Name, $_.Tag) -ForegroundColor DarkYellow
+            return
+        }
+        if (Test-Path $target) { Remove-Item $target -Recurse -Force }
+        $log = Join-Path $using:outDir ("_log_mac_" + $_.Name + "_" + $_.Tag + ".txt")
+        $arc = Join-Path $using:outDir ("_arc_mac_" + $_.Name + "_" + $_.Tag)
+        if (Test-Path $arc) { Remove-Item $arc -Recurse -Force }
+        # csproj 里写死了 PublishAot,这里必须显式关掉,否则报 Cross-OS native compilation is not supported
+        dotnet publish $_.Project -c Release -f net10.0 -r $_.Rid --self-contained true -p:PublishAot=false -p:PublishSingleFile=true --artifacts-path $arc -o $target --nologo *> $log
+        if ($LASTEXITCODE -ne 0) {
+            Get-Content $log -Tail 12 | ForEach-Object { Write-Host $_ -ForegroundColor Red }
+            throw "$($_.Name) $($_.Tag) publish 失败"
+        }
+        Remove-Item $log -Force -ErrorAction SilentlyContinue
+        Remove-Item $arc -Recurse -Force -ErrorAction SilentlyContinue
+        $_.Hash | Set-Content $stamp -Encoding ASCII
+        $size = [math]::Round((Get-ChildItem $target -File | Measure-Object Length -Sum).Sum / 1MB, 1)
+        Write-Host ("    {0,-6} {1,-12} {2,5:N1}s  {3} MB" -f $_.Name, $_.Tag, $sw.Elapsed.TotalSeconds, $size) -ForegroundColor DarkGray
+    } -ThrottleLimit $Jobs
+} else {
+    Step "2.5/6 跳过 macOS"
+}
+
 Step "3/6 模组 jar + 客户端更新日志"
 $jar = Get-ChildItem (Join-Path $modDir 'build\libs') -Filter "ZXMM-$Version.jar" -ErrorAction SilentlyContinue | Select-Object -First 1
 if (-not $jar) { throw "没有 build\libs\ZXMM-$Version.jar,先去模组工程 gradle build" }
@@ -278,6 +317,72 @@ if (-not $SkipInstaller) {
             $wslDst = To-WslPath $tarPath
             wsl -d $WslDistro -- bash -lc "cd '$wslSrc' && chmod 755 * && tar --mode=755 -czf '$wslDst' *" | Out-Host
             Assert-LastExit "tar $($pair[0])"
+        }
+    }
+
+    if (-not $SkipMac) {
+        # 客户端要塞进 .app 才能双击启动;签名用 rcodesign(Windows 上给 Mach-O 做 ad-hoc 签名)
+        # 火绒会拦 rcodesign.exe 的原位写入(os error 5),复制成 rsign.exe 再跑就正常
+        $rcodesign = 'G:\文档\deepseek-harness\default-workspace\tools\rcodesign\apple-codesign-0.29.0-x86_64-pc-windows-msvc\rcodesign.exe'
+        $signer = Join-Path $env:TEMP 'rsign.exe'
+        if (Test-Path $rcodesign) { Copy-Item $rcodesign $signer -Force }
+        $shortVersion = ($Version -replace '^[a-z]', '') -replace '([a-z]+)$', ''
+        foreach ($tag in 'macOS-arm64', 'macOS-x64') {
+            $src = Join-Path $out "ZXMC-$tag"
+            if (-not (Test-Path $src)) { throw "没有 $src,先跑 macOS 步骤" }
+            $app = Join-Path $src 'ZincXManager.app'
+            if (Test-Path $app) { Remove-Item $app -Recurse -Force }
+            $macos = Join-Path $app 'Contents\MacOS'
+            New-Item -ItemType Directory -Path $macos -Force | Out-Null
+            New-Item -ItemType Directory -Path (Join-Path $app 'Contents\Resources') -Force | Out-Null
+            Get-ChildItem $src -File | Where-Object { $_.Name -eq 'ZincXManagerClient' -or $_.Extension -eq '.dylib' } | Copy-Item -Destination $macos -Force
+            $plist = @"
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleDevelopmentRegion</key><string>zh_CN</string>
+    <key>CFBundleDisplayName</key><string>ZincXManager 客户端</string>
+    <key>CFBundleExecutable</key><string>ZincXManagerClient</string>
+    <key>CFBundleIdentifier</key><string>top.zincms.zxmc</string>
+    <key>CFBundleInfoDictionaryVersion</key><string>6.0</string>
+    <key>CFBundleName</key><string>ZincXManager</string>
+    <key>CFBundlePackageType</key><string>APPL</string>
+    <key>CFBundleShortVersionString</key><string>$shortVersion</string>
+    <key>CFBundleVersion</key><string>$shortVersion</string>
+    <key>LSMinimumSystemVersion</key><string>11.0</string>
+    <key>NSHighResolutionCapable</key><true/>
+</dict>
+</plist>
+"@
+            $plist | Set-Content (Join-Path $app 'Contents\Info.plist') -Encoding UTF8
+            'APPL????' | Set-Content (Join-Path $app 'Contents\PkgInfo') -Encoding ASCII -NoNewline
+            if (Test-Path $signer) {
+                # rcodesign 不给 --ad-hoc 参数:不传签名身份时默认就是 ad-hoc 签名
+                & $signer sign $app 2>&1 | Select-Object -Last 3 | Out-Host
+                if ($LASTEXITCODE -ne 0) { Write-Host '    rcodesign 签名失败(mac 上首次打开要手动右键→打开)' -ForegroundColor Yellow }
+                elseif (-not (Test-Path (Join-Path $app 'Contents\_CodeSignature\CodeResources'))) {
+                    Write-Host '    rcodesign 退出码 0 但没生成 _CodeSignature,按未签名处理' -ForegroundColor Yellow
+                } else { Write-Host '    .app 已 ad-hoc 签名' -ForegroundColor DarkGray }
+            } else {
+                Write-Host '    没找到 rcodesign,.app 未签名' -ForegroundColor Yellow
+            }
+            $tar = Join-Path $pkgDir "ZincXManagerClient-$Version-$tag.tar.gz"
+            if (Test-Path $tar) { Remove-Item $tar -Force }
+            # 用 WSL 里的 GNU tar:Windows 自带的 tar 会写 0666,解出来在 mac 上双击没反应
+            $wslApp = To-WslPath $src
+            $wslTar = To-WslPath $tar
+            wsl -d $WslDistro -- bash -lc "chmod -R 755 '$wslApp/ZincXManager.app' && tar --mode=755 -czf '$wslTar' -C '$wslApp' ZincXManager.app" | Out-Host
+            Assert-LastExit "tar ZXMC $tag"
+
+            $srvSrc = Join-Path $out "ZXMS-$tag"
+            $srvTar = Join-Path $pkgDir "ZincXManagerServer-$Version-$tag.tar.gz"
+            if (Test-Path $srvTar) { Remove-Item $srvTar -Force }
+            $wslSrv = To-WslPath $srvSrc
+            $wslSrvTar = To-WslPath $srvTar
+            wsl -d $WslDistro -- bash -lc "chmod -R 755 '$wslSrv' && tar --mode=755 -czf '$wslSrvTar' -C '$wslSrv' ZincXManagerServer" | Out-Host
+            Assert-LastExit "tar ZXMS $tag"
+            Write-Host "    ZXMC/ZXMS $tag" -ForegroundColor DarkGray
         }
     }
 
