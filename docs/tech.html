@@ -54,6 +54,7 @@ footer{color:var(--muted);border-top:1px solid var(--line);margin-top:30px;paddi
 <p class="tips"><b>b0.1.1a 更新:</b>新增 configuration 阶段登录检查(21200 事件 <span class="mono">evt|joining</span>):未绑定 / 封禁的玩家在「正在加入世界」时就被踢出并显示理由。登录确认改成「发 621 后立刻踢走,账号主人点同意后重进」;持久登录免确认改成同玩家<b>且同 IP</b>;ZXMS 没连上时 ZXMM 完全不动作(不攒事件、不踢人、不提示)。封禁账号(`ban user <账号>`)现在会连带拦住它绑定的 MC 玩家:连接阶段和进服阶段都同时比对「玩家名」与「绑定的账号名」。</p>
 <p class="tips"><b>b0.1.3 更新:</b>新增<b>白名单</b> —— 进服时先于绑定检查,名单里的通联标可以是 MC 玩家名 / ZXM 用户 ID / ZXM 用户名,未命中直接踢出(<span class="mono">§e你未在白名单中</span>);名单存 <span class="mono">Data/Whitelist.txt</span> + <span class="mono">Data/Whitelist.enabled</span>,内存 <span class="mono">HashSet</span> 比对,账号在本地就直接取、不在本地走 <span class="mono">ResolveAccountAsync</span> 路由 ZXMOS。版本号同时改为 <span class="mono">[版本类型][大版本][中版本][小版本][极小更新/修复更新]</span> 五段规则。</p>
 <p class="tips"><b>b0.2.0a 更新:</b>①<b>封禁判定前移到配置阶段</b> —— 白名单 → 封禁 → 登录数组 / 持久登录 → 绑定,账号被封的玩家不再先放行再在进服时踢,连接阶段就直接显示「已被封禁:原因(剩余时间)」;账号名解析统一走 <span class="mono">ResolveAccountAsync</span>(本地账号 / 官方账号 / 镜像壳账号)。②<b>ZXMC 重连失败不再叠窗</b> —— 自动重连 5 次失败只切一次连接页(已有连接窗口不再新建),同一 ViewModel 的 <span class="mono">ErrorRaised</span> 不再重复订阅(以前一次失败会弹多个相同弹窗),主界面关闭即停心跳。③版本号统一 b0.2.0a。</p>
+<p class="tips"><b>b0.2.0c 更新:</b>①<b>连接地址会写回配置</b> —— ZXMC 只有真正连上之后才把地址/端口写进 <span class="mono">config.ini</span>(<span class="mono">czip/czport</span> 或 <span class="mono">ozip/ozport</span>),连不上不会把错的目标存进去;②首次引导改用正确的配置键,重开不再重复进引导;③连接页端口提示改成「ZXMS 一般是 21000,ZXMOS 一般是 25000」;④<b>打包覆盖三端</b> —— Windows(安装包 MSI + 便携 ZIP)、Linux(<span class="mono">tar.gz</span>)、macOS(<span class="mono">.app</span> 打进 <span class="mono">tar.gz</span>,ad-hoc 签名,首次打开右键 → 打开);macOS 不能做 AOT,用自包含单文件(<span class="mono">--self-contained -p:PublishAot=false -p:PublishSingleFile=true</span>)。⑤测试套件增至 16 套件 244 项(新增白名单表与持久登录表的存储单测)。</p>
 <h2 id="a050">a0.5.0 客户端怎么应对断线</h2>
 <p class="lead">这一段是纯操作说明,讲客户端在连接断开/窗口尺寸这两件事上的行为,不是自动生成的表。</p>
 <h3>断线心跳与自动重连</h3>
@@ -84,7 +85,7 @@ footer{color:var(--muted);border-top:1px solid var(--line);margin-top:30px;paddi
   <li>登录窗里输入完密码可直接按 <b>回车</b> 登录;弹窗按 <b>Esc</b> 等于「取消」。</li>
 </ul>
 <h3>自检:全量测试程序</h3>
-<p>安装包里另带 <span class="mono">ZincXManagerTests</span>(或从交付包的「5-全量测试」目录拿),双击就跑 15 个套件 210 项断言:冒烟握手、注册登录、公告推送、封禁解封、官方验证、消息存档、改名、身份码、版本号规则、白名单、官方账号绑定与 621 在线同意、AOT 冒烟、MSI、GUI 注入、官网链接。退出码 0 = 全绿。</p>
+<p>安装包里另带 <span class="mono">ZincXManagerTests</span>(或从交付包的「5-全量测试」目录拿),双击就跑 16 个套件 244 项断言:冒烟握手、注册登录、公告推送、封禁解封、官方验证、消息存档、改名、身份码、版本号规则、白名单、官方账号绑定与 621 在线同意、AOT 冒烟、MSI、GUI 注入、官网链接、白名单与持久登录的存储单测。退出码 0 = 全绿。</p>
 
 <h2 id="howto">如何操作</h2>
 <p class="lead">这一节是纯文字操作说明,不是自动生成的表。按顺序做即可。</p>

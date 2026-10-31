@@ -892,6 +892,11 @@ var results = new List<SuiteResult>();
     results.Add(await ZincXManagerTests.OfficialBindChain.RunAsync(Ws, DebugMs, DebugOs));
 }
 
+// ================= 套件 16:白名单表 + 持久登录表(存储单测) =================
+{
+    await ZincXManagerTests.StoreSuite.RunAsync(results, Ws);
+}
+
 // ================= 汇总 =================
 Console.WriteLine();
 Console.WriteLine("================= 总表 =================");

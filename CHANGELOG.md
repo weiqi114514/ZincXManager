@@ -16,6 +16,10 @@ ZincXManager(锌X管理面板)的变更记录。格式参考 [Keep a Changelog](
 - 重建 `_publish-aot.ps1`:一条命令出 ZXMOS / ZXMS / ZXMC / ZXMTL / 测试的 Windows AOT,加 ZXMS / ZXMC 的 Linux AOT(走 WSL),再打 MSI、便携 zip 与 Linux tar.gz,并刷新桌面目录
 - 版本号统一 b0.2.0c(ZXMS / ZXMC / ZXMOS / ZXMM)
 
+### 测试
+- 新增套件 16「白名单与持久登录(存储单测)」34 项:白名单增删查、大小写与 trim、注释空行、重启后仍在、开关文件;持久登录「同玩家同 IP 才免确认」、换 IP 旧记录立刻失效、同一玩家只留一行、删除只影响本人
+- 全量:16 套件 244 项,通过 244 / 失败 0
+
 ## [b0.2.0b] - 2026-10-31
 
 > **本版本主题**:跨平台发布——客户端与子服务端都能出 Linux 与 macOS 包了。
