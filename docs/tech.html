@@ -52,6 +52,8 @@ footer{color:var(--muted);border-top:1px solid var(--line);margin-top:30px;paddi
 <p class="tips"><b>b0.1.0 更新:</b>新增 620–630「登录确认 / 账号绑定」协议(含专用长连接 21200 的说明)、<span class="mono">bind / unbind / bind list</span> 三条控制台命令、<span class="mono">ZxmmApi</span>(ZXMS↔ZXMM 长连接)与 <span class="mono">LoginRequestWindow</span> 两个类型,以及登录数组 / 持久登录表 / 解绑立即失效的流程说明。ZXMM 模组本身的文档另见 <span class="mono">ZXMM-技术文档.md</span>。</p>
 <p class="tips"><b>b0.1.1 更新:</b>绑定拆成两步 —— <span class="mono">626</span> 只校验绑定码并回 <span class="mono">pending|令牌|玩家名</span>,ZXMC 用户点「确定绑定」后发 <span class="mono">631 BindConfirm</span> 才真正落盘(令牌 2 分钟、一次性、只认发起账号);未绑定账号查询(629)只回 <span class="mono">nobind</span>,不再下发别人的玩家名与绑定码。</p>
 <p class="tips"><b>b0.1.1a 更新:</b>新增 configuration 阶段登录检查(21200 事件 <span class="mono">evt|joining</span>):未绑定 / 封禁的玩家在「正在加入世界」时就被踢出并显示理由。登录确认改成「发 621 后立刻踢走,账号主人点同意后重进」;持久登录免确认改成同玩家<b>且同 IP</b>;ZXMS 没连上时 ZXMM 完全不动作(不攒事件、不踢人、不提示)。封禁账号(`ban user <账号>`)现在会连带拦住它绑定的 MC 玩家:连接阶段和进服阶段都同时比对「玩家名」与「绑定的账号名」。</p>
+<p class="tips"><b>b0.1.3 更新:</b>新增<b>白名单</b> —— 进服时先于绑定检查,名单里的通联标可以是 MC 玩家名 / ZXM 用户 ID / ZXM 用户名,未命中直接踢出(<span class="mono">§e你未在白名单中</span>);名单存 <span class="mono">Data/Whitelist.txt</span> + <span class="mono">Data/Whitelist.enabled</span>,内存 <span class="mono">HashSet</span> 比对,账号在本地就直接取、不在本地走 <span class="mono">ResolveAccountAsync</span> 路由 ZXMOS。版本号同时改为 <span class="mono">[版本类型][大版本][中版本][小版本][极小更新/修复更新]</span> 五段规则。</p>
+<p class="tips"><b>b0.2.0a 更新:</b>①<b>封禁判定前移到配置阶段</b> —— 白名单 → 封禁 → 登录数组 / 持久登录 → 绑定,账号被封的玩家不再先放行再在进服时踢,连接阶段就直接显示「已被封禁:原因(剩余时间)」;账号名解析统一走 <span class="mono">ResolveAccountAsync</span>(本地账号 / 官方账号 / 镜像壳账号)。②<b>ZXMC 重连失败不再叠窗</b> —— 自动重连 5 次失败只切一次连接页(已有连接窗口不再新建),同一 ViewModel 的 <span class="mono">ErrorRaised</span> 不再重复订阅(以前一次失败会弹多个相同弹窗),主界面关闭即停心跳。③版本号统一 b0.2.0a。</p>
 <h2 id="a050">a0.5.0 客户端怎么应对断线</h2>
 <p class="lead">这一段是纯操作说明,讲客户端在连接断开/窗口尺寸这两件事上的行为,不是自动生成的表。</p>
 <h3>断线心跳与自动重连</h3>
@@ -82,7 +84,7 @@ footer{color:var(--muted);border-top:1px solid var(--line);margin-top:30px;paddi
   <li>登录窗里输入完密码可直接按 <b>回车</b> 登录;弹窗按 <b>Esc</b> 等于「取消」。</li>
 </ul>
 <h3>自检:全量测试程序</h3>
-<p>安装包里另带 <span class="mono">ZincXManagerTests</span>(或从交付包的「5-全量测试」目录拿),双击就跑 14 个套件 154 项断言:冒烟握手、注册登录、公告推送、封禁解封、官方验证、消息存档、改名、身份码、AOT 冒烟、MSI、GUI 注入、官网链接。退出码 0 = 全绿。</p>
+<p>安装包里另带 <span class="mono">ZincXManagerTests</span>(或从交付包的「5-全量测试」目录拿),双击就跑 15 个套件 210 项断言:冒烟握手、注册登录、公告推送、封禁解封、官方验证、消息存档、改名、身份码、版本号规则、白名单、官方账号绑定与 621 在线同意、AOT 冒烟、MSI、GUI 注入、官网链接。退出码 0 = 全绿。</p>
 
 <h2 id="howto">如何操作</h2>
 <p class="lead">这一节是纯文字操作说明,不是自动生成的表。按顺序做即可。</p>
@@ -171,7 +173,7 @@ zxm-lic verify &lt;公钥.pem&gt; &lt;证书.lic&gt; &lt;授权码&gt;</code></p
 <table><thead><tr><th>环节</th><th>谁做</th><th>说明</th></tr></thead><tbody>
 <tr><td>玩家进服上报</td><td class="mono">ZXMM → ZXMS</td><td>走 21200 专用长连接,一行 <span class="mono">evt|joined|玩家名|IP</span>;ZXMM 不做任何判断。</td></tr>
 <tr><td>连接阶段(配置阶段)</td><td class="mono">ZXMM → ZXMS</td><td><span class="mono">evt|joining|玩家名|IP</span>:玩家还在「正在加入世界」时就问 ZXMS,未绑定 / 封禁直接踢,客户端显示理由。封禁会同时比对玩家名和它绑定的账号名。</td></tr>
-<tr><td>判断放不放行</td><td class="mono">ZXMS</td><td>依次看:登录数组(5 分钟) → <span class="mono">Data/PersistentLogin.txt</span> → 有没有绑定 → 弹窗问账号主人。</td></tr>
+<tr><td>判断放不放行</td><td class="mono">ZXMS</td><td>依次看:<b>白名单</b>(开了才查) → <b>封禁</b>(玩家名 + 绑定账号名) → 登录数组(5 分钟) → <span class="mono">Data/PersistentLogin.txt</span> → 有没有绑定 → 弹窗问账号主人。封禁排在登录数组之前,所以被封的账号即使本机 IP 还在信任期内也进不去。</td></tr>
 <tr><td>没绑定</td><td class="mono">ZXMS → ZXMM</td><td>生成 6 位绑定码,通过执行接口 <span class="mono">kick</span> 把玩家踢出并提示绑定码。</td></tr>
 <tr><td>已绑定</td><td class="mono">ZXMS ↔ ZXMC</td><td>连接阶段发 621(玩家名 / IP / 归属地),同时把玩家踢走;账号主人点允许 → 622 → 写登录数组与持久表,玩家重进直接进。</td></tr>
 <tr><td>拒绝 / 超时</td><td class="mono">ZXMS → ZXMM</td><td>玩家已在连接阶段被踢走,拒绝/超时不再踢人;超时只给 ZXMC 发 624 并清掉请求。</td></tr>
@@ -484,6 +486,10 @@ msg backget d 26/10/23 26/10/24 -os          # 按日期</code></pre>
 <tr><td class="mono">bind list</td><td class="mono">bind list [账号ID|账号名|玩家名]</td><td>不带参数列出全部绑定;带参数按账号 ID / 账号名 / 玩家名查一条,查不到返回「无绑定信息」。</td><td class="mono">CmdBindList</td><td class="mono muted">ZincXManagerServer/Command/ZxmsCommands.cs</td></tr>
 <tr><td class="mono">bind</td><td class="mono">bind &lt;账号名或ID&gt; &lt;玩家名&gt;</td><td>手动把某个 MC 玩家名绑到 ZXM 账号上(账号在前)。一个玩家只能绑一个账号,已绑别的会提示先 unbind。</td><td class="mono">CmdBind</td><td class="mono muted">ZincXManagerServer/Command/ZxmsCommands.cs</td></tr>
 <tr><td class="mono">unbind</td><td class="mono">unbind &lt;玩家名|账号名|账号ID&gt;</td><td>解绑:删绑定 + 删持久登录表记录,该玩家再进服要重新走确认。三种参数形式都能用。</td><td class="mono">CmdUnbind</td><td class="mono muted">ZincXManagerServer/Command/ZxmsCommands.cs</td></tr>
+<tr><td class="mono">wl add</td><td class="mono">wl add &lt;通联标&gt;</td><td>加白名单。通联标可以是 MC 玩家名 / ZXM 用户 ID / ZXM 用户名,命中任意一种即放行。</td><td class="mono">CmdWlAdd</td><td class="mono muted">ZincXManagerServer/Command/ZxmsCommands.cs</td></tr>
+<tr><td class="mono">wl rm</td><td class="mono">wl rm &lt;通联标&gt;</td><td>从白名单移除一条。</td><td class="mono">CmdWlRemove</td><td class="mono muted">ZincXManagerServer/Command/ZxmsCommands.cs</td></tr>
+<tr><td class="mono">wl on / off</td><td class="mono">wl on<br>wl off</td><td>开关白名单检查。开:进服先查白名单(白名单 → 封禁 → 登录数组 / 持久登录 → 绑定);关:不检查。状态存 <span class="mono">Data/Whitelist.enabled</span>,重启仍生效。</td><td class="mono">CmdWlEnable / CmdWlDisable</td><td class="mono muted">ZincXManagerServer/Command/ZxmsCommands.cs</td></tr>
+<tr><td class="mono">wl</td><td class="mono">wl<br>wl &lt;通联标&gt;</td><td>不带参数列出名单与开关状态;带参数查一条,返回「在白名单里 / 不在白名单里」。</td><td class="mono">CmdWlList</td><td class="mono muted">ZincXManagerServer/Command/ZxmsCommands.cs</td></tr>
 <tr><td class="mono">config</td><td class="mono">config</td><td>进入配置模式(打印 14 项配置表;只能改表内已有项;exitc 退出;模式内拒绝其它命令)。</td><td class="mono">ConfigMode.Enter</td><td class="mono muted">ZincXManagerServer/Command/ConfigMode.cs</td></tr>
 </tbody></table>
 <h3>ZXMOS 官方服务端 · 21 条</h3>
