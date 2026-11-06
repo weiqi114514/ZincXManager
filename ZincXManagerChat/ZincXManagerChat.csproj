@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <OutputType>Exe</OutputType>
+    <AssemblyName>ZincXManagerChat</AssemblyName>
+    <RootNamespace>ZincXManagerChat</RootNamespace>
+    <!-- 子服进程按需拉起它,跟 ZXMS 同一套版本号 -->
+    <Version>0.2.0</Version>
+    <FileVersion>0.2.0.0</FileVersion>
+    <InformationalVersion>b0.2.0c</InformationalVersion>
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- 现成的聊天后端:SignalR + REST + SQLite,进程内挂载,零外部依赖 -->
+    <PackageReference Include="BareChat" Version="0.2.0" />
+    <ProjectReference Include="..\ZincXManagerShared\ZincXManagerShared.csproj" />
+  </ItemGroup>
+
+</Project>
+
