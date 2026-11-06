@@ -259,9 +259,14 @@ internal static partial class Program
     /// <summary>别服显示名表(618 下发,键 = 服ID);本服名不存这里,直接读配置。</summary>
     private static readonly ConcurrentDictionary<string, string> ServerNames = new(StringComparer.OrdinalIgnoreCase);
 
-    /// <summary>把 618 的负载(<c>self=本服ID</c> 第一行 + 每行 <c>服ID\t显示名</c>)装进内存表。</summary>
+    /// <summary>
+    /// 把 618 的负载(<c>self=本服ID</c> 第一行 + 每行 <c>服ID\t显示名</c>)装进内存表。
+    /// 这是官方端下发的**整张表**,不是增量 —— 所以先按这份重建。不清旧行的话,官方端重启后
+    /// 名字表归零再下发空表,本服还留着旧名字,会以为名字已经对上了而永不补报(20:15 那次实测踩到)。
+    /// </summary>
     private static int IndexServerNames(string payload)
     {
+        var fresh = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);   //这次下发的完整表
         var count = 0;
         foreach (var line in (payload ?? "").Replace("\r\n", "\n").Split('\n'))
         {
@@ -282,8 +287,14 @@ internal static partial class Program
                 continue;
             }
 
-            ServerNames[parts[0].Trim()] = parts[1].Trim();
+            fresh[parts[0].Trim()] = parts[1].Trim();
             count++;
+        }
+
+        ServerNames.Clear();
+        foreach (var pair in fresh)
+        {
+            ServerNames[pair.Key] = pair.Value;
         }
 
         return count;
