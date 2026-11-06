@@ -32,7 +32,7 @@ public partial class FriendsWindow : Window
     public static FriendsWindow? Current { get; private set; }
 
     private readonly List<FriendEntry> _friends = [];   // 服务端下发的完整列表
-    private readonly Dictionary<string, string> _previewHold = new(StringComparer.OrdinalIgnoreCase);   // 刚发出去、还没被轮询证实的预览,键=好友完整ID
+    private readonly Dictionary<string, (string Text, long At)> _previewHold = new(StringComparer.OrdinalIgnoreCase);   // 刚发出去、还没被轮询证实的预览,键=好友完整ID
     private readonly Dictionary<string, DateTime> _unreadClearedAt = new(StringComparer.OrdinalIgnoreCase);   // 红点刚被清掉的时间,挡住并发刷新把 0 盖回去
     private string _keyword = "";                        // 搜索框里的字
     private DispatcherTimer? _preview;                   // 本服对话的「最后一句 + 未读」定时补
@@ -41,6 +41,9 @@ public partial class FriendsWindow : Window
 
     /// <summary>红点清掉后压住未读的秒数:必须盖住 5 秒轮询周期,不然旧值下一轮又冒出来。</summary>
     private const int UnreadHoldSeconds = 8;
+
+    /// <summary>本地预览最多顶多久:消息其实没送出去时没人来撤,不设上限那句假预览会一直挂在列表上。</summary>
+    private const int PreviewHoldMs = 30_000;
 
     private AddFriendWindow? _addFriendWindow;           // 开着的「添加好友」窗(同一个时间只留一个)
     private FriendRequestsWindow? _requestsWindow;       // 开着的「好友通知」窗
@@ -200,15 +203,15 @@ public partial class FriendsWindow : Window
 
             var preview = polledPreview;
             // 刚发出去的那句还在等回执:轮询拿回来的多半还是旧预览,先按本地这句顶着
-            if (_previewHold.TryGetValue(id, out var held))
+            if (_previewHold.TryGetValue(id, out var hold))
             {
-                if (string.Equals(preview, held, StringComparison.Ordinal))
+                if (string.Equals(preview, hold.Text, StringComparison.Ordinal) || Environment.TickCount64 - hold.At >= PreviewHoldMs)
                 {
-                    _previewHold.Remove(id);   //轮询已经追上了,临时预览不用再顶
+                    _previewHold.Remove(id);   //轮询已经追上了,或者顶太久了(多半根本没送出去)
                 }
                 else
                 {
-                    preview = held;
+                    preview = hold.Text;
                 }
             }
 
@@ -271,15 +274,15 @@ public partial class FriendsWindow : Window
             var preview = entry.Preview;
 
             // 刚发出去的那句还在等回执:服务端给的预览可能还是旧的
-            if (_previewHold.TryGetValue(entry.Id, out var held))
+            if (_previewHold.TryGetValue(entry.Id, out var hold))
             {
-                if (string.Equals(preview, held, StringComparison.Ordinal))
+                if (string.Equals(preview, hold.Text, StringComparison.Ordinal) || Environment.TickCount64 - hold.At >= PreviewHoldMs)
                 {
-                    _previewHold.Remove(entry.Id);   //服务端已经追上了
+                    _previewHold.Remove(entry.Id);   //服务端已经追上了,或者顶太久了
                 }
                 else
                 {
-                    preview = held;
+                    preview = hold.Text;
                 }
             }
 
@@ -308,7 +311,7 @@ public partial class FriendsWindow : Window
     public void ShowLocalPreview(string friendFullId, string text)
     {
         // 先记下来:轮询如果跑在回执前面,拿回来的还是旧的一句
-        _previewHold[friendFullId] = text;
+        _previewHold[friendFullId] = (text, Environment.TickCount64);
 
         var index = _friends.FindIndex(entry => string.Equals(entry.Id, friendFullId, StringComparison.OrdinalIgnoreCase));
         if (index < 0)
