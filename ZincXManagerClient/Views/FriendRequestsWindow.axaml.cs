@@ -1,5 +1,6 @@
 using System;                                // Exception
 using System.Collections.Generic;            // List
+using System.Linq;                           // Select:算申请列表签名
 using System.Threading.Tasks;                // Task:发协议
 using Avalonia;                              // Thickness
 using Avalonia.Controls;                     // Window / Button / TextBlock / Grid
@@ -24,6 +25,9 @@ public partial class FriendRequestsWindow : Window
 {
     /// <summary>当前开着的通知窗(主窗收到 657 时找它刷新)。</summary>
     public static FriendRequestsWindow? Current { get; private set; }
+
+    private string _shownSignature = "";   // 上一次画出来的申请列表签名,一样就不用重建
+    private bool _answering;               // 有一条申请正在处理,挡住连点发出的第二个 658
 
     public FriendRequestsWindow()
     {
@@ -52,13 +56,21 @@ public partial class FriendRequestsWindow : Window
             Logger.Log(LogLevel.Warning, $"[好友] 申请列表里有 {badLines} 行认不出来,已跳过");
         }
 
+        StatusText.Text = entries.Count == 0 ? "没有待处理的申请" : $"共 {entries.Count} 条待处理";
+
+        // 内容没变就别重建:整表 Clear + 重新 Add 会让滚动条跳回顶部,而 657 是随申请推来的
+        var signature = string.Join("\n", entries.Select(one => one.FromId + "\t" + one.Message + "\t" + one.Time));
+        if (string.Equals(signature, _shownSignature, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        _shownSignature = signature;
         RequestList.Children.Clear();
         foreach (var entry in entries)
         {
             RequestList.Children.Add(BuildRow(entry));
         }
-
-        StatusText.Text = entries.Count == 0 ? "没有待处理的申请" : $"共 {entries.Count} 条待处理";
     }
 
     /// <summary>画一条申请:左头像、中间「谁想加你 + 他写的什么 + 什么时候」、右边同意/拒绝。</summary>
@@ -95,10 +107,9 @@ public partial class FriendRequestsWindow : Window
         text.Children.Add(when);
 
         var agree = new Button { Content = "同意", MinWidth = 52, MinHeight = 26 };
-        agree.Click += async (_, _) => await AnswerAsync(entry, agree: true);
-
         var refuse = new Button { Content = "拒绝", MinWidth = 52, MinHeight = 26 };
-        refuse.Click += async (_, _) => await AnswerAsync(entry, agree: false);
+        agree.Click += async (_, _) => await AnswerAsync(entry, agree: true, agree, refuse);
+        refuse.Click += async (_, _) => await AnswerAsync(entry, agree: false, agree, refuse);
 
         var buttons = new StackPanel
         {
@@ -141,14 +152,24 @@ public partial class FriendRequestsWindow : Window
     /// <summary>申请人显示名:申请里只有 ID,取最后一个「-」前的名字拿不到,就用完整 ID。</summary>
     private static string DisplayNameOf(string fullId) => fullId.Length > 0 ? fullId : "有人";
 
-    /// <summary>点同意/拒绝:发 658,成功后就重新拉一次列表。</summary>
-    private async Task AnswerAsync(FriendRequestEntry entry, bool agree)
+    /// <summary>点同意/拒绝:发 658,成功后就重新拉一次列表。同一时刻只放一条申请过去,按钮先禁掉。</summary>
+    private async Task AnswerAsync(FriendRequestEntry entry, bool agree, Button agreeButton, Button refuseButton)
     {
+        if (_answering)
+        {
+            return;
+        }
+
         if (ClientSession.Connect is not { } connect)
         {
             StatusText.Text = "还没连上服务端";
             return;
         }
+
+        // 手快点两下会发两个 658,第二个必然拿到「没有这条申请」,用户看到的就是同意成功却弹失败
+        _answering = true;
+        agreeButton.IsEnabled = false;
+        refuseButton.IsEnabled = false;
 
         try
         {
@@ -162,6 +183,12 @@ public partial class FriendRequestsWindow : Window
         {
             Logger.Log(LogLevel.Warning, $"[好友] 回申请失败: {ex.Message}");
             StatusText.Text = "操作失败:连接不在了,重连后再试";
+        }
+        finally
+        {
+            _answering = false;
+            agreeButton.IsEnabled = true;
+            refuseButton.IsEnabled = true;
         }
     }
 
