@@ -97,6 +97,40 @@ public sealed class AccountStore
     /// <summary>这个等级合法吗。</summary>
     public bool IsLevel(string level) => Array.IndexOf(_levels, level) >= 0;
 
+    /// <summary>
+    /// 账号名能不能用:长度 2-24,不许出现协议分隔符(| tab 换行)和文件名非法字符。
+    ///
+    /// <para>名字会被拼进中继负载(648/649 用竖线分段、618 用 tab 分列)和官方端的
+    /// <c>Data/users/名称.dat</c>,放进来一个竖线就能把后面几段挤歪,所以从一开始就不许起这种名字。</para>
+    /// </summary>
+    public static bool IsNameTextOk(string name, out string error)
+    {
+        if (name.Length < 2)
+        {
+            error = "账号名至少 2 个字符";
+            return false;
+        }
+
+        if (name.Length > 24)
+        {
+            error = "账号名最多 24 个字符";
+            return false;
+        }
+
+        foreach (var one in name)
+        {
+            if (char.IsControl(one) || one is '|' or '\t' or '\n' or '\r' or '/'
+                or '\\' or ':' or '*' or '?' or '"' or '<' or '>')
+            {
+                error = "账号名不能带控制字符,也不能带 | \\ / : * ? \" < > 这些符号";
+                return false;
+            }
+        }
+
+        error = "";
+        return true;
+    }
+
     /// <summary>全部账号(按 ID 排序)。</summary>
     public IReadOnlyCollection<Account> All
     {
@@ -164,9 +198,9 @@ public sealed class AccountStore
         account = null;
         name = name.Trim();
 
-        if (name.Length < 2)
+        if (!IsNameTextOk(name, out var nameError))
         {
-            error = "账号名至少 2 个字符";
+            error = nameError;
             return false;
         }
 
@@ -369,9 +403,9 @@ public sealed class AccountStore
             return false;
         }
 
-        if (newName.Length < 2)
+        if (!IsNameTextOk(newName, out var nameError))
         {
-            error = "账号名至少 2 个字符";
+            error = nameError;
             return false;
         }
 

@@ -23,6 +23,7 @@ public static class StoreSuite
             WhiteList(r, root);
             Persistent(r, root);
             AccountIds(r, root);
+            AccountNames(r, root);
         }
         catch (Exception ex)
         {
@@ -154,5 +155,31 @@ public static class StoreSuite
         r.Add("重启后继续往上加(编号 4)", fourth is { Id: 4 }, fourth?.Id.ToString() ?? "null");
         r.Add("编号水位落了盘", File.Exists(Path.Combine(dir, AccountStore.NextIdFileName)),
             Path.Combine(dir, AccountStore.NextIdFileName));
+    }
+
+    /// <summary>账号名不能带协议分隔符:名字要拼进 648/649 的竖线负载和官方端的 名称.dat。</summary>
+    private static void AccountNames(SuiteResult r, string root)
+    {
+        var dir = Path.Combine(root, "names");
+        var store = new AccountStore(dir);
+        var hash = ZincXManagerShared.Account.PasswordHash.Hash("tester", "123456");
+
+        r.Add("正常名字能通过", AccountStore.IsNameTextOk("阿丽丝", out _), "阿丽丝");
+        r.Add("带竖线的名字不行", !AccountStore.IsNameTextOk("a|b", out var pipeError), pipeError);
+        r.Add("竖线的报错说得清", pipeError.Contains("符号"), pipeError);
+        r.Add("带 tab 的名字不行", !AccountStore.IsNameTextOk("a\tb", out _), "a\\tb");
+        r.Add("带换行的名字不行", !AccountStore.IsNameTextOk("a\nb", out _), "a\\nb");
+        r.Add("带斜杠的名字不行", !AccountStore.IsNameTextOk("a/b", out _), "a/b");
+        r.Add("一个字的名字不行", !AccountStore.IsNameTextOk("a", out _), "a");
+        r.Add("超长的名字不行", !AccountStore.IsNameTextOk(new string('a', 25), out _), "25 个 a");
+
+        r.Add("建号时挡住竖线名", !store.Add("bad|name", hash, "Player", out _, out var addError), addError);
+        r.Add("建号的报错说得清", addError.Contains("符号"), addError);
+        r.Add("被挡住的名字没落盘", store.Find("bad|name") is null, "Find(bad|name)");
+        r.Add("建号时挡住换行名", !store.Add("bad\nname", hash, "Player", out _, out _), "bad\\nname");
+
+        store.Add("goodname", hash, "Player", out _, out _);
+        r.Add("改名时挡住竖线", !store.Rename("goodname", "bad|again", hash, out _, out var renameError), renameError);
+        r.Add("改名被挡后原名还在", store.Find("goodname") is not null, "Find(goodname)");
     }
 }
