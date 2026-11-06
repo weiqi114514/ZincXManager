@@ -897,6 +897,21 @@ var results = new List<SuiteResult>();
     await ZincXManagerTests.StoreSuite.RunAsync(results, Ws);
 }
 
+// ================= 套件 17:好友功能(编解码 + 好友档 + 聊天档,纯存储单测) =================
+{
+    await ZincXManagerTests.FriendSuite.RunAsync(results, Ws);
+}
+
+// ================= 套件 18:限速器(令牌桶,纯内存单测) =================
+{
+    await ZincXManagerTests.RateLimitSuite.RunAsync(results);
+}
+
+// ================= 套件 19:登录失败封禁(真起 ZXMS 用错密码连试) =================
+{
+    await ZincXManagerTests.LoginThrottleSuite.RunAsync(results, Ws, DebugMs);
+}
+
 // ================= 汇总 =================
 Console.WriteLine();
 Console.WriteLine("================= 总表 =================");

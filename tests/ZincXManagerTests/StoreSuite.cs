@@ -22,6 +22,7 @@ public static class StoreSuite
         {
             WhiteList(r, root);
             Persistent(r, root);
+            AccountIds(r, root);
         }
         catch (Exception ex)
         {
@@ -128,5 +129,30 @@ public static class StoreSuite
         {
             Directory.SetCurrentDirectory(old);
         }
+    }
+
+    /// <summary>账号编号只增不回收:删掉最大号再建一个,新号不能拿回旧号(好友档与聊天频道都按编号指认人)。</summary>
+    private static void AccountIds(SuiteResult r, string root)
+    {
+        var dir = Path.Combine(root, "accounts");
+        var store = new AccountStore(dir);
+        var hash = ZincXManagerShared.Account.PasswordHash.Hash("tester", "123456");
+
+        r.Add("建第一个账号", store.Add("tester", hash, "Player", out var first, out var e1), e1);
+        r.Add("第一个账号编号是 1", first is { Id: 1 }, first?.Id.ToString() ?? "null");
+
+        store.Add("second", hash, "Player", out var second, out _);
+        r.Add("第二个账号编号是 2", second is { Id: 2 }, second?.Id.ToString() ?? "null");
+
+        r.Add("删掉最大的那个", store.Remove("second"), "Remove(second)");
+        store.Add("third", hash, "Player", out var third, out _);
+        r.Add("新建的不会捡回被删的编号 2", third is { Id: 3 }, third?.Id.ToString() ?? "null");
+
+        // 重启后水位不能退回去,否则下一次重建号又会撞车
+        var reload = new AccountStore(dir);
+        reload.Add("fourth", hash, "Player", out var fourth, out _);
+        r.Add("重启后继续往上加(编号 4)", fourth is { Id: 4 }, fourth?.Id.ToString() ?? "null");
+        r.Add("编号水位落了盘", File.Exists(Path.Combine(dir, AccountStore.NextIdFileName)),
+            Path.Combine(dir, AccountStore.NextIdFileName));
     }
 }

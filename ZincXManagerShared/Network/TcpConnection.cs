@@ -17,6 +17,13 @@ public sealed class TcpConnection : IAsyncDisposable
     /// <summary>写锁:同一条连接的并发写串行化。</summary>
     private readonly SemaphoreSlim _writeLock = new(1, 1);
 
+    /// <summary>
+    /// 单次写超时:对端不读数据时 socket 缓冲会满,<c>WriteAsync</c> 就永久挂在这儿 ——
+    /// 而调用它的往往是收包处理线程,一挂全服排队(dispatcher 是单消费者)。
+    /// 超时当作连接已坏,抛 <see cref="TimeoutException"/> 让上层断开它。
+    /// </summary>
+    private static readonly TimeSpan WriteTimeout = TimeSpan.FromSeconds(10);
+
     /// <summary>0 = 未关闭,1 = 已关闭(保证只释放一次)。</summary>
     private int _disposed;
 
@@ -44,6 +51,7 @@ public sealed class TcpConnection : IAsyncDisposable
     public bool IsClosed => _disposed != 0;
 
     /// <summary>往本连接写一个包;线程安全,关闭后抛 <see cref="ObjectDisposedException"/>。</summary>
+    /// <exception cref="TimeoutException">对端 <see cref="WriteTimeout"/> 秒内一点没读,连接判废。</exception>
     public async Task WriteAsync(Packet packet, CancellationToken cancellationToken = default)
     {
         if (_disposed != 0)
@@ -62,7 +70,17 @@ public sealed class TcpConnection : IAsyncDisposable
                     (ushort)(packet.Flags | SessionCrypto.FlagEncrypted));
             }
 
-            await Stream.WriteAsync(outgoing.ToBytes(), cancellationToken);
+            // 超时令牌必须和上层令牌串联:任何一边取消都要真的把写操作掐断
+            using var timeout = new CancellationTokenSource(WriteTimeout);
+            using var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeout.Token);
+            try
+            {
+                await Stream.WriteAsync(outgoing.ToBytes(), linked.Token);
+            }
+            catch (OperationCanceledException) when (timeout.IsCancellationRequested && !cancellationToken.IsCancellationRequested)
+            {
+                throw new TimeoutException($"往 {RemoteEndPoint} 写包超时({WriteTimeout.TotalSeconds:0} 秒内对方一点没读)");
+            }
         }
         finally
         {

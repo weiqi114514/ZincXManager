@@ -36,6 +36,12 @@ public class TcpClient : IClient
     /// <summary>写锁:并发发包不会写花。</summary>
     private readonly SemaphoreSlim _writeLock = new(1, 1);
 
+    /// <summary>
+    /// 单次写超时:服务端不读数据时 socket 缓冲会满,<c>WriteAsync</c> 就永久挂在这儿,
+    /// 连重连循环都轮不到。超时当作断线,抛 <see cref="TimeoutException"/>。
+    /// </summary>
+    private static readonly TimeSpan WriteTimeout = TimeSpan.FromSeconds(10);
+
     private Task? _receiveTask;
 
     /// <summary>0 = 未关闭,1 = 已关闭(让 <see cref="CloseAsync"/> 幂等)。</summary>
@@ -181,6 +187,7 @@ public class TcpClient : IClient
 
     /// <summary>发一个包;内部写锁串行化,可安全并发调用。返回只代表写进流缓冲,不代表对端已收到。</summary>
     /// <exception cref="InvalidOperationException">尚未连接</exception>
+    /// <exception cref="TimeoutException">对端 <see cref="WriteTimeout"/> 秒内一点没读,连接判废。</exception>
     public async Task WriteAsync(Packet packet, CancellationToken cancellationToken = default)
     {
         if (_stream is null)
@@ -199,7 +206,17 @@ public class TcpClient : IClient
                     (ushort)(packet.Flags | SessionCrypto.FlagEncrypted));
             }
 
-            await _stream.WriteAsync(outgoing.ToBytes(), cancellationToken);
+            // 服务端不回读时这里会永久挂住,连重连逻辑都轮不到 —— 掐掉当断线处理
+            using var timeout = new CancellationTokenSource(WriteTimeout);
+            using var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeout.Token);
+            try
+            {
+                await _stream.WriteAsync(outgoing.ToBytes(), linked.Token);
+            }
+            catch (OperationCanceledException) when (timeout.IsCancellationRequested && !cancellationToken.IsCancellationRequested)
+            {
+                throw new TimeoutException($"{Target}:{_port} 写包超时({WriteTimeout.TotalSeconds:0} 秒内对方一点没读)");
+            }
         }
         finally
         {

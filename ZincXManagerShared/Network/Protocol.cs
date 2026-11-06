@@ -31,11 +31,41 @@ public static class Protocol
     public const ushort SessionHelloAck = 381;   // ZXMS → ZXMC:服务端 ECDH 公钥
 
     // ---------- 4xx+:业务(先占位,协议定好再填实) ----------
-    /// <summary>好友消息 —— <b>未实施</b>:编号先占着,以后要做再定负载(那时才需要"每跳按包 Id 记上游"的回执链路)。</summary>
+    /// <summary>
+    /// 好友私聊。ZXMC → ZXMS:负载 <c>对方完整ID\t消息编号\t正文</c>。
+    /// 消息编号由客户端生成,只用于「重发不产生重复消息」和「回执对号入座」,不是序号。
+    /// </summary>
     public const ushort FriendMsg = 400;
 
-    /// <summary>好友消息回执 —— <b>未实施</b>,理由同上。</summary>
+    /// <summary>
+    /// 好友私聊回执。ZXMC → ZXMS / ZXMS → ZXMC:负载 <c>ok|消息编号|序号</c> 表示消息已收下并分配了序号,
+    /// <c>ok|消息编号|序号|dup</c> 表示这条之前就收过(重发,没有重复落盘),
+    /// <c>err|原因</c> 表示没发出去(不是好友 / 目标不对 / 对方不在线且没落盘)。
+    /// </summary>
     public const ushort FriendMsgAck = 401;
+
+    /// <summary>
+    /// ZXMC → ZXMS:要一段聊天记录。负载 <c>对方完整ID\t起点序号</c>(起点序号空或 0 = 从头要)。
+    /// 只回序号大于起点的那几条,最多 200 条。
+    /// </summary>
+    public const ushort FriendMsgHistory = 402;
+
+    /// <summary>
+    /// ZXMS → ZXMC:聊天记录。每行一条 <c>序号\t时间\tdirection\t正文</c>,
+    /// direction = <c>in</c>(对方发来的) 或 <c>out</c>(自己发出去的)。
+    /// </summary>
+    public const ushort FriendMsgHistoryReply = 403;
+
+    /// <summary>
+    /// 送达 / 已读回执。服务端 → 客户端:负载 <c>对端完整ID\t消息编号或序号\t状态</c>,
+    /// 状态 = <c>delivered</c>(对方客户端收到了) 或 <c>read</c>(对方打开聊天窗看到了)。
+    /// </summary>
+    public const ushort FriendMsgReceipt = 404;
+
+    /// <summary>
+    /// 已读上报。ZXMC → ZXMS:负载 <c>对端完整ID\t已读到第几号</c>,服务端据此算未读数并转给对方。
+    /// </summary>
+    public const ushort FriendReadMark = 405;
 
     /// <summary>
     /// 服务端公告(群发,单向:服务端 → 客户端)。负载 = 消息卡片,见 <see cref="MessageCard"/>:
@@ -52,12 +82,112 @@ public static class Protocol
 
     // ---------- 6xx:账号 ----------
     public const ushort AccountLogin = 600;       // ZXMC → ZXMS:登录,负载 "名称|密码密文|等级"
-    public const ushort AccountLoginAck = 601;    // ZXMS → ZXMC:"ok|名称|ID|等级" 或 "err|原因"
+    public const ushort AccountLoginAck = 601;    // ZXMS → ZXMC:"ok|名称|ID|等级|完整ID" 或 "err|原因"(第五段是本服完整ID,老服务端不发时客户端只用编号)
     public const ushort AccountRegister = 602;    // ZXMC → ZXMS:注册,负载 "名称|密码密文"(等级固定 Player)
-    public const ushort AccountRegisterAck = 603; // ZXMS → ZXMC:"ok|名称|ID|等级" 或 "err|原因"
+    public const ushort AccountRegisterAck = 603; // ZXMS → ZXMC:"ok|名称|ID|等级|完整ID" 或 "err|原因"(第五段同 601)
     public const ushort AccountAvatarReq = 604;   // ZXMC → ZXMS:要当前账号的头像(负载空)
     public const ushort AccountAvatarAck = 605;   // ZXMS → ZXMC:图片字节(空 = 没头像);设置头像时回 "ok" / "err|原因"
     public const ushort AccountAvatarSet = 606;
+
+    /// <summary>
+    /// ZXMC → ZXMS:要一个好显示的头像。负载 <c>对方完整ID|账户名</c>(旧客户端只发账户名也照收)。
+    /// 只有本人和好友能要。
+    /// </summary>
+    public const ushort FriendAvatarReq = 607;
+
+    /// <summary>ZXMS → ZXMC:头像。<c>账户名|base64</c>;图片段为空 = 没有头像。</summary>
+    public const ushort FriendAvatarAck = 608;
+
+    /// <summary>
+    /// ZXMS → ZXMOS:本服账号表(613 上报)。每行 <c>ID|名称|等级</c>。
+    /// 注意这是 3 段:账号 ID 是<b>各服自己的本地编号</b>,跨服会撞号,ZXMOS 只按来源服分开存,不解析。
+    /// </summary>
+    public const ushort UserListUp = 613;
+
+    /// <summary>
+    /// ZXMOS → ZXMS:全网账号表(614 下发),整份替换。每行 <c>归属服完整ID|ID|名称|等级</c>。
+    /// 归属服完整ID 形如 <c>ZXMS-testserver2-2</c>;玩家直连 ZXMOS 注册的没有归属服,这一段留空,
+    /// 此时按 <c>#ID</c> 认人、不跨服找。兼容旧的 3 段格式(没有归属服,一律当本服编号看)。
+    /// </summary>
+    public const ushort UserListDown = 614;
+
+    /// <summary>
+    /// 跨服中转(ZNMS 之间经 ZXMOS)。负载 <c>来源完整ID|目标完整ID|动作|附加</c>,
+    /// 动作见 <see cref="FriendRelayAction"/>。ZXMOS 只按目标完整ID 找到归属子服转发,不实现好友业务。
+    /// </summary>
+    public const ushort FriendRelay = 615;
+
+    /// <summary>好友上下线广播。<c>完整ID|online|offline</c>,经 ZXMOS 转给这个人的所有好友所在服。</summary>
+    public const ushort FriendPresence = 616;
+
+    /// <summary>ZXMS → ZXMOS:上报本服显示名。<c>服务端ID|显示名</c>。</summary>
+    public const ushort ServerNameReport = 617;
+
+    /// <summary>ZXMOS → ZXMS:全服显示名表。每行 <c>服务端ID\t显示名</c>。</summary>
+    public const ushort ServerNameMap = 618;
+
+    /// <summary>
+    /// ZXMS → ZXMOS → 目标 ZXMS:跨服要头像。<c>目标服务端ID|账户名|请求者完整ID</c>。
+    /// 好友关系由发起服校验,ZXMOS 只按目标服务端ID 定向转发(不广播、不落盘)。
+    /// </summary>
+    public const ushort AvatarRelay = 648;
+
+    /// <summary>目标 ZXMS → ZXMOS → 发起 ZXMS:跨服头像回执。<c>账户名|base64|请求者完整ID</c>;空 = 那边也没有。</summary>
+    public const ushort AvatarRelayAck = 649;
+
+    // ---------- 65x:好友(ZXMC ↔ ZXMS,跨服经 ZXMOS) ----------
+
+    /// <summary>ZXMC → ZXMS:要好友列表。负载空。回 <see cref="FriendListReply"/>。</summary>
+    public const ushort FriendListQuery = 650;
+
+    /// <summary>ZXMS → ZXMC:好友列表。每行 <c>完整ID\t名字\t备注\t在线\t来源服名\t未读数\t最后一条</c>;没好友就是空负载。</summary>
+    public const ushort FriendListReply = 651;
+
+    /// <summary>ZXMC → ZXMS:发好友申请。负载 <c>完整ID|验证消息</c>。回 <see cref="FriendRequestAck"/>,对方在线会立刻收到 657。</summary>
+    public const ushort FriendRequest = 654;
+
+    /// <summary>ZXMS → ZXMC:好友申请回执。<c>ok|</c> 或 <c>err|原因</c>(已是好友 / 不能加自己 / 账号不存在 / 官方端未连接)。</summary>
+    public const ushort FriendRequestAck = 655;
+
+    /// <summary>ZXMC → ZXMS:要"别人发给我的好友申请"列表。负载空。</summary>
+    public const ushort FriendRequestsQuery = 656;
+
+    /// <summary>ZXMS → ZXMC:好友申请列表。每行 <c>申请者完整ID\t验证消息\t时间</c>。收到新申请时服务端会主动推这一包。</summary>
+    public const ushort FriendRequestsReply = 657;
+
+    /// <summary>ZXMC → ZXMS:回答一个申请。负载 <c>申请者完整ID|yes|no</c>。</summary>
+    public const ushort FriendAnswer = 658;
+
+    /// <summary>ZXMS → ZXMC:回答回执。<c>ok|</c> 或 <c>err|原因</c>。</summary>
+    public const ushort FriendAnswerAck = 659;
+
+    /// <summary>ZXMC → ZXMS:删好友。负载 <c>完整ID</c>。</summary>
+    public const ushort FriendRemove = 660;
+
+    /// <summary>ZXMS → ZXMC:删好友回执。<c>ok|</c> 或 <c>err|原因</c>。</summary>
+    public const ushort FriendRemoveAck = 661;
+
+    /// <summary>ZXMS → ZXMC:好友事件推送。<c>事件|完整ID</c>,事件见 <see cref="FriendEventKind"/>。</summary>
+    public const ushort FriendEvent = 662;
+
+    /// <summary>
+    /// ZXMC → ZXMS:搜好友。负载 = 关键词。
+    /// 规则:关键词按最后一个 <c>-</c> 切出编码段,能转成数字就按 ID 找,否则按名字找;
+    /// 名字必须<b>完全一致</b>(大小写不敏感),不做前缀/模糊匹配。结果最多 <see cref="FriendSearchLimit"/> 条。
+    /// </summary>
+    public const ushort FriendSearch = 663;
+
+    /// <summary>
+    /// ZXMS → ZXMC:搜索结果。每行 <c>完整ID|名称|等级</c>;
+    /// 本服不认识的账号回 <c>完整ID|#编码|-</c>(意思是"我只能给你地址,成不成问对方服")。
+    /// </summary>
+    public const ushort FriendSearchReply = 664;
+
+    /// <summary>ZXMC → ZXMS：设置好友备注。负载 对方完整ID\t备注(空串表示清除备注)。</summary>
+    public const ushort FriendRemark = 665;
+
+    /// <summary>ZXMS → ZXMC：设置好友备注的回执。"ok" 或 "err|原因"。</summary>
+    public const ushort FriendRemarkAck = 666;
 
     /// <summary>ZXMOS → ZXMS:把某些用户账号移交给子服务端(拉黑前先移交,别让玩家丢号)。负载 "名称|密文|等级" 每行一条。</summary>
     public const ushort AccountMigrate = 610;
@@ -107,6 +237,12 @@ public static class Protocol
 
     /// <summary>509 ZXMOS → ZXMS:玩家返回记录的查询结果(纯文本,一行一条;err| 开头表示失败)。</summary>
     public const ushort MegBackAck = 509;
+
+    /// <summary>
+    /// 510 ZXMS → ZXMC:好友聊天后端的端口与凭据(登录成功后发一次)。
+    /// 负载 <c>端口\ttoken\t本服完整ID</c>;聊天后端地址 = 客户端连的那个地址 + 这个端口 + <c>/chat</c>。
+    /// </summary>
+    public const ushort ChatHello = 510;
 
     // ---------- 62x:登录确认与账号绑定(ZXMM ↔ ZXMS ↔ ZXMC) ----------
 
@@ -211,4 +347,54 @@ public static class Protocol
 
     /// <summary>是不是合法的权限等级。</summary>
     public static bool IsLevel(string level) => Array.IndexOf(Levels, level) >= 0;
+
+    /// <summary>一次搜索最多返回多少条。</summary>
+    public const int FriendSearchLimit = 20;
+
+    /// <summary>好友列表负载里的分隔符(字段之间用 \t,免得和名字里的竖线打架)。</summary>
+    public const char FriendFieldSeparator = '\t';
+
+    /// <summary>
+    /// <see cref="FriendRelay"/>(615) 的动作词。ZXMOS 按动作原样转发,不解释含义;
+    /// 含义只在收发双方的 ZXMS 里有意义。
+    /// </summary>
+    public static class FriendRelayAction
+    {
+        /// <summary>好友申请。<c>来源|目标|request|申请者完整ID|验证消息</c>。</summary>
+        public const string Request = "request";
+
+        /// <summary>申请被同意/拒绝。<c>来源|目标|answer|yes 或 no</c>。</summary>
+        public const string Answer = "answer";
+
+        /// <summary>好友列表里加一条(跨服同意后通知对方服写档)。<c>来源|目标|add|</c>。</summary>
+        public const string Add = "add";
+
+        /// <summary>好友列表里删一条。<c>来源|目标|remove|</c>。</summary>
+        public const string Remove = "remove";
+
+        /// <summary>跨服私聊。<c>来源|目标|message|消息编号|正文</c>(编号为空表示不参与重发去重)。</summary>
+        public const string Message = "message";
+
+        /// <summary>跨服回执(送达 / 已读)。<c>来源|目标|receipt|消息编号或序号|delivered 或 read</c>。</summary>
+        public const string Receipt = "receipt";
+    }
+
+    /// <summary><see cref="FriendEvent"/>(662) 的事件词。</summary>
+    public static class FriendEventKind
+    {
+        /// <summary>有人给我发了好友申请。</summary>
+        public const string Request = "request";
+
+        /// <summary>我的申请被同意了。</summary>
+        public const string Agree = "agree";
+
+        /// <summary>对方把我删了(列表要刷)。</summary>
+        public const string Remove = "remove";
+
+        /// <summary>对方上线了。</summary>
+        public const string Online = "online";
+
+        /// <summary>对方下线了。</summary>
+        public const string Offline = "offline";
+    }
 }

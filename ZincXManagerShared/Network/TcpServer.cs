@@ -29,7 +29,12 @@ public class TcpServer : IServer
     /// <summary>每条连接的接收循环任务,关闭时等它们退出。</summary>
     private readonly ConcurrentDictionary<Guid, Task> _clientTasks = new();
 
-    private readonly PacketDispatcher<ServerboundPacket> _dispatcher;
+    /// <summary>处理器列表:所有连接共用同一份,但每条连接各有自己的队列与执行任务。</summary>
+    private Func<ServerboundPacket, Task>[] _handlers = [];
+
+    /// <summary>每条连接一个收包队列:慢 handler 只堵它自己那条连接,不再拖住全服。</summary>
+    private readonly ConcurrentDictionary<Guid, PacketDispatcher<ServerboundPacket>> _dispatchers = new();
+
     private Task? _acceptTask;
 
     /// <summary>0 = 未关闭,1 = 已关闭(让 <see cref="CloseAsync"/> 幂等)。</summary>
@@ -40,7 +45,6 @@ public class TcpServer : IServer
         _ipAddress = ipAddress;
         _port = port;
         _listener = new TcpListener(_ipAddress, port);
-        _dispatcher = new PacketDispatcher<ServerboundPacket>(_cts.Token);
     }
 
     /// <summary>客户端接入时触发。</summary>
@@ -71,7 +75,14 @@ public class TcpServer : IServer
     }
 
     /// <summary>注册收包处理器(所有连接共用)。</summary>
-    public void AddHandler(Func<ServerboundPacket, Task> handler) => _dispatcher.AddHandler(handler);
+    public void AddHandler(Func<ServerboundPacket, Task> handler)
+    {
+        var current = Volatile.Read(ref _handlers);
+        var next = new Func<ServerboundPacket, Task>[current.Length + 1];
+        current.CopyTo(next, 0);
+        next[^1] = handler;
+        Volatile.Write(ref _handlers, next);
+    }
 
     /// <summary>向所有在线客户端广播一个包;单条连接写失败只记日志。</summary>
     public async Task BroadcastAsync(Packet packet, CancellationToken cancellationToken = default)
@@ -120,8 +131,13 @@ public class TcpServer : IServer
             // 会作用在"还没登记"的条目上,随后 Add 又把身份覆盖成"未识别"
             Registry.Add(connection);
 
-            _clientTasks[connection.Id] = HandleClientAsync(connection);
+            // 每条连接自己的收包队列:一个慢 handler(查文件、等中转)只堵这条连接,
+            // 不会让全服所有人排在它后面
+            var dispatcher = new PacketDispatcher<ServerboundPacket>(_cts.Token);
+            dispatcher.AddHandler(InvokeHandlersAsync);
+            _dispatchers[connection.Id] = dispatcher;
 
+            _clientTasks[connection.Id] = HandleClientAsync(connection);
             Logger.Log(LogLevel.Info, $"[Network] 客户端接入 {connection.RemoteEndPoint} (id={connection.Id})");
             SafeInvoke(Connected, connection);
         }
@@ -155,7 +171,10 @@ public class TcpServer : IServer
                 }
 
                 Registry.Touch(connection.Id);
-                await _dispatcher.EnqueueAsync(new ServerboundPacket(packet, connection), _cts.Token);
+                if (_dispatchers.TryGetValue(connection.Id, out var dispatcher))
+                {
+                    await dispatcher.EnqueueAsync(new ServerboundPacket(packet, connection), _cts.Token);
+                }
             }
         }
         catch (OperationCanceledException)
@@ -185,10 +204,40 @@ public class TcpServer : IServer
 
             _connections.TryRemove(connection.Id, out _);
             _clientTasks.TryRemove(connection.Id, out _);
+
+            // 先把这条连接队列里剩下的包跑完(它们还要能回包),再拆连接;写超时兜底不会无限等
+            if (_dispatchers.TryRemove(connection.Id, out var dispatcher))
+            {
+                try
+                {
+                    await dispatcher.DisposeAsync();
+                }
+                catch (OperationCanceledException)
+                {
+                    // 服务端关闭,正常退出
+                }
+            }
+
             Registry.Remove(connection.Id);
             await connection.DisposeAsync();
 
             Logger.Log(LogLevel.Info, $"[Network] 客户端断开 {connection.RemoteEndPoint} (id={connection.Id})");
+        }
+    }
+
+    /// <summary>把包依次喂给所有注册的处理器;单个处理器抛异常只记日志,不影响后面的。</summary>
+    private async Task InvokeHandlersAsync(ServerboundPacket packet)
+    {
+        foreach (var handler in Volatile.Read(ref _handlers))
+        {
+            try
+            {
+                await handler(packet);
+            }
+            catch (Exception ex)
+            {
+                Logger.Log(LogLevel.Error, "[Network] 收包处理器异常: " + ex.Message);
+            }
         }
     }
 
@@ -252,7 +301,12 @@ public class TcpServer : IServer
         }
         _connections.Clear();
 
-        await _dispatcher.DisposeAsync();
+        foreach (var dispatcher in _dispatchers.Values.ToArray())
+        {
+            await dispatcher.DisposeAsync();
+        }
+        _dispatchers.Clear();
+
         _cts.Dispose();
 
         Logger.Log(LogLevel.Info, "[Network] 服务端已关闭");

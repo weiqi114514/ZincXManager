@@ -62,6 +62,12 @@ public sealed class AccountStore
     /// <summary>别的账号表里是否已经有这个名字(服务端账号 / 用户账号不能重名)。</summary>
     private readonly Func<string, bool>? _alsoTaken;
 
+    // 下一个可用编号;0 表示还没算出来(读到存档时补齐)
+    private int _nextId;
+
+    /// <summary>下一个编号的存档文件名:跟账号放在同一个目录,故意不是 .json,免得被当成账号读进来。</summary>
+    public const string NextIdFileName = "nextid.txt";
+
     /// <summary>账号目录(默认 User/Data,一个账号一个 {ID}.json)。</summary>
     public string Path { get; }
 
@@ -196,7 +202,8 @@ public sealed class AccountStore
                 Name = name,
                 Password = passwordHash,
                 Level = level,
-                Id = _map.Count == 0 ? 1 : _map.Values.Max(a => a.Id) + 1,
+                // 编号只能往上加,不能回收:好友档和聊天频道都是按编号指向人的,复用会让新账号继承旧账号的好友和私聊
+                Id = AllocateId(),
                 Ip = ip,
             };
 
@@ -542,6 +549,68 @@ public sealed class AccountStore
             {
                 _byId[account.Id] = account;
             }
+        }
+
+        // 编号水位取「存档里记的」和「现存最大编号」里大的那个:
+        // 老版本没写过 nextid.txt,现存最大编号就是唯一依据
+        var watermark = 1;
+        foreach (var account in _map.Values)
+        {
+            if (account.Id >= watermark)
+            {
+                watermark = account.Id + 1;
+            }
+        }
+
+        var saved = ReadNextIdFile();
+        _nextId = Math.Max(watermark, saved);
+    }
+
+    /// <summary>取下一个编号并立刻把水位落盘;编号一旦发出去就不再回收。</summary>
+    private int AllocateId()
+    {
+        if (_nextId <= 0)
+        {
+            _nextId = 1;
+        }
+
+        var id = _nextId;
+        _nextId = id + 1;
+        WriteNextIdFile(_nextId);
+        return id;
+    }
+
+    /// <summary>读取编号水位的存档;没有或读坏了就返回 0(当没记过)。</summary>
+    private int ReadNextIdFile()
+    {
+        try
+        {
+            var file = System.IO.Path.Combine(Path, NextIdFileName);
+            if (!File.Exists(file))
+            {
+                return 0;
+            }
+
+            return int.TryParse(File.ReadAllText(file, Encoding.UTF8).Trim(), out var value) && value > 0 ? value : 0;
+        }
+        catch (Exception ex)
+        {
+            Logger.Log(LogLevel.Warning, $"[账号] 读编号存档失败,按现存最大编号续号: {ex.Message}");
+            return 0;
+        }
+    }
+
+    /// <summary>把编号水位写进存档。写失败不挡建号,但要留痕 —— 下次重启可能重发同一个编号。</summary>
+    private void WriteNextIdFile(int next)
+    {
+        try
+        {
+            Directory.CreateDirectory(Path);
+            File.WriteAllText(System.IO.Path.Combine(Path, NextIdFileName), next.ToString(), Encoding.UTF8);
+        }
+        catch (Exception ex)
+        {
+            Logger.Log(LogLevel.Warning, $"[账号] 编号存档写不进去(重启后可能重发编号 {next}): {ex.Message}");
         }
     }
 
