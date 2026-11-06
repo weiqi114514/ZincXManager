@@ -801,7 +801,7 @@ internal static partial class Program
                 }
 
                 var ok = loginNonce.Length > 0 && loginProof.Length > 0
-                    ? Accounts.TryLoginProof(user, loginNonce, loginProof, level, out var account, out var error)
+                    ? Accounts.TryLoginProof(user, passwordHash, loginNonce, loginProof, level, out var account, out var error)
                     : Accounts.TryLogin(user, passwordHash, level, out account, out error);
 
                 if (ok)

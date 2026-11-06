@@ -176,6 +176,9 @@ public sealed class AccountStore
             return false;
         }
 
+        // 落盘前加上随机盐与迭代:存档文件泄露也不至于被离线爆破
+        var stored = PasswordHash.Protect(passwordHash);
+
         if (!IsLevel(level))
         {
             error = $"权限等级只能是 {LevelList}";
@@ -200,7 +203,7 @@ public sealed class AccountStore
             var created = new Account
             {
                 Name = name,
-                Password = passwordHash,
+                Password = stored,
                 Level = level,
                 // 编号只能往上加,不能回收:好友档和聊天频道都是按编号指向人的,复用会让新账号继承旧账号的好友和私聊
                 Id = AllocateId(),
@@ -230,7 +233,15 @@ public sealed class AccountStore
         => Add(name, passwordHash, level, ip, out account, out error);
 
     /// <summary>挑战-响应登录:proof = SHA256(存储的密文 : nonce)。 账号不存在 / 证明不匹配 / nonce 过期或重放 → 失败。</summary>
-    public bool TryLoginProof(string name, string nonce, string proof, string level, out Account? account, out string error)
+    /// <param name="name">账号名。</param>
+    /// <param name="passwordHash">客户端这次算出来的裸哈希(新格式存档只能靠它校验)。</param>
+    /// <param name="nonce">本次挑战。</param>
+    /// <param name="proof">客户端算出来的证明。</param>
+    /// <param name="level">客户端选的权限等级。</param>
+    /// <param name="account">成功时带出账号。</param>
+    /// <param name="error">失败原因。</param>
+    public bool TryLoginProof(string name, string passwordHash, string nonce, string proof, string level,
+        out Account? account, out string error)
     {
         var found = Find(name);
         if (found is null)
@@ -247,18 +258,25 @@ public sealed class AccountStore
             return false;
         }
 
-        if (!LoginProof.Verify(found.Password, nonce, proof))
+        // 老存档里存的就是那个裸哈希,证明能直接验;新存档存的是加点加轮之后的值,
+        // 客户端算不出证明,只能靠它发来的裸哈希重建一遍再比(整包本身在加密会话里)
+        if (!PasswordHash.IsProtected(found.Password) && !LoginProof.Verify(found.Password, nonce, proof))
         {
             account = null;
             error = "密码错误";
             return false;
         }
 
-        // 证明对上了,走原来的等级 / 封禁 / 记录流程
-        return TryLogin(name, found.Password, level, out account, out error);
+        // 证明 / 密文对上了,走原来的等级 / 封禁 / 记录流程
+        return TryLogin(name, passwordHash, level, out account, out error);
     }
 
     /// <summary>登录校验:账号存在 + 密文一致 + 所选等级与该账号一致。</summary>
+    /// <param name="name">账号名。</param>
+    /// <param name="passwordHash">客户端算出来的裸哈希。</param>
+    /// <param name="level">客户端选的权限等级。</param>
+    /// <param name="account">成功时带出账号。</param>
+    /// <param name="error">失败原因。</param>
     public bool TryLogin(string name, string passwordHash, string level, out Account? account, out string error)
     {
         account = Find(name);
@@ -269,7 +287,7 @@ public sealed class AccountStore
             return false;
         }
 
-        if (!string.Equals(account.Password, passwordHash, StringComparison.OrdinalIgnoreCase))
+        if (!PasswordHash.Verify(account.Password, passwordHash))
         {
             error = "密码错误";
             return false;
@@ -281,8 +299,30 @@ public sealed class AccountStore
             return false;
         }
 
+        // 老存档(裸哈希)趁这次登录成功升级成加盐迭代的格式,免得一直裸着
+        UpgradeIfLegacy(account, passwordHash);
+
         error = "";
         return true;
+    }
+
+    /// <summary>把老格式的密文升级成加盐迭代的格式;已经是新格式就什么也不做。</summary>
+    /// <param name="account">刚登录成功的账号。</param>
+    /// <param name="passwordHash">客户端这次发来的裸哈希(老格式存档就是它本身)。</param>
+    private void UpgradeIfLegacy(Account account, string passwordHash)
+    {
+        if (PasswordHash.IsProtected(account.Password))
+        {
+            return;
+        }
+
+        lock (_sync)
+        {
+            account.Password = PasswordHash.Protect(passwordHash);
+            Save();
+        }
+
+        Logger.Log(LogLevel.Info, $"[账号] {account.Name} 的密码密文已升级成加盐迭代格式");
     }
 
     /// <summary>改密码(控制台 user rep);<paramref name="newHash"/> 是密文。</summary>
@@ -303,7 +343,7 @@ public sealed class AccountStore
 
         lock (_sync)
         {
-            account.Password = newHash;
+            account.Password = PasswordHash.Protect(newHash);
             Save();
         }
 
@@ -362,7 +402,7 @@ public sealed class AccountStore
             var renamed = new Account
             {
                 Name = newName,
-                Password = newHash,
+                Password = PasswordHash.Protect(newHash),
                 Level = old.Level,
                 Id = old.Id,
                 Ip = old.Ip,
@@ -508,10 +548,11 @@ public sealed class AccountStore
 
                     var secret = item.TryGetProperty("password", out var p) ? p.GetString() ?? "" : "";
 
-                    // 老存档可能是明文,读到就升级成密文
+                    // 老存档可能是明文(更老的版本),读到就升级成密文;老格式的裸哈希先留着,
+                    // 等下次登录成功再换成加盐迭代的版本(那时候才有裸哈希可用)
                     if (secret.Length > 0 && !PasswordHash.IsHash(secret))
                     {
-                        secret = PasswordHash.Hash(name, secret);
+                        secret = PasswordHash.Protect(PasswordHash.Hash(name, secret));
                     }
 
                     var level = item.TryGetProperty("level", out var l) ? l.GetString() ?? "" : "";

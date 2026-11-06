@@ -912,6 +912,11 @@ var results = new List<SuiteResult>();
     await ZincXManagerTests.LoginThrottleSuite.RunAsync(results, Ws, DebugMs);
 }
 
+// ================= 套件 20:密码密文(随机盐 + 迭代,纯内存单测) =================
+{
+    await ZincXManagerTests.PasswordSuite.RunAsync(results);
+}
+
 // ================= 汇总 =================
 Console.WriteLine();
 Console.WriteLine("================= 总表 =================");
