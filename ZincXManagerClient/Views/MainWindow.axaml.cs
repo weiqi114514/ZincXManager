@@ -834,7 +834,9 @@ public partial class MainWindow : Window
             Logger.Log(LogLevel.Info, $"[ZXMC] 收到 {fromId} 的消息,聊天窗没开");
         }
 
-        _friendsWindow?.RefreshAll();
+        // 私聊只会改变好友行的末句与未读数,不碰申请列表:这里只重拉 650,
+        // 别再顺手发 656 —— 对方连发几条就是几个 656,而服务端每收一个都要读一遍申请档
+        _friendsWindow?.RefreshList();
     }
 
     /// <summary>处理 401:成功把序号与消息编号交回窗口;失败(err|编号|原因 或 err|原因)把红叹号标到对应气泡上。</summary>
