@@ -290,7 +290,7 @@ public partial class App : Application
             mainWindow.Show();
             waitWindow.Close();
 
-            mainViewModel.SetUser(ClientSession.User, ClientSession.UserId);
+            mainViewModel.SetUser(ClientSession.User, ClientSession.UserId, ClientSession.FullId);
             mainViewModel.RefreshAvatar();
             _ = mainViewModel.RequestMessageHistoryAsync();
             mainViewModel.StatusText = $"已登录:{ClientSession.User}({ClientSession.Level})";

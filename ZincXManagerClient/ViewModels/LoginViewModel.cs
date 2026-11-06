@@ -77,10 +77,15 @@ public partial class LoginViewModel : ViewModelBase
 
     public bool HasAvatar => Avatar is not null;
 
+    /// <summary>没有头像时画的那个首字(账户名第一个字)。</summary>
+    public string UserInitial => UserName.Length > 0 ? UserName[..1].ToUpperInvariant() : "?";
+
     public string AvatarHint => HasAvatar ? "已载入头像" : "还没有头像(登录后可在 设置 → 账户与安全 里设置)";
 
     // ---------- 账号 ----------
-    [ObservableProperty] public partial string UserName { get; set; } = "";
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(UserInitial))]
+    public partial string UserName { get; set; } = "";
     [ObservableProperty] public partial string Password { get; set; } = "";
     [ObservableProperty] public partial string Level { get; set; } = Protocol.RegisterLevel;
 
@@ -282,7 +287,7 @@ public partial class LoginViewModel : ViewModelBase
     /// <summary>收到账号类回执(601/603)后更新界面状态。</summary>
     private void OnAccountReply(ushort type, string text)
     {
-        // 负载:"ok|名称|ID|等级" 或 "err|原因"
+        // 负载:"ok|名称|ID|等级|完整ID" 或 "err|原因"
         var parts = text.Split('|');   //拆分结果
         var ok = parts.Length > 0 && parts[0] == "ok";
         var message = ok
@@ -294,9 +299,11 @@ public partial class LoginViewModel : ViewModelBase
             ClientSession.User = parts.Length > 1 ? parts[1] : UserName.Trim();
             ClientSession.UserId = parts.Length > 2 ? parts[2] : "0";
             ClientSession.Level = parts.Length > 3 ? parts[3] : Level;
+            ClientSession.FullId = parts.Length > 4 ? parts[4].Trim() : "";
             ClientConfig.Set("user", ClientSession.User);
             ClientConfig.Set("userid", ClientSession.UserId);
             ClientConfig.Set("level", ClientSession.Level);
+            ClientConfig.Set("fullid", ClientSession.FullId);
 
             // 登录成功:顺手把服务端保留期内还没收到的消息补齐(505 → 逐条 504 → 506 收尾)
             _ = _connect.RequestHistoryAsync();

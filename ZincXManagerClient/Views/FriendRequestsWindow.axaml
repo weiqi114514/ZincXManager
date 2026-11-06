@@ -1,0 +1,54 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="ZincXManagerClient.Views.FriendRequestsWindow"
+        Title="ZincXManagerClient · 好友通知"
+        Width="440" Height="500" MinWidth="360" MinHeight="300"
+        Background="{DynamicResource ThemeWindowVeil}"
+        TransparencyLevelHint="AcrylicBlur,Blur,Transparent"
+        FontFamily="Microsoft YaHei UI, Microsoft YaHei, Segoe UI"
+        WindowDecorations="None">
+
+  <Window.Styles>
+    <Style Selector="Border.requestRow">
+      <Setter Property="Background" Value="Transparent"/>
+    </Style>
+    <Style Selector="Border.avatar">
+      <Setter Property="Width" Value="36"/>
+      <Setter Property="Height" Value="36"/>
+      <Setter Property="CornerRadius" Value="0"/>
+      <Setter Property="Background" Value="{DynamicResource ThemeSecondary}"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource ThemePanelBorder}"/>
+      <Setter Property="BorderThickness" Value="1"/>
+    </Style>
+    <Style Selector="Border.avatar > TextBlock">
+      <Setter Property="FontSize" Value="14"/>
+      <Setter Property="FontWeight" Value="SemiBold"/>
+      <Setter Property="Foreground" Value="{DynamicResource ThemePrimaryDark}"/>
+      <Setter Property="HorizontalAlignment" Value="Center"/>
+      <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+  </Window.Styles>
+
+  <Grid RowDefinitions="33,*,Auto">
+    <!-- 标题栏 -->
+    <Border Grid.Row="0" Background="{DynamicResource ThemePrimary}" PointerPressed="OnTitleBarPointerPressed">
+      <Grid ColumnDefinitions="Auto,*,Auto">
+        <Rectangle Grid.Column="0" Width="1.5" Height="16" Fill="#80FFFFFF" Margin="16,0,0,0" VerticalAlignment="Center"/>
+        <TextBlock Grid.Column="1" Text="好友通知" Foreground="White" FontSize="13" Margin="14,0,0,0" VerticalAlignment="Center"/>
+        <Button Grid.Column="2" Classes="chrome close" Width="44" Click="OnCloseClick">
+          <Path Data="M0,0 L11,11 M11,0 L0,11" Stroke="White" StrokeThickness="1.6"/>
+        </Button>
+      </Grid>
+    </Border>
+
+    <!-- 申请列表 -->
+    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+      <StackPanel x:Name="RequestList" Margin="8,8,8,10" Spacing="2"/>
+    </ScrollViewer>
+
+    <Border Grid.Row="2" BorderBrush="{DynamicResource ThemePanelBorder}" BorderThickness="0,1,0,0" Padding="12,7">
+      <TextBlock x:Name="StatusText" Text="界面阶段:申请列表是演示数据,同意/拒绝还没接服务端"
+                 FontSize="10.5" TextWrapping="Wrap" Foreground="{DynamicResource ThemeMuted}"/>
+    </Border>
+  </Grid>
+</Window>

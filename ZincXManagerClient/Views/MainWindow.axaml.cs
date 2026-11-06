@@ -11,9 +11,12 @@ using Avalonia.Styling;  // 样式与主题
 using Avalonia.Input;  // 鼠标键盘输入
 using Avalonia.Interactivity;  // 路由事件
 using Avalonia.Media;  // 画刷 / 颜色 / 几何
+using Avalonia.Input.Platform;  // ClipboardExtensions:IClipboard 没有 SetTextAsync 实例方法,要靠扩展
+using ZincXManagerClient.Chat;  // ChatBridge:收 510 时登记聊天后端地址
 using ZincXManagerClient.Models;  // 客户端自身
 using ZincXManagerClient.Services;  // 导入 UpdateService(启动查更新)
 using ZincXManagerClient.ViewModels;  // 客户端自身
+using ZincXManagerShared.Friend;  // FriendCodec / ChatLog:好友负载编解码与本地聊天记录
 using ZincXManagerShared.Logging;  // 共享库
 using ZincXManagerShared.Network;  // 共享库
 
@@ -26,6 +29,9 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         Opened += (_, _) => ScrollDrag.AttachAll(this);
+
+        // 左下角 ID 那行:右键「复制 ID」,把完整账号 ID 抄进剪贴板(别人拿它搜得到我)
+        UserIdText.ContextMenu = BuildCopyIdMenu();
 
         // 启动后按设置查一次更新(不挡启动,失败只弹提示条)
         Opened += (_, _) => _ = CheckUpdateOnStartupAsync();
@@ -140,6 +146,54 @@ public partial class MainWindow : Window
             Logger.Log(LogLevel.Info, "[ZXMC] testaction=customaddress:准备打开第三方官方服务端风险说明");
             await SettingsPage.OpenCustomAddressFlowAsync();
         };
+    }
+
+    /// <summary>左下角 ID 的右键菜单:选中行就能复制,不用去别处翻。</summary>
+    private ContextMenu BuildCopyIdMenu()
+    {
+        var copy = new MenuItem { Header = "复制 ID" };
+        copy.Click += async (_, _) => await CopyUserIdAsync();
+        return new ContextMenu { Items = { copy } };
+    }
+
+    /// <summary>把当前账号的 ID 抄进剪贴板:复制完整ID(别人拿它搜得到我),不能再是左下角那个短码。</summary>
+    private async Task CopyUserIdAsync()
+    {
+        // 左下角只显示最后的编号,完整值存在 ViewModel 里;它没有时才退到会话缓存
+        var text = (Vm?.UserIdFull ?? "").Trim();
+        if (text.Length == 0)
+        {
+            text = ClientSession.FullId.Trim();
+        }
+
+        if (text.Length == 0)
+        {
+            text = ClientSession.UserId.Trim();
+        }
+
+        if (text.Length == 0)
+        {
+            Vm?.ShowToast("还没登录,没有 ID 可复制", ToastKind.Warning);
+            return;
+        }
+
+        var clipboard = TopLevel.GetTopLevel(this)?.Clipboard;
+        if (clipboard is null)
+        {
+            Vm?.ShowToast("复制失败:这台机器上拿不到剪贴板", ToastKind.Warning);
+            return;
+        }
+
+        try
+        {
+            await clipboard.SetTextAsync(text);
+            Vm?.ShowToast("已复制 ID:" + text, ToastKind.Success);
+        }
+        catch (Exception ex)
+        {
+            Logger.Log(LogLevel.Warning, "[ZXMC] 复制账号 ID 失败: " + ex.Message);
+            Vm?.ShowToast("复制失败:" + ex.Message, ToastKind.Warning);
+        }
     }
 
     /// <summary>挂上当前会话的收包事件(连接视图模型已经在 UI 线程回调,这里直接改界面)。</summary>
@@ -293,6 +347,10 @@ public partial class MainWindow : Window
             connect.PacketReceived -= OnServerPacket;
             connect.OfficialChecked -= OnOfficialChecked;
         }
+
+        // 好友窗是独立顶层窗,主窗关了它不会跟着关:留着它只会照常发 650/656 却再也收不到 651/662
+        _friendsWindow?.Close();
+        _friendsWindow = null;
     }
 
     /// <summary>官方验证第二层的结果:通过就轻描淡写提一句;不是官方服务端就明确警告(官方构建会直接断开)。</summary>
@@ -644,6 +702,11 @@ public partial class MainWindow : Window
                 vm.ApplyServerConfig(text);
                 break;
 
+            // 聊天后端的门牌与令牌(510):拿到它本服好友的私聊才走聊天后端
+            case Protocol.ChatHello:
+                ChatBridge.Configure(text);
+                break;
+
             case Protocol.Push:
                 if (!MessageCard.TryParsePush(text, out var target, out var cardText))
                 {
@@ -663,7 +726,180 @@ public partial class MainWindow : Window
                 _ = vm.AckMessageAsync(cardText);
                 Logger.Log(LogLevel.Info, "[ZXMC] 收到定向推送:" + MessageCard.Summary(cardText));
                 break;
+
+            // 好友列表(651):列表窗开着就交给它画;开着的聊天窗顺带把备注同步一下
+            case Protocol.FriendListReply:
+                _friendsWindow?.FillList(text);
+                SyncRemarks(text);
+                break;
+
+            // 好友备注回执(666):交给刚发过 665 的那个聊天窗
+            case Protocol.FriendRemarkAck:
+                ChatWindow.RemarkAck(text);
+                break;
+
+            // 好友申请列表(657):列表窗只要红点,通知窗要整张列表
+            case Protocol.FriendRequestsReply:
+                _friendsWindow?.FillRequests(text);
+                FriendRequestsWindow.Current?.FillRequests(text);
+                break;
+
+            // 好友事件(662):有人加我 / 同意我 / 删了我 / 上线 / 下线
+            case Protocol.FriendEvent:
+                HandleFriendEvent(text);
+                break;
+
+            // 搜索结果(664)
+            case Protocol.FriendSearchReply:
+                AddFriendWindow.Current?.FillResults(text);
+                break;
+
+            // 头像(608):存本地,列表重画
+            case Protocol.FriendAvatarAck:
+                if (FriendCodec.TryParseAvatarAck(text, out var avatarName, out var avatarBytes))
+                {
+                    _friendsWindow?.SaveAvatar(avatarName, avatarBytes);
+                }
+
+                break;
+
+            // 收到好友私聊(400):聊天窗开着就上屏,没开就只留个日志
+            case Protocol.FriendMsg:
+                HandleIncomingMessage(text);
+                break;
+
+            // 聊天记录(403):窗口自己按序号补上屏
+            case Protocol.FriendMsgHistoryReply:
+                ChatWindow.DeliverHistory(text);
+                break;
+
+            // 送达 / 已读回执(404)
+            case Protocol.FriendMsgReceipt:
+                ChatWindow.DeliverReceipt(text);
+                break;
+
+            // 发消息 / 发申请 / 回申请 / 删好友的回执(401 / 655 / 659 / 661)
+            case Protocol.FriendMsgAck:
+                HandleMessageAck(text);
+                break;
+
+            case Protocol.FriendRequestAck:
+            case Protocol.FriendAnswerAck:
+            case Protocol.FriendRemoveAck:
+                HandleFriendReceipt(packet.Type, text);
+                break;
         }
+    }
+
+    /// <summary>处理 662:按事件种类刷新列表 / 在线状态 / 红点。</summary>
+    private void HandleFriendEvent(string payload)
+    {
+        var parts = payload.Split('|', 2);
+        var kind = parts[0].Trim();
+        var other = parts.Length > 1 ? parts[1].Trim() : "";
+        Logger.Log(LogLevel.Info, $"[ZXMC] 好友事件:{kind} {other}");
+
+        switch (kind)
+        {
+            case Protocol.FriendEventKind.Online:
+                _friendsWindow?.SetOnline(other, online: true);
+                break;
+            case Protocol.FriendEventKind.Offline:
+                _friendsWindow?.SetOnline(other, online: false);
+                break;
+            case Protocol.FriendEventKind.Remove:
+                // 关系解除:列表重拉;开着的聊天窗必须立刻锁死,不然还能继续往里发
+                _friendsWindow?.RefreshAll();
+                ChatWindow.FriendRemoved(other);
+                Logger.Log(LogLevel.Info, $"[好友] 收到解除通知:{other},聊天窗已停");
+                break;
+            default:
+                // 申请 / 同意:列表和红点都可能变,直接重新拉一遍最省心
+                _friendsWindow?.RefreshAll();
+                break;
+        }
+    }
+
+    /// <summary>处理收到的私聊:窗口开着就上屏;没开就什么也不做(记录本来就在服务端,打开时会拉)。</summary>
+    private void HandleIncomingMessage(string payload)
+    {
+        if (!FriendCodec.TryParseIncomingMessage(payload, out var fromId, out var message))
+        {
+            Logger.Log(LogLevel.Warning, "[ZXMC] 收到的私聊格式不对,已忽略");
+            return;
+        }
+
+        if (!ChatWindow.Deliver(fromId, message))
+        {
+            Logger.Log(LogLevel.Info, $"[ZXMC] 收到 {fromId} 的消息,聊天窗没开");
+        }
+
+        _friendsWindow?.RefreshAll();
+    }
+
+    /// <summary>处理 401:成功把序号与消息编号交回窗口;失败(err|编号|原因 或 err|原因)把红叹号标到对应气泡上。</summary>
+    private void HandleMessageAck(string payload)
+    {
+        // 失败回包和成功回包格式完全不同,先分流再解析
+        if (payload.StartsWith("err|", StringComparison.OrdinalIgnoreCase))
+        {
+            // 三段 err|编号|原因 能精确定位气泡;两段的旧格式只能标最近一条待回执的
+            if (FriendCodec.TryParseMessageError(payload, out var failedId, out var reason))
+            {
+                Logger.Log(LogLevel.Warning, $"[ZXMC] {ClientSession.User} 私聊没发出去({failedId}):{reason}");
+                ChatWindow.FailById(failedId, reason);
+            }
+            else
+            {
+                var fallbackReason = payload[4..].Trim();
+                Logger.Log(LogLevel.Warning, $"[ZXMC] {ClientSession.User} 私聊没发出去:{fallbackReason}");
+                ChatWindow.FailLastPending(fallbackReason);
+            }
+
+            return;
+        }
+
+        if (!FriendCodec.TryParseMessageAck(payload, out var messageId, out var seq, out var duplicate))
+        {
+            Logger.Log(LogLevel.Warning, $"[ZXMC] 私聊回执格式不对:{payload}");
+            return;
+        }
+
+        ChatWindow.Ack(messageId, seq, duplicate);
+
+        // 跨服那条已经落到服务端了,列表里的「最后一句」还是旧的:补一次 650(内部有节流)
+        _friendsWindow?.RefreshList();
+    }
+
+    /// <summary>651 回来时把备注同步到开着的聊天窗:在别的窗口改了备注,这边标题也要跟着变。</summary>
+    private static void SyncRemarks(string payload)
+    {
+        var entries = FriendCodec.ParseFriendList(payload, out var badLines);
+        if (badLines > 0)
+        {
+            Logger.Log(LogLevel.Warning, $"[好友] 好友列表里有 {badLines} 行读不出来,备注同步跳过这些行");
+        }
+
+        foreach (var entry in entries)
+        {
+            ChatWindow.ForPeer(entry.Id)?.ApplyRemark(entry.Remark);
+        }
+    }
+
+    /// <summary>处理好友相关的回执:失败就把服务端说的原因给玩家看。</summary>
+    private void HandleFriendReceipt(ushort type, string payload)
+    {
+        var ok = payload.StartsWith("ok", StringComparison.OrdinalIgnoreCase);
+        var reason = ok ? "" : payload.Replace("err|", "", StringComparison.OrdinalIgnoreCase);
+
+        if (ok)
+        {
+            Logger.Log(LogLevel.Info, $"[ZXMC] 好友回执 {type} 成功");
+            return;
+        }
+
+        Logger.Log(LogLevel.Warning, $"[ZXMC] 好友回执 {type} 失败:{reason}");
+        _ = MessageDialog.ConfirmAsync(this, "操作没成功", reason.Length > 0 ? reason : "服务端没有说明原因");
     }
 
 
@@ -804,8 +1040,14 @@ public partial class MainWindow : Window
     /// <summary>打开(或激活)好友条窗体。</summary>
     private void ShowFriendsWindow()
     {
-        if (_friendsWindow is { IsVisible: true })
+        if (_friendsWindow is not null)
         {
+            // 最小化时 IsVisible 仍然是 true,Activate 不会把它还原 —— 得先把状态摆回 Normal
+            if (_friendsWindow.WindowState == WindowState.Minimized)
+            {
+                _friendsWindow.WindowState = WindowState.Normal;
+            }
+
             _friendsWindow.Activate();
             return;
         }

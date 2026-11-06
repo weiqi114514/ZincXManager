@@ -8,6 +8,7 @@ using Avalonia.Threading;  // UI 线程调度
 using CommunityToolkit.Mvvm.ComponentModel;  // MVVM 可观察对象
 using ZincXManagerClient.Logging;  // 客户端自身
 using ZincXManagerClient.Models;  // 客户端自身
+using ZincXManagerClient.Chat;  // ChatBridge:聊天后端的门牌(510)
 using ZincXManagerShared.Logging;  // 共享库
 using ZincXManagerShared.Network;  // 共享库
 using ZincXManagerShared.Verify;  // 共享库
@@ -323,6 +324,11 @@ public partial class ConnectViewModel : ViewModelBase, IDisposable
                             // 连上了才写回配置:地址填错、模式不匹配的连接不该覆盖已经存好的那组
                             SaveTarget(host, port);
                         }
+                        break;
+
+                    // 聊天后端的门牌与令牌(510):这里就接住,主窗还没建好也不会漏
+                    case Protocol.ChatHello:
+                        ChatBridge.Configure(text);
                         break;
 
                     default:

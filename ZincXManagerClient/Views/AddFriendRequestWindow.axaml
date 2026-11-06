@@ -1,0 +1,71 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="ZincXManagerClient.Views.AddFriendRequestWindow"
+        Title="ZincXManagerClient · 添加好友申请"
+        Width="400" Height="360" CanResize="False"
+        Background="{DynamicResource ThemeWindowVeil}"
+        TransparencyLevelHint="AcrylicBlur,Blur,Transparent"
+        FontFamily="Microsoft YaHei UI, Microsoft YaHei, Segoe UI"
+        WindowDecorations="None">
+
+  <Grid RowDefinitions="33,*">
+    <!-- 标题栏:左「添加好友申请」,右关闭 -->
+    <Border Grid.Row="0" Background="{DynamicResource ThemePrimary}" PointerPressed="OnTitleBarPointerPressed">
+      <Grid ColumnDefinitions="Auto,*,Auto">
+        <Rectangle Grid.Column="0" Width="1.5" Height="16" Fill="#80FFFFFF" Margin="16,0,0,0" VerticalAlignment="Center"/>
+        <TextBlock Grid.Column="1" Text="添加好友申请" Foreground="White" FontSize="13" Margin="14,0,0,0" VerticalAlignment="Center"/>
+        <Button Grid.Column="2" Classes="chrome close" Width="44" Click="OnCancelClick">
+          <Path Data="M0,0 L11,11 M11,0 L0,11" Stroke="White" StrokeThickness="1.6"/>
+        </Button>
+      </Grid>
+    </Border>
+
+    <Grid Grid.Row="1" RowDefinitions="Auto,Auto,Auto,*,Auto" Margin="18,14,18,14">
+      <!-- 对方:头像 + 名字 + 完整 ID -->
+      <Grid Grid.Row="0" ColumnDefinitions="Auto,*">
+        <Border Grid.Column="0" x:Name="TargetAvatar" Width="40" Height="40"
+                Background="{DynamicResource ThemeSecondary}" BorderBrush="{DynamicResource ThemePanelBorder}"
+                BorderThickness="1">
+          <TextBlock x:Name="TargetInitial" Text="?" FontSize="16" FontWeight="SemiBold"
+                     Foreground="{DynamicResource ThemePrimaryDark}"
+                     HorizontalAlignment="Center" VerticalAlignment="Center"/>
+        </Border>
+        <StackPanel Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center" Spacing="3">
+          <TextBlock x:Name="TargetName" Text="账户名" FontSize="13"
+                     Foreground="{DynamicResource ThemePrimaryDark}"/>
+          <TextBlock x:Name="TargetId" Text="ZXMS-ZES-1-14" FontSize="10.5"
+                     Foreground="{DynamicResource ThemeMuted}"/>
+        </StackPanel>
+      </Grid>
+
+      <!-- 备注(可选) -->
+      <StackPanel Grid.Row="1" Spacing="6" Margin="0,16,0,0">
+        <TextBlock Text="备注(可选)" FontSize="11.5" Foreground="{DynamicResource ThemeMuted}"/>
+        <TextBox x:Name="RemarkBox" FontSize="12.5" Watermark="给这个人起个你能认出来的名字"/>
+      </StackPanel>
+
+      <!-- 添加信息(必填:对方要知道是谁在申请) -->
+      <StackPanel Grid.Row="2" Spacing="6" Margin="0,12,0,0">
+        <TextBlock Text="添加信息" FontSize="11.5" Foreground="{DynamicResource ThemeMuted}"/>
+        <TextBox x:Name="MessageBox" FontSize="12.5" Height="72" AcceptsReturn="True"
+                 TextWrapping="Wrap" Watermark="说一下你是谁,对方通过时能看到"
+                 TextChanged="OnMessageTextChanged"/>
+        <!-- 空着点发送时的提示:不拦下这一步,服务端那边没有「申请者是谁」可看 -->
+        <TextBlock x:Name="MessageHint" Text="" FontSize="10.5" Foreground="#C62828"
+                   TextWrapping="Wrap" IsVisible="False"/>
+      </StackPanel>
+
+      <!-- 底部按钮 -->
+      <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8" Margin="0,12,0,0">
+        <Button MinWidth="72" MinHeight="32" Padding="0"
+                HorizontalContentAlignment="Center" VerticalContentAlignment="Center" Click="OnCancelClick">
+          <TextBlock Text="取消" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+        </Button>
+        <Button MinWidth="96" MinHeight="32" Padding="0"
+                HorizontalContentAlignment="Center" VerticalContentAlignment="Center" Click="OnSendClick">
+          <TextBlock Text="发送申请" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+        </Button>
+      </StackPanel>
+    </Grid>
+  </Grid>
+</Window>

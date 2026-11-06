@@ -455,7 +455,7 @@ public partial class OobeViewModel : ViewModelBase
     /// <summary>收到账号类回执(601/603)后更新界面状态。</summary>
     private void OnAccountReply(ushort type, string text)
     {
-        // 负载:"ok|名称|ID|等级" 或 "err|原因"
+        // 负载:"ok|名称|ID|等级|完整ID" 或 "err|原因"
         var parts = text.Split('|');   //拆分结果
         var ok = parts.Length > 0 && parts[0] == "ok";
         var message = ok
@@ -467,9 +467,11 @@ public partial class OobeViewModel : ViewModelBase
             ClientSession.User = parts.Length > 1 ? parts[1] : UserName.Trim();
             ClientSession.UserId = parts.Length > 2 ? parts[2] : "0";
             ClientSession.Level = parts.Length > 3 ? parts[3] : Level;
+            ClientSession.FullId = parts.Length > 4 ? parts[4].Trim() : "";
             ClientConfig.Set("user", ClientSession.User);
             ClientConfig.Set("userid", ClientSession.UserId);
             ClientConfig.Set("level", ClientSession.Level);
+            ClientConfig.Set("fullid", ClientSession.FullId);
 
             // 登录成功:顺手把服务端保留期内还没收到的消息补齐(505 → 逐条 504 → 506 收尾)
             _ = _connect.RequestHistoryAsync();

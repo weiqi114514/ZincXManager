@@ -16,6 +16,7 @@ namespace ZincXManagerClient;
 /// ThemePrimary / ThemePrimaryDark / ThemePrimaryHover / ThemeSecondary / ThemeLight / ThemeMuted  → 画刷
 /// ThemePrimaryColor / ThemeSecondaryColor / ThemeMutedColor                                        → 颜色(给渐变色标用)
 /// ThemePage / ThemePanelBorder                                                                     → 带透明度的画刷
+/// ThemePanelSolid                                                                                  → 纯白不透明画刷(实心面板,不随滑杆变)
 /// </code>
 /// </summary>
 internal static class ThemeManager
@@ -235,6 +236,8 @@ internal static class ThemeManager
             resources["ThemeGlass"] = Solid(Alpha(theme.Primary, Scale(0xCC)));       // 侧边栏 基准 80%
             resources["ThemeGlassLight"] = Solid(Alpha("FFFFFF", Scale(0xE6)));      // 卡片   基准 90%
             resources["ThemePanel"] = Solid(Alpha("FFFFFF", Scale(0x5C)));           // 面板   基准 36%
+            // 实心面板(聊天窗侧边抽屉):刻意不乘滑杆比例 —— 这是"实心"档,拖滑杆不该让它重新变透
+            resources["ThemePanelSolid"] = Solid("#FFFFFFFF");                        // 实心面板 基准 100%
             resources["ThemePage"] = Solid(Alpha("FFFFFF", Scale(0x5C)));            // 设置页 基准 36%
             resources["ThemeContentVeil"] = Solid(Alpha("E9EFF3", Scale(0x66)));     // 内容磨砂 基准 40%
             resources["ThemeWindowVeil"] = Solid(Alpha("FFFFFF", Scale(0x99)));      // 入口窗口白幕 基准 60%
@@ -245,6 +248,8 @@ internal static class ThemeManager
         resources["ThemeGlass"] = Solid(Alpha(theme.Primary, railByte));
         resources["ThemeGlassLight"] = Solid(Alpha("FFFFFF", 0xFF));
         resources["ThemePanel"] = Solid(Alpha("FFFFFF", 0xFF));
+        // 实心面板:两个分支都必须注册 —— 切档时若这个键缺失,DynamicResource 解析成 null,抽屉又透回消息列表
+        resources["ThemePanelSolid"] = Solid("#FFFFFFFF");
         resources["ThemePage"] = Solid(Alpha("FFFFFF", 0xFF));
         resources["ThemeContentVeil"] = Solid("#99E9EFF3");
         resources["ThemeWindowVeil"] = Solid("#FFFFFFFF");

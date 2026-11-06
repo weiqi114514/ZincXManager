@@ -312,8 +312,8 @@
             <StackPanel Orientation="Horizontal" Spacing="16">
               <Border Width="84" Height="84" Background="#F2F7FA" BorderBrush="{DynamicResource ThemeMuted}" BorderThickness="1">
                 <Panel>
-                  <Ellipse Width="64" Height="64" Fill="{DynamicResource ThemeSecondary}" IsVisible="{Binding !HasAvatar}"/>
-                  <TextBlock Text="?" FontSize="28" FontWeight="SemiBold" Foreground="{DynamicResource ThemePrimary}"
+                  <Ellipse Width="64" Height="64" Fill="#4E9C9C" IsVisible="{Binding !HasAvatar}"/>
+                  <TextBlock Text="{Binding UserInitial}" FontSize="28" FontWeight="SemiBold" Foreground="White"
                              HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="{Binding !HasAvatar}"/>
                   <Image Source="{Binding Avatar}" Stretch="UniformToFill"/>
                 </Panel>

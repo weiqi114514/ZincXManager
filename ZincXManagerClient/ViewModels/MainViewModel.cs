@@ -10,6 +10,7 @@ using Avalonia.Media.Imaging;  // 位图
 using ZincXManagerShared.Account;  // 共享库
 using CommunityToolkit.Mvvm.ComponentModel;  // MVVM 可观察对象
 using ZincXManagerClient.Models;  // 客户端自身
+using ZincXManagerShared.Friend;  // PlayerId:把完整 ID 拆成最后的编号
 using ZincXManagerShared.Logging;  // 共享库
 using ZincXManagerShared.Network;  // 共享库
 
@@ -72,7 +73,7 @@ public partial class MainViewModel : ViewModelBase
         // 登录过的账号:显示在左下角(带头像)
         if (ClientSession.User.Length > 0)
         {
-            SetUser(ClientSession.User, ClientConfig.GetOrEmpty("userid"));
+            SetUser(ClientSession.User, ClientConfig.GetOrEmpty("userid"), ClientConfig.GetOrEmpty("fullid"));
             RefreshAvatar();
         }
 
@@ -360,11 +361,16 @@ public partial class MainViewModel : ViewModelBase
 
     /// <summary>当前用户名,登录后由外部赋值。</summary>
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(UserInitial))]
     public partial string UserName { get; set; } = "未登录";
 
-    /// <summary>当前用户 ID(含 "ID：" 前缀),登录后由外部赋值。</summary>
+    /// <summary>当前用户 ID(含 "ID：" 前缀,只放最后的编号),登录后由外部赋值。</summary>
     [ObservableProperty]
     public partial string UserId { get; set; } = "ID：-";
+
+    /// <summary>当前用户的完整 ID(形如 <c>ZXMS-testserver-1-14</c>),复制给别人搜索时用这个,不能用左下角的短码。</summary>
+    [ObservableProperty]
+    public partial string UserIdFull { get; set; } = "";
 
     /// <summary>内容区提示(设计稿内容区留空,这里只在有操作时给一点反馈)。</summary>
     [ObservableProperty]
@@ -383,6 +389,9 @@ public partial class MainViewModel : ViewModelBase
     public partial IImage? Avatar { get; set; }
 
     public bool HasAvatar => Avatar is not null;
+
+    /// <summary>没有头像时画的那个首字(账户名第一个字)。</summary>
+    public string UserInitial => UserName.Length > 0 ? UserName[..1].ToUpperInvariant() : "?";
 
     /// <summary>从本地缓存读头像(登录后 / 换过头像后调)。</summary>
     public void RefreshAvatar()
@@ -761,13 +770,45 @@ public partial class MainViewModel : ViewModelBase
 
     // ---------- 可变数据入口 ----------
 
-    /// <summary>设置当前用户(名称与 ID 都是可变的)。</summary>
-    public void SetUser(string userName, string userId)
+    /// <summary>设置当前用户(名称与 ID 都是可变的)。左下角只显示最后的编号(如 14),完整 ID 另存 <see cref="UserIdFull"/> 供复制用。</summary>
+    /// <param name="userName">账号名。</param>
+    /// <param name="userId">数字 ID(老服务端只有这个)。</param>
+    /// <param name="fullId">完整 ID(形如 ZXMS-子服名-1-14),服务端 601/603 的第五段。</param>
+    public void SetUser(string userName, string userId, string fullId = "")
     {
         UserName = string.IsNullOrWhiteSpace(userName) ? "未登录" : userName.Trim();
-        UserId = string.IsNullOrWhiteSpace(userId)
-            ? "ID：-"
-            : "ID：" + userId.Trim().Replace("ID：", "").Replace("ID:", "");
+
+        // 有完整ID 就存完整的;老服务端不给时退回数字 ID —— 复制出去仍然是一串能搜到人的地址
+        var full = fullId.Trim();
+        if (full.Length == 0)
+        {
+            full = userId.Trim().Replace("ID：", "").Replace("ID:", "");
+        }
+
+        UserIdFull = full;
+        var code = ShortCodeOf(full);
+        UserId = code.Length == 0 ? "ID：-" : "ID：" + code;
+    }
+
+    /// <summary>
+    /// 取完整 ID 里最后那段编号:<c>ZXMS-testserver-1-14</c> → <c>14</c>。
+    /// 先按 <see cref="PlayerId"/> 严格解析,解析不了就退到「最后一个 - 之后」,连 - 都没有就原样返回。
+    /// </summary>
+    private static string ShortCodeOf(string fullId)
+    {
+        var raw = fullId.Trim();
+        if (raw.Length == 0)
+        {
+            return "";
+        }
+
+        if (PlayerId.TryParse(raw, out var parsed))
+        {
+            return parsed.Code.ToString();
+        }
+
+        var dash = raw.LastIndexOf('-');
+        return dash >= 0 && dash < raw.Length - 1 ? raw[(dash + 1)..].Trim() : raw;
     }
 
     /// <summary>整体替换消息列表。</summary>

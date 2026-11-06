@@ -375,7 +375,7 @@ public partial class SettingsViewModel : ViewModelBase
 
     /// <summary>账号名(未登录为空)。</summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(AccountLine))]
+    [NotifyPropertyChangedFor(nameof(AccountLine), nameof(UserInitial))]
     public partial string AccountName { get; set; } = "";
 
     /// <summary>账号等级。</summary>
@@ -395,6 +395,10 @@ public partial class SettingsViewModel : ViewModelBase
     public partial bool SavePassword { get; set; }
 
     public bool HasAvatar => Avatar is not null;
+
+    /// <summary>没有头像时画的那个首字(账户名第一个字)。</summary>
+    public string UserInitial => AccountName.Length > 0 ? AccountName[..1].ToUpperInvariant() : "?";
+
     /// <summary>刚切过页面的一小段时间(防误触:切换瞬间弹出来的按钮不该被上一次点击点到)。</summary>
     private DateTime _sectionChangedAt = DateTime.MinValue;
 

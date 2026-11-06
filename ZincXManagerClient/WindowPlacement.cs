@@ -8,7 +8,12 @@ namespace ZincXManagerClient;
 /// <summary>新窗口的位置:出现在"上一个窗口现在所在的位置"上(居中于它), 而不是每次都回到系统默认点或上一个窗口最初被创建的位置。</summary>
 internal static class WindowPlacement
 {
-    /// <summary>把 <paramref name="next"/> 摆到 <paramref name="previous"/> 现在的位置上(居中);没有上一个就不动。</summary>
+    /// <summary>
+    /// 把 <paramref name="next"/> 摆到 <paramref name="previous"/> 现在所在的位置上(居中);没有上一个 / 它最小化了就不动。
+    ///
+    /// <para>Position 是物理像素,ClientSize 与 Width 是 DIP,高 DPI(125% / 150%)下必须先乘 RenderScaling,
+    /// 否则算出来会往左上偏几十像素。算完再夹进「上一个窗口所在那块屏」的工作区,免得开在屏幕边上时一半露在外面。</para>
+    /// </summary>
     public static void PlaceAt(Window next, Window? previous)
     {
         if (previous is null || previous.WindowState == WindowState.Minimized)
@@ -16,14 +21,33 @@ internal static class WindowPlacement
             return;
         }
 
+        var scale = previous.RenderScaling <= 0 ? 1.0 : previous.RenderScaling;
+
+        // SizeToContent 的窗口 Width/Height 是 NaN,乘出来还是 NaN,后面 Clamp 会算成 int.MinValue
+        var nextWidth = double.IsNaN(next.Width) ? next.ClientSize.Width : next.Width;
+        var nextHeight = double.IsNaN(next.Height) ? next.ClientSize.Height : next.Height;
+
         var origin = previous.Position;
-        var size = previous.ClientSize;
+        var ownerWidth = (int)(previous.ClientSize.Width * scale);    // 上一个窗口的宽(物理像素)
+        var ownerHeight = (int)(previous.ClientSize.Height * scale);  // 上一个窗口的高(物理像素)
+        var width = (int)(nextWidth * scale);                         // 新窗口的宽(物理像素)
+        var height = (int)(nextHeight * scale);                       // 新窗口的高(物理像素)
 
-        var offsetX = (int)((size.Width - next.Width) / 2);
-        var offsetY = (int)((size.Height - next.Height) / 2);
+        var x = origin.X + (ownerWidth - width) / 2;
+        var y = origin.Y + (ownerHeight - height) / 2;
 
-        next.Position = new PixelPoint(origin.X + offsetX, origin.Y + offsetY);
+        // 按「上一个窗口所在的那块屏」钳:多显示器下用主屏会把窗口拽到别的屏上
+        var screen = previous.Screens.ScreenFromWindow(previous) ?? previous.Screens.Primary;
+        if (screen is not null)
+        {
+            var work = screen.WorkingArea;
+            x = Math.Clamp(x, work.X, Math.Max(work.X, work.X + work.Width - width));
+            y = Math.Clamp(y, work.Y, Math.Max(work.Y, work.Y + work.Height - height));
+        }
+
+        next.Position = new PixelPoint(x, y);
     }
+
     /// <summary>摆到主屏正中(第一个窗口用),按工作区算,高 DPI 不偏</summary>
     public static void CenterOnPrimaryScreen(Window window)
     {
