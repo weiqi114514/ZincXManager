@@ -7,4 +7,20 @@
   <Project Path="ZincXManagerShared/ZincXManagerShared.csproj" />
   <Project Path="ZincXManagerClient/ZincXManagerClient.csproj" />
   <Project Path="ZincXManagerServer/ZincXManagerServer.csproj" Id="49f098e6-a8c8-498a-b2ce-1044ea662874" />
+  <Folder Name="/ZincXManagerMod/">
+    <File Path="ZincXManagerMod/build.gradle" />
+    <File Path="ZincXManagerMod/settings.gradle" />
+    <File Path="ZincXManagerMod/gradle.properties" />
+    <File Path="ZincXManagerMod/gradlew" />
+    <File Path="ZincXManagerMod/gradlew.bat" />
+    <File Path="ZincXManagerMod/gradle/wrapper/gradle-wrapper.properties" />
+    <File Path="ZincXManagerMod/README-zxmm.md" />
+  </Folder>
+  <Folder Name="/ZincXManagerMod/src/">
+    <File Path="ZincXManagerMod/src/main/java/com/zincxmanager/zxmm/ZxmmMod.java" />
+    <File Path="ZincXManagerMod/src/main/java/com/zincxmanager/zxmm/ZxmmApi.java" />
+    <File Path="ZincXManagerMod/src/main/java/com/zincxmanager/zxmm/ZxmmConfig.java" />
+    <File Path="ZincXManagerMod/src/main/java/com/zincxmanager/zxmm/LoginCheckFeature.java" />
+    <File Path="ZincXManagerMod/src/main/resources/META-INF/neoforge.mods.toml" />
+  </Folder>
 </Solution>

@@ -29,7 +29,9 @@ $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $MyInvocation.MyCommand.Path
 $parent = Split-Path -Parent $root
 $official = Join-Path $parent 'ZincXManager-Official'
-$modDir = Join-Path $parent 'ZincXManagerMod'
+$modDir = Join-Path $root 'ZincXManagerMod'
+$modDirAlt = Join-Path $parent 'ZincXManagerMod'
+if (-not (Test-Path $modDir) -and (Test-Path $modDirAlt)) { $modDir = $modDirAlt }
 $out = Join-Path $root 'publish'
 $total = [System.Diagnostics.Stopwatch]::StartNew()
 

@@ -1,0 +1,35 @@
+plugins {
+    id 'java'
+    id 'net.neoforged.moddev' version '2.0.78'
+}
+
+java {
+    toolchain.languageVersion = JavaLanguageVersion.of(21)
+}
+
+neoForge {
+    version = "21.1.264"
+    runs {
+        server {
+            server()
+        }
+        // 拟真测试用:真实 NeoForge 1.21.1 客户端连本地服(仅测试,不影响产物)
+        client {
+            client()
+            gameDirectory = file('run-client')
+            programArguments.addAll '--username', 'ZXMTestPlayer', '--quickPlayMultiplayer', 'localhost:25565'
+        }
+    }
+}
+
+// 镜像:能镜像的都走镜像,maven.neoforged.net 剩下的两个包(neoform-runtime /
+// minecraft-dependencies)国内镜像都没有,必须有代理才拉得到
+repositories {
+    maven { name = 'SJTU-BMCLAPI'; url = uri('https://mirror.sjtu.edu.cn/bmclapi/') }
+    maven { name = 'QLU-BMCLAPI'; url = uri('https://mirrors.qlu.edu.cn/bmclapi/') }
+    maven { name = 'Minecraft'; url = uri('https://libraries.minecraft.net/') }
+    mavenCentral()
+}
+
+version = 'b0.3.0'   // 用户可见版本：产物名 ZXMM-b0.3.0.jar；机器版由 toml 的 version 单独提供
+group = 'com.zincxmanager'

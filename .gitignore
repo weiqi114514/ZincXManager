@@ -371,3 +371,13 @@ messages.json
 clients.log
 blacklist/
 pubilsh/
+
+# ===== 模组工程(ZincXManagerMod,Gradle + NeoForge)=====
+# 构建产物与运行目录不进仓库,源码与构建脚本进
+ZincXManagerMod/build/
+ZincXManagerMod/out/
+ZincXManagerMod/run/
+ZincXManagerMod/run-client/
+ZincXManagerMod/.gradle/
+ZincXManagerMod/.idea/
+ZincXManagerMod/*.iml

@@ -1,0 +1,29 @@
+modLoader = "javafml"
+loaderVersion = "[4,)"
+license = "MIT"
+issueTrackerURL = "https://github.com/weiqi114514/ZincXManager/issues"
+
+[[mods]]
+modId = "zxmm"
+# 机器版必须纯数字：这里写 b0.1.0 会崩服；用户看到的版本由 displayName 和启动日志给
+version = "0.3.0"
+displayName = "ZincXManager 登录验证 (ZXMM) b0.3.0"
+authors = "ZincXManager"
+description = '''
+把"玩家进服"报给子服务端 ZXMS，由账号主人确认后再放行。
+没绑定账号的玩家会被踢出并拿到 6 位绑定码，去 ZXMC 的小功能组里绑定即可。
+'''
+
+[[dependencies.zxmm]]
+modId = "neoforge"
+type = "required"
+versionRange = "[21.1.0,)"
+ordering = "NONE"
+side = "SERVER"
+
+[[dependencies.zxmm]]
+modId = "minecraft"
+type = "required"
+versionRange = "[1.21.1,1.22)"
+ordering = "NONE"
+side = "SERVER"

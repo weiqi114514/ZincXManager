@@ -271,9 +271,9 @@ smoketest lost connection: 账号验证服务未连接，请稍后再进服务�
 
 | 项 | 值 |
 |---|---|
-| 模组仓库 | `E:\report\ZincXManagerMod`（本地工程，**无 git**） |
+| 模组工程 | `E:\report\ZincXManager\ZincXManagerMod`（已在主仓内，`ZincXManager.slnx` 的 `/ZincXManagerMod/` 文件夹挂着源码与构建脚本；构建走 `gradlew build`，`dotnet build` 不连带） |
 | 技术文档 | 本文件 + `docs/tech.html` 的「ZXMM 模组端」一节（官网可见） |
-| 主仓（C# 三端 + tests + docs） | `E:\report\ZincXManager` |
+| 主仓（C# 三端 + 模组 + tests + docs） | `E:\report\ZincXManager` |
 | 官方端 | `E:\report\ZincXManager-Official` |
 
 动手前先查文档，不要凭记忆写 API。

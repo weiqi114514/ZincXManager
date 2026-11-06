@@ -1,0 +1,8 @@
+pluginManagement {
+    repositories {
+        gradlePluginPortal()
+        maven { name = 'QLU-BMCLAPI'; url = uri('https://mirrors.qlu.edu.cn/bmclapi/') }
+    }
+}
+
+rootProject.name = 'ZXMM'
