@@ -23,7 +23,7 @@ using ZincXManagerShared.Login;  // 绑定表 / 持久登录表 / 登录日志
 
 namespace ZincXManagerServer;
 
-internal static class Program
+internal static partial class Program
 {
     // 配置键名:ozip/ozport = 官方服务端地址端口,czport = 客户端接入端口
     // 缺省值:正式环境一般不用,只在配置缺失且拿不到输入时兜底
@@ -162,6 +162,33 @@ internal static class Program
 
     /// <summary>本端 config.ini(命令层改配置时用;启动时赋值)。</summary>
     private static ZFile? _config;
+
+    /// <summary>每连接发包速率上限(config 的 packetrate,默认 30 个/秒,0 = 不限)。</summary>
+    private const string KeyPacketRate = "packetrate";
+
+    /// <summary>发包速率上限的默认值:正常客户端一秒顶多几个包,30 已经放宽了。</summary>
+    private const int DefaultPacketRate = 30;
+
+    /// <summary>登录/注册失败次数上限(config 的 loginrate,默认 5 分钟内 10 次每个 IP,0 = 不限)。</summary>
+    private const string KeyLoginRate = "loginrate";
+
+    /// <summary>登录失败窗口长度(秒)。</summary>
+    private const int LoginRateWindowSeconds = 300;
+
+    /// <summary>登录失败次数上限的默认值。</summary>
+    private const int DefaultLoginRate = 10;
+
+    /// <summary>按连接限速:一个连接狂刷包只耗自己的额度,不拖慢别人。</summary>
+    private static RateLimiter _packetLimiter = new(DefaultPacketRate);
+
+    /// <summary>按 IP 数登录/注册失败次数:挡住爆破,又不误伤共用同一个外网 IP 的正常玩家。</summary>
+    private static FailureThrottle _loginLimiter = new(DefaultLoginRate, LoginRateWindowSeconds);
+
+    /// <summary>被丢弃的包数(超过限速的那些),给控制台 info 看。</summary>
+    private static long _droppedPackets;
+
+    /// <summary>限速告警的节流:同一连接不要每丢一个包就打一行日志。</summary>
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, long> RateWarnedAt = new();
 
     /// <summary>监听 ZXMC / ZXMM 的服务端;登记表在它的 Registry 上,中转时也靠它推消息。</summary>
     private static TcpServer? _server;
@@ -651,12 +678,39 @@ internal static class Program
         return new string(code);
     }
 
+    /// <summary>限速告警节流:同一个 key 一分钟最多打一行,否则刷屏比攻击本身更烦人。</summary>
+    /// <param name="key">限速维度(连接 id / IP)。</param>
+    /// <param name="message">要打的日志。</param>
+    private static void WarnRateLimited(string key, string message)
+    {
+        var now = Environment.TickCount64;
+        var last = RateWarnedAt.GetOrAdd(key, 0);
+        if (now - last < 60_000)
+        {
+            return;
+        }
+
+        if (RateWarnedAt.TryUpdate(key, now, last))
+        {
+            Logger.Log(LogLevel.Warning, message);
+        }
+    }
+
     private static async Task HandlePacketAsync(ServerboundPacket packet)
     {
         // 别名:让方法体保持原来的写法
         var server = _server!;       // 监听中的服务端
         var config = _config!;       // config.ini 句柄
         var czport = _czport;        // 客户端接入端口(答复里要回给客户端)
+
+        // 发包限速:一条连接狂刷时只丢它自己的包,别让它把 dispatcher 队列塞满
+        if (!_packetLimiter.TryTake(packet.Connection.Id.ToString()))
+        {
+            Interlocked.Increment(ref _droppedPackets);
+            WarnRateLimited(packet.Connection.Id.ToString(),
+                $"[限速] {packet.Connection.RemoteEndPoint} 发包太快,已丢弃 type={packet.Type}");
+            return;
+        }
 
         switch (packet.Type)
         {
@@ -708,6 +762,16 @@ internal static class Program
                 var loginProof = parts.Length > 7 ? parts[7].Trim() : "";
                 var fromIp = packet.Connection.RemoteEndPoint?.Address.ToString() ?? "";
 
+                // 登录只数失败:正常玩家一次就过、额度根本不动,爆破的人每试一次都在扣
+                if (_loginLimiter.IsBlocked(fromIp))
+                {
+                    WarnRateLimited("login:" + fromIp,
+                        $"[限速] {fromIp} 登录失败次数过多({user}),已拒绝");
+                    await packet.SendAsync(Protocol.AccountLoginAck,
+                        "err|失败次数过多,请稍后再试", packet.Id);
+                    break;
+                }
+
                 if (Bans.Check(user, fromIp, machine, out var ban))
                 {
                     Logger.Log(LogLevel.Warning, $"[封禁] 拒绝登录 {user}({ban!.Kind}={ban.Value},剩余 {ban.Remain})");
@@ -742,16 +806,20 @@ internal static class Program
 
                 if (ok)
                 {
+                    _loginLimiter.RecordSuccess(fromIp);
                     _server.Registry.SetAccount(packet.Connection.Id, account!.Name, account.Level);
                     Accounts.Touch(account.Name, fromIp, machine);
                     Logger.Log(LogLevel.Info, $"[账号] 登录成功:{account.Name}({account.Level}) ← {packet.Connection.RemoteEndPoint}");
                     ClientLog.Write(account.Level, $"登录 账号={account.Name} 地址={packet.Connection.RemoteEndPoint}");
 
                     await packet.SendAsync(Protocol.AccountLoginAck,
-                        $"ok|{account.Name}|{account.Id}|{account.Level}", packet.Id);
+                        $"ok|{account.Name}|{account.Id}|{account.Level}|{LocalPlayerId(account, config).Full}", packet.Id);
+                    await OnPlayerSignedInAsync(account, config);
+                    await SendChatHelloAsync(packet.Connection, account, config);
                 }
                 else
                 {
+                    _loginLimiter.RecordFailure(fromIp);
                     // 本该由官方端校验、但官方端掉线时,别只报「账号不存在」——玩家会以为是账号没了
                     var reason = side == "zxmos" && _os is not { IsConnected: true }
                         ? error + "(官方服务端未连接,暂时无法校验官方账号,请稍后再试)"
@@ -774,6 +842,17 @@ internal static class Program
                 var regMachine = parts.Length > 2 ? parts[2].Trim() : "";
 
                 var regIp = packet.Connection.RemoteEndPoint?.Address.ToString() ?? "";
+
+                // 注册和登录共用同一份失败计数:否则可以拿注册接口反过来试口令 / 刷账号
+                if (_loginLimiter.IsBlocked(regIp))
+                {
+                    WarnRateLimited("login:" + regIp,
+                        $"[限速] {regIp} 失败次数过多(注册 {user}),已拒绝");
+                    await packet.SendAsync(Protocol.AccountRegisterAck,
+                        "err|失败次数过多,请稍后再试", packet.Id);
+                    break;
+                }
+
                 if (Bans.Check(user, regIp, regMachine, out var regBan))
                 {
                     Logger.Log(LogLevel.Warning, $"[封禁] 拒绝注册 {user}({regBan!.Kind}={regBan.Value})");
@@ -792,6 +871,7 @@ internal static class Program
 
                 if (Accounts.TryRegister(user, passwordHash, out var account, out var error))
                 {
+                    _loginLimiter.RecordSuccess(regIp);
                     // 注册成功也要登记账号 + 记下 IP/机器码:否则这条连接在拉黑时踢不掉,也少一条连坐
                     _server.Registry.SetAccount(packet.Connection.Id, account!.Name, account.Level);
                     Accounts.Touch(account.Name, regIp, regMachine);
@@ -799,10 +879,11 @@ internal static class Program
                     ClientLog.Write(account.Level, $"注册 账号={account.Name} 地址={packet.Connection.RemoteEndPoint}");
 
                     await packet.SendAsync(Protocol.AccountRegisterAck,
-                        $"ok|{account.Name}|{account.Id}|{account.Level}", packet.Id);
+                        $"ok|{account.Name}|{account.Id}|{account.Level}|{LocalPlayerId(account, config).Full}", packet.Id);
                 }
                 else
                 {
+                    _loginLimiter.RecordFailure(regIp);
                     Logger.Log(LogLevel.Warning, $"[账号] 注册失败:{user} —— {error}");
                     await packet.SendAsync(Protocol.AccountRegisterAck, "err|" + error, packet.Id);
                 }
@@ -1194,6 +1275,51 @@ internal static class Program
                     $"[ZXMS] 客户端试图发服务端消息 type={packet.Type},已忽略 ← {packet.Connection.RemoteEndPoint}");
                 break;
 
+            // ---- 好友:每个动作一行,真正的判断在 Friends 目录里的处理器 ----
+            case Protocol.FriendMsg:
+                await HandleFriendMessageAsync(packet, config);
+                break;
+
+            case Protocol.FriendMsgHistory:
+                await HandleFriendHistoryQueryAsync(packet, config);
+                break;
+
+            case Protocol.FriendReadMark:
+                await HandleFriendReadMarkAsync(packet, config);
+                break;
+
+            case Protocol.FriendAvatarReq:
+                await HandleFriendAvatarAsync(packet, config);
+                break;
+
+            case Protocol.FriendListQuery:
+                await HandleFriendListQueryAsync(packet, config);
+                break;
+
+            case Protocol.FriendRequest:
+                await HandleFriendRequestAsync(packet, config);
+                break;
+
+            case Protocol.FriendRequestsQuery:
+                await HandleFriendRequestsQueryAsync(packet, config);
+                break;
+
+            case Protocol.FriendAnswer:
+                await HandleFriendAnswerAsync(packet, config);
+                break;
+
+            case Protocol.FriendRemove:
+                await HandleFriendRemoveAsync(packet, config);
+                break;
+
+            case Protocol.FriendSearch:
+                await HandleFriendSearchAsync(packet, config);
+                break;
+
+            case Protocol.FriendRemark:
+                await HandleFriendRemarkAsync(packet, config);
+                break;
+
             // 其它类型先记日志(ZXMM 模组端的类型还没定,定了在这里加 case)
             default:
                 Logger.Log(LogLevel.Warning, $"[网络] 未处理的包 type={packet.Type} len={packet.Data.Length}");
@@ -1322,6 +1448,36 @@ internal static class Program
         _zxmmApiAddress = zxmmApi;
         Logger.Log(LogLevel.Info, $"[ZXMM] 专用通道地址:{_zxmmApiAddress}");
 
+        // 限速:缺配置就写默认值,让服主知道有这两个开关
+        var packetRate = int.TryParse(config.MapGet(KeyPacketRate).Trim(), out var pr) && pr is >= 0 and <= 10000
+            ? pr
+            : DefaultPacketRate;
+        if (config.MapGet(KeyPacketRate).Trim().Length == 0)
+        {
+            config.WriteFileMap(KeyPacketRate, packetRate.ToString());
+            Logger.Log(LogLevel.Info, $"[CONFIG]{KeyPacketRate} 未配置,已写入默认值 {packetRate}(每连接每秒最多几个包,0=不限)");
+        }
+
+        _packetLimiter = new RateLimiter(packetRate);
+        Logger.Log(LogLevel.Info, packetRate > 0
+            ? $"[限速] 每连接 {packetRate} 包/秒,超出的包直接丢弃"
+            : "[限速] 每连接发包不限(服主关掉了)");
+
+        var loginRate = int.TryParse(config.MapGet(KeyLoginRate).Trim(), out var lr) && lr is >= 0 and <= 10000
+            ? lr
+            : DefaultLoginRate;
+        if (config.MapGet(KeyLoginRate).Trim().Length == 0)
+        {
+            config.WriteFileMap(KeyLoginRate, loginRate.ToString());
+            Logger.Log(LogLevel.Info,
+                $"[CONFIG]{KeyLoginRate} 未配置,已写入默认值 {loginRate}(每 IP 每 {LoginRateWindowSeconds / 60} 分钟最多失败几次登录/注册,0=不限)");
+        }
+
+        _loginLimiter = new FailureThrottle(loginRate, LoginRateWindowSeconds);
+        Logger.Log(LogLevel.Info, loginRate > 0
+            ? $"[限速] 登录/注册 每 IP 每 {LoginRateWindowSeconds / 60} 分钟最多失败 {loginRate} 次"
+            : "[限速] 登录失败次数不限(服主关掉了)");
+
         // 令牌:和模组 config 里的 api.token 一致才校验。两边都空 = 不校验(默认)
         _zxmmToken = config.MapGet(KeyZxmmToken).Trim();
         Logger.Log(LogLevel.Info, _zxmmToken.Length > 0
@@ -1378,6 +1534,11 @@ internal static class Program
         // 读 config.ini:名称 / 服务端码 / 是否连官方 / 端口 / 消息天数,缺项会问一次并写回
         var (config, serverName, connectOS) = LoadConfig();
 
+        // 聊天后端:BareChat 宿主跑独立进程(NativeAOT 编不进 ASP.NET Core),起不来只影响好友聊天
+        StartChatHost(config);
+
+        // 聊天后端:BareChat 宿主跑独立进程(NativeAOT 编不进 ASP.NET Core),起不来只影响好友聊天
+
         // ================= 启动监听:ZXMC / ZXMM 都连这个端口 =================
         _server = new TcpServer(IPAddress.Any, ushort.Parse(_czport));
 
@@ -1421,7 +1582,15 @@ internal static class Program
             var role = info?.Role ?? "未识别";
             var mode = info?.Mode ?? "-";
 
+            // 限速桶跟着连接一起丢掉,不然爆破时字典只增不减
+            _packetLimiter.Forget(conn.Id.ToString());
+            RateWarnedAt.TryRemove(conn.Id.ToString(), out _);
+
             Logger.Log(LogLevel.Info, $"[{role}] 断开 {conn.RemoteEndPoint}");
+            if (info?.User is { Length: > 0 } gone)
+            {
+                _ = AnnouncePresenceAsync(gone, Protocol.FriendEventKind.Offline);
+            }
             ClientLog.Offline(role, mode, info?.Address ?? conn.RemoteEndPoint?.ToString() ?? "?",
                 info?.Online ?? TimeSpan.Zero, info?.Packets ?? 0);
         };
@@ -1454,12 +1623,18 @@ internal static class Program
                 {
                     await Task.Delay(5000);
 
+                    // 顺带扫一遍等不回来的人:等别服头像超时、等别服回执超时,别让客户端一直挂着
+                    await SweepAvatarWaitersAsync();
+
                     if (_os is { IsConnected: true })
                     {
                         if (!hadLink)
                         {
                             hadLink = true;
                             Logger.Log(LogLevel.Info, "[ZXMOS] 官方服务端连接已恢复");
+
+                            // 断线期间别服收不到我们的上下线,重连后把本服在线的人整份补广播一遍
+                            _ = ReannounceAfterReconnectAsync(config);
                         }
 
                         continue;
@@ -1469,6 +1644,9 @@ internal static class Program
                     {
                         hadLink = false;
                         Logger.Log(LogLevel.Warning, "[ZXMOS] 与官方服务端的连接已断开,正在自动重连…");
+
+                        // 断线期间的上下线广播都丢了,别服的在线状态不可信 → 清表,别给过期数据
+                        ClearRemoteOnline();
                     }
 
                     if (Interlocked.CompareExchange(ref _osAutoReconnecting, 1, 0) != 0)
@@ -1775,6 +1953,14 @@ internal static class Program
         _ = ResolveAccountAsync(name);
 
         Logger.Log(LogLevel.Info, $"[账号] 本服在线名单已登记中转账号:{name}({level})");
+
+        // 中转登录不走 OnPlayerSignedInAsync,聊天后端的门牌(510)和好友上线广播都得在这条路上补发
+        _ = AnnouncePresenceByNameAsync(name);
+        var chatConnection = _server?.Connections.FirstOrDefault(one => one.Id == connectionId);
+        if (chatConnection is not null && _config is not null)
+        {
+            _ = SendChatHelloByNameAsync(chatConnection, name, _config);
+        }
     }
 
     /// <summary>发账号包并等回执(超时 5 秒)。每个请求一个包 Id,回执不会被别的请求认领走。</summary>
@@ -2071,7 +2257,9 @@ internal static class Program
             return 0;
         }
 
-        var sent = 0;
+        // 收包是单 worker 串行的:一条客户端连接卡在写包上,逐个 await 会把后面所有人的推送堵住。
+        // 先收齐该发给谁,再并发发出去
+        var targets = new List<TcpConnection>();   //该收到这条推送的连接
         foreach (var conn in server.Connections)
         {
             var info = server.Registry.Find(conn.Id);
@@ -2085,16 +2273,22 @@ internal static class Program
                 continue;
             }
 
+            targets.Add(conn);
+        }
+
+        var sent = 0;
+        await Task.WhenAll(targets.Select(async conn =>
+        {
             try
             {
                 await conn.SendAsync(type, payload, 0, "ZXMC");
-                sent++;
+                Interlocked.Increment(ref sent);
             }
             catch (Exception ex)
             {
-                Logger.Log(LogLevel.Warning, $"[消息] 发给 {info.Address} 失败: {ex.Message}");
+                Logger.Log(LogLevel.Warning, $"[消息] 发给 {conn.RemoteEndPoint} 失败: {ex.Message}");
             }
-        }
+        }));
 
         return sent;
     }
@@ -2157,6 +2351,8 @@ internal static class Program
             "servercode" => config.MapGet(KeyServerCode).Trim(),
             "oshash" => config.MapGet(KeyOsHash).Trim(),
             "configver" => config.MapGet(KeyConfigVer).Trim(),
+            "packetrate" => config.MapGet(KeyPacketRate).Trim(),
+            "loginrate" => config.MapGet(KeyLoginRate).Trim(),
             _ => "",
         };
     }
@@ -2301,6 +2497,33 @@ internal static class Program
                 config.WriteFileMap(KeyOfficialCheck, value);
                 return "";
 
+            case "packetrate":
+                if (!int.TryParse(value, out var packetRate) || packetRate is < 0 or > 10000)
+                {
+                    return "范围 0-10000(每连接每秒最多几个包,0 = 不限)";
+                }
+
+                _packetLimiter = new RateLimiter(packetRate);
+                RateWarnedAt.Clear();
+                config.WriteFileMap(KeyPacketRate, packetRate.ToString());
+                Logger.Log(LogLevel.Info, packetRate > 0
+                    ? $"[限速] 每连接发包上限已改成 {packetRate} 包/秒(新连接立刻生效)"
+                    : "[限速] 每连接发包已改为不限");
+                return "";
+
+            case "loginrate":
+                if (!int.TryParse(value, out var loginRate) || loginRate is < 0 or > 10000)
+                {
+                    return $"范围 0-10000(每 IP 每 {LoginRateWindowSeconds / 60} 分钟最多失败几次登录/注册,0 = 不限)";
+                }
+
+                _loginLimiter = new FailureThrottle(loginRate, LoginRateWindowSeconds);
+                config.WriteFileMap(KeyLoginRate, loginRate.ToString());
+                Logger.Log(LogLevel.Info, loginRate > 0
+                    ? $"[限速] 登录失败上限已改成每 IP 每 {LoginRateWindowSeconds / 60} 分钟 {loginRate} 次"
+                    : "[限速] 登录失败次数已改为不限");
+                return "";
+
             default:
                 return $"没有这个配置项:{key}(不能新增)";
         }
@@ -2402,6 +2625,44 @@ internal static class Program
                     break;
                 }
 
+                // ---- 好友:官方服务端推来的东西,这里只做分发 ----
+                case Protocol.UserListDown:
+                {
+                    var listPayload = Encoding.UTF8.GetString(packet.Data);   //包内容
+                    var (total, withServer) = IndexUserList(listPayload);
+                    SaveUserList(listPayload, config);
+                    Logger.Log(LogLevel.Info, $"[用户列表] 收到 ZXMOS 下发的用户列表:{total} 个账号,带归属服 {withServer} 条");
+                    break;
+                }
+
+                case Protocol.FriendRelay:
+                    await HandleFriendRelayAsync(packet, config);
+                    break;
+
+                // 中转没送到的明确回执(401/655/659/661):官方端找不到对方子服时才会发,按包 Id 找回发起人
+                case Protocol.FriendMsgAck:
+                case Protocol.FriendRequestAck:
+                case Protocol.FriendAnswerAck:
+                case Protocol.FriendRemoveAck:
+                    await HandleRelayFailureAsync(packet);
+                    break;
+
+                case Protocol.FriendPresence:
+                    await HandleFriendPresenceAsync(packet, config);
+                    break;
+
+                case Protocol.ServerNameMap:
+                    HandleServerNameMapAsync(packet, config);
+                    break;
+
+                case Protocol.AvatarRelay:
+                    await HandleAvatarRelayAsync(packet);
+                    break;
+
+                case Protocol.AvatarRelayAck:
+                    await HandleAvatarRelayAckAsync(packet, config);
+                    break;
+
                 // 官方服务端自报名称(201):记下来给 net status 显示,也写进 config
                 case Protocol.ServerName:
                 {
@@ -2459,12 +2720,25 @@ internal static class Program
                         var target = _server?.Connections.FirstOrDefault(c => c.Id == pending.Connection);
                         if (target is not null)
                         {
-                            await target.WriteAsync(new Packet(pending.PacketId, packet.Type, packet.Data));
-                            Logger.Log(LogLevel.Info, $"[ZXMOS] 账号回执已转回客户端:{text}");
-
-                            // 顺带把账号登记到这条客户端连接上:不然本服的在线名单里查不到玩家
-                            // (net clients 显示 "-",按账号定向推送也匹配不到人)
+                            // 先登记 + 建本地镜像:第五段「完整ID」要用本地编号,不能凭空算
                             RegisterRelayedAccount(pending.Connection, text);
+
+                            var reply = text;   //转给客户端的负载
+                            var forwarded = text.Split('|');   //拆分结果
+                            var mirrored = forwarded.Length > 1 ? Accounts.Find(forwarded[1].Trim()) : null;
+                            if (mirrored is null && forwarded.Length > 1)
+                            {
+                                mirrored = await ResolveAccountAsync(forwarded[1].Trim());
+                            }
+
+                            var fullId = mirrored is null ? "" : LocalPlayerId(mirrored, config).Full;
+                            if (text.StartsWith("ok|") && fullId.Length > 0)
+                            {
+                                reply = text + "|" + fullId;
+                            }
+
+                            await target.WriteAsync(new Packet(pending.PacketId, packet.Type, Encoding.UTF8.GetBytes(reply)));
+                            Logger.Log(LogLevel.Info, $"[ZXMOS] 账号回执已转回客户端:{reply}");
                         }
                         else
                         {
