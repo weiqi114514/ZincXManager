@@ -182,6 +182,26 @@ $winProjects | ForEach-Object -Parallel {
     Write-Host ("    {0,-6} {1,5:N1}s  {2} MB" -f $_.Name, $sw.Elapsed.TotalSeconds, $size) -ForegroundColor DarkGray
 } -ThrottleLimit $Jobs
 
+# 聊天后端依赖 ASP.NET Core + SQLite,跟 NativeAOT 不兼容,只能按自包含单文件发布,
+# 放进 ZXMS 同目录:ZXMS 启动时会找同目录的 ZincXManagerChat.exe 自己拉起来。
+$chatProject = Join-Path $root 'ZincXManagerChat\ZincXManagerChat.csproj'
+if ((Test-Path $chatProject) -and (Test-Path (Join-Path $out 'ZXMS-win-x64'))) {
+    Step "1.5/6 聊天后端(非 AOT 自包含单文件)"
+    $chatTarget = Join-Path $out 'ZXMS-win-x64'
+    $chatLog = Join-Path $out '_log_chat.txt'
+    dotnet publish $chatProject -c Release -f net10.0 -r win-x64 --self-contained true `
+        -p:PublishAot=false -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true `
+        --artifacts-path (Join-Path $out '_arc_ZXMChat') -o $chatTarget --nologo *> $chatLog
+    if ($LASTEXITCODE -ne 0) {
+        Get-Content $chatLog -Tail 20 | Out-Host
+        throw '聊天后端 publish 失败'
+    }
+    Remove-Item $chatLog -Force -ErrorAction SilentlyContinue
+    Remove-Item (Join-Path $out '_arc_ZXMChat') -Recurse -Force -ErrorAction SilentlyContinue
+    $chatSize = [math]::Round((Get-Item (Join-Path $chatTarget 'ZincXManagerChat.exe')).Length / 1MB, 1)
+    Write-Host "    ZincXManagerChat.exe  $chatSize MB" -ForegroundColor DarkGray
+}
+
 if ($linuxJobs.Count -gt 0) {
     Step "2/6 等 Linux AOT 收尾"
     $failed = $false
