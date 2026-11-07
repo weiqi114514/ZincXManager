@@ -39,6 +39,9 @@ internal static class ConfigMode
         new() { Key = "squarename",    Cn = "广场名称",     Description = "客户端「服务器广场」卡片上显示的名字",     Type = "文本 1-24 字符" },
         new() { Key = "msgdays",       Cn = "消息保留天数", Description = "下发给客户端:本地留多久",                Type = "1-365" },
         new() { Key = "srvmsgdays",    Cn = "存档保留天数", Description = "本服存档留多久(补发用)",                 Type = "1-365" },
+        new() { Key = "backgetcount",  Cn = "返回查询条数", Description = "msg backget 最多查几条玩家返回记录",     Type = "1-1000" },
+        new() { Key = "packetrate",    Cn = "包速率上限",   Description = "每连接每秒最多几个包,超出的直接丢(0=不限)", Type = "0-10000" },
+        new() { Key = "loginrate",     Cn = "登录失败上限", Description = "同一 IP 5 分钟内最多失败几次登录/注册(0=不限)", Type = "0-10000" },
         new() { Key = "officialcheck", Cn = "对端校验",     Description = "1 = 对端不是官方就断开,0 = 只警告",       Type = "1/0" },
         new() { Key = "ozname",        Cn = "官方端名称",   Description = "ZXMOS 下发的名称(只读)",                 Type = "只读",       ReadOnly = true },
         new() { Key = "servercode",    Cn = "服务端码",     Description = "本实例的身份证(只读)",                   Type = "只读",       ReadOnly = true },
@@ -50,7 +53,7 @@ internal static class ConfigMode
     private static readonly string[] Commands =
     {
         "help", "echo", "exit", "info", "infopc", "msgdays", "srvmsgdays", "name",
-        "notice", "push", "osuser", "srv", "user", "ban", "file", "net", "config",
+        "msg", "osuser", "srv", "user", "ban", "file", "net", "config",
     };
 
     // 是否处于配置模式。

@@ -206,55 +206,40 @@ public static class ZxmsCommands
                 $"[消息] 本服消息存档保留天数已设为 {Math.Clamp(days, 1, 365)} 天,现存 {left} 条");
         }, "设置本服自己存档的保留天数(影响补发的历史消息):srvmsgdays <天数>", "srvmsgdays 14");
 
-        cmd.Register("msg", args =>
+        // msg 是树指令:每个子命令单独注册,help 里分行列出,不再挤在一行
+        cmd.Register("msg notice", args => CmdNotice(localNotice, args),
+            "给全员发一张公告卡片(例:msg notice choice 是否同意 新协议要点见附件 是 否)",
+            NoticeUsage);
+
+        cmd.Register("msg push", args => CmdPush(localPush, args),
+            "把一张卡片推给指定玩家(例:msg push relay03 info 维护通知 今晚停服 知道了)",
+            PushUsage);
+
+        cmd.Register("msg backget", args =>
         {
-            if (args.Length == 0)
+            // 尾部带 -os 就查官方端的记录(必须是本服账号)
+            var query = args;   //查询关键字
+            var wantOs = query.Length > 0 &&
+                         string.Equals(query[^1], "-os", StringComparison.OrdinalIgnoreCase);
+            if (wantOs)
             {
-                Logger.Log(LogLevel.Warning, "[消息] 用法:" + NoticeUsage);
-                Logger.Log(LogLevel.Warning, "[消息] 用法:" + PushUsage);
+                query = query[..^1];
+                var text = osMegBack(string.Join(' ', query));
+                foreach (var line in text.Split('\n'))
+                {
+                    Logger.Log(LogLevel.Info, "[消息] " + line);
+                }
+
                 return;
             }
 
-            switch (args[0].ToLowerInvariant())
-            {
-                case "notice":
-                    CmdNotice(localNotice, args[1..]);
-                    break;
-                case "push":
-                    CmdPush(localPush, args[1..]);
-                    break;
-                case "backget":
-                {
-                    // 尾部带 -os 就查官方端的记录(必须是本服账号)
-                    var query = args[1..];   //查询关键字
-                    var wantOs = query.Length > 0 &&
-                                 string.Equals(query[^1], "-os", StringComparison.OrdinalIgnoreCase);
-                    if (wantOs)
-                    {
-                        query = query[..^1];
-                        var text = osMegBack(string.Join(' ', query));
-                        foreach (var line in text.Split('\n'))
-                        {
-                            Logger.Log(LogLevel.Info, "[消息] " + line);
-                        }
-
-                        break;
-                    }
-
-                    // 查本服玩家返回记录(Data/MegBack.txt)
-                    MegBackCommand.Run(query,
-                        id => TitleOf(id),
-                        name => accounts().Find(name)?.Id ?? 0,
-                        id => accounts().NameOf(id),
-                        backgetCountProvider());
-                    break;
-                }
-                default:
-                    Logger.Log(LogLevel.Warning, $"[消息] 不认识的子命令 {args[0]};可用:notice / push");
-                    break;
-            }
-        }, "消息:msg notice <种类> <标题> <正文> [主动作] [次动作] [选项] / msg push <目标> <种类> <标题> <正文> [主动作] [次动作] [选项]",
-            "msg notice choice 是否同意 新协议要点见附件 是 否    /    " + MegBackCommand.Usage);
+            // 查本服玩家返回记录(Data/MegBack.txt)
+            MegBackCommand.Run(query,
+                id => TitleOf(id),
+                name => accounts().Find(name)?.Id ?? 0,
+                id => accounts().NameOf(id),
+                backgetCountProvider());
+        }, "查玩家点卡片的返回记录(尾加 -os 查官方端)", MegBackCommand.Usage);
 
 
 

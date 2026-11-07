@@ -2356,6 +2356,7 @@ internal static partial class Program
             "osuser" => config.MapGet(KeyOsUser).Trim(),
             "msgdays" => _msgDays.ToString(),
             "srvmsgdays" => _srvMsgDays.ToString(),
+            "backgetcount" => _backgetCount.ToString(),
             "officialcheck" => _officialCheck ? "1" : "0",
             "ozname" => config.MapGet(KeyOsName).Trim(),
             "servercode" => config.MapGet(KeyServerCode).Trim(),
@@ -2505,6 +2506,17 @@ internal static partial class Program
 
                 _officialCheck = value == "1";
                 config.WriteFileMap(KeyOfficialCheck, value);
+                return "";
+
+            case "backgetcount":
+                if (!int.TryParse(value, out var backgetCount) || backgetCount is < 1 or > 1000)
+                {
+                    return "范围 1-1000(玩家返回记录最多查几条)";
+                }
+
+                _backgetCount = backgetCount;
+                config.WriteFileMap(KeyBackget, backgetCount.ToString());
+                Logger.Log(LogLevel.Info, $"[配置] 玩家返回查询条数已设为 {backgetCount}");
                 return "";
 
             case "packetrate":
