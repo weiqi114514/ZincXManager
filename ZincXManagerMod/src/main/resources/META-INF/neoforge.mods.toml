@@ -6,8 +6,8 @@ issueTrackerURL = "https://github.com/weiqi114514/ZincXManager/issues"
 [[mods]]
 modId = "zxmm"
 # 机器版必须纯数字：这里写 b0.1.0 会崩服；用户看到的版本由 displayName 和启动日志给
-version = "0.3.0"
-displayName = "ZincXManager 登录验证 (ZXMM) b0.3.0"
+version = "0.3.1"
+displayName = "ZincXManager 登录验证 (ZXMM) b0.3.1"
 authors = "ZincXManager"
 description = '''
 把"玩家进服"报给子服务端 ZXMS，由账号主人确认后再放行。

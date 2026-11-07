@@ -9,9 +9,9 @@
     <!-- 三个端(ZXMC/ZXMS/ZXMOS)共用,必须兼容 AOT 发布 -->
     <IsAotCompatible>true</IsAotCompatible>
     <!-- 版本跟着主版本走:显示用 b0.2.0a,文件版本必须纯数字 -->
-    <Version>0.3.0</Version>
-    <FileVersion>0.3.0.0</FileVersion>
-    <InformationalVersion>b0.3.0</InformationalVersion>
+    <Version>0.3.1</Version>
+    <FileVersion>0.3.1.0</FileVersion>
+    <InformationalVersion>b0.3.1</InformationalVersion>
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
   </PropertyGroup>
 
