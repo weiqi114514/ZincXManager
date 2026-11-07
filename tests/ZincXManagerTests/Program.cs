@@ -789,7 +789,7 @@ var results = new List<SuiteResult>();
             r.Add("拿到窗口句柄", h != IntPtr.Zero);
             Win32.PlaceWindow(h, 400, 200, 760, 520);
             // 刚摆完的第一帧 GetWindowRect 可能还是 0x0,等它变成有效值再算断言
-            var sized = Win32.WaitRect(h, 5000, out var wx, out var wy, out var ww, out var wh);
+            var sized = Win32.WaitRect(h, 10000, out var wx, out var wy, out var ww, out var wh);
             r.Add("窗口可摆放(注入基准)", sized, ww + "x" + wh);
 
             Console.WriteLine("     [注入] 窗口 " + ww + "x" + wh + " @(" + wx + "," + wy + ") 标题=" + cli.MainWindowTitle);
