@@ -788,13 +788,20 @@ var results = new List<SuiteResult>();
             var h = cli.MainWindowHandle;
             r.Add("拿到窗口句柄", h != IntPtr.Zero);
             Win32.PlaceWindow(h, 400, 200, 760, 520);
-            r.Add("窗口可摆放(注入基准)", Win32.TryRect(h, out _, out _, out var w, out var hgt), w + "x" + hgt);
+            // 刚摆完的第一帧 GetWindowRect 可能还是 0x0,等它变成有效值再算断言
+            var sized = Win32.WaitRect(h, 5000, out var wx, out var wy, out var ww, out var wh);
+            r.Add("窗口可摆放(注入基准)", sized, ww + "x" + wh);
 
-            Win32.TryRect(h, out var wx, out var wy, out var ww, out var wh);
             Console.WriteLine("     [注入] 窗口 " + ww + "x" + wh + " @(" + wx + "," + wy + ") 标题=" + cli.MainWindowTitle);
 
             // 注入能力:点击落点必须在窗口矩形内,键盘注入后窗口不能崩
-            var clickOk = Win32.ClickIn(h, 0.49, 0.37);
+            var clickOk = false;
+            for (var i = 0; i < 10 && !clickOk; i++)
+            {
+                clickOk = Win32.ClickIn(h, 0.49, 0.37);
+                if (!clickOk) { await Task.Delay(200); }
+            }
+
             await Task.Delay(300);
             Win32.TypeTo(h, "guiuser");
             await Task.Delay(200);

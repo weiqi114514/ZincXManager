@@ -55,6 +55,26 @@ public static class Win32
         Thread.Sleep(300);
     }
 
+    /// <summary>
+    /// 等窗口矩形变成有效值。刚摆完窗口/刚显示的第一帧,GetWindowRect 可能还给 0x0。
+    /// </summary>
+    /// <param name="h">窗口句柄。</param>
+    /// <param name="timeoutMs">最多等多久。</param>
+    /// <param name="x">左边界。</param>
+    /// <param name="y">上边界。</param>
+    /// <param name="w">宽。</param>
+    /// <param name="hgt">高。</param>
+    public static bool WaitRect(IntPtr h, int timeoutMs, out int x, out int y, out int w, out int hgt)
+    {
+        var deadline = Environment.TickCount64 + timeoutMs;
+        while (true)
+        {
+            if (TryRect(h, out x, out y, out w, out hgt)) { return true; }
+            if (Environment.TickCount64 >= deadline) { return false; }
+            Thread.Sleep(100);
+        }
+    }
+
     [DllImport("user32.dll")] private static extern bool PostMessage(IntPtr h, uint msg, IntPtr wParam, IntPtr lParam);
     [DllImport("user32.dll", CharSet = CharSet.Unicode)] private static extern IntPtr SendMessage(IntPtr h, uint msg, IntPtr wParam, IntPtr lParam);
     [DllImport("user32.dll")] private static extern bool GetClientRect(IntPtr h, out RECT r);
