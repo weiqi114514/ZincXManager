@@ -834,6 +834,9 @@ public partial class MainWindow : Window
             Logger.Log(LogLevel.Info, $"[ZXMC] 收到 {fromId} 的消息,聊天窗没开");
         }
 
+        // 跨服消息没有末句轮询可看,直接告诉列表:这一行有新消息,顶到最前
+        _friendsWindow?.Touch(fromId);
+
         // 私聊只会改变好友行的末句与未读数,不碰申请列表:这里只重拉 650,
         // 别再顺手发 656 —— 对方连发几条就是几个 656,而服务端每收一个都要读一遍申请档
         _friendsWindow?.RefreshList();

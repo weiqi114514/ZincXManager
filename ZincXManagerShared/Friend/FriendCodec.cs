@@ -8,7 +8,7 @@ namespace ZincXManagerShared.Friend;
 /// <param name="Remark">我给对方起的备注(空 = 显示名字)。</param>
 /// <param name="Online">当前是否在线。</param>
 /// <param name="ServerName">对方所在服的显示名(本服为空)。</param>
-public sealed record FriendEntry(string Id, string Name, string Remark, bool Online, string ServerName, int Unread = 0, string Preview = "");
+public sealed record FriendEntry(string Id, string Name, string Remark, bool Online, string ServerName, int Unread = 0, string Preview = "", long LastAt = 0);
 
 /// <summary>别人发给我的一条好友申请(657 的一行)。</summary>
 /// <param name="FromId">申请者完整ID。</param>
@@ -62,7 +62,7 @@ public static class FriendCodec
 
     // ---------------- 651 好友列表 ----------------
 
-    /// <summary>把好友列表拼成 651 的负载:<c>完整ID\t名字\t备注\t在线\t来源服\t未读数\t最后一条</c>。</summary>
+    /// <summary>把好友列表拼成 651 的负载:<c>完整ID\t名字\t备注\t在线\t来源服\t未读数\t最后一条\t最后一条的时间</c>。</summary>
     public static string BuildFriendList(IEnumerable<FriendEntry> entries)
     {
         var lines = new List<string>();
@@ -76,7 +76,8 @@ public static class FriendCodec
                 one.Online ? "1" : "0",
                 Clean(one.ServerName),
                 one.Unread.ToString(CultureInfo.InvariantCulture),
-                Clean(one.Preview)));
+                Clean(one.Preview),
+                one.LastAt.ToString(CultureInfo.InvariantCulture)));
         }
 
         return string.Join(LineSeparator, lines);
@@ -84,7 +85,7 @@ public static class FriendCodec
 
     /// <summary>
     /// 解析 651 的负载;坏行计数通过 <paramref name="badLines"/> 交回,由调用方记日志。
-    /// 兼容 5 段(没有未读与摘要)和 4 段(连名字都没有)的旧格式,那时未读按 0、摘要按空。
+    /// 兼容 7 段(没有时间)和更早的 5/4 段格式,缺的字段按 0 或空。
     /// </summary>
     public static List<FriendEntry> ParseFriendList(string? payload, out int badLines)
     {
@@ -101,6 +102,7 @@ public static class FriendCodec
 
             var entry = parts.Length switch
             {
+                >= 8 => new FriendEntry(parts[0].Trim(), parts[1], parts[2], parts[3] == "1", parts[4], ParseInt(parts[5]), parts[6], ParseLong(parts[7])),
                 >= 7 => new FriendEntry(parts[0].Trim(), parts[1], parts[2], parts[3] == "1", parts[4], ParseInt(parts[5]), parts[6]),
                 6 => new FriendEntry(parts[0].Trim(), parts[1], parts[2], parts[3] == "1", parts[4], ParseInt(parts[5]), ""),
                 5 => new FriendEntry(parts[0].Trim(), parts[1], parts[2], parts[3] == "1", parts[4], 0, ""),
@@ -111,6 +113,10 @@ public static class FriendCodec
 
         return list;
     }
+
+    /// <summary>把一段文本当长整数读,读不出来算 0。</summary>
+    private static long ParseLong(string text) =>
+        long.TryParse((text ?? "").Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var value) ? value : 0;
 
     /// <summary>把一段文本当整数读,读不出来算 0。</summary>
     private static int ParseInt(string text) =>

@@ -51,12 +51,14 @@ internal static partial class Program
             var cursor = FriendStore.ReadCursor(self, id.Full);                          //已读到第几号
             var unread = lines.Count(line => line.Incoming && line.Seq > cursor);        //未读条数
             var preview = "";
+            var lastAt = 0L;                                                             //最后一条消息的时间(unix 秒),客户端按它排序
             if (lines.Count > 0)
             {
                 var tail = lines[lines.Count - 1];
                 // 对方发的带上他的名字,自己发的只给正文 —— 一眼看出这句是谁说的
                 var who = friend.Remark.Length > 0 ? friend.Remark : AccountNameOf(id);
                 preview = tail.Incoming ? who + "：" + tail.Text : tail.Text;
+                lastAt = new DateTimeOffset(tail.Time.ToUniversalTime()).ToUnixTimeSeconds();
             }
 
             rows.Add(new FriendEntry(
@@ -66,7 +68,8 @@ internal static partial class Program
                 IsOnline(id, config),
                 ServerNameOf(id.ServerId, config),
                 unread,
-                preview));
+                preview,
+                lastAt));
         }
 
         await packet.Connection.SendAsync(Protocol.FriendListReply, FriendCodec.BuildFriendList(rows), packet.Id);

@@ -76,20 +76,24 @@ public static class FriendSuite
     /// <summary>各个负载的拼装与解析(含旧格式兼容与脏行计数)。</summary>
     private static void CodecPart(SuiteResult r)
     {
-        // 好友列表:7 段
+        // 好友列表:8 段(最后一段是最后一条消息的时间)
         var list = new List<FriendEntry>
         {
-            new("ZXMS-testserver2-2-13", "zeta2", "小z", true, "ZXMS-testserver2-2", 3, "在吗"),
+            new("ZXMS-testserver2-2-13", "zeta2", "小z", true, "ZXMS-testserver2-2", 3, "在吗", 1762400000),
             new("ZXMS-testserver-1-5", "", "", false, "ZXMS-testserver-1"),
         };
         var text = FriendCodec.BuildFriendList(list);
         var back = FriendCodec.ParseFriendList(text, out var bad);
-        r.Add("好友列表 7 段往返不丢字段", bad == 0 && back.Count == 2
+        r.Add("好友列表 8 段往返不丢字段", bad == 0 && back.Count == 2
             && back[0].Id == "ZXMS-testserver2-2-13" && back[0].Name == "zeta2" && back[0].Remark == "小z"
             && back[0].Online && back[0].Unread == 3 && back[0].Preview == "在吗", text);
+        r.Add("最后一条消息的时间能往返", back.Count == 2 && back[0].LastAt == 1762400000 && back[1].LastAt == 0);
         r.Add("没名字的空段也认", back.Count == 2 && back[1].Name == "" && back[1].Remark == "" && !back[1].Online);
 
-        // 旧格式:5 段(没有未读数与最后一条)、4 段(没有名字)
+        // 旧格式:7 段(没有时间)、5 段(没有未读数与最后一条)、4 段(没有名字)
+        var seven = "ZXMS-a-1-2\tname\t备注\t1\tZXMS-a-1\t0\t在吗";
+        var backSeven = FriendCodec.ParseFriendList(seven, out var badSeven);
+        r.Add("7 段旧格式能读,时间按 0", badSeven == 0 && backSeven.Count == 1 && backSeven[0].Preview == "在吗" && backSeven[0].LastAt == 0);
         var five = "ZXMS-a-1-2\tname\t备注\t1\tZXMS-a-1";
         var backFive = FriendCodec.ParseFriendList(five, out var badFive);
         r.Add("5 段旧格式能读,未读数按 0", badFive == 0 && backFive.Count == 1 && backFive[0].Unread == 0 && backFive[0].Preview == "");

@@ -38,6 +38,7 @@ public partial class FriendsWindow : Window
     private DispatcherTimer? _preview;                   // 本服对话的「最后一句 + 未读」定时补
     private DateTime _lastListAt;                        // 上次发 650 的时间戳,用来节流
     private bool _previewBusy;                           // 预览刷新正在跑,挡住重入(否则旧快照会盖掉新值)
+    private readonly Dictionary<string, long> _recentAt = new(StringComparer.OrdinalIgnoreCase);   // 本机记下的最后消息时间(unix 秒),键=好友完整ID,和服务端给的时间取大的那个用来排序
 
     /// <summary>红点清掉后压住未读的秒数:必须盖住 5 秒轮询周期,不然旧值下一轮又冒出来。</summary>
     private const int UnreadHoldSeconds = 8;
@@ -116,10 +117,16 @@ public partial class FriendsWindow : Window
         }
 
         _friends.Clear();
-        // 在线的排前面;同状态按显示名排,免得每次刷新顺序乱跳
-        _friends.AddRange(entries
-            .OrderByDescending(entry => entry.Online)
-            .ThenBy(entry => entry.Remark.Length > 0 ? entry.Remark : entry.Name, StringComparer.OrdinalIgnoreCase));
+        _friends.AddRange(entries);
+        // 已经不存在的行别再占着时间戳,否则重新加回来时会莫名其妙顶到最前
+        foreach (var gone in _recentAt.Keys
+                     .Where(key => !entries.Any(one => string.Equals(one.Id, key, StringComparison.OrdinalIgnoreCase)))
+                     .ToArray())
+        {
+            _recentAt.Remove(gone);
+        }
+
+        Resort();
 
         Logger.Log(LogLevel.Info, $"[好友] 列表刷新:{_friends.Count} 条");
 
@@ -127,6 +134,44 @@ public partial class FriendsWindow : Window
         Paint();
         _ = AskMissingAvatarsAsync();
         _ = RefreshLocalPreviewsAsync();
+    }
+
+    /// <summary>某个好友刚有消息:记下时间,把他这一行按时间排到该在的位置并重画。</summary>
+    public void Touch(string friendFullId)
+    {
+        if (friendFullId.Length == 0)
+        {
+            return;
+        }
+
+        _recentAt[friendFullId] = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        Resort();
+        Paint();
+    }
+
+    /// <summary>本机记下的时间(自己刚发出去的那条),和服务端给的时间取大的那个。</summary>
+    private long StampOf(string friendFullId) =>
+        _recentAt.TryGetValue(friendFullId, out var stamp) ? stamp : 0;
+
+    /// <summary>排序:按最后一条消息的时间倒序,没有消息的排后面,再按在线、显示名,免得顺序乱跳。</summary>
+    private void Resort()
+    {
+        _friends.Sort((left, right) =>
+        {
+            var leftAt = Math.Max(left.LastAt, StampOf(left.Id));
+            var rightAt = Math.Max(right.LastAt, StampOf(right.Id));
+            if (leftAt != rightAt)
+            {
+                return rightAt.CompareTo(leftAt);
+            }
+
+            if (left.Online != right.Online)
+            {
+                return right.Online.CompareTo(left.Online);
+            }
+
+            return string.Compare(DisplayNameOf(left), DisplayNameOf(right), StringComparison.OrdinalIgnoreCase);
+        });
     }
 
     /// <summary>
@@ -178,7 +223,7 @@ public partial class FriendsWindow : Window
         }
 
         var unread = await ChatApi.UnreadAsync();
-        var results = new (string Id, string Preview, int Unread)[locals.Count];
+        var results = new (string Id, string Preview, int Unread, long At)[locals.Count];
         await Task.WhenAll(locals.Select(async (one, index) =>
         {
             var channel = ChatChannel.ForPair(ChatBridge.SelfCode, one.Code);
@@ -189,11 +234,13 @@ public partial class FriendsWindow : Window
                 : int.TryParse(last.SenderId, out var sender) && sender == ChatBridge.SelfCode
                     ? last.Text
                     : one.Name + "：" + last.Text;
-            results[index] = (one.Id, preview, unread.TryGetValue(channel, out var count) ? count : 0);
+            // 本服对话的时间只有聊天后端知道,服务端那份聊天记录是空的
+            var at = last is null ? 0L : new DateTimeOffset(last.At.ToUniversalTime()).ToUnixTimeSeconds();
+            results[index] = (one.Id, preview, unread.TryGetValue(channel, out var count) ? count : 0, at);
         }));
 
         var changed = false;   //有没有真的变了,没变就不用重画(免得每 5 秒闪一下)
-        foreach (var (id, polledPreview, polledCount) in results)
+        foreach (var (id, polledPreview, polledCount, polledAt) in results)
         {
             var index = _friends.FindIndex(one => string.Equals(one.Id, id, StringComparison.OrdinalIgnoreCase));
             if (index < 0)
@@ -230,17 +277,19 @@ public partial class FriendsWindow : Window
             }
 
             var before = _friends[index];
-            if (string.Equals(before.Preview, preview, StringComparison.Ordinal) && before.Unread == count)
+            var nextAt = polledAt > before.LastAt ? polledAt : before.LastAt;
+            if (string.Equals(before.Preview, preview, StringComparison.Ordinal) && before.Unread == count && nextAt == before.LastAt)
             {
                 continue;
             }
 
-            _friends[index] = before with { Preview = preview, Unread = count };
+            _friends[index] = before with { Preview = preview, Unread = count, LastAt = nextAt };
             changed = true;
         }
 
         if (changed)
         {
+            Resort();
             Dispatcher.UIThread.Post(Paint);
         }
     }
@@ -320,6 +369,9 @@ public partial class FriendsWindow : Window
         }
 
         _friends[index] = _friends[index] with { Preview = text };
+        // 自己刚发出一条:按这条的时间重排,和对方发来一样
+        _recentAt[friendFullId] = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        Resort();
         Paint();
     }
 
