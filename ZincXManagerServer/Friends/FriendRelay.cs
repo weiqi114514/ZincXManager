@@ -305,7 +305,7 @@ internal static partial class Program
             }
             catch (Exception ex)
             {
-                Logger.Log(LogLevel.Warning, $"[好友] 给 {connection.RemoteEndPoint} 推上下线失败:{ex.Message}");
+                Logger.Log(LogLevel.Warning, $"[好友] 给 {connection.RemoteEndPoint} 推上下线失败(多半是对方刚好下线,这条推送可以忽略):{ex.Message}");
             }
         }));
 

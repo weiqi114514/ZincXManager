@@ -2296,7 +2296,7 @@ internal static partial class Program
             }
             catch (Exception ex)
             {
-                Logger.Log(LogLevel.Warning, $"[消息] 发给 {conn.RemoteEndPoint} 失败: {ex.Message}");
+                Logger.Log(LogLevel.Warning, $"[消息] 发给 {conn.RemoteEndPoint} 失败(多半是对方刚好下线,这条推送可以忽略): {ex.Message}");
             }
         }));
 
