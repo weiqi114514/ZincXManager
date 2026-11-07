@@ -841,7 +841,8 @@ var results = new List<SuiteResult>();
         r.Add("docs 目录存在", Directory.Exists(docs), docs);
         if (Directory.Exists(docs))
         {
-            var pages = new[] { "index.html", "download.html", "changelog.html", "help.html", "zxms.html", "tech.html", "arch.html", "seq.html", "404.html" };
+            // tech/arch/seq 三页已换成带口令门禁的 .php(未验证口令不下发正文),断言跟着站点走
+            var pages = new[] { "index.html", "download.html", "changelog.html", "help.html", "zxms.html", "tech.php", "arch.php", "seq.php", "404.html" };
             var missing = pages.Where(p => !File.Exists(Path.Combine(docs, p))).ToList();
             r.Add("主要页面都在 (" + pages.Length + " 个)", missing.Count == 0, missing.Count == 0 ? "" : "缺:" + string.Join(",", missing));
 
