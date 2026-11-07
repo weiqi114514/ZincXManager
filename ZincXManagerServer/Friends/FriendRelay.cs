@@ -282,6 +282,11 @@ internal static partial class Program
         var targets = new List<TcpConnection>();   // 该收到这条上下线的人
         foreach (var connection in _server?.Connections ?? [])
         {
+            if (connection.IsClosed)
+            {
+                continue;   // 已经在关了,发过去只会抛 disposed
+            }
+
             var name = _server?.Registry.Find(connection.Id)?.User ?? "";
             var self = LocalPlayerId(Accounts.Find(name), config);
             if (self.IsEmpty || !FriendStore.AreFriends(self, who))

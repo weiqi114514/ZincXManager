@@ -128,6 +128,11 @@ internal static partial class Program
 
         foreach (var connection in _server.Connections)
         {
+            if (connection.IsClosed)
+            {
+                continue;   // 已经在关了,发过去只会抛 disposed
+            }
+
             var info = _server.Registry.Find(connection.Id);
             if (info is null || info.User.Length == 0)
             {

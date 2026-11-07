@@ -370,6 +370,11 @@ internal static partial class Program
 
         foreach (var conn in server.Connections)
         {
+            if (conn.IsClosed)
+            {
+                continue;   //已经在关了,发过去只会抛 disposed
+            }
+
             var info = server.Registry.Find(conn.Id);
             if (info is null || !string.Equals(info.User, account.Name, StringComparison.OrdinalIgnoreCase))
             {
@@ -2262,6 +2267,11 @@ internal static partial class Program
         var targets = new List<TcpConnection>();   //该收到这条推送的连接
         foreach (var conn in server.Connections)
         {
+            if (conn.IsClosed)
+            {
+                continue;   //已经在关了,发过去只会抛 disposed
+            }
+
             var info = server.Registry.Find(conn.Id);
             if (info?.Role != "ZXMC")
             {
