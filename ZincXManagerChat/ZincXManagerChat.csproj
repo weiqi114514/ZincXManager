@@ -8,9 +8,9 @@
     <AssemblyName>ZincXManagerChat</AssemblyName>
     <RootNamespace>ZincXManagerChat</RootNamespace>
     <!-- 子服进程按需拉起它,跟 ZXMS 同一套版本号 -->
-    <Version>0.2.0</Version>
-    <FileVersion>0.2.0.0</FileVersion>
-    <InformationalVersion>b0.2.0c</InformationalVersion>
+    <Version>0.3.0</Version>
+    <FileVersion>0.3.0.0</FileVersion>
+    <InformationalVersion>b0.3.0</InformationalVersion>
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
   </PropertyGroup>
 
