@@ -440,6 +440,61 @@ public class ZFile : IDisposable
         return ok;
     }
 
+    /// <summary>删掉一个键(整行移除,注释与空行原样保留);键本来就不在也返回 true。</summary>
+    public bool RemoveFileMap(string key)
+    {
+        var ok = false;
+        LogLevel level = LogLevel.Info;
+        string? message = null;
+
+        lock (_sync)
+        {
+            if (_fs == null)
+            {
+                level = LogLevel.Error;
+                message = "[zFile]removeFileMap:文件未打开";
+            }
+            else if (string.IsNullOrWhiteSpace(key))
+            {
+                level = LogLevel.Warning;
+                message = "[zFile]removeFileMap:key 不能为空";
+            }
+            else
+            {
+                try
+                {
+                    var all = ReadAllCore();
+                    var eol = DetectNewline(all);
+                    _eol = eol;
+                    var lines = SplitLines(all);
+
+                    var removed = lines.RemoveAll(line =>
+                    {
+                        if (line.Length == 0 || line[0] == '#' || line[0] == ';') return false;
+
+                        var pos = line.IndexOf('=');
+                        return pos >= 0 && line[..pos].Trim() == key;
+                    });
+
+                    if (removed > 0)
+                    {
+                        WriteAllCore(lines, eol, ensureTrailingNewline: true);
+                    }
+
+                    ok = true;
+                }
+                catch (Exception ex)
+                {
+                    level = LogLevel.Error;
+                    message = "[zFile]removeFileMap:写入失败 " + ex.Message;
+                }
+            }
+        }
+
+        if (message != null) Logger.Log(level, message);
+        return ok;
+    }
+
     /// <summary>写一个键值到文件(改配置项)。</summary>
     public bool WriteFileMap(string key, int value)
     {
