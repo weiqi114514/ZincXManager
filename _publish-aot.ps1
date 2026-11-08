@@ -119,23 +119,26 @@ foreach ($p in $winProjects) { $p | Add-Member -NotePropertyName Hash -NotePrope
 Step "1/6 Windows AOT 并行编译($($winProjects.Count) 个,并行度 $Jobs),Linux AOT 同时开跑"
 $outDir = $out
 
-# Linux 两个端共用 Shared 的 obj,并行会抢 project.assets.json;用 --artifacts-path 各给一份中间目录后才能真正并行
+# Linux 两个端共用 Shared 的 obj,并行会抢 project.assets.json;用 --artifacts-path 各给一份中间目录后仍能并行跑,
+# 但 AOT 编译本身很吃内存,两路同时跑加上本机游戏/浏览器会 OOM 直接把 job 打死(日志只剩 Generating native code,无报错),
+# 所以这里逐个启、逐个等:一次只有一个 ILCompiler 在跑。
 $linuxJobs = @()
 if (-not $SkipLinux) {
-    foreach ($lp in @(
+    $linuxPairs = foreach ($lp in @(
         [pscustomobject]@{ Name = 'ZXMS'; Project = (Join-Path $root 'ZincXManagerServer\ZincXManagerServer.csproj') },
         [pscustomobject]@{ Name = 'ZXMC'; Project = (Join-Path $root 'ZincXManagerClient\ZincXManagerClient.csproj') }
-    )) {
-        $lp | Add-Member -NotePropertyName Hash -NotePropertyValue (Get-SourceHash $lp.Project $root) -Force
-        $linuxJobs += Start-Job -ArgumentList $lp, $out, $WslDistro, $forceBuild -ScriptBlock {
-            param($lp, $outDir, $distro, $force)
+    )) { $lp | Add-Member -NotePropertyName Hash -NotePropertyValue (Get-SourceHash $lp.Project $root) -Force -PassThru }
+    # 一个 job 里串行跑两端的 AOT
+    $linuxJobs += Start-Job -ArgumentList $linuxPairs, $out, $WslDistro, $forceBuild -ScriptBlock {
+        param($pairs, $outDir, $distro, $force)
+        foreach ($lp in $pairs) {
             $name = $lp.Name; $project = $lp.Project; $hash = $lp.Hash
             $sw = [System.Diagnostics.Stopwatch]::StartNew()
             $target = Join-Path $outDir "$name-linux-x64"
             $stamp = Join-Path $target '.buildhash'
             if (-not $force -and (Test-Path $stamp) -and ((Get-Content $stamp -Raw).Trim() -eq $hash)) {
                 Write-Host ("    {0,-6} 源码没变,跳过 (linux)" -f $name) -ForegroundColor DarkYellow
-                return
+                continue
             }
             if (Test-Path $target) { Remove-Item $target -Recurse -Force }
             $full = [System.IO.Path]::GetFullPath($project)

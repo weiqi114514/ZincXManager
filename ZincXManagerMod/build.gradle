@@ -31,5 +31,5 @@ repositories {
     mavenCentral()
 }
 
-version = 'b0.3.1'   // 用户可见版本：产物名 ZXMM-b0.3.1.jar；机器版由 toml 的 version 单独提供
+version = 'b0.3.2'   // 用户可见版本：产物名 ZXMM-b0.3.2.jar；机器版由 toml 的 version 单独提供
 group = 'com.zincxmanager'

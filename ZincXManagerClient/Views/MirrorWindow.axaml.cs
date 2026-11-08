@@ -22,6 +22,7 @@ public partial class MirrorWindow : Window
     public string[] MirrorNames { get; } =
     [
         "gh-proxy",
+        "sixyin",
         "ghfast",
         "ghproxy",
         "自建",

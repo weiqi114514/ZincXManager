@@ -76,9 +76,12 @@ internal static class Program
         app.UseRouting();
         app.UseBareChat();
 
-        var url = $"http://127.0.0.1:{port}";
+        // 绑 0.0.0.0 而不是 127.0.0.1:客户端多半在别的机器上,它的 510 里带的地址是「它连的那个地址」,
+        // 拼出来的就是 http://<那台机器的IP>:<port>/chat。只听回环时同机测试全绿,跨机一律「目标计算机积极拒绝」。
+        // 鉴权靠 ChatToken 令牌(见 TokenChatAuthProvider),不靠监听地址挡人;对外暴露的口子由防火墙管
+        var url = $"http://0.0.0.0:{port}";
         app.Urls.Add(url);
-        Console.WriteLine($"[Info] [{DateTime.Now:yyyy-MM-dd HH:mm:ss}] [Chat] 聊天宿主启动: {url}/chat 数据={Path.GetFullPath(data)}");
+        Console.WriteLine($"[Info] [{DateTime.Now:yyyy-MM-dd HH:mm:ss}] [Chat] 聊天宿主启动: 0.0.0.0:{port}/chat 数据={Path.GetFullPath(data)}");
         app.Run();
         return 0;
     }

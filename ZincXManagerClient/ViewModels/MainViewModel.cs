@@ -83,6 +83,9 @@ public partial class MainViewModel : ViewModelBase
         // 消息列表空/非空要切换那句"没有其他消息啦"
         Messages.CollectionChanged += (_, _) => OnPropertyChanged(nameof(HasMessages));
 
+        // 日志页顶部那句带条数:条数一变就刷新
+        Logs.CollectionChanged += (_, _) => OnPropertyChanged(nameof(LogSummary));
+
         // 本地消息保留天数(高级设置里改)+ 读上次存下来的消息
         LocalMessageDays = int.TryParse(ClientConfig.GetOrEmpty("msgdays"), out var keepDays)
             ? Math.Clamp(keepDays, 1, 3650)
@@ -224,8 +227,11 @@ public partial class MainViewModel : ViewModelBase
     /// <summary>按页面名找对应的消息页签。</summary>
     private string TabOf(int index) => index >= 0 && index < Tabs.Count ? Tabs[index].Key : "messages";
 
-    /// <summary>运行日志内容(取最新一份日志的末尾)。</summary>
-    [ObservableProperty] public partial string LogText { get; set; } = "";
+    /// <summary>运行日志(实时):直接绑进程级缓冲,日志一写就上屏,不再读日志文件。</summary>
+    public ObservableCollection<LogEntry> Logs => Logging.LiveLog.Entries;
+
+    /// <summary>日志页顶部的说明:显示条数,让人知道这是实时流而不是某个文件。</summary>
+    public string LogSummary => $"实时日志(共 {Logs.Count} 条,写一条上一条)";
 
     /// <summary>更新日志内容(根目录 UpdateLog.MD)。</summary>
     [ObservableProperty] public partial string ChangelogText { get; set; } = "";
@@ -268,47 +274,13 @@ public partial class MainViewModel : ViewModelBase
     {
         TabIndex = Math.Clamp(index, 0, Math.Max(0, Tabs.Count - 1));
 
-        if (IsTabLog)
-        {
-            LoadLog();
-        }
-        else if (IsTabChangelog)
+        if (IsTabChangelog)
         {
             LoadChangelog();
         }
         else if (IsTabWeb)
         {
             _ = LoadWebAsync();
-        }
-    }
-
-    /// <summary>读最新一份 ZXMC 日志的末尾(最多 400 行)。</summary>
-    public void LoadLog()
-    {
-        try
-        {
-            var dir = Path.Combine(AppContext.BaseDirectory, "logs");
-            var file = Directory.Exists(dir)
-                ? new DirectoryInfo(dir).GetFiles("*.log").OrderByDescending(f => f.LastWriteTime).FirstOrDefault()
-                : null;
-
-            if (file is null)
-            {
-                LogText = "还没有日志文件(客户端还没写过日志)。";
-                return;
-            }
-
-            // 日志文件正被本进程开着写:必须带 FileShare.ReadWrite,否则会报"被另一个进程占用"
-            using var fs = new FileStream(file.FullName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
-            using var reader = new StreamReader(fs);
-            var all = reader.ReadToEnd().Replace("\r\n", "\n").Split('\n');   //拆分结果
-            var lines = all;
-            var tail = lines.Length > 400 ? lines[(lines.Length - 400)..] : lines;
-            LogText = $"# {file.Name}(最近 400 行){Environment.NewLine}{Environment.NewLine}" + string.Join(Environment.NewLine, tail);
-        }
-        catch (Exception ex)
-        {
-            LogText = "读取日志失败:" + ex.Message;
         }
     }
 

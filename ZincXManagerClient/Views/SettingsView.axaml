@@ -386,6 +386,31 @@
             </StackPanel>
             <TextBlock Classes="tips" TextWrapping="Wrap" MaxWidth="520" HorizontalAlignment="Left"
                        Text="点「设置镜像…」选或填地址。可以填多个,用英文分号隔开,下载时按顺序试,全连不上会自动退回官方源;留空 = 只走官方源。"/>
+
+            <CheckBox Content="镜像测速换源(太快就留着,太慢就换下一个)"
+                      IsChecked="{Binding MirrorSpeedEnabled}" Margin="0,6,0,0"/>
+
+            <Grid ColumnDefinitions="Auto,Auto,Auto,Auto,Auto,Auto" RowDefinitions="Auto,Auto"
+                  ColumnSpacing="8" RowSpacing="6" IsVisible="{Binding MirrorSpeedEnabled}">
+              <TextBlock Grid.Row="0" Grid.Column="0" Classes="label" Text="速度下限" VerticalAlignment="Center"/>
+              <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding MirrorSpeedMinKb}" Width="72"/>
+              <TextBlock Grid.Row="0" Grid.Column="2" Classes="label" Text="KB/s" VerticalAlignment="Center"/>
+              <TextBlock Grid.Row="0" Grid.Column="3" Classes="label" Text="判定等待" VerticalAlignment="Center"/>
+              <TextBox Grid.Row="0" Grid.Column="4" Text="{Binding MirrorSpeedFirstSeconds}" Width="56"/>
+              <TextBlock Grid.Row="0" Grid.Column="5" Classes="label" Text="秒" VerticalAlignment="Center"/>
+
+              <TextBlock Grid.Row="1" Grid.Column="0" Classes="label" Text="换源检查" VerticalAlignment="Center"/>
+              <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding MirrorSpeedIntervalSeconds}" Width="72"/>
+              <TextBlock Grid.Row="1" Grid.Column="2" Classes="label" Text="秒" VerticalAlignment="Center"/>
+              <TextBlock Grid.Row="1" Grid.Column="3" Classes="label" Text="连接超时" VerticalAlignment="Center"/>
+              <TextBox Grid.Row="1" Grid.Column="4" Text="{Binding MirrorSpeedConnectSeconds}" Width="56"/>
+              <TextBlock Grid.Row="1" Grid.Column="5" Classes="label" Text="秒" VerticalAlignment="Center"/>
+            </Grid>
+
+            <TextBlock Classes="body" Text="{Binding MirrorSpeedSummary}"
+                       TextWrapping="Wrap" MaxWidth="520" HorizontalAlignment="Left"/>
+            <TextBlock Classes="tips" TextWrapping="Wrap" MaxWidth="520" HorizontalAlignment="Left"
+                       Text="开下载后等「判定等待」秒,速度仍低于「速度下限」就换下一个镜像;连不放「连接超时」秒也算连不上,直接换下一个。所有镜像都达不到下限时,回头用实测最快的那个把整份下完。关掉这个开关就退回旧做法:按顺序试,只在连不上或者下失败时换下一个。"/>
           </StackPanel>
         </StackPanel>
       </Border>

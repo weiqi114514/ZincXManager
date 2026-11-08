@@ -5,8 +5,12 @@ using System;
 using System.Threading;  // 线程名(日志标签用)  // 基础类型 / 常用静态方法
 // ZincXManagerShared.Logging:统一日志(落文件、带端类型前缀)
 using ZincXManagerShared.Logging;  // 共享库
+// ZincXManagerClient.Logging:LiveLog —— 界面「日志」页绑的实时日志缓冲
+using ZincXManagerClient.Logging;  // 客户端自身
 // ZincXManagerShared.Network:协议常量与网络层(客户端启动时会用到,保留引用方便排查)
 using ZincXManagerShared.Network;  // 共享库
+// ZincXManagerClient.Services:ConfigMigrator —— 启动时补齐老版本配置
+using ZincXManagerClient.Services;  // 客户端自身
 
 namespace ZincXManagerClient;
 
@@ -33,6 +37,9 @@ sealed class Program
 
         try
         {
+            // 界面起来之前先补老配置:界面各处读镜像清单 / 测速参数时就不会读到半套配置
+            ConfigMigrator.Migrate();
+
             // Avalonia 的经典桌面生命周期:阻塞到主窗口关闭才返回
             RunDesktop(args);
         }
@@ -57,6 +64,9 @@ sealed class Program
 
         // logFile:实际用的日志文件路径(失败时是尝试过的路径)
         var ok = Logger.OpenDefaultLogFile("ZXMC", out var logFile);
+
+        // 界面「日志」页要的是实时日志,不是事后读文件:从这里开始把每条日志也攒进内存
+        LiveLog.EnsureStarted();
 
         if (!ok)
         {

@@ -358,6 +358,65 @@ public partial class SettingsViewModel : ViewModelBase
         };
     }
 
+    /// <summary>测速换源开关(关掉 = 按顺序试,只在失败时换下一个)</summary>
+    [ObservableProperty] public partial bool MirrorSpeedEnabled { get; set; } = true;
+
+    /// <summary>速度下限(KB/s)</summary>
+    [ObservableProperty] public partial string MirrorSpeedMinKb { get; set; } = "500";
+
+    /// <summary>开始下载后多久做第一次判定(秒)</summary>
+    [ObservableProperty] public partial string MirrorSpeedFirstSeconds { get; set; } = "10";
+
+    /// <summary>复检间隔(秒)</summary>
+    [ObservableProperty] public partial string MirrorSpeedIntervalSeconds { get; set; } = "3";
+
+    /// <summary>连接超时(秒)</summary>
+    [ObservableProperty] public partial string MirrorSpeedConnectSeconds { get; set; } = "15";
+
+    /// <summary>测速策略的一句话说明(设置页那行显示用)</summary>
+    [ObservableProperty] public partial string MirrorSpeedSummary { get; set; } = "";
+
+    /// <summary>从 config.ini 读回测速参数(进设置页时调)</summary>
+    public void RefreshMirrorSpeed()
+    {
+        MirrorSpeedEnabled = Services.MirrorSpeedConfig.Enabled;
+        MirrorSpeedMinKb = (Services.MirrorSpeedConfig.MinBytesPerSecond / 1024).ToString();
+        MirrorSpeedFirstSeconds = Services.MirrorSpeedConfig.FirstCheckDelay.TotalSeconds.ToString("F0");
+        MirrorSpeedIntervalSeconds = Services.MirrorSpeedConfig.CheckInterval.TotalSeconds.ToString("F0");
+        MirrorSpeedConnectSeconds = Services.MirrorSpeedConfig.ConnectTimeout.TotalSeconds.ToString("F0");
+        MirrorSpeedSummary = Services.MirrorSpeedConfig.Describe();
+    }
+
+    partial void OnMirrorSpeedEnabledChanged(bool value)
+    {
+        ClientConfig.Set("update.speed.enabled", value ? "1" : "0");
+        MirrorSpeedSummary = Services.MirrorSpeedConfig.Describe();
+    }
+
+    partial void OnMirrorSpeedMinKbChanged(string value) =>
+        SaveMirrorSpeedNumber("update.speed.minkb", value, 1, 1000000);
+
+    partial void OnMirrorSpeedFirstSecondsChanged(string value) =>
+        SaveMirrorSpeedNumber("update.speed.firstseconds", value, 1, 600);
+
+    partial void OnMirrorSpeedIntervalSecondsChanged(string value) =>
+        SaveMirrorSpeedNumber("update.speed.intervalseconds", value, 1, 600);
+
+    partial void OnMirrorSpeedConnectSecondsChanged(string value) =>
+        SaveMirrorSpeedNumber("update.speed.connectseconds", value, 3, 600);
+
+    /// <summary>写一个测速参数:输入过程中不合法就先不管,等输完再落盘。</summary>
+    private void SaveMirrorSpeedNumber(string key, string value, int min, int max)
+    {
+        if (!int.TryParse((value ?? "").Trim(), out var number))
+        {
+            return;
+        }
+
+        ClientConfig.Set(key, Math.Clamp(number, min, max).ToString());
+        MirrorSpeedSummary = Services.MirrorSpeedConfig.Describe();
+    }
+
     /// <summary>当前客户端版本(显示用)</summary>
     public string CurrentVersionText => Services.UpdateService.CurrentVersion;
 
@@ -525,6 +584,7 @@ public partial class SettingsViewModel : ViewModelBase
         UpdateOnStartup = ClientConfig.Get("update.mode", "prompt") != "off";
         UpdateRelaunch = ClientConfig.Get("update.relaunch", "1") == "1";
         RefreshMirrorSummary();
+        RefreshMirrorSpeed();
 
         var cats = ClientConfig.GetOrEmpty("msgcats");
         MessageCategoryLog = cats.Contains("log");

@@ -13,6 +13,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Win32;  // 导入 Registry 类(判断是不是 MSI 安装版)
 using ZincXManagerShared.Logging;  // 导入 Logger / LogLevel
+using ZincXManagerShared.Update;  // MirrorDownloader / MirrorSpeedPolicy:测速换源
 
 namespace ZincXManagerClient.Services;
 
@@ -303,69 +304,31 @@ public static class UpdateService
         return list.ToArray();
     }
 
-    /// <summary>下载:按配置的镜像逐个试,全失败就走官方源</summary>
+    /// <summary>
+    /// 下载:镜像按顺序试,开始 N 秒后速度仍低于 M KB/s 或连不上就换下一个;
+    /// 全都没达标时用实测最快的那个把整份下完。参数与开关在 <see cref="MirrorSpeedConfig"/>。
+    /// </summary>
     private static async Task<bool> DownloadAsync(string url, string dest, IProgress<int>? onProgress, CancellationToken ct)
     {
-        var candidates = BuildDownloadUrls(url);
-        foreach (var candidate in candidates)
-        {
-            if (await TryDownloadAsync(candidate, dest, onProgress, ct))
-            {
-                // 换源成功也把进度补满,免得界面停在 99%
-                onProgress?.Report(100);
-                return true;
-            }
+        var outcome = await MirrorDownloader.DownloadAsync(
+            BuildDownloadUrls(url),
+            dest,
+            MirrorSpeedConfig.MinBytesPerSecond,
+            MirrorSpeedConfig.FirstCheckDelay,
+            MirrorSpeedConfig.CheckInterval,
+            MirrorSpeedConfig.ConnectTimeout,
+            MirrorSpeedConfig.Enabled,
+            onProgress,
+            Log,
+            ct);
 
-            Log("[更新] 这个地址没下成,换下一个: " + candidate);
+        if (outcome.Ok)
+        {
+            // 换源成功也把进度补满,免得界面停在 99%
+            onProgress?.Report(100);
         }
 
-        Log("[更新] 所有下载地址都失败");
-        return false;
-    }
-
-    /// <summary>真正下这一次;失败返回 false,由调用方决定要不要换源</summary>
-    private static async Task<bool> TryDownloadAsync(string url, string dest, IProgress<int>? onProgress, CancellationToken ct)
-    {
-        try
-        {
-            Log("[更新] 下载地址: " + url);
-            return await DownloadCoreAsync(url, dest, onProgress, ct);
-        }
-        catch (Exception ex)
-        {
-            Log("[更新] 下载异常: " + ex.Message);
-            return false;
-        }
-    }
-
-    /// <summary>下载主体(带进度)</summary>
-    private static async Task<bool> DownloadCoreAsync(string url, string dest, IProgress<int>? onProgress, CancellationToken ct)
-    {
-        using var resp = await Http.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, ct);
-        if (!resp.IsSuccessStatusCode)
-        {
-            Log($"[更新] 下载返回 {(int)resp.StatusCode}");
-            return false;
-        }
-
-        var total = resp.Content.Headers.ContentLength ?? 0;
-        await using var src = await resp.Content.ReadAsStreamAsync(ct);
-        await using var dst = File.Create(dest);
-
-        var buffer = new byte[81920];
-        long read = 0;
-        int n;
-        while ((n = await src.ReadAsync(buffer, ct)) > 0)
-        {
-            await dst.WriteAsync(buffer.AsMemory(0, n), ct);
-            read += n;
-            if (total > 0)
-            {
-                onProgress?.Report((int)(read * 100 / total));
-            }
-        }
-
-        return true;
+        return outcome.Ok;
     }
 
     /// <summary>按 SHA256 摘要校验文件</summary>

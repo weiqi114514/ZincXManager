@@ -12,10 +12,14 @@ public static class MirrorSettingsStore
     /// <summary>配置键</summary>
     private const string Key = "update.mirrors";
 
-    /// <summary>默认清单(镜像只放一个常用的,其余留空给用户加)</summary>
+    /// <summary>配置键(迁移等外部逻辑判断清单在不在时用,别在别处再抄一遍键名)。</summary>
+    public static string ConfigKey => Key;
+
+    /// <summary>默认清单:前两个启用,其余留空给用户加</summary>
     public static List<MirrorItem> Default => new()
     {
         new MirrorItem { Url = "https://gh-proxy.com/", Name = "gh-proxy", Enabled = true },
+        new MirrorItem { Url = "https://gh.sixyin.com/", Name = "sixyin", Enabled = true },
         new MirrorItem { Url = "https://ghfast.top/", Name = "ghfast", Enabled = false },
         new MirrorItem { Url = "https://ghproxy.net/", Name = "ghproxy", Enabled = false },
     };

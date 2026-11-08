@@ -124,7 +124,9 @@ public partial class MainWindow : Window
 
         // 服务端下发的消息(公告 500 / 定向推送 501)接到右侧消息面板
         Opened += (_, _) => AttachSession();
+        Opened += (_, _) => Logging.LiveLog.Entries.CollectionChanged += OnLogsChanged;
         Closed += (_, _) => DetachSession();
+        Closed += (_, _) => Logging.LiveLog.Entries.CollectionChanged -= OnLogsChanged;
 
         // 窗口关掉就停心跳:否则关了主界面还在后台重连,连不上又弹一个新窗口出来
         Closed += (_, _) =>
@@ -278,8 +280,17 @@ public partial class MainWindow : Window
         }
     }
 
-    /// <summary>刷新日志。</summary>
-    private void OnRefreshLogClick(object? sender, RoutedEventArgs e) => Vm?.LoadLog();
+    /// <summary>清空日志面板(只清屏幕上的,不删日志文件)。</summary>
+    private void OnClearLogClick(object? sender, RoutedEventArgs e) => Logging.LiveLog.Clear();
+
+    /// <summary>新日志进来就滚到底部,保证"实时"看着不累。</summary>
+    private void OnLogsChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
+    {
+        if (IsVisible && LogScroll.IsVisible)
+        {
+            LogScroll.ScrollToEnd();
+        }
+    }
 
     /// <summary>刷新更新日志。</summary>
     private void OnRefreshChangelogClick(object? sender, RoutedEventArgs e) => Vm?.LoadChangelog();

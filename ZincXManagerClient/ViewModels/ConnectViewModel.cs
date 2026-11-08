@@ -169,7 +169,7 @@ public partial class ConnectViewModel : ViewModelBase, IDisposable
     public ConnectViewModel()
     {
         // 把共享库日志接到界面:网络/文件/命令的日志都会实时显示
-        _sink = new UiLogSink(this);
+        _sink = new UiLogSink(AppendLog);
         Logger.AddSink(_sink);
 
         Logger.Log(LogLevel.Info, "[ZXMC] 客户端启动");

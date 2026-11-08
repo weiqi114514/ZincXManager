@@ -33,8 +33,8 @@ public final class ZxmmMod {
     /** 模组 id。 */
     public static final String MODID = "zxmm";
 
-    /** 用户可见的完整版本号(带 b 前缀；toml 里的机器版是纯数字 0.2.0)。 */
-    public static final String VERSION = "b0.3.0";
+    /** 用户可见的完整版本号(带 b 前缀；toml 里的机器版是纯数字 0.3.2)。 */
+    public static final String VERSION = "b0.3.2";
 
     /** 日志。 */
     public static final Logger LOGGER = LogUtils.getLogger();
