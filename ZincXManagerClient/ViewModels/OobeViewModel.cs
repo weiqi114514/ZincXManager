@@ -210,6 +210,12 @@ public partial class OobeViewModel : ViewModelBase
     [ObservableProperty] public partial string Password { get; set; } = "";
     [ObservableProperty] public partial string Level { get; set; } = Protocol.RegisterLevel;
 
+    /// <summary>是否「7 天内免登录」（引导里默认不勾，由用户自己决定）。</summary>
+    [ObservableProperty] public partial bool Remember { get; set; }
+
+    /// <summary>是否「记住账号密码」（引导里默认不勾；记录里存的是密文，不是明文）。</summary>
+    [ObservableProperty] public partial bool SavePassword { get; set; }
+
     /// <summary>可选权限等级(登录时用;注册固定 Player)。</summary>
     public string[] Levels => AccountLevels.For(Mode, IsAdminAccount, AdminSide);
 
@@ -446,10 +452,20 @@ public partial class OobeViewModel : ViewModelBase
         if (!ok)
         {
             // 被封禁 / 密码错误 / 账号不存在:都弹窗告诉用户
+            // 失败不碰登录记录:用户之前存下的免登录记录不能被一次输错密码抹掉
             Fail(register ? "注册失败" : "登录失败", Clean(text));
+            return false;
         }
 
-        return ok;
+        // 登录和注册成功都写记录(与登录窗口共用同一份 config 键),不然引导里勾的免登录到下次启动就没作用;
+        // 等级取回执里解析出的那一段(OnAccountReply 已写进 ClientSession),注册固定 Player 也走这里
+        LoginRecord.Save(UserName.Trim(), hash, ClientSession.Level, Remember, SavePassword);
+
+        // 顺手把凭据缓存进会话:断线重连要用它自动重登,登录窗口那条路本来就会写,引导这条路以前漏了
+        ClientSession.LoginHash = hash;
+        ClientSession.LoginLevel = ClientSession.Level;
+        ClientSession.LoginSide = side;
+        return true;
     }
 
     /// <summary>收到账号类回执(601/603)后更新界面状态。</summary>

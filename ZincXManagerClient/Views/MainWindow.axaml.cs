@@ -465,7 +465,12 @@ public partial class MainWindow : Window
     }
 
     /// <summary>收到登录请求(621):弹窗问玩家,回答发回服务端(622)。 绑定码窗口做好之前先用通用对话框顶着。</summary>
-    private async Task HandleLoginAskAsync(string requestId, string player, string ip, string geo)
+    /// <param name="requestId">请求 ID(622 要原样带回)。</param>
+    /// <param name="player">要进服的 MC 玩家名。</param>
+    /// <param name="ip">服务端看到的连接 IP(经隧道时可能是 127.0.0.1)。</param>
+    /// <param name="geo">服务端按连接 IP 查好的归属地。</param>
+    /// <param name="lanIp">ZXMC 上报的局域网地址(没有就是空串)。</param>
+    private async Task HandleLoginAskAsync(string requestId, string player, string ip, string geo, string lanIp)
     {
         var connect = ClientSession.Connect;
         if (connect is null || requestId.Length == 0)
@@ -474,7 +479,7 @@ public partial class MainWindow : Window
         }
 
         // 专用弹窗(外观和 MessageDialog 一套):显示账号 / IP / 归属地,让玩家决定放不放行
-        var dialog = new LoginRequestWindow(player, ip, geo);
+        var dialog = new LoginRequestWindow(player, ip, geo, lanIp);
         await dialog.ShowDialog(this);
         var agree = dialog.Agreed;
 
@@ -632,7 +637,9 @@ public partial class MainWindow : Window
                 var askPlayer = askParts.Length > 1 ? askParts[1].Trim() : "";
                 var askIp = askParts.Length > 2 ? askParts[2].Trim() : "";
                 var askGeo = askParts.Length > 3 ? askParts[3].Trim() : "";
-                _ = HandleLoginAskAsync(askId, askPlayer, askIp, askGeo);
+                // 第五段是 ZXMC 自己上报的局域网地址(新服务端才给,老服务端没有这一段)
+                var askLanIp = askParts.Length > 4 ? askParts[4].Trim() : "";
+                _ = HandleLoginAskAsync(askId, askPlayer, askIp, askGeo, askLanIp);
                 break;
             }
 

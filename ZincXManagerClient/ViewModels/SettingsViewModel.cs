@@ -434,16 +434,18 @@ public partial class SettingsViewModel : ViewModelBase
 
     /// <summary>账号名(未登录为空)。</summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(AccountLine), nameof(UserInitial))]
+    [NotifyPropertyChangedFor(nameof(AccountTitle), nameof(AccountDetail), nameof(HasAccountDetail), nameof(UserInitial))]
     public partial string AccountName { get; set; } = "";
-
-    /// <summary>账号等级。</summary>
-    [ObservableProperty]
-    public partial string AccountLevel { get; set; } = "-";
 
     /// <summary>账号 ID。</summary>
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(AccountDetail))]
     public partial string AccountId { get; set; } = "-";
+
+    /// <summary>账号全称 ID(形如 ZXMS-ZES-1-14;老服务端不下发时为空)。</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(AccountDetail), nameof(HasAccountDetail))]
+    public partial string FullId { get; set; } = "";
 
     /// <summary>7 天内免登录。</summary>
     [ObservableProperty]
@@ -464,16 +466,25 @@ public partial class SettingsViewModel : ViewModelBase
     /// <summary>是否刚刚才切过页面(400ms 内)。</summary>
     public bool IsJustSwitched => (DateTime.Now - _sectionChangedAt).TotalMilliseconds < 400;
 
-    public string AccountLine => AccountName.Length > 0
-        ? $"账号:{AccountName}    等级:{AccountLevel}    ID:{AccountId}"
-        : "当前没有登录账号";
+    /// <summary>个人信息第一行:只有账号名,字号比第二行大。</summary>
+    public string AccountTitle => AccountName.Length > 0 ? AccountName : "当前没有登录账号";
+
+    /// <summary>个人信息第二行:数字 ID 与全称 ID;没登录时为空串(整行隐藏)。</summary>
+    public string AccountDetail => AccountName.Length == 0
+        ? ""
+        : FullId.Length > 0
+            ? $"ID:{AccountId}    全称ID:{FullId}"
+            : $"ID:{AccountId}";
+
+    /// <summary>第二行是否有内容可显示(未登录时整行藏掉,不留空行)。</summary>
+    public bool HasAccountDetail => AccountDetail.Length > 0;
 
     /// <summary>刷新账号信息与头像(进这个页面时调)。</summary>
     public void RefreshAccount()
     {
         AccountName = ClientSession.User;
-        AccountLevel = ClientSession.Level;
         AccountId = ClientSession.UserId;
+        FullId = (ClientSession.FullId ?? "").Trim();
         Remember = LoginRecord.Remember;
         SavePassword = LoginRecord.SavePassword;
         Avatar = ToImage(AvatarStore.Load(AccountName));

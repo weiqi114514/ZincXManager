@@ -925,6 +925,11 @@ var results = new List<SuiteResult>();
     await ZincXManagerTests.PasswordSuite.RunAsync(results);
 }
 
+// ================= 套件 21:局域网地址上报(632/633 + 621 第五段,真起 ZXMS) =================
+{
+    await ZincXManagerTests.ClientIpSuite.RunAsync(results, Ws, DebugMs);
+}
+
 // ================= 汇总 =================
 Console.WriteLine();
 Console.WriteLine("================= 总表 =================");

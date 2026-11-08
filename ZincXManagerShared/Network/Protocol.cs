@@ -301,6 +301,24 @@ public static class Protocol
 
 
     /// <summary>
+    /// 632 ClientIpReport:ZXMC → ZXMS。客户端把自己的<b>局域网 IPv4</b>(网卡地址,如 <c>192.168.1.23</c>)报上来。
+    ///
+    /// <para>为什么需要它:ZXMC 经 frp 隧道连进来时,ZXMS 侧看到的连接地址是隧道对端(127.0.0.1),
+    /// 登录弹窗里给玩家看的 IP 与归属地都失去意义。</para>
+    ///
+    /// <para>上报值<b>只用于展示与日志</b>:白名单、封禁、持久登录表、限速等安全判断一律仍用连接 IP。
+    /// 负载 = IP 文本(空负载或非法地址由服务端丢掉)。</para>
+    /// </summary>
+    public const ushort ClientIpReport = 632;
+
+    /// <summary>
+    /// 633 ClientIpAsk:ZXMS → ZXMC。玩家进服时服务端没有(或已过期)这个账号的局域网 IP,向它的客户端要一次。
+    /// 负载空;客户端收到就回一条 <see cref="ClientIpReport"/>。
+    /// <para>服务端<b>不等</b>这条回复:玩家进服不能卡在客户端回包上,这次没赶上就下一次进服生效。</para>
+    /// </summary>
+    public const ushort ClientIpAsk = 633;
+
+    /// <summary>
     /// 服务端 → 客户端:服务端配置(客户端连上后下发一次),负载按行 <c>键=值</c>。
     /// 目前只有 <c>msgdays</c> = 这个子服务端的消息保留天数(客户端据此决定本地留多久;不认识的行忽略)。
     /// </summary>

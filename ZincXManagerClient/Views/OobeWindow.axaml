@@ -362,6 +362,11 @@
                     Padding="6,3" HorizontalAlignment="Center" Width="320"
                     IsVisible="{Binding IsAdminAccount}"/>
 
+          <StackPanel Orientation="Horizontal" Spacing="20" HorizontalAlignment="Center">
+            <CheckBox Content="7 天内免登录" IsChecked="{Binding Remember}" FontSize="13" Foreground="#1F3B3A"/>
+            <CheckBox Content="记住账号密码" IsChecked="{Binding SavePassword}" FontSize="13" Foreground="#1F3B3A"/>
+          </StackPanel>
+
           <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Center" Margin="0,6,0,0">
             <Button Classes="primary" Content="登录" Click="OnLoginClick" IsEnabled="{Binding !IsBusy}" MinWidth="90"/>
             <Button Classes="secondary" Content="注册" Click="OnRegisterClick"

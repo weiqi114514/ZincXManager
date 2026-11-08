@@ -320,12 +320,14 @@
               </Border>
 
               <StackPanel VerticalAlignment="Center" Spacing="8">
-                <TextBlock Classes="value" Text="{Binding AccountLine}"/>
+                <!-- 账号一行、ID 一行:第一行字号大做标题,第二行小字做细节 -->
+                <TextBlock Text="{Binding AccountTitle}" FontSize="18" FontWeight="SemiBold" Foreground="#14202B"/>
+                <TextBlock Classes="tips" FontSize="13" Text="{Binding AccountDetail}"
+                           IsVisible="{Binding HasAccountDetail}"/>
                 <StackPanel Orientation="Horizontal" Spacing="8">
                   <Button Classes="small" Content="更换头像…" Focusable="False" Click="OnPickAvatarClick"/>
                   <Button Classes="small" Content="删除头像" Click="OnClearAvatarClick"/>
                 </StackPanel>
-                <TextBlock Classes="tips" Text=""/>
               </StackPanel>
             </StackPanel>
 

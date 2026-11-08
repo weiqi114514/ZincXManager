@@ -395,6 +395,62 @@ internal static partial class Program
         return false;
     }
 
+    /// <summary>
+    /// 拼 621 的负载:<c>请求ID|玩家名|连接IP|归属地[|上报的局域网IP]</c>。
+    ///
+    /// <para>前四段是老格式,老客户端只读前四段,所以第五段<b>只在真有上报值时才追加</b> —— 不会让它错位。</para>
+    /// <para>归属地由调用处固定用<b>连接 IP</b> 查:上报值是本机的局域网地址,拿它查归属地只会得到「内网」。</para>
+    /// </summary>
+    private static string LoginAskPayload(int requestId, string player, string ip, string geo, string reportedIp)
+        => reportedIp.Length > 0
+            ? $"{requestId}|{player}|{ip}|{geo}|{reportedIp}"
+            : $"{requestId}|{player}|{ip}|{geo}";
+
+    /// <summary>
+    /// 把一段客户端来的文本截到 <paramref name="max"/> 个字符以内,超了就在末尾标上原长度。
+    ///
+    /// <para>只给日志用:未登录连接也能发包、单包负载上限 8 MB,原样往日志里写会被刷成大文件。</para>
+    /// </summary>
+    private static string Shorten(string text, int max)
+        => text.Length <= max ? text : text[..max] + $"…(共 {text.Length} 字符)";
+
+    /// <summary>
+    /// 玩家进服时这个账号没有上报过局域网地址(或已过期),就向它的客户端要一次(633)。
+    ///
+    /// <para><b>不等回复</b>:玩家进服不能卡在客户端回包上。这一趟的 621 用的仍是现有缓存(没有就不带第五段),
+    /// 客户端补报上来的值从<b>下一次</b>进服开始生效 —— 不回头改这次的 621。</para>
+    /// <para>账号的 ZXMC 不在线就静默跳过:它下次登录成功时会主动上报(632)。</para>
+    /// </summary>
+    private static void AskReportedIpIfStale(int accountId, string accountName, string player)
+    {
+        if (accountId <= 0 || accountName.Length == 0 || ReportedClientIp.Get(accountName).Length > 0)
+        {
+            return;
+        }
+
+        _ = AskReportedIpAsync(accountId, accountName, player);
+    }
+
+    /// <summary>真正去发 633(异常只记日志,不能让它冒到进服流程里)。</summary>
+    private static async Task AskReportedIpAsync(int accountId, string accountName, string player)
+    {
+        try
+        {
+            if (await SendToAccountAsync(accountId, Protocol.ClientIpAsk, ""))
+            {
+                Logger.Log(LogLevel.Info, $"[局域网地址] 玩家 {player} 进服时没有可用的上报地址,已向 {accountName} 的客户端索要一次");
+            }
+            else
+            {
+                Logger.Log(LogLevel.Info, $"[局域网地址] 玩家 {player} 进服时没有可用的上报地址,{accountName} 的客户端不在线,跳过索要");
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.Log(LogLevel.Warning, "[局域网地址] 索要上报地址失败: " + ex.Message);
+        }
+    }
+
     /// <summary>让 ZXMM 踢人(ZXMS 只发配,动作由它在主线程执行)</summary>
     private static async Task<bool> KickViaZxmmAsync(string player, string reason)
     {
@@ -552,7 +608,11 @@ internal static partial class Program
         LoginStore.Log($"[登录请求] {player}({ip}) → 账号 {boundAccount},请求 {requestId}(连接阶段)");
 
         var geo = await GeoLookup.LookupAsync(ip);   //归属地
-        if (!await SendToAccountAsync(boundAccount, Protocol.LoginAsk, $"{requestId}|{player}|{ip}|{geo}"))
+        // 归属地固定用连接 IP 查:上报的是玩家本机的局域网地址,拿它查只会得到「内网」
+        AskReportedIpIfStale(boundAccount, boundName, player);
+        var reportedIp = ReportedClientIp.Get(boundName);   //上报的局域网地址(可能为空)
+        if (!await SendToAccountAsync(boundAccount, Protocol.LoginAsk,
+                LoginAskPayload(requestId, player, ip, geo, reportedIp)))
         {
             PendingLogins.TryRemove(requestId, out _);
             LoginStore.Log($"[登录失败] 玩家 {player}: 绑定的 ZXMC 账号不在线");
@@ -638,8 +698,11 @@ internal static partial class Program
 
         // 归属地是展示用的:最多等 1.2 秒,超时按"未知"发,不拖住登录弹窗
         var geo = await GeoLookup.LookupAsync(ip);   //归属地
+        // 归属地固定用连接 IP 查:上报的是玩家本机的局域网地址,拿它查只会得到「内网」
+        AskReportedIpIfStale(boundAccount, boundName, player);
+        var reportedIp = ReportedClientIp.Get(boundName);   //上报的局域网地址(可能为空)
         if (!await SendToAccountAsync(boundAccount, Protocol.LoginAsk,
-                $"{requestId}|{player}|{ip}|{geo}"))
+                LoginAskPayload(requestId, player, ip, geo, reportedIp)))
         {
             PendingLogins.TryRemove(requestId, out _);
             LoginStore.Log($"[登录失败] 玩家 {player}: 绑定的账号不在线");
@@ -891,6 +954,34 @@ internal static partial class Program
                     _loginLimiter.RecordFailure(regIp);
                     Logger.Log(LogLevel.Warning, $"[账号] 注册失败:{user} —— {error}");
                     await packet.SendAsync(Protocol.AccountRegisterAck, "err|" + error, packet.Id);
+                }
+
+                break;
+            }
+
+            // ---- 局域网地址上报(632):ZXMC 报上它自己网卡的 IPv4,只用于展示与日志 ----
+            case Protocol.ClientIpReport:
+            {
+                var reportText = Encoding.UTF8.GetString(packet.Data).Trim();   //包内容
+                var reporter = server.Registry.Find(packet.Connection.Id);   //这条连接登记信息
+
+                // 写进日志的文本先截断:这个包未登录也能发,负载上限 8 MB,原样落日志就是个日志炸弹
+                var reportForLog = Shorten(reportText, 64);
+
+                // 没登录就不知道是谁报的:丢弃(账号名是这条缓存的键,没有键就存不了)
+                if (reporter is null || reporter.User.Length == 0)
+                {
+                    Logger.Log(LogLevel.Warning, $"[局域网地址] 未登录的连接上报了地址 {reportForLog},已忽略 ← {packet.Connection.RemoteEndPoint}");
+                    break;
+                }
+
+                if (ReportedClientIp.Remember(reporter.User, reportText, out var savedIp))
+                {
+                    Logger.Log(LogLevel.Info, $"[局域网地址] {reporter.User} 上报本机局域网地址 {savedIp}(连接地址仍是 {reporter.Ip},安全判断只用连接地址)");
+                }
+                else
+                {
+                    Logger.Log(LogLevel.Warning, $"[局域网地址] {reporter.User} 上报的地址不可用,已忽略:{reportForLog}");
                 }
 
                 break;

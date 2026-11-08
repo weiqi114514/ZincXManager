@@ -303,6 +303,19 @@ public partial class ConnectViewModel : ViewModelBase, IDisposable
                     case Protocol.AccountLoginAck:
                     case Protocol.AccountRegisterAck:
                         AccountReply?.Invoke(packet.Type, text);
+
+                        // 登录 / 注册成功就把本机局域网地址报上去(632):经 frp 隧道连进来时,
+                        // 服务端看到的连接地址是隧道对端,拿它当玩家 IP 给玩家看不合适
+                        if (text.StartsWith("ok|", StringComparison.Ordinal))
+                        {
+                            _ = ReportLocalIpAsync("登录成功");
+                        }
+
+                        break;
+
+                    // 服务端要本机局域网地址(633):玩家进服时服务端没有或已过期,这里补报一次
+                    case Protocol.ClientIpAsk:
+                        _ = ReportLocalIpAsync("服务端索要");
                         break;
 
                     // 官方验证第二层:对方的证明(521)
@@ -555,6 +568,39 @@ public partial class ConnectViewModel : ViewModelBase, IDisposable
         catch (Exception ex)
         {
             Logger.Log(LogLevel.Warning, "[ZXMC] 请求历史消息失败: " + ex.Message);
+        }
+    }
+
+    /// <summary>
+    /// 向服务端报一次本机局域网地址(632)。登录成功时主动报,收到 633 索要时补报。
+    ///
+    /// <para>取不到地址就只记 Warn、不发空包 —— 服务端那边「没有值」本身就是一种有效状态,
+    /// 发个空串只会让日志里多一条看不懂的记录。</para>
+    /// <para>只有连的是 ZXMS 才报:这条协议是子服务端要的,直连官方(ZXMOS)时报过去只会让它记一条「未处理的包」。</para>
+    /// </summary>
+    /// <param name="reason">为什么要报(写进日志,方便对着服务端日志排查)。</param>
+    private async Task ReportLocalIpAsync(string reason)
+    {
+        if (_client is null || _serverRole != "ZXMS")
+        {
+            return;
+        }
+
+        var ip = LocalIPv4.Value;
+        if (ip.Length == 0)
+        {
+            Logger.Log(LogLevel.Warning, "[ZXMC] 取不到本机局域网 IPv4,这次不向服务端上报(上报只是展示用)");
+            return;
+        }
+
+        try
+        {
+            await _client.SendAsync(Protocol.ClientIpReport, ip);
+            Logger.Log(LogLevel.Info, $"[ZXMC] 已上报本机局域网地址 {ip}({reason})");
+        }
+        catch (Exception ex)
+        {
+            Logger.Log(LogLevel.Warning, "[ZXMC] 上报本机局域网地址失败: " + ex.Message);
         }
     }
 
