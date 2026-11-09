@@ -22,6 +22,9 @@ public sealed class ClientInfo
     /// <summary>权限等级(登录后由账号决定;没登录是 "-")。</summary>
     public string Level { get; set; } = "-";
 
+    /// <summary>客户端自报的版本号(登录 / 注册负载最后一段,如 <c>b0.3.2a</c>)。 老客户端没有这一段,这里就是空串 —— 空串等于"版本未知",强制更新时按太旧处理。</summary>
+    public string Version { get; set; } = "";
+
     /// <summary>对端 IP。</summary>
     public string Ip { get; init; } = "?";
 
@@ -91,6 +94,15 @@ public sealed class ClientRegistry
         {
             info.User = user;
             info.Level = level;
+        }
+    }
+
+    /// <summary>登录 / 注册时记下客户端版本(强制更新要用它判断谁该被踢)。</summary>
+    public void SetVersion(Guid id, string version)
+    {
+        if (_map.TryGetValue(id, out var info))
+        {
+            info.Version = version;
         }
     }
 

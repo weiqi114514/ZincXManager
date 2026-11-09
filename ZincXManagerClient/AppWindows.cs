@@ -84,7 +84,11 @@ internal static class AppWindows
     }
 
     /// <summary>重连彻底失败:关掉主界面,切回连接流程窗体,并弹窗把失败原因告诉用户。</summary>
-    public static void ShowConnectWithError(string error)
+    /// <param name="error">给玩家看的原因。</param>
+    /// <param name="title">弹窗标题:默认「连接失败」,服务端要求更新时传「需要更新客户端」。</param>
+    /// <param name="hint">弹窗底部那行灰字提示。</param>
+    public static void ShowConnectWithError(string error, string title = "连接失败",
+        string hint = "检查服务端是否在运行,或地址/端口是否变化")
     {
         // 只切一次:已经回到连接流程就不再造新窗口 —— 心跳/多次失败重复调用时,
         // 以前每次都会新建一个一模一样的连接窗口,还会在同一个 ViewModel 上挂出重复弹窗
@@ -115,9 +119,9 @@ internal static class AppWindows
             from.Close();
         }
 
-        _ = Views.MessageDialog.InfoAsync(connect, "连接失败",
+        _ = Views.MessageDialog.InfoAsync(connect, title,
             string.IsNullOrWhiteSpace(error) ? "与服务端的连接已断开,自动重连 5 次均未成功。" : error,
-            "知道了", "检查服务端是否在运行,或地址/端口是否变化");
+            "知道了", hint);
     }
 
 }

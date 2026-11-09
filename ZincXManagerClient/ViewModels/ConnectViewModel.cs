@@ -111,6 +111,14 @@ public partial class ConnectViewModel : ViewModelBase, IDisposable
     /// <summary>需要弹窗提示的错误(标题, 内容):连不上、模式不匹配。</summary>
     public event Action<string, string>? ErrorRaised;
 
+    /// <summary>服务端要求更新客户端时触发(634 或被 601/603 拒登录):参数是服务端给的原因。</summary>
+    public event Action<string>? UpdateRequiredRaised;
+
+    /// <summary>
+    /// 服务端已经明确要本端更新:收到以后就别再自动重连了 —— 版本没变,重连再多次也一样被拒。
+    /// </summary>
+    public bool UpdateRequired { get; private set; }
+
     /// <summary>启动自检期间置 true:错误由 App 自己按模式弹「连接 ZXMS/ZXMOS 失败」,界面别再弹一次。</summary>
     public bool SuppressErrorDialog { get; set; }
 
@@ -245,6 +253,7 @@ public partial class ConnectViewModel : ViewModelBase, IDisposable
         }
 
         _rejected = false;
+        UpdateRequired = false;   //新的一次连接:上次被要求更新的标记清掉(用户可能已经换了新版)
         IsBusy = true;
         SetState("连接中…", "#F0A020");
 
@@ -304,6 +313,13 @@ public partial class ConnectViewModel : ViewModelBase, IDisposable
                     case Protocol.AccountRegisterAck:
                         AccountReply?.Invoke(packet.Type, text);
 
+                        // 服务端要求更新(强更开着且本端太旧):置位后再通知界面,界面据此停掉自动重连
+                        if (IsUpdateRequired(text))
+                        {
+                            UpdateRequired = true;
+                            UpdateRequiredRaised?.Invoke(text.Trim());
+                        }
+
                         // 登录 / 注册成功就把本机局域网地址报上去(632):经 frp 隧道连进来时,
                         // 服务端看到的连接地址是隧道对端,拿它当玩家 IP 给玩家看不合适
                         if (text.StartsWith("ok|", StringComparison.Ordinal))
@@ -316,6 +332,13 @@ public partial class ConnectViewModel : ViewModelBase, IDisposable
                     // 服务端要本机局域网地址(633):玩家进服时服务端没有或已过期,这里补报一次
                     case Protocol.ClientIpAsk:
                         _ = ReportLocalIpAsync("服务端索要");
+                        break;
+
+                    // 服务端要求更新并已断开(634):先说明原因,再让上层别再重连
+                    case Protocol.ClientTooOld:
+                        Logger.Log(LogLevel.Warning, $"[ZXMC] 服务端要求更新客户端:{text.Trim()}");
+                        UpdateRequired = true;
+                        UpdateRequiredRaised?.Invoke(text.Trim());
                         break;
 
                     // 官方验证第二层:对方的证明(521)
@@ -487,6 +510,10 @@ public partial class ConnectViewModel : ViewModelBase, IDisposable
         return true;
     }
 
+    /// <summary>服务端这条回执是不是「版本太旧,先更新」(601 / 603 的 err 负载以固定开头词起头)。</summary>
+    private static bool IsUpdateRequired(string text)
+        => text.TrimStart().StartsWith("err|" + Protocol.UpdateRequiredMarker, StringComparison.Ordinal);
+
     /// <summary>
     /// 断线重连后自动重登:用登录时缓存的密文 + 新的挑战-响应再发一次 600。
     /// 没缓存(没登录过)或没连上就返回 false;回执 err 只记日志,不弹窗。
@@ -503,8 +530,9 @@ public partial class ConnectViewModel : ViewModelBase, IDisposable
 
         var nonce = ZincXManagerShared.Account.LoginProof.NewNonce();   //本次挑战
         var proof = ZincXManagerShared.Account.LoginProof.Compute(hash, nonce);   //挑战响应
+        var version = ZincXManagerClient.Services.UpdateService.CurrentVersion;   //本端版本号(强制更新要它)
         var payload = $"{user}|{hash}|{ClientSession.LoginLevel}|{ClientSession.LoginSide}|" +
-                      $"{ZincXManagerShared.Account.MachineCode.Value}||{nonce}|{proof}";
+                      $"{ZincXManagerShared.Account.MachineCode.Value}||{nonce}|{proof}|{version}";
 
         var wait = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);   //等 601
         void OnReply(ushort type, string text)

@@ -149,6 +149,7 @@ public sealed class Probe : IDisposable
     private readonly object _lock = new();
     private Task? _reader;
     private readonly SemaphoreSlim _signal = new(0);
+    private bool _closed;   //对端断开了没(读线程读到 EOF 时置位)
 
     public string Name { get; }
     public string? LastAck { get; private set; }
@@ -326,11 +327,13 @@ public sealed class Probe : IDisposable
                 }
                 catch
                 {
+                    _closed = true;
                     return;
                 }
 
                 if (packet is null)
                 {
+                    _closed = true;
                     return;
                 }
 
@@ -338,6 +341,22 @@ public sealed class Probe : IDisposable
                 try { _signal.Release(); } catch { /* 已释放 */ }
             }
         });
+    }
+
+    /// <summary>对端是不是已经断开(等服务端主动踢人时用)。</summary>
+    public bool Closed => _closed;
+
+    /// <summary>等对端断开,最多等 timeoutMs。</summary>
+    public async Task<bool> WaitClosedAsync(int timeoutMs = 8000)
+    {
+        var end = DateTime.UtcNow.AddMilliseconds(timeoutMs);
+        while (DateTime.UtcNow < end)
+        {
+            if (_closed) { return true; }
+            await Task.Delay(100);
+        }
+
+        return _closed;
     }
 
     /// <summary>从后台读线程攒的队列里取一条指定类型的包(取过就没)。</summary>
@@ -370,23 +389,40 @@ public sealed class Probe : IDisposable
         lock (_lock) { return _got.Any(g => g.Type == type); }
     }
 
-    /// <summary>注册一个账号,返回服务端是否回 ok|。</summary>
-    public async Task<bool> RegisterAsync(string user, string pass, string machine, int timeoutMs = 8000)
+    /// <summary>注册一个账号,返回服务端是否回 ok|。<paramref name="version"/> 非空时按新客户端带上版本段。</summary>
+    public async Task<bool> RegisterAsync(string user, string pass, string machine, int timeoutMs = 8000, string version = "")
     {
         var hash = PasswordHash.Hash(user, pass);
-        await SendAsync(2, Protocol.AccountRegister, Encoding.UTF8.GetBytes($"{user}|{hash}|{machine}"));
+        var payload = $"{user}|{hash}|{machine}";   //老客户端:没有挑战-响应也没有版本段
+
+        if (version.Length > 0)
+        {
+            var nonce = LoginProof.NewNonce();
+            var proof = LoginProof.Compute(hash, nonce);
+            payload = $"{user}|{hash}|{machine}|{nonce}|{proof}|{version}";
+        }
+
+        await SendAsync(2, Protocol.AccountRegister, Encoding.UTF8.GetBytes(payload));
         var ack = await WaitAsync(Protocol.AccountRegisterAck, timeoutMs);
         LastAck = ack;
         return ack?.StartsWith("ok|") == true;
     }
 
-    /// <summary>登录:带 nonce/proof 走挑战-响应,返回是否回 ok|。</summary>
-    public async Task<bool> LoginAsync(string user, string pass, string machine, string level, string side, int timeoutMs = 8000)
+    /// <summary>登录:带 nonce/proof 走挑战-响应,返回是否回 ok|。<paramref name="version"/> 非空时按新客户端带上版本段。</summary>
+    public async Task<bool> LoginAsync(string user, string pass, string machine, string level, string side, int timeoutMs = 8000, string version = "")
     {
         var hash = PasswordHash.Hash(user, pass);
         var nonce = LoginProof.NewNonce();
         var proof = LoginProof.Compute(hash, nonce);
-        await SendAsync(2, Protocol.AccountLogin, Encoding.UTF8.GetBytes($"{user}|{hash}|{level}|{side}|{machine}||{nonce}|{proof}"));
+        var payload = $"{user}|{hash}|{level}|{side}|{machine}||{nonce}|{proof}";
+
+        // 第 9 段是客户端版本:老客户端没有这一段,服务端当"版本未知"
+        if (version.Length > 0)
+        {
+            payload += "|" + version;
+        }
+
+        await SendAsync(2, Protocol.AccountLogin, Encoding.UTF8.GetBytes(payload));
         var ack = await WaitAsync(Protocol.AccountLoginAck, timeoutMs);
         LastAck = ack;
         return ack?.StartsWith("ok|") == true;

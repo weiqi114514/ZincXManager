@@ -6,6 +6,7 @@ const string Ws = @"G:\文档\deepseek-harness\default-workspace";
 const string DebugMs = @"E:\report\ZincXManager\ZincXManagerServer\bin\Debug\net10.0";
 const string DebugOs = @"E:\report\ZincXManager-Official\ZincXManagerOServer\bin\Debug\net10.0";
 const string LicTool = @"E:\report\ZincXManager-Official\ZincXManagerLicTool\bin\Debug\net10.0\ZincXManagerLicTool.exe";
+const string DebugChat = @"E:\report\ZincXManager\ZincXManagerChat\bin\Debug\net10.0";
 
 var results = new List<SuiteResult>();
 
@@ -928,6 +929,16 @@ var results = new List<SuiteResult>();
 // ================= 套件 21:局域网地址上报(632/633 + 621 第五段,真起 ZXMS) =================
 {
     await ZincXManagerTests.ClientIpSuite.RunAsync(results, Ws, DebugMs);
+}
+
+// ================= 套件 22:强制更新(forceupdate / minversion + 634 踢线,真起 ZXMS) =================
+{
+    await ZincXManagerTests.ForceUpdateSuite.RunAsync(results, Ws, DebugMs);
+}
+
+// ================= 套件 23:聊天频道号一致(510 第四段 + 好友私聊真收发,真起 ZXMOS/ZXMS/聊天宿主) =================
+{
+    await ZincXManagerTests.ChatChannelSuite.RunAsync(results, Ws, DebugMs, DebugOs, DebugChat);
 }
 
 // ================= 汇总 =================

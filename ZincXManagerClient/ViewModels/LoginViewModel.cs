@@ -70,6 +70,11 @@ public partial class LoginViewModel : ViewModelBase
         return body.StartsWith("失败:") ? body[3..] : body;
     }
 
+    /// <summary>服务端这条回执是不是「本服开了强制更新,客户端版本太旧」。</summary>
+    /// <para>不能按 "err|" 开头判:OnAccountReply 已经把前缀剥掉、换成 "失败:" 了,这里只认记号本身。</para>
+    private static bool IsUpdateRequired(string text)
+        => text.Contains(Protocol.UpdateRequiredMarker, StringComparison.Ordinal);
+
     // ---------- 头像 ----------
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasAvatar), nameof(AvatarHint))]
@@ -237,9 +242,11 @@ public partial class LoginViewModel : ViewModelBase
         // 登录附带挑战-响应:nonce 每次不同,proof = SHA256(密文 : nonce);密文本身仅用于转发给 ZXMOS(整包已加密)
         var nonce = ZincXManagerShared.Account.LoginProof.NewNonce();
         var proof = ZincXManagerShared.Account.LoginProof.Compute(hash, nonce);
+        // 最后一段是本端版本号:服务端开了强制更新时会拿它判断要不要拒登录 / 踢下线
+        var version = ZincXManagerClient.Services.UpdateService.CurrentVersion;
         var payload = register
-            ? $"{user}|{hash}|{MachineCode.Value}|{nonce}|{proof}"
-            : $"{user}|{hash}|{level}|{side}|{MachineCode.Value}||{nonce}|{proof}";
+            ? $"{user}|{hash}|{MachineCode.Value}|{nonce}|{proof}|{version}"
+            : $"{user}|{hash}|{level}|{side}|{MachineCode.Value}||{nonce}|{proof}|{version}";
 
         if (!await _connect.SendAsync(type, payload))
         {
@@ -262,8 +269,9 @@ public partial class LoginViewModel : ViewModelBase
 
         if (!ok)
         {
-            // 被封禁 / 密码错误 / 账号不存在:都弹窗告诉用户
-            Fail(register ? "注册失败" : "登录失败", Clean(text));
+            // 被封禁 / 密码错误 / 账号不存在:都弹窗告诉用户;
+            // 服务端开了强制更新时标题改成「需要更新客户端」,别让人以为是账号问题
+            Fail(IsUpdateRequired(text) ? "需要更新客户端" : register ? "注册失败" : "登录失败", Clean(text));
             return false;
         }
 

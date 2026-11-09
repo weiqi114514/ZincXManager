@@ -12,6 +12,7 @@ using ZincXManagerShared.History;  // 补发游标
 using ZincXManagerShared.Logging;  // 共享库
 using ZincXManagerShared.Network;  // 共享库
 using ZincXManagerShared.Security;  // 共享库
+using ZincXManagerShared.Update;  // 版本号比较(强制更新)
 using ZincXManagerShared.Verify;  // 共享库
 using ZincXManagerServer.Command;  // 子服自身
 
@@ -177,6 +178,18 @@ internal static partial class Program
 
     /// <summary>登录失败次数上限的默认值。</summary>
     private const int DefaultLoginRate = 10;
+
+    /// <summary>强制更新开关(config 的 forceupdate,默认 0 = 关)。开了以后版本低于门槛的 ZXMC 登录被拒、在线的被踢。</summary>
+    private const string KeyForceUpdate = "forceupdate";
+
+    /// <summary>强制更新的最低版本(config 的 minversion,形如 <c>b0.3.2a</c>)。 留空 = 用本端自己的版本号(<see cref="AppVersion"/>)。</summary>
+    private const string KeyMinVersion = "minversion";
+
+    /// <summary>强制更新开关当前值(启动时读配置,配置模式里改立刻生效)。</summary>
+    private static bool _forceUpdate;
+
+    /// <summary>强制更新的门槛版本;空串表示"跟本端版本一致"。</summary>
+    private static string _minVersion = "";
 
     /// <summary>按连接限速:一个连接狂刷包只耗自己的额度,不拖慢别人。</summary>
     private static RateLimiter _packetLimiter = new(DefaultPacketRate);
@@ -828,7 +841,18 @@ internal static partial class Program
                 // 第 6/7 段是挑战-响应(loginNonce / proof),用于本地账号增强校验
                 var loginNonce = parts.Length > 6 ? parts[6].Trim() : "";
                 var loginProof = parts.Length > 7 ? parts[7].Trim() : "";
+                // 第 9 段是客户端版本(b0.3.2a);老客户端没有这一段,当"版本未知"
+                var loginVersion = parts.Length > 8 ? parts[8].Trim() : "";
                 var fromIp = packet.Connection.RemoteEndPoint?.Address.ToString() ?? "";
+
+                _server.Registry.SetVersion(packet.Connection.Id, loginVersion);
+
+                // 强制更新:版本不够直接回 err,不耗限速额度(旧客户端会一直重连,别把整个 IP 的额度用光)
+                if (RejectOutdatedClient(loginVersion, protocol: "登录", user) is { } outdatedLogin)
+                {
+                    await packet.SendAsync(Protocol.AccountLoginAck, "err|" + outdatedLogin, packet.Id);
+                    break;
+                }
 
                 // 登录只数失败:正常玩家一次就过、额度根本不动,爆破的人每试一次都在扣
                 if (_loginLimiter.IsBlocked(fromIp))
@@ -908,8 +932,19 @@ internal static partial class Program
                 var passwordHash = parts.Length > 1 ? parts[1] : "";
                 // 第 3 段是客户端机器码(老客户端没这段,当空处理)
                 var regMachine = parts.Length > 2 ? parts[2].Trim() : "";
+                // 注册负载最后一段也是客户端版本(名称|密文|机器码|nonce|proof|版本)
+                var regVersion = parts.Length > 5 ? parts[5].Trim() : "";
 
                 var regIp = packet.Connection.RemoteEndPoint?.Address.ToString() ?? "";
+
+                _server.Registry.SetVersion(packet.Connection.Id, regVersion);
+
+                // 强制更新对注册同样生效:旧客户端注册进来也一样用不了
+                if (RejectOutdatedClient(regVersion, protocol: "注册", user) is { } outdatedReg)
+                {
+                    await packet.SendAsync(Protocol.AccountRegisterAck, "err|" + outdatedReg, packet.Id);
+                    break;
+                }
 
                 // 注册和登录共用同一份失败计数:否则可以拿注册接口反过来试口令 / 刷账号
                 if (_loginLimiter.IsBlocked(regIp))
@@ -1573,6 +1608,28 @@ internal static partial class Program
         Logger.Log(LogLevel.Info, loginRate > 0
             ? $"[限速] 登录/注册 每 IP 每 {LoginRateWindowSeconds / 60} 分钟最多失败 {loginRate} 次"
             : "[限速] 登录失败次数不限(服主关掉了)");
+
+        // 强制更新:缺配置就写默认(关),让服主知道有这两个开关
+        var forceUpdateText = config.MapGet(KeyForceUpdate).Trim();   //配置里的开关值
+        if (forceUpdateText.Length == 0)
+        {
+            config.WriteFileMap(KeyForceUpdate, "0");
+            forceUpdateText = "0";
+            Logger.Log(LogLevel.Info, $"[CONFIG]{KeyForceUpdate} 未配置,已写入默认值 0(强制更新关)");
+        }
+
+        _forceUpdate = forceUpdateText == "1";
+
+        _minVersion = config.MapGet(KeyMinVersion).Trim();
+        if (!config.ReadFileMap().ContainsKey(KeyMinVersion))
+        {
+            config.WriteFileMap(KeyMinVersion, "");
+            Logger.Log(LogLevel.Info, $"[CONFIG]{KeyMinVersion} 未配置,已写入空值(强制更新门槛 = 本端版本 {AppVersion})");
+        }
+
+        Logger.Log(LogLevel.Info, _forceUpdate
+            ? $"[强制更新] 开:客户端版本低于 {MinimumVersion} 一律拒绝登录并踢下线"
+            : $"[强制更新] 关(config 里 {KeyForceUpdate}=1 可开,门槛用 {KeyMinVersion},留空 = 本端版本 {AppVersion})");
 
         // 令牌:和模组 config 里的 api.token 一致才校验。两边都空 = 不校验(默认)
         _zxmmToken = config.MapGet(KeyZxmmToken).Trim();
@@ -2243,6 +2300,155 @@ internal static partial class Program
         return level == Protocol.RegisterLevel ? "zxmos" : "zxms";
     }
 
+    /// <summary>强制更新要用的门槛版本:配了 minversion 就用它,没配就是本端自己的版本号。</summary>
+    private static string MinimumVersion => _minVersion.Length > 0 ? _minVersion : AppVersion;
+
+    /// <summary>
+    /// 强制更新:这个客户端版本能不能放进来。返回 null = 放行;返回非空 = 该回给玩家的原因。
+    /// <para>开关没开一律放行(开关关着时版本号对错都不该拦人)。开关开着而版本缺失(老客户端没报版本)
+    /// 按"太旧"处理 —— 否则只要不发最后一段就能绕过强制更新。</para>
+    /// </summary>
+    /// <param name="clientVersion">客户端自报的版本号(可能为空 = 老客户端)。</param>
+    /// <param name="protocol">"登录" / "注册",只用于日志与文案。</param>
+    /// <param name="user">账号名,只用于日志。</param>
+    private static string? RejectOutdatedClient(string clientVersion, string protocol, string user)
+    {
+        if (!_forceUpdate)
+        {
+            return null;
+        }
+
+        var need = MinimumVersion;   //本服要求的最低版本
+        var ok = clientVersion.Length > 0 && VersionRules.Compare(clientVersion, need) >= 0;
+
+        if (!ok)
+        {
+            Logger.Log(LogLevel.Warning,
+                $"[强制更新] 拒绝{protocol} {user}(客户端={DescribeVersion(clientVersion)},本条要求 ≥ {need})");
+            return $"{Protocol.UpdateRequiredMarker}:请更新到最新版 ZXMC(当前 {DescribeVersion(clientVersion)},本服要求 {need})";
+        }
+
+        Logger.Log(LogLevel.Info, $"[强制更新] {protocol}放行 {user}(客户端={clientVersion} ≥ {need})");
+        return null;
+    }
+
+    /// <summary>版本号给日志 / 弹窗看的样子:空串说成「未知版本」,别让玩家看到一个空括号。</summary>
+    private static string DescribeVersion(string version)
+        => version.Length > 0 ? version : "未知版本";
+
+    /// <summary>
+    /// 填进来的字符串像不像版本号:字母开头可选,后面至少有一位数字,只允许数字 / 字母 / <c>. - +</c>。
+    /// <para>不校验就不能拦:随便填个 "abc" 会被解析成 0.0.0,门槛永远高于任何客户端,全服都进不来。</para>
+    /// </summary>
+    private static bool LooksLikeVersion(string version)
+    {
+        var text = version.Trim();   //去掉两侧空格
+        var digits = 0;   //数字字符的个数
+
+        for (var i = 0; i < text.Length; i++)
+        {
+            var c = text[i];
+
+            if (char.IsDigit(c))
+            {
+                digits++;
+                continue;
+            }
+
+            if (char.IsAsciiLetter(c) || c is '.' or '-' or '+')
+            {
+                continue;
+            }
+
+            return false;
+        }
+
+        return digits > 0;
+    }
+
+    /// <summary>
+    /// 强制更新开启后,把在线且版本不够的 ZXMC 踢下线:先发 634 讲清原因,再断开。
+    /// <para>不 await 在调用方等它:发包带 10 秒写超时,处理命令的线程不该为别人的连接卡住。</para>
+    /// </summary>
+    /// <returns>踢掉几条连接(当场统计,真正的断开在后台完成)。</returns>
+    private static int KickOutdatedClients()
+    {
+        var server = _server;
+        if (server is null || !_forceUpdate)
+        {
+            return 0;
+        }
+
+        var need = MinimumVersion;   //本服要求的最低版本
+        var victims = new List<TcpConnection>();   //要踢的连接
+        var names = new List<string>();   //各自的账号名(只用于日志)
+
+        foreach (var conn in server.Connections)
+        {
+            if (conn.IsClosed)
+            {
+                continue;
+            }
+
+            var info = server.Registry.Find(conn.Id);
+            if (info?.Role != "ZXMC")
+            {
+                continue;
+            }
+
+            if (info.Version.Length > 0 && VersionRules.Compare(info.Version, need) >= 0)
+            {
+                continue;   //版本够,留着
+            }
+
+            victims.Add(conn);
+            names.Add($"{info.User}({DescribeVersion(info.Version)})");
+        }
+
+        if (victims.Count == 0)
+        {
+            return 0;
+        }
+
+        Logger.Log(LogLevel.Warning,
+            $"[强制更新] 踢下线 {victims.Count} 个旧版客户端(本服要求 ≥ {need}):{string.Join("、", names)}");
+        _ = Task.Run(KickAsync);
+
+        return victims.Count;
+
+        async Task KickAsync()
+        {
+            // 先把原因发出去再断:顺序反了客户端只会看到"连接已断开"
+            foreach (var conn in victims)
+            {
+                try
+                {
+                    await conn.SendAsync(Protocol.ClientTooOld,
+                        $"{Protocol.UpdateRequiredMarker}:请更新到最新版 ZXMC(本服要求 {need})", 0, "ZXMC");
+                }
+                catch (Exception ex)
+                {
+                    Logger.Log(LogLevel.Warning, $"[强制更新] 通知 {conn.RemoteEndPoint} 失败(对方可能已经断了): {ex.Message}");
+                }
+            }
+
+            // 断开前留一点时间让包真的发出去(写是同步落 socket 的,这里只是保险)
+            await Task.Delay(200);
+
+            foreach (var conn in victims)
+            {
+                try
+                {
+                    await conn.DisposeAsync();
+                }
+                catch (Exception ex)
+                {
+                    Logger.Log(LogLevel.Warning, $"[强制更新] 断开 {conn.RemoteEndPoint} 失败: {ex.Message}");
+                }
+            }
+        }
+    }
+
     /// <summary>把账号包转给 ZXMOS;没连上就返回 false(调用方决定退回本地还是报错)。</summary>
     private static async Task<bool> TryRelayAccountAsync(ServerboundPacket packet, ushort osType, string tail = "")
     {
@@ -2455,6 +2661,8 @@ internal static partial class Program
             "configver" => config.MapGet(KeyConfigVer).Trim(),
             "packetrate" => config.MapGet(KeyPacketRate).Trim(),
             "loginrate" => config.MapGet(KeyLoginRate).Trim(),
+            "forceupdate" => _forceUpdate ? "1" : "0",
+            "minversion" => _minVersion,
             _ => "",
         };
     }
@@ -2635,6 +2843,48 @@ internal static partial class Program
                 Logger.Log(LogLevel.Info, loginRate > 0
                     ? $"[限速] 登录失败上限已改成每 IP 每 {LoginRateWindowSeconds / 60} 分钟 {loginRate} 次"
                     : "[限速] 登录失败次数已改为不限");
+                return "";
+
+            case "forceupdate":
+                if (value is not ("0" or "1"))
+                {
+                    return "只能填 1(旧版拒绝登录并踢下线)或 0(不检查)";
+                }
+
+                _forceUpdate = value == "1";
+                config.WriteFileMap(KeyForceUpdate, value);
+                if (!_forceUpdate)
+                {
+                    Logger.Log(LogLevel.Info, "[强制更新] 已关闭,版本不再拦截");
+                    return "";
+                }
+
+                // 开着就得有个门槛:minversion 留空时用本端版本
+                Logger.Log(LogLevel.Info, $"[强制更新] 已开启,门槛 {MinimumVersion};正在检查在线客户端");
+                var kicked = KickOutdatedClients();
+                Logger.Log(LogLevel.Info, kicked > 0
+                    ? $"[强制更新] 在线旧版客户端 {kicked} 个已踢下线"
+                    : "[强制更新] 在线客户端版本都够,没人被踢");
+                return "";
+
+            case "minversion":
+                // 留空 = 跟本端版本一致;填了必须是能认出类型的版本号,否则比较永远判旧、谁都进不来
+                if (value.Length > 0 && !LooksLikeVersion(value))
+                {
+                    return "要填版本号(如 b0.3.2a),留空表示跟本端版本一致";
+                }
+
+                _minVersion = value;
+                config.WriteFileMap(KeyMinVersion, value);
+                Logger.Log(LogLevel.Info, $"[强制更新] 门槛已设为 {MinimumVersion}");
+                if (_forceUpdate)
+                {
+                    var kickedByVersion = KickOutdatedClients();
+                    Logger.Log(LogLevel.Info, kickedByVersion > 0
+                        ? $"[强制更新] 在线旧版客户端 {kickedByVersion} 个已踢下线"
+                        : "[强制更新] 在线客户端版本都够,没人被踢");
+                }
+
                 return "";
 
             default:

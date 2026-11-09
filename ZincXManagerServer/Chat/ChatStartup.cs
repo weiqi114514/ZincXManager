@@ -172,9 +172,10 @@ internal static partial class Program
         }
 
         var selfServerId = SelfServerId(config);
-        await connection.SendAsync(Protocol.ChatHello, $"{host.Port}\t{token}\t{selfServerId}");
+        // 第四段显式带自己的本服编号:中转登录时 601 第三段是官方编号,客户端拿它算频道号会算错
+        await connection.SendAsync(Protocol.ChatHello, $"{host.Port}\t{token}\t{selfServerId}\t{account.Id}");
         Logger.Log(LogLevel.Info,
-            $"[聊天] 已把聊天后端端口 {host.Port} 与令牌发给 {account.Name}(本服ID={selfServerId})");
+            $"[聊天] 已把聊天后端端口 {host.Port} 与令牌发给 {account.Name}(本服ID={selfServerId},编号={account.Id})");
 
         // 建频道要发 HTTP,不能占着登录这条线,丢后台
         _ = Task.Run(async () =>

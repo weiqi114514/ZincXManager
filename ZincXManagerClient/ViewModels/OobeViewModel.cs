@@ -306,6 +306,11 @@ public partial class OobeViewModel : ViewModelBase
         // 回执里常带 "失败:" 前缀,和弹窗标题重复,去掉
         return body.StartsWith("失败:") ? body[3..] : body;
     }
+
+    /// <summary>服务端这条回执是不是「本服开了强制更新,客户端版本太旧」。</summary>
+    /// <para>不能按 "err|" 开头判:OnAccountReply 已经把前缀剥掉、换成 "失败:" 了,这里只认记号本身。</para>
+    private static bool IsUpdateRequired(string text)
+        => text.Contains(Protocol.UpdateRequiredMarker, StringComparison.Ordinal);
     [ObservableProperty] public partial bool IsBusy { get; set; }
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CanGoNext))]
@@ -424,9 +429,11 @@ public partial class OobeViewModel : ViewModelBase
         // 附带挑战-响应:nonce 每次不同,proof = SHA256(密文 : nonce)
         var nonce = ZincXManagerShared.Account.LoginProof.NewNonce();
         var proof = ZincXManagerShared.Account.LoginProof.Compute(hash, nonce);
+        // 最后一段是本端版本号:服务端开了强制更新时会拿它判断要不要拒登录 / 踢下线
+        var version = ZincXManagerClient.Services.UpdateService.CurrentVersion;
         var payload = register
-            ? $"{UserName.Trim()}|{hash}|{MachineCode.Value}|{nonce}|{proof}"
-            : $"{UserName.Trim()}|{hash}|{Level}|{side}|{MachineCode.Value}||{nonce}|{proof}";
+            ? $"{UserName.Trim()}|{hash}|{MachineCode.Value}|{nonce}|{proof}|{version}"
+            : $"{UserName.Trim()}|{hash}|{Level}|{side}|{MachineCode.Value}||{nonce}|{proof}|{version}";
 
         if (!await _connect.SendAsync(type, payload))
         {
@@ -453,7 +460,8 @@ public partial class OobeViewModel : ViewModelBase
         {
             // 被封禁 / 密码错误 / 账号不存在:都弹窗告诉用户
             // 失败不碰登录记录:用户之前存下的免登录记录不能被一次输错密码抹掉
-            Fail(register ? "注册失败" : "登录失败", Clean(text));
+            // 强更开着时标题换成「需要更新客户端」,别让人以为账号出问题
+            Fail(IsUpdateRequired(text) ? "需要更新客户端" : register ? "注册失败" : "登录失败", Clean(text));
             return false;
         }
 

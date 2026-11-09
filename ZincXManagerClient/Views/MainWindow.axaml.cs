@@ -206,6 +206,7 @@ public partial class MainWindow : Window
             connect.PacketReceived += OnServerPacket;
             connect.OfficialChecked += OnOfficialChecked;
             connect.PropertyChanged += OnConnectChanged;
+            connect.UpdateRequiredRaised += OnUpdateRequired;
 
             // 官方社区卡片按实际连接状态显示(直连 ZXMOS / 经子服连官方都算)
             Vm?.RefreshOfficialVisibility();
@@ -357,6 +358,7 @@ public partial class MainWindow : Window
         {
             connect.PacketReceived -= OnServerPacket;
             connect.OfficialChecked -= OnOfficialChecked;
+            connect.UpdateRequiredRaised -= OnUpdateRequired;
         }
 
         // 好友窗是独立顶层窗,主窗关了它不会跟着关:留着它只会照常发 650/656 却再也收不到 651/662
@@ -1179,6 +1181,28 @@ public partial class MainWindow : Window
     private int _reconnectAttempt;
     private bool _reconnecting;
     private string _lastReconnectError = "";
+    private bool _updateNotified;   //强制更新的提示已经弹过,别每 5 秒弹一次
+
+    /// <summary>
+    /// 服务端要求更新客户端:停掉自动重连、关主界面回到连接页并说明原因。
+    /// <para>版本没变,重连只会被同样拒绝 —— 继续每 5 秒重连一次既没用,也会把服务端的失败计数刷满。</para>
+    /// </summary>
+    private void OnUpdateRequired(string reason)
+    {
+        if (_updateNotified)
+        {
+            return;
+        }
+
+        _updateNotified = true;
+        _heartbeat?.Stop();
+        Logger.Log(LogLevel.Warning, "[ZXMC] 服务端要求更新客户端,已停止自动重连:" + reason);
+
+        var text = reason.StartsWith("err|", StringComparison.Ordinal) ? reason[4..] : reason;   //去掉回执前缀
+        AppWindows.ShowConnectWithError(
+            (text.Trim().Length > 0 ? text.Trim() : "本服已开启强制更新。") + "\n\n请更新客户端后重连,更新方式见官网下载页。",
+            "需要更新客户端", "本服开启了强制更新,旧版本无法登录");
+    }
 
     private void StartHeartbeat()
     {

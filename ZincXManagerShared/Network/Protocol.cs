@@ -240,7 +240,9 @@ public static class Protocol
 
     /// <summary>
     /// 510 ZXMS → ZXMC:好友聊天后端的端口与凭据(登录成功后发一次)。
-    /// 负载 <c>端口\ttoken\t本服完整ID</c>;聊天后端地址 = 客户端连的那个地址 + 这个端口 + <c>/chat</c>。
+    /// 负载 <c>端口\ttoken\t本服完整ID\t自己的账号编号</c>;聊天后端地址 = 客户端连的那个地址 + 这个端口 + <c>/chat</c>。
+    /// <para>第四段是本服编号(令牌里签的也是它),私聊频道号必须按它算。中转登录时 601 第三段是官方编号,
+    /// 与本服编号不是一回事,所以不能拿 601 推。</para>
     /// </summary>
     public const ushort ChatHello = 510;
 
@@ -317,6 +319,24 @@ public static class Protocol
     /// <para>服务端<b>不等</b>这条回复:玩家进服不能卡在客户端回包上,这次没赶上就下一次进服生效。</para>
     /// </summary>
     public const ushort ClientIpAsk = 633;
+
+    /// <summary>
+    /// 634 ClientTooOld:ZXMS → ZXMC。本服开了强制更新,而这条连接报上来的版本低于门槛 ——
+    /// 服务端先发这一包把原因讲清楚,再断开连接。
+    ///
+    /// <para>负载 = 给玩家看的一句话(已含要求的版本与当前版本)。客户端收到后弹窗、停止自动重连:
+    /// 版本不够时重连一百次也还是被踢,只会刷日志。</para>
+    /// <para>登录/注册被拒不走这一包(直接回 601/603 的 <c>err|</c>);它只用于踢已经在线的旧版。</para>
+    /// </summary>
+    public const ushort ClientTooOld = 634;
+
+    /// <summary>
+    /// 「客户端版本过旧」的标记词:601/603 的 <c>err|</c> 文案与 634 的负载都以它开头。
+    ///
+    /// <para>老客户端不认识 634,只能靠 601/603 里这段人话把它弹成「登录失败」;
+    /// 新客户端<b>认这个词</b>来决定停止自动重连 —— 两边必须用同一个常量,不要各写一份字面量。</para>
+    /// </summary>
+    public const string UpdateRequiredMarker = "本服已开启强制更新";
 
     /// <summary>
     /// 服务端 → 客户端:服务端配置(客户端连上后下发一次),负载按行 <c>键=值</c>。

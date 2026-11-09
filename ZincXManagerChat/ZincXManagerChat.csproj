@@ -10,7 +10,7 @@
     <!-- 子服进程按需拉起它,跟 ZXMS 同一套版本号 -->
     <Version>0.3.2</Version>
     <FileVersion>0.3.2.0</FileVersion>
-    <InformationalVersion>b0.3.2</InformationalVersion>
+    <InformationalVersion>b0.3.2a</InformationalVersion>
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
   </PropertyGroup>
 

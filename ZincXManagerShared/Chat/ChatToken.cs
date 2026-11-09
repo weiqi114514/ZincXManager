@@ -106,6 +106,43 @@ public static class ChatToken
         return true;
     }
 
+    /// <summary>
+    /// 从令牌里取出被签进去的账号编号,<b>不验签</b>。
+    /// <para>只给「本来就是这张令牌主人」的客户端用来认自己是谁 —— 它不是身份证明,谁都能伪造一份,
+    /// 聊天宿主那一侧仍必须走 <see cref="TryVerify"/>。</para>
+    /// </summary>
+    /// <param name="token">形如 <c>payload.signature</c> 的令牌。</param>
+    /// <param name="userId">解析出来的账号编号。</param>
+    /// <returns>解析成功返回 true;格式不对返回 false。</returns>
+    public static bool TryReadUserId(string token, out string userId)
+    {
+        userId = "";
+        var dot = token.IndexOf('.');
+        if (dot <= 0)
+        {
+            return false;
+        }
+
+        byte[] payloadBytes;
+        try
+        {
+            payloadBytes = Base64UrlDecode(token[..dot]);
+        }
+        catch (FormatException)
+        {
+            return false;
+        }
+
+        var parts = Encoding.UTF8.GetString(payloadBytes).Split('\n');
+        if (parts.Length != 3 || parts[0].Length == 0)
+        {
+            return false;
+        }
+
+        userId = parts[0];
+        return true;
+    }
+
     /// <summary>URL 安全 base64 编码(去掉填充)。</summary>
     private static string Base64UrlEncode(byte[] bytes)
         => Convert.ToBase64String(bytes).Replace('+', '-').Replace('/', '_').TrimEnd('=');

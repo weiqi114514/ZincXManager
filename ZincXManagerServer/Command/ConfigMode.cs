@@ -24,6 +24,9 @@ internal static class ConfigMode
         public string Description { get; init; } = "";
         public string Type { get; init; } = "";
         public bool ReadOnly { get; init; }
+
+        /// <summary>允许把值设成空串(只对「留空 = 用默认」这类项有意义)。</summary>
+        public bool AllowEmpty { get; init; }
     }
 
     // 该端可配置项的清单(配置模式表格用它)。
@@ -43,6 +46,8 @@ internal static class ConfigMode
         new() { Key = "packetrate",    Cn = "包速率上限",   Description = "每连接每秒最多几个包,超出的直接丢(0=不限)", Type = "0-10000" },
         new() { Key = "loginrate",     Cn = "登录失败上限", Description = "同一 IP 5 分钟内最多失败几次登录/注册(0=不限)", Type = "0-10000" },
         new() { Key = "officialcheck", Cn = "对端校验",     Description = "1 = 对端不是官方就断开,0 = 只警告",       Type = "1/0" },
+        new() { Key = "forceupdate",   Cn = "强制更新",     Description = "1 = 旧版 ZXMC 拒绝登录并踢下线,0 = 不检查", Type = "1/0" },
+        new() { Key = "minversion",    Cn = "最低版本",     Description = "强制更新的门槛版本,留空 = 跟本端版本一致",   Type = "版本号如 b0.3.2a", AllowEmpty = true },
         new() { Key = "ozname",        Cn = "官方端名称",   Description = "ZXMOS 下发的名称(只读)",                 Type = "只读",       ReadOnly = true },
         new() { Key = "servercode",    Cn = "服务端码",     Description = "本实例的身份证(只读)",                   Type = "只读",       ReadOnly = true },
         new() { Key = "oshash",        Cn = "官方账号密文", Description = "本端在 ZXMOS 上的账号密文(下次连接生效)",  Type = "64 位十六进制" },
@@ -129,7 +134,8 @@ internal static class ConfigMode
             return true;
         }
 
-        if (value.Length == 0)
+        // 空值只有「留空 = 用默认」这类项允许(minversion 清空就是回到本端版本)
+        if (value.Length == 0 && !item.AllowEmpty)
         {
             Logger.Log(LogLevel.Warning, "配置模式用法:<键名|中文名> <键值>;输入 exitc 退出");
             return true;
@@ -142,7 +148,8 @@ internal static class ConfigMode
             return true;
         }
 
-        Logger.Log(LogLevel.Info, $"{item.Key}({item.Cn})已设置为 {Program.ConfigValue(item.Key)}");
+        var shown = Program.ConfigValue(item.Key);   //设置后的值
+        Logger.Log(LogLevel.Info, $"{item.Key}({item.Cn})已设置为 {(shown.Length > 0 ? shown : "空")}");
         return true;
     }
 
@@ -153,15 +160,15 @@ internal static class ConfigMode
         foreach (var c in s) { w += c >= 0x2E80 ? 2 : 1; }
         return w;
     }
-/// <summary>按显示宽度右侧补空格。</summary>
 
+    /// <summary>按显示宽度右侧补空格。</summary>
     private static string Pad(string s, int width)
     {
         var pad = width - DisplayWidth(s);
         return pad > 0 ? s + new string(' ', pad) : s;
-    /// <summary>把三列排成对齐的表格文本。</summary>
     }
 
+    /// <summary>把三列排成对齐的表格文本。</summary>
     private static string BuildTable()
     {
         var lines = new List<string> { "配置项(只能改这些,不能增删):" };
