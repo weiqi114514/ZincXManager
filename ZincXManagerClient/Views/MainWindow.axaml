@@ -653,20 +653,22 @@
             </StackPanel>
           </StackPanel>
 
-          <!-- ③ 解绑:确认 -->
-          <StackPanel x:Name="UnbindPanel" Grid.Row="1" IsVisible="False" Spacing="16">
+          <!-- ③ 解绑:列表样式,每个已绑玩家一行 + 单独的解绑按钮 -->
+          <StackPanel x:Name="UnbindPanel" Grid.Row="1" IsVisible="False" Spacing="14">
             <TextBlock Text="解绑后这名玩家再进服时会被要求重新绑定;当前账号不会丢。"
                        FontSize="12.5" TextWrapping="Wrap" Foreground="{DynamicResource ThemeMuted}"/>
-            <Border Padding="12,10" Background="#FDE7E7" BorderBrush="#F3B7B7" BorderThickness="1">
-              <TextBlock x:Name="UnbindInfo" Text="确认要解绑吗?" FontSize="12.5" Foreground="#8E1B1B"
-                         TextWrapping="Wrap"/>
-            </Border>
+
+            <!-- 行由 code-behind 按 630 下发的玩家名生成 -->
+            <ScrollViewer MaxHeight="240" VerticalScrollBarVisibility="Auto">
+              <StackPanel x:Name="UnbindListPanel" Spacing="6"/>
+            </ScrollViewer>
+
+            <TextBlock x:Name="UnbindInfo" Text="" FontSize="11.5" TextWrapping="Wrap"
+                       Foreground="{DynamicResource ThemeMuted}"/>
+
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10">
-              <Button Content="取消" Click="OnBindCloseClick" Height="34" Padding="18,0" CornerRadius="0"
+              <Button Content="关闭" Click="OnBindCloseClick" Height="34" Padding="18,0" CornerRadius="0"
                       Background="{DynamicResource ThemeLight}" BorderThickness="0" Foreground="#1F3B3A" Cursor="Hand"
-                      HorizontalContentAlignment="Center" VerticalContentAlignment="Center"/>
-              <Button Content="确认解绑" Click="OnUnbindSubmitClick" Height="34" Padding="22,0" CornerRadius="0"
-                      Background="#C62828" BorderThickness="0" Foreground="White" Cursor="Hand"
                       HorizontalContentAlignment="Center" VerticalContentAlignment="Center"/>
             </StackPanel>
           </StackPanel>

@@ -415,9 +415,6 @@ public partial class MainWindow : Window
     /// <summary>绑定/解绑回执:窗口在就订阅显示,没人订阅直接弹框</summary>
     public event Action<bool, string>? BindAckArrived;
 
-    // 当前账号绑定的 MC 玩家名(空 = 没绑)
-    private string _boundPlayer = "";
-
     /// <summary>问服务端:我这个账号绑了谁(629,回 630)。</summary>
     private async void QueryBindAsync()
     {
@@ -557,6 +554,100 @@ public partial class MainWindow : Window
         {
             BindHeader.Text = "解绑";
             UnbindPanel.IsVisible = true;
+            // 列表在 ShowBindOverlay 里那次 629 的 630 回执里已经填好;这里不重复问一遍
+            if (UnbindListPanel.Children.Count == 0)
+            {
+                UnbindInfo.Text = "正在查询…";
+            }
+        }
+    }
+
+    /// <summary>按 630 的玩家名重建解绑列表:一个玩家一行,行尾一个解绑按钮。</summary>
+    /// <param name="players">这个账号名下的玩家名(顺序按服务端给的)。</param>
+    private void RebuildUnbindList(System.Collections.Generic.List<string> players)
+    {
+        UnbindListPanel.Children.Clear();
+
+        if (players.Count == 0)
+        {
+            UnbindInfo.Text = "还没有绑定任何 MC 玩家。先让玩家进一次服,踢人提示里会给 6 位绑定码,填到「绑定」里即可。";
+            return;
+        }
+
+        foreach (var player in players)
+        {
+            UnbindListPanel.Children.Add(BuildUnbindRow(player));
+        }
+
+        UnbindInfo.Text = players.Count == 1
+            ? "当前账号绑定了 1 个玩家。"
+            : $"当前账号绑定了 {players.Count} 个玩家,逐个解绑。";
+    }
+
+    /// <summary>解绑列表的一行:左边玩家名,右边一个红色「解绑」。</summary>
+    private Control BuildUnbindRow(string player)
+    {
+        var name = new TextBlock
+        {
+            Text = player,
+            FontSize = 13,
+            VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center,
+            TextTrimming = Avalonia.Media.TextTrimming.CharacterEllipsis,
+        };
+
+        var button = new Button
+        {
+            Content = "解绑",
+            Height = 28,
+            Padding = new Thickness(16, 0, 16, 0),
+            CornerRadius = new CornerRadius(0),
+            Background = Brush.Parse("#C62828"),
+            Foreground = Brushes.White,
+            BorderThickness = new Thickness(0),
+            Cursor = new Avalonia.Input.Cursor(Avalonia.Input.StandardCursorType.Hand),
+        };
+        button.Click += async (_, _) => await UnbindOneAsync(player);
+
+        var grid = new Grid
+        {
+            ColumnDefinitions = new ColumnDefinitions("*,Auto"),
+        };
+        Grid.SetColumn(name, 0);
+        Grid.SetColumn(button, 1);
+        grid.Children.Add(name);
+        grid.Children.Add(button);
+
+        return new Border
+        {
+            Child = grid,
+            Padding = new Thickness(12, 8, 10, 8),
+            Background = Brush.Parse("#F2FFFFFF"),
+            BorderBrush = new SolidColorBrush(Color.Parse("#DDE4E4")),
+            BorderThickness = new Thickness(1),
+        };
+    }
+
+    /// <summary>列表里点了某一个玩家的「解绑」:先确认,再发 628(负载是玩家名)。</summary>
+    private async Task UnbindOneAsync(string player)
+    {
+        if (Vm is not { } vm)
+        {
+            return;
+        }
+
+        var agree = await MessageDialog.ConfirmAsync(this, "解绑确认",
+            $"确定解除当前账号与 MC 玩家「{player}」的绑定吗？\n解绑后这名玩家再进服需要重新绑定，在线的会被踢下线。",
+            yes: "确定解绑", no: "取消", hint: "账号本身不会受影响");
+
+        if (!agree)
+        {
+            return;
+        }
+
+        UnbindInfo.Text = $"正在解绑「{player}」…";
+        if (!await vm.SendUnbindAsync(player))
+        {
+            UnbindInfo.Text = "发送失败,检查连接";
         }
     }
 
@@ -584,15 +675,6 @@ public partial class MainWindow : Window
         {
             BindHint.Text = "发送失败,检查连接";
             BindHint.Foreground = Avalonia.Media.Brush.Parse("#C62828");
-        }
-    }
-
-    /// <summary>确认解绑(628)。</summary>
-    private async void OnUnbindSubmitClick(object? sender, RoutedEventArgs e)
-    {
-        if (Vm is { } vm)
-        {
-            await vm.SendUnbindAsync();
         }
     }
 
@@ -655,7 +737,7 @@ public partial class MainWindow : Window
                 break;
             }
 
-            // ---- 绑定关系(630):回答"我这个账号绑了谁" ----
+            // ---- 绑定关系(630):回答"我这个账号绑了哪些玩家",一行一个 ----
             case Protocol.BindList:
             {
                 var line = text.Trim();
@@ -664,18 +746,20 @@ public partial class MainWindow : Window
                 // 未绑定时代码属于玩家本人,自动填进来等于把别人的绑定码送到这个账号手上
                 if (line.StartsWith("nobind", StringComparison.OrdinalIgnoreCase))
                 {
-                    _boundPlayer = "";
-                    UnbindInfo.Text = "还没有绑定任何 MC 玩家。先让玩家进一次服,踢人提示里会给 6 位绑定码,填到下面的输入框即可。";
+                    RebuildUnbindList(new System.Collections.Generic.List<string>());
                     Logger.Log(LogLevel.Info, "[绑定] 当前账号未绑定");
                     break;
                 }
 
-                _boundPlayer = line.Length > 0 ? line.Split('=')[0].Trim() : "";
-                UnbindInfo.Text = _boundPlayer.Length > 0
-                    ? "当前账号绑定的是:玩家 " + _boundPlayer + "\n解绑后这名玩家再进服需要重新绑定。"
-                    : "当前账号还没有绑定任何 MC 玩家。";
-                Logger.Log(LogLevel.Info, _boundPlayer.Length > 0
-                    ? $"[绑定] 当前账号绑定了玩家 {_boundPlayer}"
+                // 一行一个玩家,格式「玩家名=账号名」;只取等号左边
+                var players = line.Split('\n', StringSplitOptions.RemoveEmptyEntries)
+                    .Select(row => row.Split('=')[0].Trim())
+                    .Where(name => name.Length > 0)
+                    .ToList();
+
+                RebuildUnbindList(players);
+                Logger.Log(LogLevel.Info, players.Count > 0
+                    ? $"[绑定] 当前账号绑定了 {players.Count} 个玩家:{string.Join(" , ", players)}"
                     : "[绑定] 当前账号还没有绑定");
                 break;
             }
@@ -1148,9 +1232,9 @@ public partial class MainWindow : Window
         }
     }
 
-    /// <summary>帮助:打开在线帮助页(GitHub Pages 镜像;旧站 http://zxm.zincms.top:10/help.html 仍然可用)。</summary>
+    /// <summary>帮助:打开在线帮助页(官网 zxm.zincms.top)。</summary>
     private async void OnHelpClick(object? sender, RoutedEventArgs e)
-        => await OpenUrlAsync("https://weiqi114514.github.io/ZincXManager/help.html", "帮助");
+        => await OpenUrlAsync("http://zxm.zincms.top/help.html", "帮助");
 
     /// <summary>反馈:打开 GitHub 仓库的 issues。</summary>
     private async void OnFeedbackClick(object? sender, RoutedEventArgs e)

@@ -49,7 +49,7 @@ public static class UpdateService
     }
 
     /// <summary>更新日志页(官网 docs)</summary>
-    public static string ChangelogUrl => "https://weiqi114514.github.io/ZincXManager/changelog.html";
+    public static string ChangelogUrl => "http://zxm.zincms.top/changelog.html";
 
     /// <summary>是不是 MSI 安装版(否则按便携版处理)</summary>
     public static bool IsInstalled

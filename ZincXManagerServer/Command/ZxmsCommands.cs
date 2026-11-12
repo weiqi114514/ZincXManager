@@ -425,15 +425,19 @@ public static class ZxmsCommands
         }
 
         var accountName = accounts.FindById(accountId)?.Name ?? "?";   //账号名
-        var playerName = LoginStore.PlayerOf(accountId);                 //绑定的玩家名
+        var playerNames = LoginStore.PlayersOf(accountId);             //这个账号名下的玩家
 
-        if (playerName.Length == 0)
+        if (playerNames.Count == 0)
         {
             Logger.Log(LogLevel.Info, $"[绑定] 无绑定信息:账号 {accountName}(ID {accountId}) 没有绑定任何玩家");
             return;
         }
 
-        Logger.Log(LogLevel.Info, $"[绑定] 账号 {accountName}(ID {accountId})  ↔  玩家 {playerName}");
+        Logger.Log(LogLevel.Info, $"[绑定] 账号 {accountName}(ID {accountId})  ↔  {playerNames.Count} 个玩家:");
+        foreach (var playerName in playerNames)
+        {
+            Logger.Log(LogLevel.Info, $"  玩家 {playerName}");
+        }
     }
 
     /// <summary>绑定:先账号(名或 ID),再玩家名</summary>
@@ -461,19 +465,18 @@ public static class ZxmsCommands
             return;
         }
 
-        // 一个玩家只能绑一个账号
-        var existing = LoginStore.AccountOf(player);   //绑定的账号ID
-        if (existing > 0 && existing != account.Id)
+        // 一个玩家只能绑一个账号;一个账号最多绑 bindmax 个(config 里配)
+        var limitError = LoginStore.CheckBindLimit(account.Id, player, Program.BindMax);   //预检结果
+        if (limitError.Length > 0)
         {
-            var other = accounts.FindById(existing)?.Name ?? "?";
-            Logger.Log(LogLevel.Warning, $"[绑定] 玩家 {player} 已经绑在账号 {other} 上,先 unbind {player} 再绑");
+            Logger.Log(LogLevel.Warning, "[绑定] " + limitError);
             return;
         }
 
-        if (LoginStore.Bind(account.Id, player, out var error))
+        if (LoginStore.Bind(account.Id, player, Program.BindMax, out var error))
         {
             LoginStore.Log($"[手动绑定] 玩家 {player} ↔ 账号 {account.Name}(ID {account.Id})");
-            Logger.Log(LogLevel.Info, $"[绑定] 成功:{player} ↔ {account.Name}(ID {account.Id})");
+            Logger.Log(LogLevel.Info, $"[绑定] 成功:{player} ↔ {account.Name}(ID {account.Id}),该账号名下共 {LoginStore.BindCount(account.Id)} 个玩家");
         }
         else
         {
@@ -483,7 +486,7 @@ public static class ZxmsCommands
 
     /// <summary>
     /// 解绑:MC 玩家名 / ZXM 账号名 / ZXM 账号 ID 都能当参数。
-    /// 先按玩家名精确找(输入的是玩家名就解这个玩家),找不到再按账号名、账号 ID。
+    /// 先按玩家名精确找(输入的是玩家名就解这个玩家),找不到再按账号名、账号 ID(那种情况解掉该账号名下全部)。
     /// </summary>
     private static void CmdUnbind(AccountStore accounts, string[] args)
     {
@@ -495,16 +498,27 @@ public static class ZxmsCommands
 
         var key = args[0].Trim();
 
-        // ① 玩家名(MC 账号名称):绑定表里这个玩家归哪个账号
-        var accountId = LoginStore.AccountOf(key);
-
-        // ② ZXM 账号名(ZM 账号名称)
-        if (accountId <= 0)
+        // ① 玩家名(MC 账号名称):绑定表里这个玩家归哪个账号 —— 只解这一个
+        var ownerId = LoginStore.AccountOf(key);
+        if (ownerId > 0)
         {
-            accountId = accounts.Find(key)?.Id ?? 0;
+            var ownerName = accounts.FindById(ownerId)?.Name ?? "?";   //账号名
+            if (!LoginStore.Unbind(ownerId, key, out var one))
+            {
+                Logger.Log(LogLevel.Warning, $"[绑定] 解绑失败:{key} 不在账号 {ownerName}(ID {ownerId}) 名下");
+                return;
+            }
+
+            // 解绑必须立刻生效:持久登录表里的"已信任"记录一起删掉
+            LoginStore.RemovePersistentLogin(one);
+            LoginStore.Log($"[手动解绑] 玩家 {one} ↔ 账号 {ownerName}(ID {ownerId})");
+            Logger.Log(LogLevel.Info, $"[绑定] 已解绑:{one} ↔ {ownerName}(ID {ownerId});该账号还剩 {LoginStore.BindCount(ownerId)} 个玩家");
+            Logger.Log(LogLevel.Info, "[绑定] 该玩家再进服会重新走确认流程");
+            return;
         }
 
-        // ③ ZXM 账号 ID
+        // ② ZXM 账号名(ZM 账号名称) ③ ZXM 账号 ID —— 这两种是"按账号解",解掉名下全部并逐个说明
+        var accountId = accounts.Find(key)?.Id ?? 0;
         if (accountId <= 0 && int.TryParse(key, out var byId))
         {
             accountId = accounts.FindById(byId)?.Id ?? 0;
@@ -518,19 +532,21 @@ public static class ZxmsCommands
         }
 
         var accountName = accounts.FindById(accountId)?.Name ?? "?";   //账号名
-
-        if (!LoginStore.Unbind(accountId, out var player))
+        var removed = LoginStore.UnbindAll(accountId);                  //解掉的全部玩家
+        if (removed.Count == 0)
         {
             Logger.Log(LogLevel.Warning, $"[绑定] 账号 {accountName}(ID {accountId}) 没有绑定记录");
             return;
         }
 
-        // 解绑必须立刻生效:持久登录表里的"已信任"记录一起删掉
-        LoginStore.RemovePersistentLogin(player);
-        LoginStore.Log($"[手动解绑] 玩家 {player} ↔ 账号 {accountName}(ID {accountId})");
+        foreach (var player in removed)
+        {
+            LoginStore.RemovePersistentLogin(player);
+            LoginStore.Log($"[手动解绑] 玩家 {player} ↔ 账号 {accountName}(ID {accountId})");
+            Logger.Log(LogLevel.Info, $"[绑定] 已解绑:{player} ↔ {accountName}(ID {accountId})");
+        }
 
-        Logger.Log(LogLevel.Info, $"[绑定] 已解绑:{player} ↔ {accountName}(ID {accountId})");
-        Logger.Log(LogLevel.Info, $"[绑定] 该玩家再进服会重新走确认流程");
+        Logger.Log(LogLevel.Info, $"[绑定] 这些玩家再进服会重新走确认流程(共 {removed.Count} 个)");
     }
 
     /// <summary>加白名单条目(通联标:MC 玩家名 / ZXM 账号名 / ZXM 账号 ID)。</summary>

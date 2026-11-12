@@ -237,16 +237,16 @@ public partial class SettingsViewModel : ViewModelBase
     public string ProducerQq => "2016811976";
 
     /// <summary>官网首页。</summary>
-    public string WebsiteUrl => "https://weiqi114514.github.io/ZincXManager/";
+    public string WebsiteUrl => "http://zxm.zincms.top/";
 
     /// <summary>技术文档。</summary>
-    public string DocsUrl => "https://weiqi114514.github.io/ZincXManager/help.html";
+    public string DocsUrl => "http://zxm.zincms.top/help.html";
 
     /// <summary>源码仓库。</summary>
     public string RepoUrl => "https://github.com/weiqi114514/ZincXManager";
 
     /// <summary>更新日志。</summary>
-    public string ChangelogUrl => "https://weiqi114514.github.io/ZincXManager/changelog.html";
+    public string ChangelogUrl => "http://zxm.zincms.top/changelog.html";
 
     /// <summary>运行环境一行说明。</summary>
     public string RuntimeInfo =>

@@ -941,6 +941,11 @@ var results = new List<SuiteResult>();
     await ZincXManagerTests.ChatChannelSuite.RunAsync(results, Ws, DebugMs, DebugOs, DebugChat);
 }
 
+// ================= 套件 24:绑定上限(bindmax 配置 + 超限拦截 + 解绑列表,真起 ZXMS + 假 ZXMM) =================
+{
+    await ZincXManagerTests.BindLimitSuite.RunAsync(results, Ws, DebugMs);
+}
+
 // ================= 汇总 =================
 Console.WriteLine();
 Console.WriteLine("================= 总表 =================");

@@ -188,6 +188,20 @@ internal static partial class Program
     /// <summary>强制更新开关当前值(启动时读配置,配置模式里改立刻生效)。</summary>
     private static bool _forceUpdate;
 
+    /// <summary>绑定上限(config 的 bindmax):一个 ZXM 账号最多能绑几个 MC 玩家。</summary>
+    private const string KeyBindMax = "bindmax";
+
+    /// <summary>绑定上限的默认值:一个账号一个玩家,和以前的规矩一样。</summary>
+    private const int DefaultBindMax = 1;
+
+    /// <summary>绑定上限当前值(config 里改立刻生效,0 = 不限)。</summary>
+    private static int _bindMax = DefaultBindMax;
+
+    /// <summary>当前绑定上限(控制台 bind 命令要按同一条规矩判断)。</summary>
+    internal static int BindMax => _bindMax;
+
+
+
     /// <summary>强制更新的门槛版本;空串表示"跟本端版本一致"。</summary>
     private static string _minVersion = "";
 
@@ -1255,6 +1269,14 @@ internal static partial class Program
                     break;
                 }
 
+                // 上限在提交码这一步就先挡:让用户当场看到"先解绑一个",而不是输了码点了确认才失败
+                var bindLimit = LoginStore.CheckBindLimit(bindAccount, bindPlayer, _bindMax);
+                if (bindLimit.Length > 0)
+                {
+                    await packet.SendAsync(Protocol.BindAck, "err|" + bindLimit, packet.Id);
+                    break;
+                }
+
                 var token = Guid.NewGuid().ToString("N")[..8].ToUpperInvariant();   //确认令牌
                 PendingBinds[token] = new PendingBind(bindAccount, bindPlayer, code, DateTime.Now);
                 await packet.SendAsync(Protocol.BindAck, $"pending|{token}|{bindPlayer}", packet.Id);
@@ -1284,10 +1306,9 @@ internal static partial class Program
                     break;
                 }
 
-                // 改绑：这个账号原来绑的玩家要先失去"免确认"，否则他不在任何账号名下还能直接进服
-                var previousPlayer = LoginStore.PlayerOf(confirmAccount);
-
-                if (!LoginStore.Bind(confirmAccount, pending.Player, out var bindError))
+                // 这个账号名下的旧玩家不做任何处理:上限拦着不许顶掉旧的,
+                // 真要让他失去免确认只能走 628 解绑(解绑会清登录数组、持久登录表并踢人)
+                if (!LoginStore.Bind(confirmAccount, pending.Player, _bindMax, out var bindError))
                 {
                     await packet.SendAsync(Protocol.BindAck, "err|" + bindError, packet.Id);
                     break;
@@ -1306,53 +1327,75 @@ internal static partial class Program
                 LoginStore.Log($"[绑定] 账号 {confirmAccount} 确认绑定玩家 {pending.Player}(令牌 {token})");
                 await packet.SendAsync(Protocol.BindAck, $"ok|{pending.Player}", packet.Id);
 
-                if (previousPlayer.Length > 0 && !string.Equals(previousPlayer, pending.Player, StringComparison.OrdinalIgnoreCase))
-                {
-                    LoginArray.TryRemove(previousPlayer, out _);
-                    LoginStore.RemovePersistentLogin(previousPlayer);
-                    LoginStore.Log($"[改绑] 账号 {confirmAccount} 从 {previousPlayer} 改绑到 {pending.Player}，旧玩家的免登录已清掉");
-                    // 踢人不 await:回执要等 ZXMM,等在这儿会把这条连接的报文处理堵住
-                    _ = KickViaZxmmAsync(previousPlayer, "账号已改绑到别的玩家，请重新绑定后再进入");
-                }
+                // 多绑之后不再有"改绑顶掉旧玩家":旧玩家仍在这个账号名下,他的免登录与在线状态都不能动
+                // (要让他失去免确认,只能走 628 解绑)
 
                 break;
             }
 
-            // ---- 解绑(628) ----
+            // ---- 解绑(628):负载是玩家名(空 = 这个账号名下全部解掉,兼容老客户端) ----
             case Protocol.Unbind:
             {
                 var unbindWho = _server?.Registry.Find(packet.Connection.Id)?.User ?? "";
                 var unbindAccount = (await ResolveAccountAsync(unbindWho))?.Id ?? 0;
-                if (unbindAccount > 0 && LoginStore.Unbind(unbindAccount, out var removed))
+                var unbindTarget = Encoding.UTF8.GetString(packet.Data).Trim();   //要解掉哪个玩家
+                if (unbindAccount <= 0)
                 {
-                    // 解绑要立刻失效:登录数组、持久登录表都清掉,再通过执行接口把在线的人踢掉
-                    LoginArray.TryRemove(removed, out _);
-                    LoginStore.RemovePersistentLogin(removed);
-                    await packet.SendAsync(Protocol.BindAck, $"ok|{removed}", packet.Id);
-                    // 踢人不 await(同上),否则回执会被这条踢人拖到 10 秒后
-                    _ = KickViaZxmmAsync(removed, "账号已解绑，请重新绑定后再进入");
+                    await packet.SendAsync(Protocol.BindAck, "err|请先登录(这条连接没有登录态,断线重连后请重新登录一次)", packet.Id);
+                    break;
+                }
+
+                // 只解自己名下的:负载里的玩家名必须真在这个账号名下,不能拿别人的名字来解绑
+                List<string> removed;
+                if (unbindTarget.Length == 0)
+                {
+                    removed = LoginStore.UnbindAll(unbindAccount);
                 }
                 else
                 {
-                    await packet.SendAsync(Protocol.BindAck, "err|没有绑定记录", packet.Id);
+                    removed = LoginStore.Unbind(unbindAccount, unbindTarget, out var one) ? [one] : [];
                 }
+
+                if (removed.Count == 0)
+                {
+                    await packet.SendAsync(Protocol.BindAck,
+                        unbindTarget.Length == 0 ? "err|没有绑定记录" : $"err|这个账号没有绑定玩家 {unbindTarget}", packet.Id);
+                    break;
+                }
+
+                // 解绑要立刻失效:登录数组、持久登录表都清掉,再通过执行接口把在线的人踢掉
+                foreach (var player in removed)
+                {
+                    LoginArray.TryRemove(player, out _);
+                    LoginStore.RemovePersistentLogin(player);
+                }
+
+                await packet.SendAsync(Protocol.BindAck, $"ok|{string.Join(",", removed)}", packet.Id);
+
+                // 踢人不 await(同上),否则回执会被这条踢人拖到 10 秒后
+                foreach (var player in removed)
+                {
+                    _ = KickViaZxmmAsync(player, "账号已解绑，请重新绑定后再进入");
+                }
+
                 break;
             }
 
-            // ---- 查绑定(629):ZXMM 查全部;ZXMC 只查自己绑了哪个 ----
+            // ---- 查绑定(629):ZXMM 查全部;ZXMC 只查自己绑了哪些 ----
             case Protocol.BindQuery:
             {
                 var queryInfo = _server?.Registry.Find(packet.Connection.Id);
 
                 if (queryInfo?.Role == "ZXMC")
                 {
-                    // 客户端来查:只回自己这条(解绑页要显示"当前绑定了谁")
+                    // 客户端来查:只回自己名下的玩家,一行一个(解绑页按行做列表)
                     var selfId = (await ResolveAccountAsync(queryInfo.User))?.Id ?? 0;
-                    var selfPlayer = selfId > 0 ? LoginStore.PlayerOf(selfId) : "";
+                    var selfPlayers = selfId > 0 ? LoginStore.PlayersOf(selfId) : [];   //自己的玩家名
 
-                    if (selfPlayer.Length > 0)
+                    if (selfPlayers.Count > 0)
                     {
-                        await packet.SendAsync(Protocol.BindList, $"{selfPlayer}={queryInfo.User}", packet.Id);
+                        var selfLines = selfPlayers.Select(p => $"{p}={queryInfo.User}");
+                        await packet.SendAsync(Protocol.BindList, string.Join("\n", selfLines), packet.Id);
                         break;
                     }
 
@@ -1464,7 +1507,7 @@ internal static partial class Program
         Console.WriteLine(" _____   _           _  __ __  ___                                     _____    \r\n/__  /  (_)___  ____| |/ //  |/  /___ _____  ____ _____ ____  _____   / ___/    \r\n  / /  / / __ \\/ ___/   // /|_/ / __ `/ __ \\/ __ `/ __ `/ _ \\/ ___/   \\__ \\     \r\n / /__/ / / / / /__/   |/ /  / / /_/ / / / / /_/ / /_/ /  __/ /      ___/ /     \r\n/____/_/_/ /_/\\___/_/|_/_/  /_/\\__,_/_/ /_/\\__,_/\\__, /\\___/_/      /____/      \r\n                                                /____/                          ");
         Console.WriteLine("欢迎使用ZincXManager子服务端");
         Console.WriteLine("当前版本为 ZXMS-" + AppVersion);
-        Console.WriteLine("ZincXManager官网 https://weiqi114514.github.io/ZincXManager/");
+        Console.WriteLine("ZincXManager官网 http://zxm.zincms.top/");
         Console.WriteLine("旧站(带端口) http://zxm.zincms.top:10/");
     }
 
@@ -1630,6 +1673,20 @@ internal static partial class Program
         Logger.Log(LogLevel.Info, _forceUpdate
             ? $"[强制更新] 开:客户端版本低于 {MinimumVersion} 一律拒绝登录并踢下线"
             : $"[强制更新] 关(config 里 {KeyForceUpdate}=1 可开,门槛用 {KeyMinVersion},留空 = 本端版本 {AppVersion})");
+
+        // 绑定上限:缺配置就写默认(1),让服主知道有这个开关
+        var bindMaxText = config.MapGet(KeyBindMax).Trim();   //配置里的上限值
+        if (bindMaxText.Length == 0)
+        {
+            config.WriteFileMap(KeyBindMax, DefaultBindMax.ToString());
+            bindMaxText = DefaultBindMax.ToString();
+            Logger.Log(LogLevel.Info, $"[CONFIG]{KeyBindMax} 未配置,已写入默认值 {DefaultBindMax}(一个账号只能绑一个玩家)");
+        }
+
+        _bindMax = int.TryParse(bindMaxText, out var parsedBindMax) && parsedBindMax >= 0 ? parsedBindMax : DefaultBindMax;
+        Logger.Log(LogLevel.Info, _bindMax > 0
+            ? $"[绑定] 上限:一个账号最多绑 {_bindMax} 个玩家(config 里 {KeyBindMax} 可改,0 = 不限)"
+            : $"[绑定] 上限:不限(config 里 {KeyBindMax}=0)");
 
         // 令牌:和模组 config 里的 api.token 一致才校验。两边都空 = 不校验(默认)
         _zxmmToken = config.MapGet(KeyZxmmToken).Trim();
@@ -2663,6 +2720,7 @@ internal static partial class Program
             "loginrate" => config.MapGet(KeyLoginRate).Trim(),
             "forceupdate" => _forceUpdate ? "1" : "0",
             "minversion" => _minVersion,
+            "bindmax" => _bindMax.ToString(),
             _ => "",
         };
     }
@@ -2865,6 +2923,19 @@ internal static partial class Program
                 Logger.Log(LogLevel.Info, kicked > 0
                     ? $"[强制更新] 在线旧版客户端 {kicked} 个已踢下线"
                     : "[强制更新] 在线客户端版本都够,没人被踢");
+                return "";
+
+            case "bindmax":
+                if (!int.TryParse(value, out var bindMax) || bindMax is < 0 or > 1000)
+                {
+                    return "范围 0-1000(一个账号最多绑几个 MC 玩家,0 = 不限)";
+                }
+
+                _bindMax = bindMax;
+                config.WriteFileMap(KeyBindMax, bindMax.ToString());
+                Logger.Log(LogLevel.Info, bindMax > 0
+                    ? $"[绑定] 上限已改成 {bindMax} 个玩家/账号(立刻生效)"
+                    : "[绑定] 上限已改为不限(立刻生效)");
                 return "";
 
             case "minversion":

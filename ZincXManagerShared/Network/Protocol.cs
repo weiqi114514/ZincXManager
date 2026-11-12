@@ -283,7 +283,11 @@ public static class Protocol
     /// </summary>
     public const ushort BindAck = 627;
 
-    /// <summary>628 Unbind:ZXMC → ZXMS。解绑当前账号。负载 <c>账号ID</c> 或空(空 = 按连接账号)。</summary>
+    /// <summary>
+    /// 628 Unbind:ZXMC → ZXMS。解绑当前账号名下的<b>一个</b>玩家。
+    /// 负载 = 要解绑的 MC 玩家名;负载为空时按连接账号把这名下的全部玩家都解掉(兼容老客户端)。
+    /// 回执用 627 BindAck:<c>ok|玩家名,玩家名</c> 或 <c>err|原因</c>。
+    /// </summary>
     public const ushort Unbind = 628;
 
     /// <summary>
@@ -292,7 +296,10 @@ public static class Protocol
     /// </summary>
     public const ushort BindQuery = 629;
 
-    /// <summary>630 BindList:ZXMS → ZXMM。绑定关系列表,一行一条 <c>玩家名=ZXM账号名</c>,没有就是空负载。</summary>
+    /// <summary>
+    /// 630 BindList:ZXMS → ZXMM / ZXMC。绑定关系列表,一行一条 <c>玩家名=ZXM账号名</c>,没有就是 <c>nobind</c>。
+    /// <para>一个账号可以绑多个玩家,所以同一个账号名会出现多行;ZXMC 按行拆出玩家名填解绑列表。</para>
+    /// </summary>
     public const ushort BindList = 630;
 
     /// <summary>

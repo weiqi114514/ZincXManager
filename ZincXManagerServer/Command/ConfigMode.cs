@@ -48,6 +48,7 @@ internal static class ConfigMode
         new() { Key = "officialcheck", Cn = "对端校验",     Description = "1 = 对端不是官方就断开,0 = 只警告",       Type = "1/0" },
         new() { Key = "forceupdate",   Cn = "强制更新",     Description = "1 = 旧版 ZXMC 拒绝登录并踢下线,0 = 不检查", Type = "1/0" },
         new() { Key = "minversion",    Cn = "最低版本",     Description = "强制更新的门槛版本,留空 = 跟本端版本一致",   Type = "版本号如 b0.3.2a", AllowEmpty = true },
+        new() { Key = "bindmax",       Cn = "绑定上限",     Description = "一个 ZXM 账号最多绑几个 MC 玩家",          Type = "0-1000,0=不限" },
         new() { Key = "ozname",        Cn = "官方端名称",   Description = "ZXMOS 下发的名称(只读)",                 Type = "只读",       ReadOnly = true },
         new() { Key = "servercode",    Cn = "服务端码",     Description = "本实例的身份证(只读)",                   Type = "只读",       ReadOnly = true },
         new() { Key = "oshash",        Cn = "官方账号密文", Description = "本端在 ZXMOS 上的账号密文(下次连接生效)",  Type = "64 位十六进制" },

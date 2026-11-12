@@ -663,18 +663,19 @@ public partial class MainViewModel : ViewModelBase
         }
     }
 
-    /// <summary>解绑当前账号(628)。</summary>
-    public async Task<bool> SendUnbindAsync()
+    /// <summary>解绑当前账号名下的一个玩家(628,负载是玩家名)。</summary>
+    /// <param name="player">要解绑的 MC 玩家名。</param>
+    public async Task<bool> SendUnbindAsync(string player)
     {
         var connect = ClientSession.Connect;
-        if (connect is null)
+        if (connect is null || player.Trim().Length == 0)
         {
             return false;
         }
 
         try
         {
-            await connect.SendAsync(Protocol.Unbind, string.Empty);
+            await connect.SendAsync(Protocol.Unbind, player.Trim());
             return true;
         }
         catch (Exception ex)

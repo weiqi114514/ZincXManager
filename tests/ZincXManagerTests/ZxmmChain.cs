@@ -178,6 +178,7 @@ public static class ZxmmChain
                 ["name"] = "CSharp-ZXMM服",
                 ["czport"] = czport.ToString(),
                 ["zxmmapi"] = "127.0.0.1:" + zxmmPort,
+                ["bindmax"] = "2",   //这个场景要验"一个账号挂两个玩家",上限放到 2
             });
 
             r.Add("ZXMS 监听 " + czport, ms.WaitPort(czport));
@@ -288,39 +289,48 @@ public static class ZxmmChain
             r.Add("持久登录命中走的是放行分支", passed, "");
             r.Add("持久登录命中 → 不再弹窗", !probe.HasQueued(Protocol.LoginAsk), "队列里出现了 621");
 
-            // ⑤ 改绑到另一个玩家 → 旧玩家的免登录必须立刻失效(账号名下已经没他了)
+            // ⑤ 再绑一个玩家(这个服 bindmax=2)→ 账号名下变成两个,旧玩家的免登录不受影响
             fake.PushJoined("mcplayer2", "/203.0.113.10:51519");
             var kickP2 = await fake.TakeAsync("|kick|mcplayer2", 8000);
             var codeP2 = Regex.Match(kickP2 ?? "", "绑定码：([A-Z2-9]{6})").Groups[1].Value;
-            r.Add("改绑用的新玩家拿到绑定码", codeP2.Length == 6, codeP2.Length > 0 ? codeP2 : kickP2 ?? "");
+            r.Add("第二个玩家拿到绑定码", codeP2.Length == 6, codeP2.Length > 0 ? codeP2 : kickP2 ?? "");
 
             if (codeP2.Length == 6)
             {
                 await probe.SendAsync(14, Protocol.BindApply, Encoding.UTF8.GetBytes(codeP2));
                 var pending2 = await probe.TakeQueuedAsync(Protocol.BindAck, 8000);
                 var token2 = pending2?.Split('|') is { Length: > 1 } parts2 ? parts2[1] : "";
-                r.Add("改绑也要先 pending", pending2?.StartsWith("pending|") == true, pending2 ?? "没收到回执");
+                r.Add("再绑一个也要先 pending", pending2?.StartsWith("pending|") == true, pending2 ?? "没收到回执");
 
                 await probe.SendAsync(17, Protocol.BindConfirm, Encoding.UTF8.GetBytes(token2));
                 var rebindAck = await probe.TakeQueuedAsync(Protocol.BindAck, 8000);
-                r.Add("改绑到新玩家成功", rebindAck?.StartsWith("ok|mcplayer2") == true, rebindAck ?? "没收到回执");
+                r.Add("上限内再绑一个玩家成功", rebindAck?.StartsWith("ok|mcplayer2") == true, rebindAck ?? "没收到回执");
             }
 
             await Task.Delay(400);
-            var persistentRebind = File.Exists(persistentPath) ? ReadShared(persistentPath) : "";
-            r.Add("改绑后旧玩家免登录已清掉", CountOf(persistentRebind, "mcplayer") == 0, persistentRebind.Trim());
+            var bindTwoPath = Path.Combine(dir, "Data", "BindUser.txt");   //两个玩家的绑定表(LoginStore 存在 Data 下)
+            var bindTwo = File.Exists(bindTwoPath) ? ReadShared(bindTwoPath) : "";
+            r.Add("绑定表里同一账号挂着两行",
+                CountBound(bindTwo, "mcplayer") + CountBound(bindTwo, "mcplayer2") == 2, bindTwo.Trim());
 
-            var rebindKick = await fake.TakeAsync("|kick|mcplayer", 6000);
-            r.Add("改绑后旧玩家被要求重新绑定",
-                rebindKick is not null && rebindKick.Contains("账号已改绑到别的玩家"), rebindKick ?? "没收到:" + fake.Dump());
+            var persistentTwo = File.Exists(persistentPath) ? ReadShared(persistentPath) : "";
+            r.Add("多绑不动第一个玩家的免登录", CountOf(persistentTwo, "mcplayer") == 1, persistentTwo.Trim());
 
-            // ⑥ 解绑(现在账号绑的是 mcplayer2) → 立刻失效：回执 ok + 踢人 + 持久表清干净
+            // 多绑语义下没有"改绑顶掉旧的":第一个玩家不该被踢
+            r.Add("多绑后第一个玩家没被踢", await fake.TakeAsync("|kick|mcplayer", 2500) is null, fake.Dump());
+
+            // ⑥ 解绑(空负载 = 这个账号名下全部解掉) → 回执 ok + 两个都踢 + 持久表清干净
             await probe.SendAsync(13, Protocol.Unbind, Array.Empty<byte>());
             var unbindAck = await probe.TakeQueuedAsync(Protocol.BindAck, 8000);
             r.Add("解绑回执 ok", unbindAck?.StartsWith("ok|") == true, unbindAck ?? "没收到回执");
+            r.Add("回执里带被解的两个玩家名",
+                unbindAck?.Contains("mcplayer") == true && unbindAck?.Contains("mcplayer2") == true, unbindAck ?? "");
 
             var kick2 = await fake.TakeAsync("|kick|mcplayer2", 6000);
-            r.Add("解绑后下发踢人", kick2 is not null, kick2 ?? "没收到:" + fake.Dump());
+            r.Add("解绑后下发踢人(第二个玩家)", kick2 is not null, kick2 ?? "没收到:" + fake.Dump());
+
+            var kick2Old = await fake.TakeAsync("|kick|mcplayer|", 6000);
+            r.Add("解绑后下发踢人(第一个玩家)", kick2Old is not null, kick2Old ?? "没收到:" + fake.Dump());
 
             await Task.Delay(400);
             var persistentAfter = File.Exists(persistentPath) ? ReadShared(persistentPath) : "";
@@ -412,6 +422,12 @@ public static class ZxmmChain
     private static int CountOf(string text, string player)
         => text.Split('\n', StringSplitOptions.RemoveEmptyEntries)
             .Count(line => line.TrimStart('\uFEFF').StartsWith(player + "|", StringComparison.OrdinalIgnoreCase));
+
+    /// <summary>数一下绑定表里有几行挂的是这个玩家(绑定表一行是 `账号ID=玩家名`)。</summary>
+    private static int CountBound(string text, string player)
+        => text.Split('\n', StringSplitOptions.RemoveEmptyEntries)
+            .Count(line => line.TrimStart('\uFEFF').Split('=', 2) is [_, var name]
+                           && string.Equals(name.Trim(), player, StringComparison.OrdinalIgnoreCase));
 
     /// <summary>读服务端正在写的文件:用 FileShare.ReadWrite 打开,免得把服务端的写入顶掉。</summary>
     private static string ReadShared(string path)

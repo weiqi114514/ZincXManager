@@ -91,6 +91,7 @@ public static class OfficialBindChain
                 ["oslevel"] = "Admin",
                 ["servercode"] = serverCode,
                 ["zxmmapi"] = "127.0.0.1:" + zxmmPort,
+                ["bindmax"] = "2",   //这个场景要验"一个账号挂两个玩家",上限放到 2
             });
 
             r.Add("ZXMS 监听 " + czport, ms.WaitPort(czport, 25), LastLines(ms, 2));
@@ -195,10 +196,10 @@ public static class OfficialBindChain
             r.Add("放行时没有再弹 621", !probe.HasQueued(Protocol.LoginAsk), "队列里出现了 621");
             r.Add("放行时没有再下发 kick", await fake.TakeAsync("|kick|osplayer|", 2500) is null, "又收到一条 kick");
 
-            // ---------- ⑥ 改绑:同一个官方账号改绑新玩家 → 旧玩家免登录清掉并踢下线 ----------
+            // ---------- ⑥ 再绑第二个玩家(这个服 bindmax=2):账号名下两个,旧玩家的免登录不受影响 ----------
             fake.PushJoining("osplayer2", "/198.51.100.8:50011");
             var kick2 = await fake.TakeAsync("|kick|osplayer2|", 12000);
-            r.Add("改绑用的新玩家拿到绑定码", kick2 is not null, kick2 ?? "没收到:" + fake.Dump());
+            r.Add("第二个玩家拿到绑定码", kick2 is not null, kick2 ?? "没收到:" + fake.Dump());
             if (kick2 is not null) { await fake.ReplyAsync(kick2, "err", "没有这个在线玩家"); }
 
             var code2 = Regex.Match(kick2 ?? "", "绑定码：([A-Z2-9]{6})").Groups[1].Value;
@@ -206,31 +207,32 @@ public static class OfficialBindChain
             {
                 await probe.SendAsync(14, Protocol.BindApply, Encoding.UTF8.GetBytes(code2));
                 var pending2 = await probe.TakeQueuedAsync(Protocol.BindAck, 10000);
-                r.Add("改绑也要先 pending", pending2?.StartsWith("pending|") == true, pending2 ?? "没收到");
+                r.Add("再绑一个也要先 pending", pending2?.StartsWith("pending|") == true, pending2 ?? "没收到");
 
                 var token2 = pending2?.Split('|') is { Length: > 1 } parts2 ? parts2[1] : "";
                 await probe.SendAsync(17, Protocol.BindConfirm, Encoding.UTF8.GetBytes(token2));
                 var rebind = await probe.TakeQueuedAsync(Protocol.BindAck, 10000);
-                r.Add("改绑到新玩家成功(同一个官方账号)", rebind?.StartsWith("ok|osplayer2") == true, rebind ?? "没收到");
+                r.Add("上限内再绑第二个玩家成功(同一个官方账号)", rebind?.StartsWith("ok|osplayer2") == true, rebind ?? "没收到");
             }
 
-            r.Add("改绑记了 [改绑] 审计", await WaitFileAsync(loginlogPath, "从 osplayer 改绑到 osplayer2", 10000), "");
+            var persistentAfter = ReadShared(persistentPath);   // 多绑之后的持久登录表
+            r.Add("多绑不动第一个玩家的持久登录", persistentAfter.Contains("osplayer|198.51.100.7|"), persistentAfter.Trim());
+            r.Add("多绑后第一个玩家没被踢", await fake.TakeAsync("|kick|osplayer|", 2500) is null, fake.Dump());
 
-            var persistentAfter = ReadShared(persistentPath);   // 改绑后的持久登录表
-            r.Add("改绑后旧玩家持久登录被清掉", !persistentAfter.Contains("osplayer|"), persistentAfter.Trim());
+            // 630 列表:客户端查自己名下,应该一行一个玩家(解绑页按行渲染)
+            await probe.SendAsync(18, Protocol.BindQuery, Encoding.UTF8.GetBytes("osbind"));
+            var listText = await probe.TakeQueuedAsync(Protocol.BindList, 10000);   // 绑定列表
+            var names = (listText ?? "").Split('\n', StringSplitOptions.RemoveEmptyEntries)
+                .Select(l => l.Split('=')[0].Trim()).ToList();
+            r.Add("630 一行一个玩家(两个都在)",
+                names.SequenceEqual(new[] { "osplayer", "osplayer2" }), listText ?? "没收到");
 
-            var kickOld = await fake.TakeAsync("|kick|osplayer|", 12000);
-            r.Add("改绑后旧玩家被踢(理由:账号已改绑到别的玩家)",
-                kickOld is not null && kickOld.Contains("账号已改绑到别的玩家"), kickOld ?? "没收到:" + fake.Dump());
-            if (kickOld is not null) { await fake.ReplyAsync(kickOld, "err", "没有这个在线玩家"); }
-
-            // ---------- ⑦ 旧玩家再进服 → 已经不在任何账号名下,必须重新绑定 ----------
+            // ---------- ⑦ 旧玩家再进服 → 仍在账号名下,登录数组照旧放行(多绑没有把旧的顶掉) ----------
             fake.PushJoining("osplayer", "/198.51.100.7:50004");
-            var kick3 = await fake.TakeAsync("|kick|osplayer|", 12000);
-            var code3 = Regex.Match(kick3 ?? "", "绑定码：([A-Z2-9]{6})").Groups[1].Value;
-            r.Add("改绑后旧玩家再进服要重新绑定", code3.Length == 6, kick3 ?? "没收到:" + fake.Dump());
-            r.Add("重新拿到的绑定码和旧的不同", code3.Length == 6 && code3 != code1, code1 + " → " + code3);
-            if (kick3 is not null) { await fake.ReplyAsync(kick3, "err", "没有这个在线玩家"); }
+            await Task.Delay(1200);
+            r.Add("多绑后旧玩家再进服没被要求重新绑定(没收到 kick)",
+                await fake.TakeAsync("|kick|osplayer|", 2000) is null, fake.Dump());
+            r.Add("多绑后旧玩家再进服没有再弹 621", !probe.HasQueued(Protocol.LoginAsk), "队列里出现了 621");
         }
         catch (Exception ex)
         {
