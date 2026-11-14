@@ -17,6 +17,19 @@ namespace ZincXManagerTests;
 /// </summary>
 public static class ForceUpdateSuite
 {
+    /// <summary>本端版本:门槛留空时服务端拿它当最低版本,测试里不能跟着升版硬编码。</summary>
+    private static readonly string _selfVersion = ReadSelfVersion();
+
+    /// <summary>从程序集读 InformationalVersion(形如 b0.3.3)。</summary>
+    private static string ReadSelfVersion()
+    {
+        var attr = (System.Reflection.AssemblyInformationalVersionAttribute?)Attribute.GetCustomAttribute(
+            typeof(ForceUpdateSuite).Assembly, typeof(System.Reflection.AssemblyInformationalVersionAttribute));
+        var raw = attr?.InformationalVersion ?? "";   //形如 b0.3.3 或 b0.3.3+提交哈希
+        var plus = raw.IndexOf('+');   //SourceLink 追加的提交哈希要去掉
+        return plus > 0 ? raw[..plus] : raw;
+    }
+
     /// <summary>跑一遍,结果追加到 results。</summary>
     public static async Task RunAsync(List<SuiteResult> results, string ws, string debugMs)
     {
@@ -108,18 +121,18 @@ public static class ForceUpdateSuite
             // ---------- ⑥ 版本号低于门槛(b0.3.1)一样被拒 ----------
             using (var midProbe = await Probe.ConnectAsync("127.0.0.1", czport, "OS"))
             {
-                r.Add("b0.3.2a 客户端注册成功",
-                    await midProbe.RegisterAsync("newclient", "pw123456", "MACH-NEW", version: "b0.3.2a"),
+                r.Add("本端版本客户端注册成功",
+                    await midProbe.RegisterAsync("newclient", "pw123456", "MACH-NEW", version: _selfVersion),
                     midProbe.LastAck ?? "");
                 var midOk = await midProbe.LoginAsync("newclient", "pw123456", "MACH-NEW", "Player", "zxms", version: "b0.3.1");
                 r.Add("b0.3.1 客户端登录被拒", !midOk, midProbe.LastAck ?? "");
             }
 
-            // ---------- ⑦ 达到门槛的版本(b0.3.2a)放行 ----------
+            // ---------- ⑦ 达到门槛的版本(本端版本)放行 ----------
             using (var newProbe = await Probe.ConnectAsync("127.0.0.1", czport, "OS"))
             {
-                r.Add("b0.3.2a 客户端登录成功",
-                    await newProbe.LoginAsync("newclient", "pw123456", "MACH-NEW", "Player", "zxms", version: "b0.3.2a"),
+                r.Add("本端版本客户端登录成功",
+                    await newProbe.LoginAsync("newclient", "pw123456", "MACH-NEW", "Player", "zxms", version: _selfVersion),
                     newProbe.LastAck ?? "");
                 r.Add("放行也记日志(客户端版本 ≥ 门槛)",
                     await WaitOutAsync(ms, "登录放行 newclient", 8000), LastLines(ms, 3));
@@ -132,7 +145,7 @@ public static class ForceUpdateSuite
 
             using (var newProbe = await Probe.ConnectAsync("127.0.0.1", czport, "OS"))
             {
-                var highOk = await newProbe.LoginAsync("newclient", "pw123456", "MACH-NEW", "Player", "zxms", version: "b0.3.2a");
+                var highOk = await newProbe.LoginAsync("newclient", "pw123456", "MACH-NEW", "Player", "zxms", version: _selfVersion);
                 r.Add("门槛高于客户端版本时被拒", !highOk, newProbe.LastAck ?? "");
             }
 
@@ -143,8 +156,8 @@ public static class ForceUpdateSuite
 
             using (var newProbe = await Probe.ConnectAsync("127.0.0.1", czport, "OS"))
             {
-                r.Add("清空门槛后 b0.3.2a 又能登录",
-                    await newProbe.LoginAsync("newclient", "pw123456", "MACH-NEW", "Player", "zxms", version: "b0.3.2a"),
+                r.Add("清空门槛后本端版本又能登录",
+                    await newProbe.LoginAsync("newclient", "pw123456", "MACH-NEW", "Player", "zxms", version: _selfVersion),
                     newProbe.LastAck ?? "");
             }
 
