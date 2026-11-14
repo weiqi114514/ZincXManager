@@ -393,6 +393,20 @@ public static class Protocol
     /// <summary>是不是合法的权限等级。</summary>
     public static bool IsLevel(string level) => Array.IndexOf(Levels, level) >= 0;
 
+    /// <summary>
+    /// 是不是管理等级(Player 以外都算)。子服等级(LAdmin / HAdmin / System)与官方等级(Admin / System)都认,
+    /// 因为管理员可能从任意一端登录;空串与服务端占位符 <see cref="ServerAccountLevel"/> 都不算。
+    /// </summary>
+    public static bool IsManagementLevel(string level)
+    {
+        if (level.Length == 0 || level == ServerAccountLevel)
+        {
+            return false;
+        }
+
+        return Array.IndexOf(Levels, level) > 0 || Array.IndexOf(OSLevels, level) > 0;
+    }
+
     /// <summary>一次搜索最多返回多少条。</summary>
     public const int FriendSearchLimit = 20;
 

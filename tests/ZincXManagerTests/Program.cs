@@ -946,6 +946,11 @@ var results = new List<SuiteResult>();
     await ZincXManagerTests.BindLimitSuite.RunAsync(results, Ws, DebugMs);
 }
 
+// ================= 套件 25:管理员界面(等级判定,纯函数) =================
+{
+    await ZincXManagerTests.AdminNavSuite.RunAsync(results);
+}
+
 // ================= 汇总 =================
 Console.WriteLine();
 Console.WriteLine("================= 总表 =================");

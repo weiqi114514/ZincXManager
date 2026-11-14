@@ -50,7 +50,7 @@
       <Setter Property="Height" Value="20"/>
       <Setter Property="Stretch" Value="Uniform"/>
       <Setter Property="Stroke" Value="{DynamicResource ThemePrimaryDark}"/>
-      <Setter Property="StrokeThickness" Value="1.7"/>
+      <Setter Property="StrokeThickness" Value="1"/>
       <Setter Property="StrokeLineCap" Value="Round"/>
       <Setter Property="Fill" Value="Transparent"/>
       <Setter Property="VerticalAlignment" Value="Center"/>

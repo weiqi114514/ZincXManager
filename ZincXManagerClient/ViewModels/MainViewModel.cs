@@ -50,13 +50,27 @@ public partial class MainViewModel : ViewModelBase
         ManageItems.Add(new Models.FunctionItem { Key = "mg-stats", Title = "数据统计", Description = "在线 / 活跃 / 经济数据", Icon = Models.Icons.StatsManage, IconStroke = true });
 
         // 顺序:设置沉到功能列表最底下,小功能组顶替它原来的位置
-        NavItems.Add(new NavItem("经济", Icons.Economy));
-        NavItems.Add(new NavItem("社区", Icons.Community));
-        NavItems.Add(new NavItem("组织", Icons.Organization));
-        NavItems.Add(new NavItem("好友", Icons.Friends, 5, 3));
-        NavItems.Add(new NavItem("小功能组", Icons.Widgets));
-        NavItems.Add(new NavItem("管理", Icons.Manage, 5, 4));
+        // 管理账号登录后,左侧整栏换成管理端的大类;玩家那几页不再出现
+        if (IsAdmin)
+        {
+            NavItems.Add(new NavItem("服务器管理", Icons.AdminServer, iconStroke: true));
+            NavItems.Add(new NavItem("功能", Icons.AdminFunction, iconStroke: true));
+            NavItems.Add(new NavItem("ZXM 管理", Icons.AdminZxm, iconStroke: true));
+            NavItems.Add(new NavItem("查询统计", Icons.AdminQuery, iconStroke: true));
+        }
+        else
+        {
+            NavItems.Add(new NavItem("经济", Icons.Economy));
+            NavItems.Add(new NavItem("社区", Icons.Community));
+            NavItems.Add(new NavItem("组织", Icons.Organization));
+            NavItems.Add(new NavItem("好友", Icons.Friends, 5, 3));
+            NavItems.Add(new NavItem("小功能组", Icons.Widgets));
+            NavItems.Add(new NavItem("管理", Icons.Manage, 5, 4));
+        }
+
         NavItems.Add(new NavItem("设置", Icons.Settings));
+
+        BuildAdminItems();
 
         // 设置页里改了权限等级 / 连接方式,标题栏那句要跟着变
         Settings.PropertyChanged += OnSettingsChanged;
@@ -113,9 +127,12 @@ public partial class MainViewModel : ViewModelBase
     /// <summary>设置页视图模型。</summary>
     public SettingsViewModel Settings { get; } = new();
 
+    /// <summary>当前登录的是不是管理账号(等级由登录成功后写进 config 的 level 决定,Player 以外都算)。</summary>
+    public bool IsAdmin { get; } = Protocol.IsManagementLevel(ClientConfig.GetOrEmpty("level"));
+
     /// <summary>当前一级导航(决定右侧显示哪个页面)。</summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsSettings), nameof(IsEconomy), nameof(IsWidgets), nameof(IsPlaceholder), nameof(IsCommunity), nameof(IsOrganization), nameof(IsManage), nameof(ShowMessages))]
+    [NotifyPropertyChangedFor(nameof(IsSettings), nameof(IsEconomy), nameof(IsWidgets), nameof(IsPlaceholder), nameof(IsCommunity), nameof(IsOrganization), nameof(IsManage), nameof(IsAdminServer), nameof(IsAdminFunction), nameof(IsAdminZxm), nameof(IsAdminQuery), nameof(ShowMessages))]
     public partial string CurrentPage { get; set; } = "";
 
     /// <summary>是否正在显示设置页。</summary>
@@ -154,7 +171,8 @@ public partial class MainViewModel : ViewModelBase
 
     /// <summary>没选任何页面(点了 Logo)时不显示"该页面还没做"。</summary>
     public bool IsPlaceholder => CurrentPage.Length > 0 && !IsEconomy && !IsWidgets
-        && CurrentPage != "社区" && CurrentPage != "组织" && CurrentPage != "管理";
+        && CurrentPage != "社区" && CurrentPage != "组织" && CurrentPage != "管理"
+        && !IsAdminServer && !IsAdminFunction && !IsAdminZxm && !IsAdminQuery;
 
     public bool IsCommunity => CurrentPage == "社区";
 
@@ -162,6 +180,20 @@ public partial class MainViewModel : ViewModelBase
 
 
     public bool IsManage => CurrentPage == "管理";
+
+    // ---------- 管理端(管理账号才有的 4 个大类) ----------
+
+    /// <summary>管理端「服务器管理」大类。</summary>
+    public bool IsAdminServer => CurrentPage == "服务器管理";
+
+    /// <summary>管理端「功能」大类。</summary>
+    public bool IsAdminFunction => CurrentPage == "功能";
+
+    /// <summary>管理端「ZXM 管理」大类。</summary>
+    public bool IsAdminZxm => CurrentPage == "ZXM 管理";
+
+    /// <summary>管理端「查询统计」大类。</summary>
+    public bool IsAdminQuery => CurrentPage == "查询统计";
 
     /// <summary>社区页的子功能(按模式 / 是否连官方决定显示)。</summary>
     public System.Collections.ObjectModel.ObservableCollection<Models.FunctionItem> CommunityItems { get; } = new();
@@ -171,6 +203,71 @@ public partial class MainViewModel : ViewModelBase
 
     /// <summary>管理页的子功能。</summary>
     public System.Collections.ObjectModel.ObservableCollection<Models.FunctionItem> ManageItems { get; } = new();
+
+    /// <summary>管理端「服务器管理」大类的子项(占位)。</summary>
+    public System.Collections.ObjectModel.ObservableCollection<Models.FunctionItem> AdminServerItems { get; } = new();
+
+    /// <summary>管理端「功能」大类的子项(占位)。</summary>
+    public System.Collections.ObjectModel.ObservableCollection<Models.FunctionItem> AdminFunctionItems { get; } = new();
+
+    /// <summary>管理端「ZXM 管理」大类的子项(占位)。</summary>
+    public System.Collections.ObjectModel.ObservableCollection<Models.FunctionItem> AdminZxmItems { get; } = new();
+
+    /// <summary>管理端「查询统计」大类的子项(占位)。</summary>
+    public System.Collections.ObjectModel.ObservableCollection<Models.FunctionItem> AdminQueryItems { get; } = new();
+
+    /// <summary>
+    /// 填管理端四个大类的子项。清单来自桌面"功能介绍.txt"的 Admin 段,这一版全是占位卡片。
+    /// 每个子项目前各配各的图标(24x24 描边),卡片本身还没接真实功能。
+    /// </summary>
+    private void BuildAdminItems()
+    {
+        void Add(System.Collections.ObjectModel.ObservableCollection<Models.FunctionItem> host, string key, string title, string desc, string icon)
+        {
+            host.Add(new Models.FunctionItem { Key = key, Title = title, Description = desc, Icon = icon, IconStroke = true });
+        }
+
+        // 服务器管理:MC 服本身的操作
+        Add(AdminServerItems, "ad-rcon", "RCON", "与 mc 服务器连接的远程控制台", Icons.AdminRcon);
+        Add(AdminServerItems, "ad-listen", "监听服务器", "监听 mc 服的输出", Icons.AdminListen);
+        Add(AdminServerItems, "ad-file", "文件管理", "管理 mc 服或 ZXMS 所在机器的文件", Icons.AdminFile);
+        Add(AdminServerItems, "ad-plugin", "mod/插件管理", "管理 mc 服的插件 / mod", Icons.AdminPlugin);
+        Add(AdminServerItems, "ad-map", "地图管理", "管理 mc 服的地图", Icons.AdminMap);
+        Add(AdminServerItems, "ad-mapswitch", "地图备份切换", "快速切换 mc 服地图的备份", Icons.AdminMapSwitch);
+        Add(AdminServerItems, "ad-playerdata", "玩家数据管理", "直接修改玩家的数据文件", Icons.AdminPlayerData);
+        Add(AdminServerItems, "ad-op", "op 管理", "设置 / 取消 op", Icons.AdminOp);
+        Add(AdminServerItems, "ad-inventory", "玩家背包管理", "查看、管理玩家背包", Icons.AdminInventory);
+        Add(AdminServerItems, "ad-whitelist", "白名单", "mc 服的白名单管理", Icons.AdminWhitelist);
+
+        // 功能:跨系统对接与全服级操作
+        Add(AdminFunctionItems, "ad-mapbackup", "mc 地图备份", "备份 mc 服的地图", Icons.AdminMapBackup);
+        Add(AdminFunctionItems, "ad-multisync", "多服数据互通", "自动同步多个服的玩家数据", Icons.AdminMultiSync);
+        Add(AdminFunctionItems, "ad-mcserver", "与 mc 服的连接设置", "连哪个服、用什么端口", Icons.AdminMcServer);
+        Add(AdminFunctionItems, "ad-qqbot", "qqbot 连接", "与 qqbot 框架对接", Icons.AdminQqBot);
+        Add(AdminFunctionItems, "ad-stats", "统计", "玩家人数、经济等", Icons.AdminStats);
+        Add(AdminFunctionItems, "ad-qqbind", "qq 绑定", "zxmc 账户与 qq 绑定", Icons.AdminQqBind);
+        Add(AdminFunctionItems, "ad-ban", "联 ban", "在 zxmc 里 ban 玩家,同时推送 zxmc 与 qq 群", Icons.AdminBan);
+        Add(AdminFunctionItems, "ad-vote", "投票发布", "小区域(特定人)/ 全区(整个 zxms)", Icons.AdminVote);
+
+        // ZXM 管理:ZXM 自己那套账户 / 社区 / 组织 / 官方业务
+        Add(AdminZxmItems, "ad-account", "账户管理", "管理 zxm 的账户", Icons.AdminAccount);
+        Add(AdminZxmItems, "ad-post", "帖子管理", "社区帖子", Icons.AdminPost);
+        Add(AdminZxmItems, "ad-resource", "资源管理", "社区资源库", Icons.AdminResource);
+        Add(AdminZxmItems, "ad-chatroom", "聊天室管理", "社区聊天室与房间", Icons.AdminChatRoom);
+        Add(AdminZxmItems, "ad-company", "企业管理", "组织里的企业", Icons.AdminCompany);
+        Add(AdminZxmItems, "ad-personal", "个人管理", "组织里的个人", Icons.AdminPersonal);
+        Add(AdminZxmItems, "ad-team", "团队管理", "组织里的团队", Icons.AdminTeam);
+        Add(AdminZxmItems, "ad-shop", "官方商店", "管理官方商店、设置上架", Icons.AdminShop);
+        Add(AdminZxmItems, "ad-loan", "官方贷款", "官方贷款业务", Icons.AdminLoan);
+        Add(AdminZxmItems, "ad-bond", "官方债券", "官方债券业务", Icons.AdminBond);
+        Add(AdminZxmItems, "ad-zone", "开发区/机器/基地管理", "登记信息与后续校验", Icons.AdminZone);
+
+        // 查询统计:记录类,只读为主
+        Add(AdminQueryItems, "ad-zonecheck", "开发区/机器位置校验", "自动检查登记的坐标是否真有机器", Icons.AdminZoneCheck);
+        Add(AdminQueryItems, "ad-joinlog", "玩家出入服务器记录", "自动记录玩家进出", Icons.AdminJoinLog);
+        Add(AdminQueryItems, "ad-grouplog", "群聊天记录", "记录群聊天", Icons.AdminGroupLog);
+        Add(AdminQueryItems, "ad-serverlog", "服聊天记录", "记录服内聊天", Icons.AdminServerLog);
+    }
 
     /// <summary>顶部那句:权限等级 - 连接方式(如 Player - SAOS),两段都来自设置页。</summary>
     public string ModeText => $"{Settings.Role} - {Settings.Mode}";

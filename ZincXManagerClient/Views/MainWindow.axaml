@@ -47,6 +47,18 @@
       <Setter Property="Fill" Value="{DynamicResource ThemeOnRail}"/>
     </Style>
 
+    <!-- 描边图标(管理端那批 24x24 线条):导航栏原样式只认填充图标,线条图形会糊成实心块,单独一套 -->
+    <Style Selector="Button.nav Path.strokeIcon">
+      <Setter Property="Fill" Value="Transparent"/>
+      <Setter Property="Stroke" Value="#FFFFFF"/>
+      <Setter Property="StrokeThickness" Value="1"/>
+      <Setter Property="StrokeLineCap" Value="Flat"/>
+    </Style>
+    <Style Selector="Button.nav.selected Path.strokeIcon">
+      <Setter Property="Fill" Value="Transparent"/>
+      <Setter Property="Stroke" Value="{DynamicResource ThemeOnRail}"/>
+    </Style>
+
     <!-- 每行都有的左侧小条:常态半透明白,选中用主题次要色,悬停用纯白 —— 全部跟主题走 -->
     <Style Selector="Button.nav Rectangle.bar">
       <Setter Property="Fill" Value="#59FFFFFF"/>
@@ -280,9 +292,15 @@
                   <Grid ColumnDefinitions="3,*" MinHeight="40">
                     <!-- 贴在界面左边缘的小条,每行都有;选中时由样式高亮 -->
                     <Rectangle Grid.Column="0" Classes="bar"/>
-                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="12" Margin="28,9,14,9">
-                      <Path Data="{Binding Icon}" Width="17" Height="17"
-                            Stretch="Uniform" VerticalAlignment="Center"/>
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="12" Margin="28,8,14,8">
+                      <!-- 描边图标按 24x24 画布原坐标出图:各图共用同一个中心(12,12),大小与位置才一致;
+                           画布比旧图标宽 7,用负右距把图标与文字的间距拉回原样 -->
+                      <Panel Width="24" Height="24" Margin="0,0,-7,0" VerticalAlignment="Center">
+                        <Path Width="17" Height="17" Data="{Binding Icon}" Stretch="Uniform"
+                              HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="{Binding ShowVectorIcon}"/>
+                        <Path Classes="strokeIcon" Data="{Binding Icon}" Stretch="None" IsVisible="{Binding ShowStrokeIcon}"
+                              HorizontalAlignment="Left" VerticalAlignment="Top"/>
+                      </Panel>
                       <TextBlock Text="{Binding Label}" VerticalAlignment="Center"/>
                     </StackPanel>
                   </Grid>
@@ -374,6 +392,12 @@
           <views:FunctionPickerView x:Name="CommunityPage" Grid.Row="0" Grid.RowSpan="2" IsVisible="{Binding IsCommunity}"/>
           <views:FunctionPickerView x:Name="OrganizationPage" Grid.Row="0" Grid.RowSpan="2" IsVisible="{Binding IsOrganization}"/>
           <views:FunctionPickerView x:Name="ManagePage" Grid.Row="0" Grid.RowSpan="2" IsVisible="{Binding IsManage}"/>
+
+          <!-- 管理端四个大类(管理账号登录才出现,卡片横向网格) -->
+          <views:FunctionPickerView x:Name="AdminServerPage" Grid.Row="0" Grid.RowSpan="2" WrapLayout="True" IsVisible="{Binding IsAdminServer}"/>
+          <views:FunctionPickerView x:Name="AdminFunctionPage" Grid.Row="0" Grid.RowSpan="2" WrapLayout="True" IsVisible="{Binding IsAdminFunction}"/>
+          <views:FunctionPickerView x:Name="AdminZxmPage" Grid.Row="0" Grid.RowSpan="2" WrapLayout="True" IsVisible="{Binding IsAdminZxm}"/>
+          <views:FunctionPickerView x:Name="AdminQueryPage" Grid.Row="0" Grid.RowSpan="2" WrapLayout="True" IsVisible="{Binding IsAdminQuery}"/>
 
           <!-- 小功能组:搜索 + 左右两栏细条列表 -->
           <views:WidgetsView x:Name="WidgetsPage" Grid.Row="0" Grid.RowSpan="2" IsVisible="{Binding IsWidgets}"/>
@@ -539,7 +563,7 @@
                       Background="{DynamicResource ThemeLight}" BorderBrush="{DynamicResource ThemePanelBorder}"
                       BorderThickness="1" Click="OnOpenMessagesFullClick" ToolTip.Tip="全屏查看消息">
                 <Path x:Name="PanelToggleIcon" Data="{x:Static models:Icons.PanelCollapse}" Width="14" Height="14"
-                      Stretch="Uniform" Stroke="{DynamicResource ThemePrimaryDark}" StrokeThickness="1.8"
+                      Stretch="Uniform" Stroke="{DynamicResource ThemePrimaryDark}" StrokeThickness="1"
                       Fill="Transparent"/>
               </Button>
             </StackPanel>

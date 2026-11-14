@@ -1123,6 +1123,12 @@ public partial class MainWindow : Window
         this.FindControl<FunctionPickerView>("CommunityPage")?.SetContent("社区", Vm.CommunityItems);
         this.FindControl<FunctionPickerView>("OrganizationPage")?.SetContent("组织", Vm.OrganizationItems);
         this.FindControl<FunctionPickerView>("ManagePage")?.SetContent("管理", Vm.ManageItems);
+
+        // 管理端四个大类:标题给全称,左侧导航上用的是短名
+        this.FindControl<FunctionPickerView>("AdminServerPage")?.SetContent("MC 服务器管理类", Vm.AdminServerItems);
+        this.FindControl<FunctionPickerView>("AdminFunctionPage")?.SetContent("功能类", Vm.AdminFunctionItems);
+        this.FindControl<FunctionPickerView>("AdminZxmPage")?.SetContent("ZXM 管理", Vm.AdminZxmItems);
+        this.FindControl<FunctionPickerView>("AdminQueryPage")?.SetContent("查询/统计", Vm.AdminQueryItems);
     }
 
     /// <summary>回默认页。</summary>
