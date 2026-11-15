@@ -256,8 +256,16 @@ if (-not $SkipMac) {
 }
 
 Step "3/6 模组 jar + 客户端更新日志"
-$jar = Get-ChildItem (Join-Path $modDir 'build\libs') -Filter "ZXMM-$Version.jar" -ErrorAction SilentlyContinue | Select-Object -First 1
-if (-not $jar) { throw "没有 build\libs\ZXMM-$Version.jar,先去模组工程 gradle build" }
+# 模组工程可能和主仓同级(默认 E:\report\ZincXManagerMod),也可能在主仓里面 —— 两处都找
+$jar = $null
+foreach ($candidate in @($modDir, $modDirAlt)) {
+    if (-not $candidate) { continue }
+    $libs = Join-Path $candidate 'build\libs'
+    if (-not (Test-Path $libs)) { continue }
+    $jar = Get-ChildItem $libs -Filter "ZXMM-$Version.jar" -ErrorAction SilentlyContinue | Select-Object -First 1
+    if ($jar) { break }
+}
+if (-not $jar) { throw "没有 build\libs\ZXMM-$Version.jar,先去模组工程 gradle build(找过 $modDir 与 $modDirAlt)" }
 Copy-Item $jar.FullName (Join-Path $out $jar.Name) -Force
 Write-Host "    $($jar.Name) ($([math]::Round($jar.Length/1KB,1)) KB)" -ForegroundColor DarkGray
 
