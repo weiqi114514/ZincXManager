@@ -19,6 +19,26 @@ public static class ClientLog
     /// <summary>日志文件路径,默认程序工作目录下的 clients.log。</summary>
     public static string Path { get; set; } = "clients.log";
 
+    /// <summary>
+    /// 改用指定目录 + 本次启动时间做文件名(logs/CClient/clients-2026-11-15_17-30-00.log)。
+    /// 相对路径锚在可执行文件目录(与 <see cref="Logger.ResolveLogDirectory"/> 同一锚点),不跟着进程当前目录跑,
+    /// 否则从别的目录启动时这份日志会和 MLog 分成两棵树。
+    /// 父目录不存在会自动建;建不出来就维持工作目录的 clients.log,不抛。
+    /// </summary>
+    public static void Initialize(string directory)
+    {
+        try
+        {
+            var target = Logger.ResolveDirectory(directory);   //解析后的绝对目录
+            Directory.CreateDirectory(target);
+            Path = System.IO.Path.Combine(target, $"clients-{DateTime.Now:yyyy-MM-dd_HH-mm-ss}.log");
+        }
+        catch (Exception ex)
+        {
+            Logger.Log(LogLevel.Warning, "[ClientLog] 建目录失败,仍写工作目录: " + ex.Message);
+        }
+    }
+
     /// <summary>追加一行:时间 [标签] 内容。</summary>
     public static void Write(string tag, string message)
     {

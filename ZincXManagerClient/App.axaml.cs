@@ -31,7 +31,24 @@ public partial class App : Application
         // 注意:客户端没有控制台,这句一定要落日志,不然"双击没反应"完全查不到原因
         // 测试要同时开多个客户端(套件9/11 会各起一个),给个开关跳过互斥
         var skipSingleInstance = Environment.GetEnvironmentVariable("ZXM_NO_SINGLE_INSTANCE") == "1";
-        if (!skipSingleInstance && !SingleInstanceMutex.WaitOne(0))
+        // 上一个客户端被强杀(任务管理器/Stop-Process)时互斥体被遗弃,WaitOne 会抛 AbandonedMutexException。
+        // .NET 语义里抛这个异常时所有权已经拿到,所以当成功处理,否则强杀过一次就再也起不来。
+        var singleInstanceOwned = false;
+        if (!skipSingleInstance)
+        {
+            try
+            {
+                singleInstanceOwned = SingleInstanceMutex.WaitOne(0);
+            }
+            catch (System.Threading.AbandonedMutexException)
+            {
+                singleInstanceOwned = true;
+                ZincXManagerShared.Logging.Logger.Log(ZincXManagerShared.Logging.LogLevel.Warning,
+                    "[ZXMC] 上一个客户端被强制结束,互斥体已接管,继续启动");
+            }
+        }
+
+        if (!skipSingleInstance && !singleInstanceOwned)
         {
             ZincXManagerShared.Logging.Logger.Log(ZincXManagerShared.Logging.LogLevel.Warning,
                 "[ZXMC] 已有一个客户端在运行,本次启动退出(单实例互斥)");

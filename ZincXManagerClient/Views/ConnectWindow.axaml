@@ -174,9 +174,6 @@
                     Content="SAOS · 子服务端 + 官方服务端"/>
           </StackPanel>
 
-          <!-- 当前模式具体连谁(读自 config.ini) -->
-          <TextBlock Classes="label" Text="{Binding ModeHint}" TextWrapping="Wrap"/>
-
           <TextBlock Classes="section" Text="目标服务端"/>
 
           <!-- OOS:官方服务端地址只读显示,要改从这里进(原来在设置页里) -->
@@ -199,8 +196,6 @@
                 <TextBox Classes="field" Text="{Binding Port}" PlaceholderText="例如 21000"/>
               </StackPanel>
             </Grid>
-            <TextBlock Classes="label" TextWrapping="Wrap"
-                       Text="端口:ZXMS 一般是 21000,ZXMOS 一般是 25000。连接时按模式校验目标,不匹配直接拒绝。"/>
           </StackPanel>
 
           <!-- 三个按钮横排:连上之后"进入主界面"就在眼前,不用往下翻 -->

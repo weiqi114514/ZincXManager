@@ -1,4 +1,4 @@
-<Window xmlns="https://github.com/avaloniaui"
+﻿<Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         x:Class="ZincXManagerClient.Views.ServerPickWindow"
         Title="选择 MC 服务器"
@@ -125,7 +125,7 @@
 
     <!-- 底栏:左下提示,右下取消 / 应用 -->
     <Grid Grid.Row="2" ColumnDefinitions="*,Auto" Margin="16,10,16,14">
-      <TextBlock Grid.Column="0" Text="切换后看到的是那台服的数据" FontSize="12" Foreground="#4A6B78"
+      <TextBlock Grid.Column="0" Text="切换后数据自动同步" FontSize="12" Foreground="#4A6B78"
                  VerticalAlignment="Center"/>
       <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10">
         <Button Classes="dbtn secondary" Content="取消" Click="OnCancelClick"/>

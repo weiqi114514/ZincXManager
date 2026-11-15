@@ -63,7 +63,8 @@
     </Style>
     <Style Selector="TextBlock.fndesc">
       <Setter Property="FontSize" Value="11.5"/>
-      <Setter Property="Foreground" Value="{DynamicResource ThemeMuted}"/>
+      <!-- 别用 ThemeMuted:那是浅蓝强调色,当正文灰字在浅底上几乎看不清 -->
+      <Setter Property="Foreground" Value="#5A7480"/>
       <Setter Property="VerticalAlignment" Value="Center"/>
       <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
     </Style>

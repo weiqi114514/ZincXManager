@@ -217,6 +217,9 @@ public partial class MainWindow : Window
         if (Vm is { } vm)
         {
             _ = vm.RequestMessageHistoryAsync();
+
+            // 进主界面先问一次好友申请(656):657 回来才知道「好友」那一行的红点亮不亮
+            _ = vm.RequestFriendRequestsAsync();
         }
     }
 
@@ -421,6 +424,20 @@ public partial class MainWindow : Window
         _ = OpenServerPickerAsync();
     }
 
+    /// <summary>打开 RCON / ZXMM 桥接控制台:切页,把配置里选中的服同步成目标服,再拉一次清单(684)。</summary>
+    public void OpenConsole()
+    {
+        if (Vm is not { } vm)
+        {
+            return;
+        }
+
+        vm.Console.PreferServer(ClientConfig.GetMcServer());
+        vm.CurrentPage = "ad-console";
+        Logger.Log(LogLevel.Info, "[控制台] 打开 RCON / ZXMM 桥接控制台,请求服务器清单(684)");
+        _ = vm.Console.RefreshServersAsync();
+    }
+
     /// <summary>拉列表 → 弹窗 → 等用户选;弹窗关掉就把订阅拆了。</summary>
     private async Task OpenServerPickerAsync()
     {
@@ -524,6 +541,7 @@ public partial class MainWindow : Window
 
             progress.SetText("正在加载数据");
             QueryBindAsync();                 // 切完重新拉一次绑定关系(629),回来直接刷成那台服的数据
+            await ReloadAfterServerSwitchAsync(serverId);   // 好友 / 申请 / 历史一起重拉,别留着上一台服的界面
             await Task.Delay(400);            // 让「正在加载数据」这一级看得见
             progress.Finish();
             Logger.Log(LogLevel.Info, $"[数据分离] 已切换到服务器 {serverId}");
@@ -558,6 +576,61 @@ public partial class MainWindow : Window
         {
             Logger.Log(LogLevel.Warning, "[绑定] 查询失败: " + ex.Message);
         }
+    }
+
+    /// <summary>
+    /// 切服成功后的重拉:好友列表(650)/ 好友申请(656)/ 历史消息(505)。
+    /// 切服本身已经成功,任一步失败只记 Warn,不回滚、不弹窗打断用户。
+    /// </summary>
+    /// <param name="serverId">刚切过去的服务器编号(只用于日志)。</param>
+    private async Task ReloadAfterServerSwitchAsync(int serverId)
+    {
+        var connect = ClientSession.Connect;
+        if (connect is null)
+        {
+            Logger.Log(LogLevel.Warning, "[数据分离] 切服后重拉跳过:连接不在了");
+            return;
+        }
+
+        var ok = new System.Collections.Generic.List<string>();       //发成功的步骤,日志里好核对
+        var failed = new System.Collections.Generic.List<string>();   //发失败的步骤
+
+        async Task SendStepAsync(string name, Func<Task<bool>> send)
+        {
+            try
+            {
+                if (await send())
+                {
+                    ok.Add(name);
+                    return;
+                }
+
+                failed.Add(name);
+                Logger.Log(LogLevel.Warning, $"[数据分离] 切服后重拉 {name} 没发出去:连接已断开");
+            }
+            catch (Exception ex)
+            {
+                failed.Add(name);
+                Logger.Log(LogLevel.Warning, $"[数据分离] 切服后重拉 {name} 失败: {ex.Message}");
+            }
+        }
+
+        await SendStepAsync("好友列表(650)", () => connect.SendAsync(Protocol.FriendListQuery, ""));
+        await SendStepAsync("好友申请(656)", () => connect.SendAsync(Protocol.FriendRequestsQuery, ""));
+
+        // 历史消息走现有的补发入口(505):它自己会判连接在不在
+        if (Vm is { } vm && connect.IsConnected)
+        {
+            await SendStepAsync("历史消息(505)", async () =>
+            {
+                await vm.RequestMessageHistoryAsync();
+                return true;
+            });
+        }
+
+        Logger.Log(LogLevel.Info,
+            $"[数据分离] 切服 {serverId} 后重拉:{string.Join(" / ", ok)}" +
+            (failed.Count > 0 ? $";失败 {string.Join(" / ", failed)}" : ""));
     }
 
     /// <summary>绑定二次确认:用户点了「确定绑定」才把令牌发回服务端(631)。</summary>
@@ -970,18 +1043,33 @@ public partial class MainWindow : Window
 
             // 好友申请列表(657):列表窗只要红点,通知窗要整张列表
             case Protocol.FriendRequestsReply:
+            {
+                // 未处理条数就是这份列表的行数:谁问的、推来的都按这个数覆盖最准
+                var requests = FriendCodec.ParseFriendRequests(text, out var badRequests);
+                vm.SetFriendRequestCount(requests.Count);
+                if (badRequests > 0)
+                {
+                    Logger.Log(LogLevel.Warning, $"[好友] 申请列表里有 {badRequests} 行认不出来,红点按能认出来的算");
+                }
+
+                Logger.Log(LogLevel.Info, $"[好友] 未处理申请 {requests.Count} 条,「好友」红点已同步");
                 _friendsWindow?.FillRequests(text);
                 FriendRequestsWindow.Current?.FillRequests(text);
                 break;
+            }
 
             // 好友事件(662):有人加我 / 同意我 / 删了我 / 上线 / 下线
             case Protocol.FriendEvent:
                 HandleFriendEvent(text);
                 break;
 
-            // 搜索结果(664)
+            // 搜索结果(664):通知窗会自己发 663 查申请人名字,按请求编号认领,认不出的给加好友窗
             case Protocol.FriendSearchReply:
-                AddFriendWindow.Current?.FillResults(text);
+                if (FriendRequestsWindow.Current?.TakeSearchReply(packet.Id, text) != true)
+                {
+                    AddFriendWindow.Current?.FillResults(text);
+                }
+
                 break;
 
             // 头像(608):存本地,列表重画
@@ -1013,12 +1101,50 @@ public partial class MainWindow : Window
                 HandleMessageAck(text);
                 break;
 
-            case Protocol.FriendRequestAck:
+            // 回申请的回执(659)先给通知窗:它要立刻把那一行摘掉并弹自己的提示;
+            // 不是它发的那条才落到通用回执上
             case Protocol.FriendAnswerAck:
+                if (FriendRequestsWindow.Current?.HandleAnswerAck(packet.Id, text) != true)
+                {
+                    HandleFriendReceipt(packet.Type, text);
+                }
+
+                // 服务端处理完申请不会推新的 657:自己再要一次,红点才会跟着少一条
+                _ = vm.RequestFriendRequestsAsync();
+                break;
+
+            case Protocol.FriendRequestAck:
             case Protocol.FriendRemoveAck:
                 HandleFriendReceipt(packet.Type, text);
                 break;
+
+            // 终端命令回执(681):序号|ok|文本 或 序号|err|原因
+            case Protocol.ConsoleResult:
+                Vm?.Console.ApplyResult(text);
+                break;
+
+            // 终端持续输出(682):服务器ID|一行文本
+            case Protocol.ConsoleOutput:
+                HandleConsoleOutput(text);
+                break;
+
+            // 终端服务器清单(685)
+            case Protocol.ConsoleServers:
+                Vm?.Console.ApplyServers(text);
+                break;
         }
+    }
+
+    /// <summary>682 负载是 <c>服务器ID|一行文本</c>:拆开交给终端,编号坏了就当没收到。</summary>
+    private void HandleConsoleOutput(string payload)
+    {
+        var parts = payload.Split('|', 2);
+        if (parts.Length < 2 || !int.TryParse(parts[0].Trim(), out var serverId))
+        {
+            return;
+        }
+
+        Vm?.Console.AppendOutput(serverId, parts[1]);
     }
 
     /// <summary>处理 662:按事件种类刷新列表 / 在线状态 / 红点。</summary>
@@ -1037,15 +1163,29 @@ public partial class MainWindow : Window
             case Protocol.FriendEventKind.Offline:
                 _friendsWindow?.SetOnline(other, online: false);
                 break;
+            case Protocol.FriendEventKind.Request:
+                // 别人来申请:先加一让红点立刻亮;服务端紧接着会推 657,真值以那一包为准
+                if (Vm is { } requestVm)
+                {
+                    requestVm.BumpFriendRequestCount();
+                    _ = requestVm.RequestFriendRequestsAsync();
+                }
+
+                _friendsWindow?.RefreshAll();
+                FriendRequestsWindow.Current?.RefreshRequests();
+                break;
             case Protocol.FriendEventKind.Remove:
                 // 关系解除:列表重拉;开着的聊天窗必须立刻锁死,不然还能继续往里发
                 _friendsWindow?.RefreshAll();
+                FriendRequestsWindow.Current?.RefreshRequests();
                 ChatWindow.FriendRemoved(other);
                 Logger.Log(LogLevel.Info, $"[好友] 收到解除通知:{other},聊天窗已停");
                 break;
             default:
-                // 申请 / 同意:列表和红点都可能变,直接重新拉一遍最省心
+                // 申请 / 同意:列表和红点都可能变,直接重新拉一遍最省心;
+                // 同意之后对方那条申请就不该再留在通知窗里,通知窗也重拉
                 _friendsWindow?.RefreshAll();
+                FriendRequestsWindow.Current?.RefreshRequests();
                 break;
         }
     }

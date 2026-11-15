@@ -76,6 +76,13 @@ public partial class FunctionPickerView : UserControl
             return;
         }
 
+        // RCON / ZXMM 桥接控制台:页面就在主窗口内容区里,切过去即可
+        if (key == "ad-rcon")
+        {
+            (TopLevel.GetTopLevel(this) as MainWindow)?.OpenConsole();
+            return;
+        }
+
         var (source, hint) = key switch
         {
             "srv-square" => ("数据来源:子服务端(ZXMS)", "和锌源广场功能一样,只是社区内容来自你连的子服务端"),

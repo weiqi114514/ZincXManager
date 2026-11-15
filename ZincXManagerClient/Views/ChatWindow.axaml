@@ -1,4 +1,4 @@
-<Window xmlns="https://github.com/avaloniaui"
+﻿<Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         x:Class="ZincXManagerClient.Views.ChatWindow"
         Title="ZincXManagerClient · 聊天"
@@ -226,7 +226,7 @@
           </StackPanel>
 
           <StackPanel Spacing="6">
-            <TextBlock Text="对象 ID(ZXM 账号 ID)" FontSize="11.5" Foreground="{DynamicResource ThemeMuted}"/>
+            <TextBlock Text="账号 ID" FontSize="11.5" Foreground="{DynamicResource ThemeMuted}"/>
             <Border Background="{DynamicResource ThemeLight}" BorderBrush="{DynamicResource ThemePanelBorder}"
                     BorderThickness="1" Padding="10,8">
               <TextBlock x:Name="ObjectIdText" Text="5" FontSize="12"

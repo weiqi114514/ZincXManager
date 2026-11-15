@@ -178,8 +178,9 @@ public static class Protocol
     public const ushort FriendSearch = 663;
 
     /// <summary>
-    /// ZXMS → ZXMC:搜索结果。每行 <c>完整ID|名称|等级</c>;
-    /// 本服不认识的账号回 <c>完整ID|#编码|-</c>(意思是"我只能给你地址,成不成问对方服")。
+    /// ZXMS → ZXMC:搜索结果。每行 <c>完整ID|名称|等级|来源服</c>(老版本服务端只发前三段,客户端按字段数兼容);
+    /// 来源服 = 该玩家所属服的显示名,查不到写 <c>未知</c>。
+    /// 本服不认识的账号回 <c>完整ID|#编码|-|来源服</c>(意思是"我只能给你地址,成不成问对方服")。
     /// </summary>
     public const ushort FriendSearchReply = 664;
 
@@ -202,6 +203,27 @@ public static class Protocol
 
     /// <summary>ZXMS → ZXMC 切换结果:<c>ok|ID</c> 或 <c>err|原因</c>。</summary>
     public const ushort ServerSwitchAck = 673;
+
+    /// <summary>控制台:ZXMC → ZXMS 发一条命令。负载 <c>服务器ID|命令</c>。ZXMS 处理完回 <see cref="ConsoleResult"/>。</summary>
+    public const ushort ConsoleCommand = 680;
+
+    /// <summary>控制台:ZXMS → ZXMC 命令结果。<c>序号|ok|文本</c> 或 <c>序号|err|原因</c>。</summary>
+    public const ushort ConsoleResult = 681;
+
+    /// <summary>控制台:ZXMS → ZXMC 持续输出推送(桥接模式开着监听时才有)。负载 <c>服务器ID|一行文本</c>。</summary>
+    public const ushort ConsoleOutput = 682;
+
+    /// <summary>控制台:ZXMC → ZXMS 开关持续输出。负载 <c>服务器ID|1</c> 开 / <c>服务器ID|0</c> 关。</summary>
+    public const ushort ConsoleTap = 683;
+
+    /// <summary>控制台:ZXMC → ZXMS 要能用的服务器清单(负载空)。ZXMS 回 <see cref="ConsoleServers"/>。</summary>
+    public const ushort ConsoleServersReq = 684;
+
+    /// <summary>
+    /// 控制台:ZXMS → ZXMC 服务器清单。每行 <c>ID|名称|控制台模式|桥接在线|RCON在线</c>,行间 <c>\n</c>;
+    /// 控制台模式 0 = ZXMM 桥接 / 1 = RCON,在线标记 1 / 0。
+    /// </summary>
+    public const ushort ConsoleServers = 685;
 
     /// <summary>ZXMOS → ZXMS:把某些用户账号移交给子服务端(拉黑前先移交,别让玩家丢号)。负载 "名称|密文|等级" 每行一条。</summary>
     public const ushort AccountMigrate = 610;

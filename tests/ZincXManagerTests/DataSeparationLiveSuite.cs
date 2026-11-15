@@ -227,7 +227,7 @@ public static class DataSeparationLiveSuite
             return false;
         }
 
-        foreach (var file in Directory.GetFiles(logDir, "*.log"))
+        foreach (var file in Directory.GetFiles(logDir, "*.log", SearchOption.AllDirectories))
         {
             try
             {
@@ -258,7 +258,7 @@ public static class DataSeparationLiveSuite
             return false;
         }
 
-        foreach (var file in Directory.GetFiles(logDir, "*.log"))
+        foreach (var file in Directory.GetFiles(logDir, "*.log", SearchOption.AllDirectories))
         {
             try
             {

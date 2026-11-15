@@ -813,11 +813,15 @@ var results = new List<SuiteResult>();
             // 服务端发一条,看客户端日志有没有收到(证明注入的那个客户端确实连在服上)
             ms.SendCmd("msg notice text GUI注入公告 这条是注入测试");
             await Task.Delay(2500);
+            // 日志现在落在 logs/MLog 下,要递归找
             var cliLogDir = Path.Combine(cliDir, "logs");
             var log = "";
             if (Directory.Exists(cliLogDir))
             {
-                var f = new DirectoryInfo(cliLogDir).GetFiles("*.log").OrderByDescending(x => x.LastWriteTime).FirstOrDefault();
+                var f = Directory.GetFiles(cliLogDir, "*.log", SearchOption.AllDirectories)
+                    .Select(p => new FileInfo(p))
+                    .OrderByDescending(x => x.LastWriteTime)
+                    .FirstOrDefault();
                 if (f is not null)
                 {
                     using var fs = new FileStream(f.FullName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
@@ -964,6 +968,11 @@ var results = new List<SuiteResult>();
 // ================= 套件 28:net close 的查找 / 断开 / 已离线判定(进程内,不起 ZXMS) =================
 {
     await ZincXManagerTests.NetCloseSuite.RunAsync(results);
+}
+
+// ================= 套件 29:控制台(连接表 / RCON 客户端 / 选路 / 命令日志,进程内,不起 ZXMS) =================
+{
+    await ZincXManagerTests.ConsoleSuite.RunAsync(results);
 }
 
 // ================= 汇总 =================

@@ -29,7 +29,7 @@
     </Style>
   </Window.Styles>
 
-  <Grid RowDefinitions="33,*,Auto">
+  <Grid RowDefinitions="33,*">
     <!-- 标题栏 -->
     <Border Grid.Row="0" Background="{DynamicResource ThemePrimary}" PointerPressed="OnTitleBarPointerPressed">
       <Grid ColumnDefinitions="Auto,*,Auto">
@@ -41,14 +41,19 @@
       </Grid>
     </Border>
 
-    <!-- 申请列表 -->
-    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
-      <StackPanel x:Name="RequestList" Margin="8,8,8,10" Spacing="2"/>
-    </ScrollViewer>
+    <!-- 申请列表;空态叠在同一格里,列表为空时居中显示 -->
+    <Grid Grid.Row="1">
+      <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel x:Name="RequestList" Margin="8,8,8,10" Spacing="2"/>
+      </ScrollViewer>
 
-    <Border Grid.Row="2" BorderBrush="{DynamicResource ThemePanelBorder}" BorderThickness="0,1,0,0" Padding="12,7">
-      <TextBlock x:Name="StatusText" Text="界面阶段:申请列表是演示数据,同意/拒绝还没接服务端"
-                 FontSize="10.5" TextWrapping="Wrap" Foreground="{DynamicResource ThemeMuted}"/>
-    </Border>
+      <StackPanel x:Name="EmptyState" IsVisible="False" Spacing="6" Margin="24"
+                  HorizontalAlignment="Center" VerticalAlignment="Center">
+        <TextBlock x:Name="EmptyTitle" Text="没有待处理的好友申请"
+                   FontSize="12.5" HorizontalAlignment="Center" Foreground="{DynamicResource ThemeMuted}"/>
+        <TextBlock x:Name="EmptyHint" Text="别人发来的申请会显示在这里"
+                   FontSize="10.5" HorizontalAlignment="Center" Foreground="{DynamicResource ThemeMuted}"/>
+      </StackPanel>
+    </Grid>
   </Grid>
 </Window>

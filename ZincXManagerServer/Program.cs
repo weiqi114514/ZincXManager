@@ -251,6 +251,15 @@ internal static partial class Program
     /// <summary>保护 <see cref="_clientServer"/>:收包在分派线程,断开回调在收发线程,两个都会动它。</summary>
     private static readonly object _clientServerLock = new();
 
+    /// <summary>正在持续接收控制台输出的连接(连接 → 服务器编号);断开时清掉,一条连接同时只收一台。</summary>
+    private static readonly Dictionary<TcpConnection, int> _consoleTaps = new();
+
+    /// <summary>保护 <see cref="_consoleTaps"/>:分派线程增删,ZXMM 收包线程推送时取快照。</summary>
+    private static readonly object _consoleTapLock = new();
+
+    /// <summary>每台服务器当前的持续输出开关(服务器编号 → 模组是否已在推);只在计数从 0 变正、或从正变 0 时翻转,免得同一台重复通知。</summary>
+    private static readonly Dictionary<int, bool> _tapState = new();
+
     /// <summary>账号表(users.ini):注册 / 登录都查它;控制台 account 命令也用它。</summary>
     private static readonly AccountStore Accounts = new("User/Data");
 
@@ -262,10 +271,42 @@ internal static partial class Program
 
     static void OpenLog()
     {
-        if (!Logger.OpenDefaultLogFile("ZXMS", out var logFile))
+        if (!Logger.OpenDefaultLogFile("ZXMS", out var logFile, "logs/MLog"))
         {
             Console.Error.WriteLine("[Fatal]打开日志文件失败: " + logFile);
             Environment.Exit(1);
+        }
+
+        // 两类日志各有各的去处:客户端连接日志(CClient)按时间分文件,控制台命令日志(Cmd)按时间分文件
+        ClientLog.Initialize("logs/CClient");
+        CommandLog.Initialize("logs/Cmd");
+
+        WarnOldLogsInRoot();
+    }
+
+    /// <summary>
+    /// 提示 logs 根目录里改动前留下的旧日志。只提示不自动搬:自动搬要把可能正在写的文件挪走,风险高。
+    /// 只数顶层 *.log,MLog / CClient / Cmd 子目录里的不算。
+    /// </summary>
+    static void WarnOldLogsInRoot()
+    {
+        try
+        {
+            var root = Logger.ResolveLogDirectory();   //日志根目录,与 MLog 同一锚点
+            if (!Directory.Exists(root))
+            {
+                return;
+            }
+
+            var count = Directory.GetFiles(root, "*.log").Length;   //顶层旧日志文件数
+            if (count > 0)
+            {
+                Logger.Log(LogLevel.Info, $"[日志] logs 根目录下还有 {count} 个旧日志文件(改动前生成的),不影响使用;要归档可手动移到 logs/MLog");
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.Log(LogLevel.Warning, "[日志] 统计 logs 根目录的旧日志失败: " + ex.Message);
         }
     }
 
@@ -547,11 +588,163 @@ internal static partial class Program
             : $"{address} [账号#{info.AccountId}/{info.User}]";
     }
 
+    /// <summary>
+    /// 这条连接当前选的服务器编号(没选过/没登记 = 0,表示走共享区)。
+    /// 切服是客户端主动发的 672,记在 _clientServer 里,断开时清掉。
+    /// </summary>
+    private static int ServerOf(TcpConnection connection)
+    {
+        int serverId;   //连接当前选的服务器编号
+        lock (_clientServerLock)
+        {
+            if (!_clientServer.TryGetValue(connection, out serverId))
+            {
+                return 0;
+            }
+        }
+
+        // 没开 bind 分离时所有账号都该落在共享区:这时还返回编号,调用方就会去读一个根本不该存在的分区
+        return DataSeparation.IsSeparated("bind") ? serverId : 0;
+    }
+
+    /// <summary>
+    /// 能不能用服务器控制台:只有 HAdmin 和 System。Player / LAdmin 不够。
+    /// </summary>
+    /// <param name="connection">发请求的连接。</param>
+    private static bool CanUseConsole(TcpConnection connection)
+    {
+        var info = _server?.Registry.Find(connection.Id);   //这条连接的登录信息
+        return info is not null && (info.Level == "HAdmin" || info.Level == "System");
+    }
+
+    /// <summary>
+    /// 把某台服的一行控制台输出推给正在监听它的客户端。
+    /// </summary>
+    /// <param name="serverId">服务器编号。</param>
+    /// <param name="text">这一行输出。</param>
+    private static void PushConsoleOutput(int serverId, string text)
+    {
+        // 推送是网络 IO:不能压在 ZXMM 收包线程上,也不能让一条慢连接拖住别的连接
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                var targets = new List<TcpConnection>();   //正在收这台服的连接快照(持锁期间不写包)
+                lock (_consoleTapLock)
+                {
+                    foreach (var pair in _consoleTaps)
+                    {
+                        if (pair.Value == serverId)
+                        {
+                            targets.Add(pair.Key);
+                        }
+                    }
+                }
+
+                if (targets.Count == 0)
+                {
+                    return;
+                }
+
+                Logger.Log(LogLevel.Debug,
+                    $"[控制台] 推 {text.Length} 字的输出给 {targets.Count} 条连接({serverId} 号)");
+
+                var payload = Encoding.UTF8.GetBytes($"{serverId}|{text}");
+                foreach (var conn in targets)
+                {
+                    try
+                    {
+                        await conn.WriteAsync(new Packet(0, Protocol.ConsoleOutput, payload));
+                        Logger.Log(LogLevel.Debug, $"[控制台] 已把这一行发给连接 {conn.Id.ToString("N")[..8]}");
+                    }
+                    catch (Exception ex)
+                    {
+                        // 断了的连接会在 Disconnected 里清掉,这里只留个痕迹
+                        Logger.Log(LogLevel.Warning, $"[控制台] 推送 {serverId} 的输出失败 → {ex.Message}");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Log(LogLevel.Error, $"[控制台] 推送 {serverId} 的控制台输出异常 → {ex}");
+            }
+        });
+    }
+
+    /// <summary>
+    /// 重算某台服务器还要不要持续输出,并把结果同步给模组。
+    ///
+    /// <para>客户端勾选 / 取消 / 换服务器 / 断开都走这里:订阅连接数从 0 变正才让模组开始推,落到 0 才让它停。
+    /// 光记 <see cref="_consoleTaps"/> 不通知模组的话,客户端只会收到回执、永远收不到真正的输出。</para>
+    /// </summary>
+    /// <param name="serverId">服务器编号。</param>
+    private static void RefreshTap(int serverId)
+    {
+        bool want;   //这台服现在到底该不该让模组推
+        lock (_consoleTapLock)
+        {
+            var count = 0;
+            foreach (var pair in _consoleTaps)
+            {
+                if (pair.Value == serverId)
+                {
+                    count++;
+                }
+            }
+
+            want = count > 0;
+            if (_tapState.TryGetValue(serverId, out var current) && current == want)
+            {
+                return;
+            }
+
+            _tapState[serverId] = want;
+        }
+
+        var api = ZxmmApiOf(serverId);
+        if (api is null)
+        {
+            // 桥接没连上时只留痕:等它重连后台再勾一次即可,不要在这里阻塞分派线程
+            Logger.Log(LogLevel.Warning, $"[控制台] {serverId} 号服务器没有 ZXMM 通道,持续输出开关发不出去");
+            return;
+        }
+
+        _ = SendTapAsync(api, serverId, want);
+    }
+
+    /// <summary>把持续输出开关发给模组;失败只记日志,不往调用方抛。</summary>
+    /// <param name="api">该服的 ZXMM 通道。</param>
+    /// <param name="serverId">服务器编号(只用于日志)。</param>
+    /// <param name="on">true=开始推,false=停止推。</param>
+    private static async Task SendTapAsync(Zxmm.ZxmmApi api, int serverId, bool on)
+    {
+        try
+        {
+            var ok = await api.ConsoleTapAsync(on).ConfigureAwait(false);
+            Logger.Log(ok ? LogLevel.Info : LogLevel.Warning, ok
+                ? $"[控制台] 已通知 {serverId} 号服务器{(on ? "开始" : "停止")}推送控制台输出"
+                : $"[控制台] {serverId} 号服务器{(on ? "开始" : "停止")}推送控制台输出失败(模组没答 ok)");
+        }
+        catch (Exception ex)
+        {
+            Logger.Log(LogLevel.Warning, $"[控制台] 通知 {serverId} 号服务器开关持续输出时出错 → {ex.Message}");
+        }
+    }
+
     /// <summary>按 zxmmapi=host:port 建接口客户端(支持 [::1]:21200)</summary>
     private static Zxmm.ZxmmApi CreateZxmmApi()
     {
         var (host, port) = SplitZxmmApiAddress(_zxmmApiAddress);
-        return new Zxmm.ZxmmApi(host, port, _zxmmToken);
+        var api = new Zxmm.ZxmmApi(host, port, _zxmmToken);   //ZXMM 长连接(连不连由调用方 Start)
+        // 持续输出按登记表编号路由:客户端订阅的是登记表那台,模组自报的是 MC 服自己的 id,两者对不上
+        api.ConsoleOutput += line =>
+        {
+            if (Servers.Default is { } entry)
+            {
+                PushConsoleOutput(entry.Id, line);
+            }
+        };
+        return api;
     }
 
     /// <summary>把 zxmmapi 的 host:port 拆开(支持 [::1]:21200);拆不出来时按 127.0.0.1:21200 兜底。</summary>
@@ -594,6 +787,21 @@ internal static partial class Program
     }
 
     /// <summary>
+    /// 按服务器编号取那条 ZXMM 长连接:单独建过连的查 _zxmmApis,没单独建的(通常是登记表第一台)走主通道。
+    /// </summary>
+    /// <param name="serverId">服务器编号。</param>
+    /// <returns>该服的连接;这个编号没连过 ZXMM 时返回 null。</returns>
+    private static Zxmm.ZxmmApi? ZxmmApiOf(int serverId)
+    {
+        if (_zxmmApis.TryGetValue(serverId, out var api))
+        {
+            return api;
+        }
+
+        return Servers.Default?.Id == serverId ? _zxmmApi : null;
+    }
+
+    /// <summary>
     /// 按登记表给每台服务器连一条 ZXMM 专用通道;建不起来只记 Warn,不影响启动。
     ///
     /// <para>主机一律取 zxmmapi 配的 host 部分(同一台机器上的多个 MC 服只差端口),端口取登记表的 Port。
@@ -613,6 +821,8 @@ internal static partial class Program
 
         foreach (var entry in Servers.All)
         {
+            // 每台可以自己写主机(模组不一定和 ZXMS 同机);没写就用 zxmmapi 配的那个
+            var entryHost = entry.Host.Length > 0 ? entry.Host : host;
             if (!connectedPorts.Add(entry.Port))
             {
                 Logger.Log(LogLevel.Info,
@@ -623,14 +833,16 @@ internal static partial class Program
             try
             {
                 // 登记项自己带令牌就用它的,没填则跟全局 zxmmtoken
-                var api = new Zxmm.ZxmmApi(host, entry.Port, entry.Token.Length > 0 ? entry.Token : _zxmmToken);
+                var api = new Zxmm.ZxmmApi(entryHost, entry.Port, entry.Token.Length > 0 ? entry.Token : _zxmmToken);
                 api.ServerIdentified += (id, name) =>
                     Logger.Log(LogLevel.Info, $"[ZXMM] 服务器 {entry.Id}({entry.Name}) 报上身份 {id}({name})");
+                // 这台服的持续输出推给按编号订阅的客户端(foreach 变量每轮新建,捕获安全)
+                api.ConsoleOutput += line => PushConsoleOutput(entry.Id, line);
                 api.Start();
                 _zxmmApis[entry.Id] = api;
                 _zxmmApi ??= api;   //默认接口已经建好时不会覆盖,只有兜底路径才由第一台顶上
                 Logger.Log(LogLevel.Info,
-                    $"[ZXMM] 服务器 {entry.Id}({entry.Name}) 专用通道 → {host}:{entry.Port}(断了自动重连)");
+                    $"[ZXMM] 服务器 {entry.Id}({entry.Name}) 专用通道 → {entryHost}:{entry.Port}(断了自动重连)");
             }
             catch (Exception ex)
             {
@@ -1363,9 +1575,12 @@ internal static partial class Program
                     break;
                 }
 
+                // 绑定表按这条连接当前选的服务器取:客户端切到哪台,就只认那台的分区(没开分离时 Scope 返回空串)
+                var bindScope = DataSeparation.Scope("bind", ServerOf(packet.Connection));
+
                 // 绑定码只是"玩家本人的凭证":码可能被别人看到或转发,
                 // 所以真正落盘前还要账号主人在 ZXMC 上亲眼确认一次(631)
-                var alreadyOwner = LoginStore.AccountOf(bindPlayer);
+                var alreadyOwner = LoginStore.AccountOf(bindPlayer, bindScope);
                 if (alreadyOwner > 0 && alreadyOwner != bindAccount)
                 {
                     await packet.SendAsync(Protocol.BindAck, $"err|这个玩家已经被账号 {alreadyOwner} 绑定了", packet.Id);
@@ -1373,7 +1588,7 @@ internal static partial class Program
                 }
 
                 // 上限在提交码这一步就先挡:让用户当场看到"先解绑一个",而不是输了码点了确认才失败
-                var bindLimit = LoginStore.CheckBindLimit(bindAccount, bindPlayer, _bindMax);
+                var bindLimit = LoginStore.CheckBindLimit(bindAccount, bindPlayer, _bindMax, bindScope);
                 if (bindLimit.Length > 0)
                 {
                     await packet.SendAsync(Protocol.BindAck, "err|" + bindLimit, packet.Id);
@@ -1411,7 +1626,8 @@ internal static partial class Program
 
                 // 这个账号名下的旧玩家不做任何处理:上限拦着不许顶掉旧的,
                 // 真要让他失去免确认只能走 628 解绑(解绑会清登录数组、持久登录表并踢人)
-                if (!LoginStore.Bind(confirmAccount, pending.Player, _bindMax, out var bindError))
+                if (!LoginStore.Bind(confirmAccount, pending.Player, _bindMax, out var bindError,
+                        DataSeparation.Scope("bind", ServerOf(packet.Connection))))
                 {
                     await packet.SendAsync(Protocol.BindAck, "err|" + bindError, packet.Id);
                     break;
@@ -1449,14 +1665,15 @@ internal static partial class Program
                 }
 
                 // 只解自己名下的:负载里的玩家名必须真在这个账号名下,不能拿别人的名字来解绑
+                var unbindScope = DataSeparation.Scope("bind", ServerOf(packet.Connection));   //解绑只动当前选中那台服的分区
                 List<string> removed;
                 if (unbindTarget.Length == 0)
                 {
-                    removed = LoginStore.UnbindAll(unbindAccount);
+                    removed = LoginStore.UnbindAll(unbindAccount, unbindScope);
                 }
                 else
                 {
-                    removed = LoginStore.Unbind(unbindAccount, unbindTarget, out var one) ? [one] : [];
+                    removed = LoginStore.Unbind(unbindAccount, unbindTarget, out var one, unbindScope) ? [one] : [];
                 }
 
                 if (removed.Count == 0)
@@ -1493,7 +1710,9 @@ internal static partial class Program
                 {
                     // 客户端来查:只回自己名下的玩家,一行一个(解绑页按行做列表)
                     var selfId = (await ResolveAccountAsync(queryInfo.User))?.Id ?? 0;
-                    var selfPlayers = selfId > 0 ? LoginStore.PlayersOf(selfId) : [];   //自己的玩家名
+                    var selfPlayers = selfId > 0
+                        ? LoginStore.PlayersOf(selfId, DataSeparation.Scope("bind", ServerOf(packet.Connection)))   //只回这台服分区里的玩家
+                        : [];
 
                     if (selfPlayers.Count > 0)
                     {
@@ -1635,6 +1854,134 @@ internal static partial class Program
                 await packet.WriteAsync(new Packet(packet.Id, Protocol.ServerSwitchAck, okText));
                 Logger.Log(LogLevel.Info,
                     $"[数据分离] 客户端 {Where(packet.Connection)} 切到服务器 {target.Id}({target.Name}) → ok");
+                break;
+            }
+
+            // ---- 控制台:列服务器 / 执行一条命令 / 开关持续输出 ----
+            case Protocol.ConsoleServersReq:
+            {
+                var lines = new List<string>();   //每行一台:编号|名称|控制台模式|桥接在线|RCON在线
+                foreach (var entry in Servers.All)
+                {
+                    var bridge = Zxms.ConsoleRouter.IsBridgeOnline(entry.Id) ? 1 : 0;   //ZXMM 通道通不通
+                    var rcon = entry.ConsoleMode == Zxms.ZxmmRegistry.ConsoleModeRcon && Zxms.RconHub.IsOnline(entry.Id) ? 1 : 0;   //RCON 会话在不在
+                    lines.Add($"{entry.Id}|{entry.Name}|{entry.ConsoleMode}|{bridge}|{rcon}");
+                }
+
+                // 0 台时回空负载,客户端按空列表处理
+                var listText = string.Join('\n', lines);
+                await packet.WriteAsync(new Packet(packet.Id, Protocol.ConsoleServers, Encoding.UTF8.GetBytes(listText)));
+                Logger.Log(LogLevel.Info,
+                    $"[控制台] 客户端 {Where(packet.Connection)} 要控制台服务器列表 → 回 {lines.Count} 台");
+                break;
+            }
+
+            case Protocol.ConsoleCommand:
+            {
+                // 先卡权限:没权限的连接连表都不查、命令也不执行
+                if (!CanUseConsole(packet.Connection))
+                {
+                    var denied = Encoding.UTF8.GetBytes("err|没有这个服务器控制台的权限");
+                    await packet.WriteAsync(new Packet(packet.Id, Protocol.ConsoleResult, denied));
+                    Logger.Log(LogLevel.Warning,
+                        $"[控制台] 客户端 {Where(packet.Connection)} 想执行控制台命令 → 不是 HAdmin/System,已拒绝");
+                    break;
+                }
+
+                var text = Encoding.UTF8.GetString(packet.Data);   //负载:服务器编号|命令
+                var bar = text.IndexOf('|');   //命令里可能还有竖线,只切第一根
+                if (bar <= 0 || !int.TryParse(text[..bar].Trim(), out var serverId))
+                {
+                    var bad = Encoding.UTF8.GetBytes("err|参数不对");
+                    await packet.WriteAsync(new Packet(packet.Id, Protocol.ConsoleResult, bad));
+                    break;
+                }
+
+                var command = text[(bar + 1)..].Trim();   //要执行的 MC 命令(不带前导斜杠)
+                if (command.Length == 0)
+                {
+                    var empty = Encoding.UTF8.GetBytes("err|命令是空的");
+                    await packet.WriteAsync(new Packet(packet.Id, Protocol.ConsoleResult, empty));
+                    break;
+                }
+
+                // 命令日志要记是谁发的:登录信息随连接走,没登录取不到就按「控制台」记
+                var info = _server?.Registry.Find(packet.Connection.Id);
+                var operatorName = info?.User ?? "";   //操作人名称
+                if (operatorName.Length == 0)
+                {
+                    operatorName = "控制台";
+                }
+
+                var accountId = info?.AccountId ?? 0;   //操作人账号编号,0 = 没有账号
+                var (ok, result) = await Zxms.ConsoleRouter.SendAsync(serverId, command, operatorName, accountId);
+                var reply = Encoding.UTF8.GetBytes(ok ? $"ok|{result}" : $"err|{result}");
+                await packet.WriteAsync(new Packet(packet.Id, Protocol.ConsoleResult, reply));
+                break;
+            }
+
+            case Protocol.ConsoleTap:
+            {
+                if (!CanUseConsole(packet.Connection))
+                {
+                    var denied = Encoding.UTF8.GetBytes("err|没有这个服务器控制台的权限");
+                    await packet.WriteAsync(new Packet(packet.Id, Protocol.ConsoleResult, denied));
+                    Logger.Log(LogLevel.Warning,
+                        $"[控制台] 客户端 {Where(packet.Connection)} 想收控制台输出 → 不是 HAdmin/System,已拒绝");
+                    break;
+                }
+
+                var text = Encoding.UTF8.GetString(packet.Data);   //负载:服务器编号|1(开) 或 |0(关)
+                var bar = text.IndexOf('|');
+                var flag = bar > 0 ? text[(bar + 1)..].Trim() : "";
+                if (bar <= 0 || flag is not ("0" or "1") || !int.TryParse(text[..bar].Trim(), out var serverId))
+                {
+                    var bad = Encoding.UTF8.GetBytes("err|参数不对");
+                    await packet.WriteAsync(new Packet(packet.Id, Protocol.ConsoleResult, bad));
+                    break;
+                }
+
+                if (!Servers.TryGet(serverId, out var tapEntry))
+                {
+                    var missing = Encoding.UTF8.GetBytes("err|没有这个服务器");
+                    await packet.WriteAsync(new Packet(packet.Id, Protocol.ConsoleResult, missing));
+                    break;
+                }
+
+                var on = flag == "1";   //1 = 开始收,0 = 停止
+                int? previous = null;   //这条连接原来在收哪台:换台或关掉时要把旧那台的推送停掉
+                lock (_consoleTapLock)
+                {
+                    if (_consoleTaps.TryGetValue(packet.Connection, out var was))
+                    {
+                        previous = was;
+                    }
+
+                    if (on)
+                    {
+                        _consoleTaps[packet.Connection] = serverId;
+                    }
+                    else
+                    {
+                        _consoleTaps.Remove(packet.Connection);
+                    }
+                }
+
+                // 旧那台可能已经没人订阅了,先让它停;再按新目标重算
+                if (previous is int oldId && oldId != serverId)
+                {
+                    RefreshTap(oldId);
+                }
+
+                RefreshTap(serverId);
+
+                var ack = Encoding.UTF8.GetBytes(on
+                    ? $"ok|已开始接收 {serverId} 号服务器的控制台输出"
+                    : "ok|已停止");
+                await packet.WriteAsync(new Packet(packet.Id, Protocol.ConsoleResult, ack));
+                Logger.Log(LogLevel.Info, on
+                    ? $"[控制台] 客户端 {Where(packet.Connection)} 在收 {serverId}({tapEntry.Name}) 的控制台输出"
+                    : $"[控制台] 客户端 {Where(packet.Connection)} 停止接收 {serverId}({tapEntry.Name}) 的控制台输出");
                 break;
             }
 
@@ -1867,6 +2214,13 @@ internal static partial class Program
         // 多服数据分离:先读登记表,再读开关与键表,最后按上次留下的快照做一次迁移。
         // 三步的顺序不能换 —— 迁移要按登记表列服务器、按键表定位文件,而且必须在绑定表被读之前跑完。
         // 每一步的结论(读到几台 / 开关与键 / 迁没迁)在各自的类里已经打了日志,这里只补一句汇总,不重复刷屏。
+        // 控制台:ZXMM 连接表(Data/ZXMMC.dat,合并了早期的 Servers.txt)先读进来,
+        // 再把两条查询函数交给 ConsoleRouter —— 之后所有"把命令送到某台服"的调用都从那里走。
+        var (tableHost, _) = SplitZxmmApiAddress(_zxmmApiAddress);
+        Zxms.ZxmmRegistry.Load(tableHost);
+        Zxms.ConsoleRouter.Attach(
+            id => Zxms.ZxmmRegistry.TryGet(id, out var entry) ? entry : null,
+            ZxmmApiOf);
         Servers.Load();
         DataSeparation.Load(config);
         SeparationMigration.Run(config);
@@ -1922,6 +2276,18 @@ internal static partial class Program
 
         // 登记表里还有别的服务器:按同一套 host + 各自的端口把专用通道一并连上(本期只建连备查)
         ConnectAllZxmm();
+
+        // Connected 要等握手才为真,所以刚启动时这里的「在线」经常是 0,属正常
+        var bridgeOnline = 0;   //ZXMM 通道已经握上手的台数
+        foreach (var entry in Servers.All)
+        {
+            if (Zxms.ConsoleRouter.IsBridgeOnline(entry.Id))
+            {
+                bridgeOnline++;
+            }
+        }
+
+        Logger.Log(LogLevel.Info, $"[控制台] 登记 {Servers.All.Count} 台服务器,桥接在线 {bridgeOnline} 台");
 
         return (config, serverName, connectOS);
     }
@@ -1995,6 +2361,23 @@ internal static partial class Program
             lock (_clientServerLock)
             {
                 _clientServer.Remove(conn);
+            }
+
+            // 收控制台输出的订阅同样按连接清掉,否则推送会一直往死连接上写
+            int? tappedServer = null;   //这条连接原来在收哪台:断开后要重算那台的开关
+            lock (_consoleTapLock)
+            {
+                if (_consoleTaps.TryGetValue(conn, out var tapped))
+                {
+                    tappedServer = tapped;
+                }
+
+                _consoleTaps.Remove(conn);
+            }
+
+            if (tappedServer is int lastTapped)
+            {
+                RefreshTap(lastTapped);
             }
 
             Logger.Log(LogLevel.Info, $"[{role}] 断开 {Where(conn)}");

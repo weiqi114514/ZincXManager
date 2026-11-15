@@ -1,0 +1,178 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:models="using:ZincXManagerClient.Models"
+             xmlns:vm="using:ZincXManagerClient.ViewModels"
+             x:Class="ZincXManagerClient.Views.TerminalView"
+             x:DataType="vm:TerminalViewModel">
+
+  <UserControl.Styles>
+    <!-- 发送:和「进入」按钮同一套主题色,直角 -->
+    <Style Selector="Button.send">
+      <Setter Property="Background" Value="{DynamicResource ThemePrimary}"/>
+      <Setter Property="Foreground" Value="White"/>
+      <Setter Property="BorderThickness" Value="0"/>
+      <Setter Property="CornerRadius" Value="0"/>
+      <Setter Property="Padding" Value="16,6"/>
+      <Setter Property="FontSize" Value="12.5"/>
+      <Setter Property="Cursor" Value="Hand"/>
+    </Style>
+    <Style Selector="Button.send /template/ ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource ThemePrimary}"/>
+      <Setter Property="BorderThickness" Value="0"/>
+      <Setter Property="CornerRadius" Value="0"/>
+    </Style>
+    <Style Selector="Button.send:pointerover /template/ ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource ThemePrimaryHover}"/>
+    </Style>
+    <Style Selector="Button.send:pressed /template/ ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource ThemePrimaryDark}"/>
+    </Style>
+
+    <!-- 终端输出框:模板内部的 Border 自己管底色,只在 TextBox 上设 Background 不够 ——
+         鼠标一划过(:pointerover)或点进去(:focus)就被默认样式换成浅色,整块变白 -->
+    <Style Selector="TextBox.term">
+      <Setter Property="Background" Value="#0F1A24"/>
+      <Setter Property="BorderThickness" Value="0"/>
+    </Style>
+    <Style Selector="TextBox.term /template/ Border#PART_BorderElement">
+      <Setter Property="Background" Value="#0F1A24"/>
+      <Setter Property="BorderThickness" Value="0"/>
+    </Style>
+    <Style Selector="TextBox.term:pointerover /template/ Border#PART_BorderElement">
+      <Setter Property="Background" Value="#0F1A24"/>
+      <Setter Property="BorderThickness" Value="0"/>
+    </Style>
+    <Style Selector="TextBox.term:focus /template/ Border#PART_BorderElement">
+      <Setter Property="Background" Value="#0F1A24"/>
+      <Setter Property="BorderThickness" Value="0"/>
+    </Style>
+
+    <!-- 目标服下拉:直角、细边线,和输入框排在一起;禁用时只淡一点,不要变成一片灰 -->
+    <Style Selector="ComboBox.serverPicker">
+      <Setter Property="CornerRadius" Value="0"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource ThemePanelBorder}"/>
+      <Setter Property="Background" Value="White"/>
+      <Setter Property="Padding" Value="8,2"/>
+      <Setter Property="MinHeight" Value="30"/>
+      <Setter Property="FontSize" Value="12.5"/>
+      <Setter Property="HorizontalAlignment" Value="Stretch"/>
+      <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+      <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+    <!-- 同上:下拉的底色在模板里,不覆盖 :pointerover / :focus 就会跟着主题变 -->
+    <Style Selector="ComboBox.serverPicker /template/ Border#Background">
+      <Setter Property="Background" Value="White"/>
+    </Style>
+    <Style Selector="ComboBox.serverPicker:pointerover /template/ Border#Background">
+      <Setter Property="Background" Value="White"/>
+    </Style>
+    <Style Selector="ComboBox.serverPicker:focus /template/ Border#Background">
+      <Setter Property="Background" Value="White"/>
+    </Style>
+  </UserControl.Styles>
+
+  <Grid RowDefinitions="Auto,*,Auto,Auto" Margin="18,16,16,16">
+    <!-- 顶栏:功能标题 + 清空 + 搜索框 + 搜索开关 -->
+    <Grid Grid.Row="0" ColumnDefinitions="*,Auto,Auto,Auto">
+      <StackPanel Grid.Column="0" Spacing="6" VerticalAlignment="Center">
+        <TextBlock Text="RCON / ZXMM 桥接控制台" FontSize="22" FontWeight="SemiBold" Foreground="#1F3B3A"/>
+        <Rectangle Width="34" Height="2.5" Fill="{DynamicResource ThemePrimary}" HorizontalAlignment="Left"/>
+      </StackPanel>
+      <Button Grid.Column="1" Classes="link" Content="清空" Click="OnClearClick"
+              VerticalAlignment="Center" Margin="0,0,10,0"/>
+      <TextBox Grid.Column="2" x:Name="SearchBox" Width="200" FontSize="12.5" VerticalAlignment="Center"
+               PlaceholderText="搜索终端内容" TextChanged="OnSearchTextChanged"/>
+      <Button Grid.Column="3" Classes="mini" Content="{Binding SearchButtonText}" Click="OnSearchClick"
+              Margin="6,0,0,0" VerticalAlignment="Center"/>
+    </Grid>
+
+    <!-- 中间:终端铺满;搜索结果展开时压在上半部分 -->
+    <Grid Grid.Row="1" RowDefinitions="*,*" Margin="0,12,0,0">
+      <!-- 终端输出区:只读文本框,能选中 / Ctrl+A 全选 / Ctrl+C 复制;新行自动滚到底 -->
+      <Border Grid.Row="0" Grid.RowSpan="2" Background="#0F1A24" BorderBrush="#1E3244" BorderThickness="1">
+        <Grid>
+          <TextBox x:Name="TerminalBox" Classes="term" Background="#0F1A24" BorderThickness="0" Padding="8,6"
+                   Foreground="#D7E2EA" CaretBrush="Transparent" SelectionBrush="#2F6F8F"
+                   FontFamily="Consolas, Cascadia Mono, Menlo, monospace" FontSize="12"
+                   IsReadOnly="True" AcceptsReturn="True" TextWrapping="NoWrap"
+                   ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                   ScrollViewer.VerticalScrollBarVisibility="Auto"
+                   Text="{Binding TerminalText, Mode=OneWay}" TextChanged="OnTerminalTextChanged"/>
+          <!-- 空态:服务端还没接上时终端就是空的,给一句说明 -->
+          <TextBlock Text="还没有输出 —— 选好目标服，输入命令回车发送" FontSize="12"
+                     Foreground="#5C7688" HorizontalAlignment="Center" VerticalAlignment="Center"
+                     IsHitTestVisible="False" IsVisible="{Binding IsTerminalEmpty}"/>
+        </Grid>
+      </Border>
+
+      <!-- 搜索结果:占上半部分,自己带滚动条 -->
+      <Border Grid.Row="0" Background="#0B141C" BorderBrush="#1E3244" BorderThickness="1"
+              IsVisible="{Binding SearchActive}">
+        <Grid RowDefinitions="Auto,*">
+          <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Margin="10,5,10,3">
+            <TextBlock Grid.Column="0" Text="{Binding SearchSummary}" FontSize="11.5" Foreground="#8FA9B8"/>
+          </Grid>
+          <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto"
+                        HorizontalScrollBarVisibility="Auto" Padding="0,0,0,4">
+            <ItemsControl ItemsSource="{Binding SearchHits}" HorizontalAlignment="Left">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="models:TerminalLine">
+                  <SelectableTextBlock Text="{Binding Display}" Foreground="{Binding Foreground}"
+                                       FontFamily="Consolas, Cascadia Mono, Menlo, monospace"
+                                       FontSize="12" TextWrapping="NoWrap" Margin="10,1,10,1"/>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </ScrollViewer>
+          <TextBlock Grid.Row="1" Text="没有匹配的行" FontSize="12" Foreground="#5C7688"
+                     HorizontalAlignment="Center" VerticalAlignment="Center"
+                     IsVisible="{Binding SearchEmpty}"/>
+        </Grid>
+      </Border>
+    </Grid>
+
+    <!-- 目标服务器:输入框上方,一台服时也留着(禁用),别让人以为这功能没了 -->
+    <Grid Grid.Row="2" ColumnDefinitions="Auto,*" Margin="0,10,0,0">
+      <TextBlock Grid.Column="0" Text="目标服务器" FontSize="12" Foreground="#2B3B44"
+                 VerticalAlignment="Center"/>
+      <ComboBox Grid.Column="1" x:Name="ServerBox" Classes="serverPicker" Margin="10,0,0,0"
+                MaxDropDownHeight="260" MinWidth="220"
+                ItemsSource="{Binding Servers}"
+                SelectedItem="{Binding Target, Mode=TwoWay}"
+                IsEnabled="{Binding CanPickServer}"
+                PlaceholderText="还没有服务器清单">
+        <ComboBox.ItemTemplate>
+          <DataTemplate x:DataType="models:ConsoleServer">
+            <Grid ColumnDefinitions="Auto,Auto,*" MinWidth="200">
+              <!-- 在线 / 离线:同一个绿点红点,省得每行写字 -->
+              <Ellipse Grid.Column="0" Width="7" Height="7" Margin="0,0,8,0" VerticalAlignment="Center"
+                       Fill="#2E8B57" IsVisible="{Binding Online}"/>
+              <Ellipse Grid.Column="0" Width="7" Height="7" Margin="0,0,8,0" VerticalAlignment="Center"
+                       Fill="#B04A4A" IsVisible="{Binding !Online}"/>
+              <TextBlock Grid.Column="1" Text="{Binding Name}" FontSize="12.5" VerticalAlignment="Center"/>
+              <TextBlock Grid.Column="2" Text="{Binding ModeSuffix}" FontSize="11" Margin="10,0,0,0"
+                         Foreground="{DynamicResource ThemeMuted}" VerticalAlignment="Center"/>
+            </Grid>
+          </DataTemplate>
+        </ComboBox.ItemTemplate>
+      </ComboBox>
+    </Grid>
+
+    <!-- 底栏:命令输入 + 发送 + 持续输出 -->
+    <Grid Grid.Row="3" ColumnDefinitions="*,Auto,Auto" Margin="0,10,0,0">
+      <TextBox Grid.Column="0" x:Name="InputBox" FontSize="12.5" VerticalAlignment="Center"
+               FontFamily="Consolas, Cascadia Mono, Menlo, monospace"
+               PlaceholderText="输入命令，回车发送" Text="{Binding InputText}" KeyDown="OnInputKeyDown"/>
+      <Button Grid.Column="1" Classes="send" Content="发送" Click="OnSendClick"
+              Margin="8,0,0,0" VerticalAlignment="Center"/>
+      <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6" Margin="14,0,0,0" VerticalAlignment="Center">
+        <TextBlock Text="持续输出" FontSize="12" Foreground="#2B3B44" VerticalAlignment="Center"/>
+        <ToggleSwitch x:Name="TapSwitch" IsChecked="{Binding TapEnabled, Mode=OneWay}"
+                      IsEnabled="{Binding CanTap}" OnContent="开" OffContent="关" VerticalAlignment="Center"/>
+        <TextBlock Text="RCON 模式不支持持续输出" FontSize="11" VerticalAlignment="Center"
+                   Foreground="{DynamicResource ThemeMuted}" IsVisible="{Binding IsRconMode}"/>
+      </StackPanel>
+    </Grid>
+  </Grid>
+</UserControl>

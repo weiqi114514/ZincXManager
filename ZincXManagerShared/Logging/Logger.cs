@@ -78,7 +78,18 @@ public static class Logger
         if (string.IsNullOrWhiteSpace(dir)) dir = Environment.GetEnvironmentVariable("ZXM_LOG_DIR");
         if (string.IsNullOrWhiteSpace(dir)) dir = "logs";
 
-        return Path.IsPathRooted(dir) ? dir : Path.Combine(AppContext.BaseDirectory, dir);
+        return ResolveDirectory(dir);
+    }
+
+    /// <summary>
+    /// 把日志目录锚成绝对路径:相对路径一律锚在可执行文件所在目录,与进程当前目录无关。
+    /// 抽出来给 <see cref="ClientLog"/> / <see cref="CommandLog"/> 共用,三棵日志树才会落在同一处。
+    /// </summary>
+    internal static string ResolveDirectory(string? directory)
+    {
+        if (string.IsNullOrWhiteSpace(directory)) directory = "logs";
+
+        return Path.IsPathRooted(directory) ? directory : Path.Combine(AppContext.BaseDirectory, directory);
     }
 
     /// <summary>

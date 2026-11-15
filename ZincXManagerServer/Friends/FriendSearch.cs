@@ -15,6 +15,9 @@ namespace ZincXManagerServer;
 /// </summary>
 internal static partial class Program
 {
+    /// <summary>来源服名查不到时的占位符(界面直接显示这五个字)。</summary>
+    private const string UnknownServerName = "未知";
+
     /// <summary>663 入口。</summary>
     private static async Task HandleFriendSearchAsync(ServerboundPacket packet, ZFile config)
     {
@@ -72,7 +75,7 @@ internal static partial class Program
             var account = Accounts.FindById(direct.Code);
             if (account is not null)
             {
-                hits.Add(new SearchHit(direct.Full, account.Name, account.Level));
+                hits.Add(new SearchHit(direct.Full, account.Name, account.Level, SearchServerName(direct.ServerId, config)));
                 return;
             }
         }
@@ -80,12 +83,12 @@ internal static partial class Program
         // 本服没有 / 属于别服:查全网账号表,查得到就给真实名字和等级
         if (NetworkAccounts.TryGetValue(direct.Full, out var known))
         {
-            hits.Add(new SearchHit(direct.Full, known.Name, known.Level));
+            hits.Add(new SearchHit(direct.Full, known.Name, known.Level, SearchServerName(direct.ServerId, config)));
             return;
         }
 
         // 哪儿都不认识:只回地址,名字显示成 #编号
-        hits.Add(new SearchHit(direct.Full, "#" + direct.Code, FriendCodec.Unknown));
+        hits.Add(new SearchHit(direct.Full, "#" + direct.Code, FriendCodec.Unknown, SearchServerName(direct.ServerId, config)));
     }
 
     /// <summary>
@@ -108,15 +111,15 @@ internal static partial class Program
                 continue;
             }
 
-            hits.Add(new SearchHit(LocalPlayerId(account, config).Full, account.Name, account.Level));
+            hits.Add(new SearchHit(LocalPlayerId(account, config).Full, account.Name, account.Level, SearchServerName(SelfServerId(config), config)));
             localHits++;
         }
 
-        CollectNetworkHits(keyword, wantCode, localHits, self, hits);
+        CollectNetworkHits(keyword, wantCode, localHits, self, config, hits);
     }
 
     /// <summary>全网账号表补漏:跨服的人只有这张表里有。跳过本服已命中的编号,免得同一个人出两行。</summary>
-    private static void CollectNetworkHits(string keyword, int wantCode, int localHits, PlayerId self, List<SearchHit> hits)
+    private static void CollectNetworkHits(string keyword, int wantCode, int localHits, PlayerId self, ZFile config, List<SearchHit> hits)
     {
         if (localHits > 0 && wantCode <= 0)
         {
@@ -142,7 +145,7 @@ internal static partial class Program
                 continue;
             }
 
-            hits.Add(new SearchHit(id.Full, account.Name, account.Level));
+            hits.Add(new SearchHit(id.Full, account.Name, account.Level, SearchServerName(account.ServerId, config)));
         }
     }
 
@@ -168,7 +171,17 @@ internal static partial class Program
         return SameServer(self.ServerId, SelfServerId(config)) && account.Id == self.Code;
     }
 
-    /// <summary>取关键词里最后一个横线之后的编码;不是数字返回 0。</summary>
+    /// <summary>
+    /// 结果行里的来源服显示名:本服读配置名,别服读 618 下发的名字表。
+    /// 查不到就如实写「未知」,不拿服ID 冒充名字。
+    /// </summary>
+    private static string SearchServerName(string serverId, ZFile config)
+    {
+        var name = ServerNameOf(serverId, config).Trim();
+        return name.Length > 0 ? name : UnknownServerName;
+    }
+
+    /// <summary>关键词里最后一个横线之后的编码;不是数字返回 0。</summary>
     private static int ParseTrailingCode(string keyword)
     {
         var dash = keyword.LastIndexOf('-');

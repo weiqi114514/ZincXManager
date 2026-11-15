@@ -1,4 +1,4 @@
-<UserControl xmlns="https://github.com/avaloniaui"
+﻿<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:models="using:ZincXManagerClient.Models"
              xmlns:vm="using:ZincXManagerClient.ViewModels"
@@ -90,7 +90,7 @@
               <Path Classes="cardIconStroke" Data="{x:Static models:Icons.Store}"/>
               <StackPanel Spacing="4" VerticalAlignment="Center">
                 <TextBlock Classes="cardTitle" Text="商店"/>
-                <TextBlock Classes="cardDesc" Text="与玩家 / 官方进行交易"/>
+                <TextBlock Classes="cardDesc" Text="官方与玩家的交易市场"/>
               </StackPanel>
             </StackPanel>
             <Button Classes="go" Content="进入" HorizontalAlignment="Right" VerticalAlignment="Bottom" Click="OnStoreEnter"/>
@@ -104,7 +104,7 @@
               <Path Classes="cardIconStroke" Data="{x:Static models:Icons.Bank}"/>
               <StackPanel Spacing="4" VerticalAlignment="Center">
                 <TextBlock Classes="cardTitle" Text="银行"/>
-                <TextBlock Classes="cardDesc" Text="存取款 / 转账与利息"/>
+                <TextBlock Classes="cardDesc" Text="存钱、转账、借贷"/>
               </StackPanel>
             </StackPanel>
             <Button Classes="go" Content="进入" HorizontalAlignment="Right" VerticalAlignment="Bottom" Click="OnBankEnter"/>

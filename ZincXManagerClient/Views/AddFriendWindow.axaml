@@ -1,4 +1,4 @@
-<Window xmlns="https://github.com/avaloniaui"
+﻿<Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         x:Class="ZincXManagerClient.Views.AddFriendWindow"
         Title="ZincXManagerClient · 添加好友"
@@ -88,7 +88,7 @@
     <!-- 解析提示:告诉玩家这次会去哪个服务端找 -->
     <TextBlock Grid.Row="2" x:Name="HintText" Margin="16,0,16,8" FontSize="11"
                Foreground="{DynamicResource ThemeMuted}" TextWrapping="Wrap"
-               Text="输入 ZXMS-ZES-1-14 按 ID 找;输入账户名或编号在本服用户列表里找"/>
+               Text="请输入 完整ID/账户名/账户编号"/>
 
     <!-- 结果列表 -->
     <ScrollViewer Grid.Row="3" Margin="0,4,0,0" VerticalScrollBarVisibility="Auto">
@@ -101,7 +101,7 @@
 
     <!-- 底部说明 -->
     <Border Grid.Row="4" BorderBrush="{DynamicResource ThemePanelBorder}" BorderThickness="0,1,0,0" Padding="14,8">
-      <TextBlock x:Name="StatusText" Text="按完整 ID / 账户名 / 账户编号搜本服账号"
+      <TextBlock x:Name="StatusText" Text="请输入 完整ID/账户名/账户编号"
                  FontSize="10.5" TextWrapping="Wrap" Foreground="{DynamicResource ThemeMuted}"/>
     </Border>
   </Grid>

@@ -94,6 +94,13 @@ public static class ZxmsCommands
             "查看 ZXMM 专用通道状态",
             "zxmm status");
 
+        // 连接表的交互式编辑:要挂/摘命令层的拦截器,所以先把 handler 交给它
+        ZxmmConfigMode.Attach(cmd);
+
+        cmd.Register("zxmm config", args => ZxmmConfigMode.Enter(args),
+            "改 ZXMM 连接表(交互式:<编号|名称> 选择后逐项改)",
+            "zxmm config 2");
+
         cmd.Register("net status", _ => CmdNetStatus(osProvider(), osTargetProvider(), osNameProvider(), clientCountProvider()),
             "查看 ZXMOS 连接与客户端接入情况",
             "net status");

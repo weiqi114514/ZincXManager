@@ -71,6 +71,12 @@ public class CommandHandler
     /// <summary>拦截器是否处于配置模式(用于把回显标签从 [Command] 换成 [ConfigSet])。</summary>
     public Func<bool>? IsConfigMode { get; set; }
 
+    /// <summary>
+    /// 这一行是不是机密(比如正在输 RCON 密码)：返回 true 时日志里只记 ******，不记原文。
+    /// 拦在回显之前判断 —— 拦截器拿到这行时日志已经写过了，事后没法补救。
+    /// </summary>
+    public Func<string, bool>? MaskInput { get; set; }
+
     public void Start()
     {
         if (_running) return;
@@ -103,7 +109,7 @@ public class CommandHandler
             if (input.Length == 0) continue;
 
             var echoTag = IsConfigMode?.Invoke() == true ? "[ConfigSet]" : "[Command]";
-            Logger.Log(LogLevel.Info, $"{echoTag} > {input}");
+            Logger.Log(LogLevel.Info, $"{echoTag} > {(MaskInput?.Invoke(input) == true ? "******" : input)}");
 
             if (LineInterceptor is not null && LineInterceptor(input))
             {

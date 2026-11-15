@@ -303,6 +303,13 @@
                       </Panel>
                       <TextBlock Text="{Binding Label}" VerticalAlignment="Center"/>
                     </StackPanel>
+                    <!-- 未处理条数:贴在标题右侧的红点,超过 99 写 99+;没有申请时整块不显示 -->
+                    <Border Grid.Column="1" IsVisible="{Binding ShowBadge}"
+                            HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,10,0"
+                            Height="16" MinWidth="16" CornerRadius="8" Background="#E5484D">
+                      <TextBlock Text="{Binding BadgeText}" Foreground="White" FontSize="10"
+                                 HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
                   </Grid>
                 </Button>
               </DataTemplate>
@@ -401,6 +408,11 @@
 
           <!-- 小功能组:搜索 + 左右两栏细条列表 -->
           <views:WidgetsView x:Name="WidgetsPage" Grid.Row="0" Grid.RowSpan="2" IsVisible="{Binding IsWidgets}"/>
+
+          <!-- RCON / ZXMM 桥接控制台:深色终端页 -->
+          <Grid Grid.Row="0" Grid.RowSpan="2" IsVisible="{Binding IsConsole}">
+            <views:TerminalView DataContext="{Binding Console}"/>
+          </Grid>
 
           <!-- 其它页面:占位 -->
           <StackPanel Grid.Row="0" Grid.RowSpan="2" VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="6"

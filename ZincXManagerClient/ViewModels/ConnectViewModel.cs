@@ -134,7 +134,7 @@ public partial class ConnectViewModel : ViewModelBase, IDisposable
 
     /// <summary>连接模式:OS(仅子服务端)/ OOS(仅官方服务端)/ SAOS(两者)。</summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsOs), nameof(IsOos), nameof(IsSaos), nameof(ModeHint))]
+    [NotifyPropertyChangedFor(nameof(IsOs), nameof(IsOos), nameof(IsSaos))]
     public partial string Mode { get; set; } = "SAOS";
 
     /// <summary>服务端地址(可手动改,连接后由服务端身份包校验)。</summary>
@@ -170,14 +170,6 @@ public partial class ConnectViewModel : ViewModelBase, IDisposable
 
     /// <summary>这个模式要求对方是什么端。</summary>
     private string ExpectRole => Mode == "OOS" ? "ZXMOS" : "ZXMS";
-
-    /// <summary>界面上的模式说明:这个模式连的是谁(来源 config.ini)。</summary>
-    public string ModeHint => Mode switch
-    {
-        "OS" => $"OS:子服务端 ZXMS(czip:czport = {_czip}:{_czport})",
-        "OOS" => $"OOS:官方服务端 ZXMOS(ozip:ozport = {_ozip}:{_ozport})",
-        _ => $"SAOS:先连子服务端 {_czip}:{_czport},由它转发官方服务端 {_ozip}:{_ozport}",
-    };
 
     /// <summary>连接页的视图模型:目标地址、模式、连接状态都在这里。</summary>
     public ConnectViewModel()

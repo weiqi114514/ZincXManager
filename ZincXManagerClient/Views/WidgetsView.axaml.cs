@@ -1,4 +1,4 @@
-using System;  // 基础类型
+﻿using System;  // 基础类型
 using System.Collections.Generic;  // 列表
 using System.Linq;  // 过滤
 using Avalonia.Controls;  // 窗口与控件
@@ -21,7 +21,7 @@ public partial class WidgetsView : UserControl
     [
         new WidgetEntry
         {
-            Key = "bind", Title = "绑定 / 解绑", Description = "把 ZXMC 账号绑到 MC 玩家名上",
+            Key = "bind", Title = "绑定 / 解绑", Description = "ZXM与MC账号的绑定",
             IconPath = Icons.Bind, Stroke = true,
         },
     ];

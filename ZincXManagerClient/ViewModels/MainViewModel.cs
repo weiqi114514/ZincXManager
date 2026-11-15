@@ -31,23 +31,23 @@ public partial class MainViewModel : ViewModelBase
         // 两个广场功能一样(看社区内容),区别是数据来源:服务器广场走 ZXMS,锌源广场走官方 ZXMOS
         CommunityItems.Add(new Models.FunctionItem
         {
-            Key = "srv-square", Title = "服务器广场", Description = "子服务端的社区内容",
+            Key = "srv-square", Title = "服务器广场", Description = "本服的帖子与资源",
             IconSvg = "avares://ZincXManagerClient/Assets/icons/server-square.svg", Icon = Models.Icons.ServerSquare, IconStroke = true, IsVisible = !isOos,
         });
         CommunityItems.Add(new Models.FunctionItem
         {
-            Key = "zinc-square", Title = "锌源广场", Description = "官方服务端的社区内容",
+            Key = "zinc-square", Title = "锌源广场", Description = "官方的共享交流广场 交流/资源",
             IconSvg = "avares://ZincXManagerClient/Assets/icons/official-square.svg", Icon = Models.Icons.OfficialSquare, IconStroke = true, IsVisible = false,
         });
 
-        OrganizationItems.Add(new Models.FunctionItem { Key = "org-personal", Title = "个人组织", Description = "个人小组 / 小团队", Icon = Models.Icons.PersonalOrg, IconStroke = true });
-        OrganizationItems.Add(new Models.FunctionItem { Key = "org-team", Title = "团队组织", Description = "多人协作的团队", Icon = Models.Icons.TeamOrg, IconStroke = true });
-        OrganizationItems.Add(new Models.FunctionItem { Key = "org-company", Title = "企业组织", Description = "企业 / 大型组织", Icon = Models.Icons.CompanyOrg, IconStroke = true });
+        OrganizationItems.Add(new Models.FunctionItem { Key = "org-personal", Title = "个人组织", Description = "个人的组织形式 开发区/基地/机器", Icon = Models.Icons.PersonalOrg, IconStroke = true });
+        OrganizationItems.Add(new Models.FunctionItem { Key = "org-team", Title = "团队组织", Description = "多人的团队组织形式 开发区/基地/机器", Icon = Models.Icons.TeamOrg, IconStroke = true });
+        OrganizationItems.Add(new Models.FunctionItem { Key = "org-company", Title = "企业组织", Description = "大规模的多人组织形式", Icon = Models.Icons.CompanyOrg, IconStroke = true });
 
-        ManageItems.Add(new Models.FunctionItem { Key = "mg-version", Title = "版本管理", Description = "服务端 / 客户端版本", Icon = Models.Icons.VersionManage, IconStroke = true });
-        ManageItems.Add(new Models.FunctionItem { Key = "mg-source", Title = "数据源管理", Description = "数据源与连接配置", Icon = Models.Icons.SourceManage, IconStroke = true });
-        ManageItems.Add(new Models.FunctionItem { Key = "mg-server", Title = "服务器管理", Description = "开服 / 重启 / 备份", Icon = Models.Icons.ServerManage, IconStroke = true });
-        ManageItems.Add(new Models.FunctionItem { Key = "mg-stats", Title = "数据统计", Description = "在线 / 活跃 / 经济数据", Icon = Models.Icons.StatsManage, IconStroke = true });
+        ManageItems.Add(new Models.FunctionItem { Key = "mg-version", Title = "版本管理", Description = "版本、mod、材质包", Icon = Models.Icons.VersionManage, IconStroke = true });
+        ManageItems.Add(new Models.FunctionItem { Key = "mg-source", Title = "数据源管理", Description = "数据源 切换/管理/删除", Icon = Models.Icons.SourceManage, IconStroke = true });
+        ManageItems.Add(new Models.FunctionItem { Key = "mg-server", Title = "服务器管理", Description = "数据源下的服务器管理/使用/选择", Icon = Models.Icons.ServerManage, IconStroke = true });
+        ManageItems.Add(new Models.FunctionItem { Key = "mg-stats", Title = "数据统计", Description = "各类数据统计", Icon = Models.Icons.StatsManage, IconStroke = true });
 
         // 顺序:设置沉到功能列表最底下,小功能组顶替它原来的位置
         // 管理账号登录后,左侧整栏换成管理端的大类;玩家那几页不再出现
@@ -127,12 +127,15 @@ public partial class MainViewModel : ViewModelBase
     /// <summary>设置页视图模型。</summary>
     public SettingsViewModel Settings { get; } = new();
 
+    /// <summary>RCON / ZXMM 桥接控制台页的视图模型。</summary>
+    public TerminalViewModel Console { get; } = new();
+
     /// <summary>当前登录的是不是管理账号(等级由登录成功后写进 config 的 level 决定,Player 以外都算)。</summary>
     public bool IsAdmin { get; } = Protocol.IsManagementLevel(ClientConfig.GetOrEmpty("level"));
 
     /// <summary>当前一级导航(决定右侧显示哪个页面)。</summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsSettings), nameof(IsEconomy), nameof(IsWidgets), nameof(IsPlaceholder), nameof(IsCommunity), nameof(IsOrganization), nameof(IsManage), nameof(IsAdminServer), nameof(IsAdminFunction), nameof(IsAdminZxm), nameof(IsAdminQuery), nameof(ShowMessages))]
+    [NotifyPropertyChangedFor(nameof(IsSettings), nameof(IsEconomy), nameof(IsWidgets), nameof(IsPlaceholder), nameof(IsCommunity), nameof(IsOrganization), nameof(IsManage), nameof(IsAdminServer), nameof(IsAdminFunction), nameof(IsAdminZxm), nameof(IsAdminQuery), nameof(IsConsole), nameof(ShowMessages))]
     public partial string CurrentPage { get; set; } = "";
 
     /// <summary>是否正在显示设置页。</summary>
@@ -172,7 +175,7 @@ public partial class MainViewModel : ViewModelBase
     /// <summary>没选任何页面(点了 Logo)时不显示"该页面还没做"。</summary>
     public bool IsPlaceholder => CurrentPage.Length > 0 && !IsEconomy && !IsWidgets
         && CurrentPage != "社区" && CurrentPage != "组织" && CurrentPage != "管理"
-        && !IsAdminServer && !IsAdminFunction && !IsAdminZxm && !IsAdminQuery;
+        && !IsAdminServer && !IsAdminFunction && !IsAdminZxm && !IsAdminQuery && !IsConsole;
 
     public bool IsCommunity => CurrentPage == "社区";
 
@@ -194,6 +197,9 @@ public partial class MainViewModel : ViewModelBase
 
     /// <summary>管理端「查询统计」大类。</summary>
     public bool IsAdminQuery => CurrentPage == "查询统计";
+
+    /// <summary>RCON / ZXMM 桥接控制台页是否显示。</summary>
+    public bool IsConsole => CurrentPage == "ad-console";
 
     /// <summary>社区页的子功能(按模式 / 是否连官方决定显示)。</summary>
     public System.Collections.ObjectModel.ObservableCollection<Models.FunctionItem> CommunityItems { get; } = new();
@@ -228,7 +234,7 @@ public partial class MainViewModel : ViewModelBase
         }
 
         // 服务器管理:MC 服本身的操作
-        Add(AdminServerItems, "ad-rcon", "RCON", "与 mc 服务器连接的远程控制台", Icons.AdminRcon);
+        Add(AdminServerItems, "ad-rcon", "RCON/ZXMM桥接控制台", "与 mc 服务器连接的远程控制台", Icons.AdminRcon);
         Add(AdminServerItems, "ad-listen", "监听服务器", "监听 mc 服的输出", Icons.AdminListen);
         Add(AdminServerItems, "ad-file", "文件管理", "管理 mc 服或 ZXMS 所在机器的文件", Icons.AdminFile);
         Add(AdminServerItems, "ad-plugin", "mod/插件管理", "管理 mc 服的插件 / mod", Icons.AdminPlugin);
@@ -488,6 +494,59 @@ public partial class MainViewModel : ViewModelBase
 
     /// <summary>左侧导航项。</summary>
     public ObservableCollection<NavItem> NavItems { get; } = new();
+
+    /// <summary>未处理的好友申请条数(左侧「好友」那一行右上角的红点)。</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasFriendRequests))]
+    [NotifyPropertyChangedFor(nameof(FriendRequestBadge))]
+    public partial int FriendRequestCount { get; set; }
+
+    /// <summary>有未处理的好友申请:红点亮。</summary>
+    public bool HasFriendRequests => FriendRequestCount > 0;
+
+    /// <summary>红点里写的数字:超过 99 写 99+。</summary>
+    public string FriendRequestBadge => FriendRequestCount > 99 ? "99+" : FriendRequestCount.ToString();
+
+    /// <summary>
+    /// 条数只在 MainViewModel 这边算一份,但导航模板的 DataContext 是 NavItem,模板里绑不回主视图模型;
+    /// 所以每次变就把「好友」那一行上的红点同步过去,界面只读 NavItem.BadgeCount。
+    /// </summary>
+    partial void OnFriendRequestCountChanged(int value)
+    {
+        var friends = NavItems.FirstOrDefault(nav => nav.Label == "好友");
+        if (friends is not null)
+        {
+            friends.BadgeCount = value;
+        }
+    }
+
+    /// <summary>整体覆盖未处理条数(657 回来时按行数算;负数当 0)。</summary>
+    public void SetFriendRequestCount(int count) => FriendRequestCount = Math.Max(0, count);
+
+    /// <summary>又有人来申请(662 request):先加一让红点立刻亮,657 回来再按真值对齐。</summary>
+    public void BumpFriendRequestCount() => FriendRequestCount++;
+
+    /// <summary>主动要一次「别人发给我的好友申请」(656):657 回来才知道红点亮不亮。</summary>
+    public async Task RequestFriendRequestsAsync()
+    {
+        if (ClientSession.Connect is not { } connect || !connect.IsConnected)
+        {
+            Logger.Log(LogLevel.Info, "[好友] 未连接服务端,这次不拉申请列表(656)");
+            return;
+        }
+
+        try
+        {
+            if (!await connect.SendAsync(Protocol.FriendRequestsQuery, ""))
+            {
+                Logger.Log(LogLevel.Warning, "[好友] 申请列表(656)没发出去:连接已断开");
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.Log(LogLevel.Warning, "[好友] 拉取申请列表(656)失败: " + ex.Message);
+        }
+    }
 
     /// <summary>右侧消息列表(内容由服务端下发,界面不写死)。</summary>
     public ObservableCollection<MessageItem> Messages { get; } = new();

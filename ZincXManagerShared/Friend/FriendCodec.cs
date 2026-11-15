@@ -20,7 +20,8 @@ public sealed record FriendRequestEntry(string FromId, string Message, string Ti
 /// <param name="Id">完整ID;本服不认识的账号也照样给地址。</param>
 /// <param name="Name">名字;<c>#编号</c> = 只知道编号、不知道名字。</param>
 /// <param name="Level">等级;<c>-</c> = 不知道。</param>
-public sealed record SearchHit(string Id, string Name, string Level);
+/// <param name="ServerName">对方所属服的显示名;空串 = 老版本服务端没这一列。</param>
+public sealed record SearchHit(string Id, string Name, string Level, string ServerName = "");
 
 /// <summary>全网账号表里的一条(614 的一行)。</summary>
 /// <param name="ServerId">归属服ID;空 = 该账号直连官方端注册,不属于任何子服。</param>
@@ -158,29 +159,39 @@ public static class FriendCodec
 
     // ---------------- 664 搜索结果 ----------------
 
-    /// <summary>把一条搜索结果拼成 664 的一行(竖线,跟旧版本对齐)。</summary>
+    /// <summary>
+    /// 把一条搜索结果拼成 664 的一行(竖线,跟旧版本对齐)。
+    /// 第 4 段是来源服显示名,老客户端只读前三段,多出来的会忽略。
+    /// </summary>
     public static string BuildSearchHit(SearchHit hit) =>
-        string.Join(PipeSeparator, hit.Id, Clean(hit.Name), Clean(hit.Level));
+        string.Join(PipeSeparator, hit.Id, Clean(hit.Name), Clean(hit.Level), Clean(hit.ServerName));
 
     /// <summary>把搜索结果拼成 664 的负载。</summary>
     public static string BuildSearchHits(IEnumerable<SearchHit> hits) =>
         string.Join(LineSeparator, hits.Select(BuildSearchHit));
 
-    /// <summary>解析 664 的负载(客户端用)。</summary>
+    /// <summary>
+    /// 解析 664 的负载(客户端用)。兼容两种:3 段 <c>完整ID|名称|等级</c>(老服务端,来源服给空串)、
+    /// 4 段 <c>完整ID|名称|等级|来源服</c>。只切前 3 个竖线,第 4 段里再有竖线也不会丢。
+    /// </summary>
     public static List<SearchHit> ParseSearchHits(string? payload, out int badLines)
     {
         var list = new List<SearchHit>();
         badLines = 0;
         foreach (var line in SplitLines(payload))
         {
-            var parts = line.Split(PipeSeparator);
+            var parts = line.Split(PipeSeparator, 4);
             if (parts.Length < 2)
             {
                 badLines++;
                 continue;
             }
 
-            list.Add(new SearchHit(parts[0].Trim(), parts[1], parts.Length >= 3 ? parts[2] : Unknown));
+            list.Add(new SearchHit(
+                parts[0].Trim(),
+                parts[1],
+                parts.Length >= 3 ? parts[2] : Unknown,
+                parts.Length >= 4 ? parts[3].Trim() : ""));
         }
 
         return list;

@@ -10,7 +10,8 @@ namespace ZincXManager.Server.Zxms;
 
 /// <summary>
 /// 数据分离迁移：拿上次的状态快照和本次配置比对，只对"新增分离"和"移出分离"的数据动手。
-/// 0→1 时把共享区文件复制进 Data/SS-编号/，1→0 时把分区文件复制回共享区，复制不删原件。
+/// 0→1 时把共享区文件复制进 Data/SS-编号/，1→0 时把分区文件复制回共享区；
+/// 复制核对通过后把源文件改名留档，免得共享区和分区同时可写同一份数据。
 /// </summary>
 internal static class SeparationMigration
 {
@@ -341,7 +342,8 @@ internal static class SeparationMigration
     }
 
     /// <summary>
-    /// 复制文件并建好父目录，复制不删原件；失败只记日志不抛，避免一次迁移失败拖垮启动。
+    /// 复制文件并建好父目录；复制成功且目标核对通过后把源文件改名留档。
+    /// 失败只记日志不抛，避免一次迁移失败拖垮启动。
     /// </summary>
     private static void Copy(string src, string dst)
     {
@@ -359,6 +361,65 @@ internal static class SeparationMigration
         catch (Exception ex)
         {
             Logger.Log(LogLevel.Error, $"[数据分离] 从 {src} 复制到 {dst} 失败 → {ex.Message}");
+            return;
+        }
+
+        // 复制完核对长度并试读目标:没读成功就保留源文件,否则两边都没了
+        if (!VerifyCopy(src, dst))
+        {
+            return;
+        }
+
+        MarkMigrated(src);
+    }
+
+    /// <summary>
+    /// 核对复制结果：长度一致、目标能读开才算复制成功；不一致时记 Error 由调用方保留源文件。
+    /// </summary>
+    private static bool VerifyCopy(string src, string dst)
+    {
+        try
+        {
+            var expected = new FileInfo(src).Length;   //源文件长度
+            var actual = new FileInfo(dst).Length;     //目标文件长度
+            if (expected != actual)
+            {
+                Logger.Log(LogLevel.Error, $"[数据分离] 复制后大小不一致({src} {expected} 字节 → {dst} {actual} 字节) → 源文件保留不改名");
+                return false;
+            }
+
+            // 共享读:登录层可能正在用这个文件,不能把它挡住
+            using var probe = new FileStream(dst, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+            if (probe.Length != expected)
+            {
+                Logger.Log(LogLevel.Error, $"[数据分离] 复制后目标 {dst} 读到的长度是 {probe.Length} 不是 {expected} → 源文件保留不改名");
+                return false;
+            }
+
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Logger.Log(LogLevel.Error, $"[数据分离] 核对复制结果 {dst} 失败 → 源文件保留不改名：{ex.Message}");
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// 把已迁走的源文件改名成 &lt;原名&gt;.migrated-时间：留退路不直接删，同时让共享区和分区不会双写同一份数据。
+    /// 改名失败只记 Warn，本次迁移仍按成功处理(目标文件已经在位)。
+    /// </summary>
+    private static void MarkMigrated(string src)
+    {
+        try
+        {
+            var backup = $"{src}.migrated-{DateTime.Now:yyyyMMddHHmmss}";   //留档文件名
+            File.Move(src, backup);
+            Logger.Log(LogLevel.Info, $"[数据分离] 源文件已改名留档: {backup}");
+        }
+        catch (Exception ex)
+        {
+            Logger.Log(LogLevel.Warning, $"[数据分离] 源文件 {src} 改名失败 → 保持原样,请手工确认是否还有双写：{ex.Message}");
         }
     }
 
@@ -377,7 +438,7 @@ internal static class SeparationMigration
 
         if (Console.IsInputRedirected)
         {
-            Logger.Log(LogLevel.Warning, "[数据分离] 当前没有可交互的 stdin → 按默认处理，不迁移");
+            Logger.Log(LogLevel.Warning, "[数据分离] 输入被重定向,跳过迁移;要迁移请在有控制台的窗口里启动");
             return "";
         }
 

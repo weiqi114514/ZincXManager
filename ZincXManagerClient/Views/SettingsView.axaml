@@ -367,8 +367,6 @@
           <StackPanel Spacing="6">
             <TextBlock Classes="label" Text="本地消息保留天数(1-3650)"/>
             <TextBox Text="{Binding MessageDays}" Width="120" HorizontalAlignment="Left"/>
-            <TextBlock Classes="tips" TextWrapping="Wrap" MaxWidth="520" HorizontalAlignment="Left"
-                       Text="客户端本地产的消息按这个天数保留,默认 60 天。官方服务端(ZXMOS)下发的消息固定最多保留 20 天;子服务端(ZXMS)下发的消息按子服务端自己的设置保留(默认 7 天)。过期消息在开客户端时自动清理,也可以在消息卡片上手动删除。"/>
           </StackPanel>
 
           <Rectangle Height="1" Fill="#66E3EEF4"/>
@@ -377,8 +375,6 @@
             <TextBlock Classes="panelTitle" Text="更新"/>
             <CheckBox Content="启动时检查更新(有更新就提示)" IsChecked="{Binding UpdateOnStartup}"/>
             <CheckBox Content="更新完成后自动打开程序" IsChecked="{Binding UpdateRelaunch}"/>
-            <TextBlock Classes="tips" TextWrapping="Wrap" MaxWidth="520" HorizontalAlignment="Left"
-                       Text="不勾选「启动时检查」= 完全不获取更新信息,仍然可以在「下载」页手动检查。自动打开只在便携版(zip)更新时生效,MSI 安装版装完需要自己打开。"/>
 
             <TextBlock Classes="label" Text="下载镜像(更新安装包走这里)" Margin="0,4,0,0"/>
             <StackPanel Orientation="Horizontal" Spacing="10">
@@ -386,8 +382,6 @@
                          VerticalAlignment="Center" MaxWidth="360" TextTrimming="CharacterEllipsis"/>
               <Button Classes="small" Content="设置镜像…" Click="OnEditMirrorClick"/>
             </StackPanel>
-            <TextBlock Classes="tips" TextWrapping="Wrap" MaxWidth="520" HorizontalAlignment="Left"
-                       Text="点「设置镜像…」选或填地址。可以填多个,用英文分号隔开,下载时按顺序试,全连不上会自动退回官方源;留空 = 只走官方源。"/>
 
             <CheckBox Content="镜像测速换源(太快就留着,太慢就换下一个)"
                       IsChecked="{Binding MirrorSpeedEnabled}" Margin="0,6,0,0"/>
@@ -411,8 +405,6 @@
 
             <TextBlock Classes="body" Text="{Binding MirrorSpeedSummary}"
                        TextWrapping="Wrap" MaxWidth="520" HorizontalAlignment="Left"/>
-            <TextBlock Classes="tips" TextWrapping="Wrap" MaxWidth="520" HorizontalAlignment="Left"
-                       Text="开下载后等「判定等待」秒,速度仍低于「速度下限」就换下一个镜像;连不放「连接超时」秒也算连不上,直接换下一个。所有镜像都达不到下限时,回头用实测最快的那个把整份下完。关掉这个开关就退回旧做法:按顺序试,只在连不上或者下失败时换下一个。"/>
           </StackPanel>
         </StackPanel>
       </Border>
@@ -472,9 +464,6 @@
             <TextBlock Classes="tips" Text="正在检查更新…" VerticalAlignment="Center"
                        IsVisible="{Binding IsCheckingUpdate}"/>
           </StackPanel>
-
-          <TextBlock Classes="tips" TextWrapping="Wrap" MaxWidth="560" HorizontalAlignment="Left"
-                     Text="检查更新会读取 GitHub 上的最新发布版本。启动时是否自动检查,可在「高级」里设置。"/>
         </StackPanel>
       </Border>
 

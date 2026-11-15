@@ -41,4 +41,16 @@ public partial class NavItem : ObservableObject
 
     [ObservableProperty]
     public partial bool IsSelected { get; set; }
+
+    /// <summary>右上角红点里的条数(0 = 不显示红点)。</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowBadge))]
+    [NotifyPropertyChangedFor(nameof(BadgeText))]
+    public partial int BadgeCount { get; set; }
+
+    /// <summary>有条数才把红点摆出来。</summary>
+    public bool ShowBadge => BadgeCount > 0;
+
+    /// <summary>红点里写的数字:超过 99 写 99+。</summary>
+    public string BadgeText => BadgeCount > 99 ? "99+" : BadgeCount.ToString();
 }

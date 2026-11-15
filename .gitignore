@@ -381,3 +381,8 @@ ZincXManagerMod/run-client/
 ZincXManagerMod/.gradle/
 ZincXManagerMod/.idea/
 ZincXManagerMod/*.iml
+# 本地构建与临时产物
+.infinity/
+_qa/
+_zxtest-publish/
+ui-shots/

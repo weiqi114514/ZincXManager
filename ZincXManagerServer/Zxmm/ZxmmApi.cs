@@ -66,6 +66,12 @@ public sealed class ZxmmApi : IAsyncDisposable
     /// </summary>
     public event Action<string, string>? PlayerJoining;
 
+    /// <summary>
+    /// ZXMM 推来的一行服务端控制台输出(桥接模式开了持续监听才有)。
+    /// 只有内容,不带时间 —— 时间是收到的那一刻,用 ZXMM 那边的还不如用这边的。
+    /// </summary>
+    public event Action<string>? ConsoleOutput;
+
     /// <summary>专用通道当前有没有连上。</summary>
     public bool Connected => _client?.Connected == true;
 
@@ -257,7 +263,9 @@ public sealed class ZxmmApi : IAsyncDisposable
         {
             if (_pending.TryRemove(id, out var waiter))
             {
-                waiter.TrySetResult((parts[2] == "ok", parts.Length > 3 ? parts[3] : ""));
+                // 结果里可能带竖线(控制台命令的输出),整段拼回来别只取第四段
+                var result = parts.Length > 3 ? string.Join('|', parts.Skip(3)) : "";
+                waiter.TrySetResult((parts[2] == "ok", result));
             }
 
             return;
@@ -277,6 +285,24 @@ public sealed class ZxmmApi : IAsyncDisposable
             catch (Exception ex)
             {
                 Log($"[ZXMM] 处理连接中事件异常: {ex.Message}");
+            }
+
+            return;
+        }
+
+        // 事件 evt|console|一行输出(桥接模式开着持续监听时模组每行推一条)
+        if (parts.Length >= 3 && parts[0] == "evt" && parts[1] == "console")
+        {
+            // 用 rest 拼回去:MC 日志行里本来就可能有竖线(比如 | 分隔的表格)
+            var text = string.Join('|', parts.Skip(2));
+            Log($"[ZXMM] 持续输出一行 → {text}");
+            try
+            {
+                ConsoleOutput?.Invoke(text);
+            }
+            catch (Exception ex)
+            {
+                Log($"[ZXMM] 处理控制台输出异常: {ex.Message}");
             }
 
             return;
@@ -349,6 +375,18 @@ public sealed class ZxmmApi : IAsyncDisposable
         var (ok, result) = await CallAsync("ping", ct).ConfigureAwait(false);
         return ok && result == "pong";
     }
+
+    /// <summary>桥接模式:让 MC 服执行一条命令,返回它的输出。Ok=false 表示没真的执行(主线程忙等)。</summary>
+    public async Task<(bool Ok, string Result)> ConsoleAsync(string command, CancellationToken ct = default)
+        => await CallAsync("console", ct, command).ConfigureAwait(false);
+
+    /// <summary>桥接模式:开关"持续把服务端控制台输出推过来"。</summary>
+    public async Task<bool> ConsoleTapAsync(bool on, CancellationToken ct = default)
+        => (await CallAsync("console.tap", ct, on ? "1" : "0").ConfigureAwait(false)).Ok;
+
+    /// <summary>让 ZXMM 改它本机的一个配置文件键值,返回改之前的值(原来没有就是空串)。</summary>
+    public async Task<(bool Ok, string Result)> ConfigSetAsync(string file, string key, string value, CancellationToken ct = default)
+        => await CallAsync("config", ct, file, key, value).ConfigureAwait(false);
 
     /// <summary>在长连接上发一条任务并等结果。</summary>
     private async Task<(bool Ok, string Result)> CallAsync(string method, CancellationToken ct, params string[] args)

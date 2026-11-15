@@ -88,6 +88,18 @@ public partial class AddFriendWindow : Window
         text.Children.Add(title);
         text.Children.Add(sub);
 
+        // 来源服:老版本服务端没有这一列(空串),就这一行不画
+        var serverName = hit.ServerName.Trim();
+        if (serverName.Length > 0 && serverName != FriendCodec.Unknown)
+        {
+            text.Children.Add(new TextBlock
+            {
+                Text = "· " + serverName,
+                FontSize = 11,
+                Foreground = new SolidColorBrush(Color.Parse("#5A7480")),
+            });
+        }
+
         var add = new Button { Content = "添加", HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Center };
         add.Classes.Add("primary");
         add.Click += async (_, _) => await AskAsync(hit);
@@ -160,7 +172,7 @@ public partial class AddFriendWindow : Window
             ResultList.Children.Clear();
             EmptyHint.IsVisible = true;
             EmptyHint.Text = "输入内容开始搜索";
-            StatusText.Text = "按完整 ID / 账户名 / 账户编号搜";
+            StatusText.Text = "请输入 完整ID/账户名/账户编号";
             return;
         }
 
