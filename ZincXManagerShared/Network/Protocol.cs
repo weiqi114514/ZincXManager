@@ -189,6 +189,20 @@ public static class Protocol
     /// <summary>ZXMS → ZXMC：设置好友备注的回执。"ok" 或 "err|原因"。</summary>
     public const ushort FriendRemarkAck = 666;
 
+    /// <summary>多服数据分离:ZXMC → ZXMS 要已登记的服务器列表(负载空)。</summary>
+    public const ushort ServerListReq = 670;
+
+    /// <summary>
+    /// ZXMS → ZXMC 服务器列表。每行一台 <c>ID|名称|端口</c>,行间 <c>\n</c>;负载空 = 一台都没登记。
+    /// </summary>
+    public const ushort ServerList = 671;
+
+    /// <summary>ZXMC → ZXMS 切换当前服务器(负载 = 目标服务器 ID,十进制)。ZXMS 处理完回 <see cref="ServerSwitchAck"/>。</summary>
+    public const ushort ServerSwitchReq = 672;
+
+    /// <summary>ZXMS → ZXMC 切换结果:<c>ok|ID</c> 或 <c>err|原因</c>。</summary>
+    public const ushort ServerSwitchAck = 673;
+
     /// <summary>ZXMOS → ZXMS:把某些用户账号移交给子服务端(拉黑前先移交,别让玩家丢号)。负载 "名称|密文|等级" 每行一条。</summary>
     public const ushort AccountMigrate = 610;
 

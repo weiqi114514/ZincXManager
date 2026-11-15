@@ -415,6 +415,132 @@ public partial class MainWindow : Window
     /// <summary>绑定/解绑回执:窗口在就订阅显示,没人订阅直接弹框</summary>
     public event Action<bool, string>? BindAckArrived;
 
+    /// <summary>打开「选择 MC 服务器」弹窗:先拉列表(670),选完切服(672),清单在 <c>Data/Servers.txt</c>。</summary>
+    public void OpenServerPicker()
+    {
+        _ = OpenServerPickerAsync();
+    }
+
+    /// <summary>拉列表 → 弹窗 → 等用户选;弹窗关掉就把订阅拆了。</summary>
+    private async Task OpenServerPickerAsync()
+    {
+        try
+        {
+            var connect = ClientSession.Connect;
+            if (connect is null)
+            {
+                await MessageDialog.WarnAsync(this, "选择 MC 服务器", "还没连上服务端,稍后再试。");
+                return;
+            }
+
+            var picker = new ServerPickWindow();
+
+            //671 走的是网络读线程,改界面必须回 UI 线程
+            void OnList(string payload) => Avalonia.Threading.Dispatcher.UIThread.Post(
+                () => picker.SetServers(ParseServerList(payload), ClientConfig.GetMcServer()));
+
+            connect.ServerListReceived += OnList;
+            picker.Applied += id => _ = ApplyServerAsync(picker, connect, id);
+            picker.Closed += (_, _) => connect.ServerListReceived -= OnList;
+
+            Logger.Log(LogLevel.Info, "[数据分离] 打开选服窗口,请求服务器列表(670)");
+            _ = connect.SendAsync(Protocol.ServerListReq, string.Empty);
+            await picker.ShowDialog(this);
+            Logger.Log(LogLevel.Info, "[数据分离] 选服窗口已关闭");
+        }
+        catch (Exception ex)
+        {
+            Logger.Log(LogLevel.Error, "[数据分离] 选服窗口出错: " + ex);
+            await MessageDialog.WarnAsync(this, "选择 MC 服务器", "打不开选服窗口:" + ex.Message);
+        }
+    }
+
+    /// <summary>把 671 的负载解析成 (ID, 名称) 列表;坏行直接跳过,不让一行脏数据挡住整个列表。</summary>
+    private static System.Collections.Generic.List<(int Id, string Name)> ParseServerList(string payload)
+    {
+        var list = new System.Collections.Generic.List<(int Id, string Name)>();
+        foreach (var row in payload.Split('\n', StringSplitOptions.RemoveEmptyEntries))
+        {
+            var parts = row.Trim().Split('|');   //拆分结果
+            if (parts.Length < 2 || !int.TryParse(parts[0].Trim(), out var id) || id <= 0)
+            {
+                continue;
+            }
+
+            list.Add((id, parts[1].Trim()));
+        }
+
+        return list;
+    }
+
+    /// <summary>
+    /// 应用切服:写 mcserver → 「正在请求」→ 发 672 → 「正在等待数据」→ 等 673 →
+    /// 「正在加载数据」→ 重新拉一次绑定关系 → 关框。任一步失败都回滚 mcserver。
+    /// </summary>
+    private async Task ApplyServerAsync(Window owner, ConnectViewModel connect, int serverId)
+    {
+        var progress = new ProgressDialog();
+        var ack = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        void OnAck(string payload) => ack.TrySetResult(payload);
+
+        connect.ServerSwitchAck += OnAck;
+        progress.SetText("正在请求");
+        _ = progress.ShowDialog(owner);
+
+        var previous = ClientConfig.GetMcServer();
+        ClientConfig.SetMcServer(serverId);
+
+        try
+        {
+            var sent = await connect.SendAsync(Protocol.ServerSwitchReq, serverId.ToString());
+            if (!sent)
+            {
+                ClientConfig.SetMcServer(previous);
+                progress.Finish();
+                await MessageDialog.WarnAsync(owner, "切换服务器", "请求没发出去,还连着原来的服务器。");
+                return;
+            }
+
+            progress.SetText("正在等待数据");
+            var done = await Task.WhenAny(ack.Task, Task.Delay(5000));   // 服务端 5 秒不回就放弃
+            if (done != ack.Task)
+            {
+                ClientConfig.SetMcServer(previous);
+                progress.Finish();
+                await MessageDialog.WarnAsync(owner, "切换服务器", "服务端 5 秒没有回应,请稍后再试。");
+                return;
+            }
+
+            var reply = (await ack.Task).Trim();
+            if (!reply.StartsWith("ok", StringComparison.OrdinalIgnoreCase))
+            {
+                ClientConfig.SetMcServer(previous);
+                progress.Finish();
+                await MessageDialog.WarnAsync(owner, "切换服务器",
+                    reply.Length > 4 ? reply[4..].Trim() : "服务端拒绝了这次切换");
+                return;
+            }
+
+            progress.SetText("正在加载数据");
+            QueryBindAsync();                 // 切完重新拉一次绑定关系(629),回来直接刷成那台服的数据
+            await Task.Delay(400);            // 让「正在加载数据」这一级看得见
+            progress.Finish();
+            Logger.Log(LogLevel.Info, $"[数据分离] 已切换到服务器 {serverId}");
+        }
+        catch (Exception ex)
+        {
+            ClientConfig.SetMcServer(previous);
+            progress.Finish();
+            Logger.Log(LogLevel.Warning, "[数据分离] 切服失败: " + ex.Message);
+            await MessageDialog.WarnAsync(owner, "切换服务器", "切换失败:" + ex.Message);
+        }
+        finally
+        {
+            connect.ServerSwitchAck -= OnAck;
+        }
+    }
+
     /// <summary>问服务端:我这个账号绑了谁(629,回 630)。</summary>
     private async void QueryBindAsync()
     {

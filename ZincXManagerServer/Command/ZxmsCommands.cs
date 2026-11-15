@@ -76,7 +76,8 @@ public static class ZxmsCommands
         Func<WhitelistStore> whitelistProvider,
         Func<string> serverAccountNameProvider,
         Action enterConfig,
-        Func<Zxmm.ZxmmApi?>? zxmmProvider = null)
+        Func<Zxmm.ZxmmApi?>? zxmmProvider = null,
+        Func<TcpServer?>? serverProvider = null)
     {
         // 记住本端的服务端账号名:用户账号不能和它重名(和 config 里的 osuser 同步)
         _serverAccountName = serverAccountNameProvider();
@@ -109,6 +110,10 @@ public static class ZxmsCommands
             },
             "断开并重新连接官方服务端",
             "net reconnect");
+
+        cmd.Register("net close", args => CmdNetClose(serverProvider?.Invoke(), args),
+            "手动断开指定连接:<连接id前8位|IP|IP:端口>",
+            "net close 1a2b3c4d");
 
         // ---- 账号管理(和 ZXMOS 同结构:user 是命令类型) ----
         cmd.Register("user list", _ => CmdUserList(accountProvider()),
@@ -706,6 +711,61 @@ public static class ZxmsCommands
         }
 
         LogBlock(registry.ToTable("[网络] "));
+    }
+
+    /// <summary>net close &lt;关键字&gt;:手动断开一条连接(踢掉扫描器、卡死的客户端)。</summary>
+    private static void CmdNetClose(TcpServer? server, string[] args)
+    {
+        if (server is null)
+        {
+            Logger.Log(LogLevel.Warning, "[网络] 服务端还没起来,现在没有连接可以断开");
+            return;
+        }
+
+        if (args.Length == 0)
+        {
+            Logger.Log(LogLevel.Warning, "[网络] 用法:net close <连接id前8位|IP|IP:端口>;先 net clients 看列表");
+            return;
+        }
+
+        var key = args[0].Trim();   // 用户给的关键字
+        var hits = server.FindConnections(key);
+        if (hits.Count == 0)
+        {
+            Logger.Log(LogLevel.Warning, $"[网络] 没有匹配的连接:{key}(用 net clients 看在线列表)");
+            return;
+        }
+
+        if (hits.Count > 1)
+        {
+            Logger.Log(LogLevel.Warning, $"[网络] {key} 匹配到 {hits.Count} 条连接,请给更精确的地址:");
+            foreach (var one in hits)
+            {
+                Logger.Log(LogLevel.Warning, $"        {one.RemoteEndPoint}  id={one.Id.ToString()[..8]}");
+            }
+            return;
+        }
+
+        // 断开要等 socket 真正拆掉,不堵命令线程
+        var target = hits[0];
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                if (await server.CloseConnectionAsync(target))
+                {
+                    Logger.Log(LogLevel.Info, $"[网络] 已断开 {target.RemoteEndPoint}(id={target.Id.ToString()[..8]})");
+                }
+                else
+                {
+                    Logger.Log(LogLevel.Warning, $"[网络] {target.RemoteEndPoint} 已经不在线了");
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Log(LogLevel.Error, "[网络] 手动断开连接失败: " + ex.Message);
+            }
+        });
     }
 
     /// <summary>user list</summary>

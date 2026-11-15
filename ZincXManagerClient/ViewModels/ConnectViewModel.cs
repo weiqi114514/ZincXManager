@@ -112,7 +112,13 @@ public partial class ConnectViewModel : ViewModelBase, IDisposable
     public event Action<string, string>? ErrorRaised;
 
     /// <summary>服务端要求更新客户端时触发(634 或被 601/603 拒登录):参数是服务端给的原因。</summary>
-    public event Action<string>? UpdateRequiredRaised;
+    public event Action<string>? UpdateRequiredRaised;   // 服务端要求更新
+
+    /// <summary>多服数据分离:收到服务器列表(671,负载每行 <c>ID|名称|端口</c>)。</summary>
+    public event Action<string>? ServerListReceived;
+
+    /// <summary>多服数据分离:收到切服结果(673,<c>ok|ID</c> 或 <c>err|原因</c>)。</summary>
+    public event Action<string>? ServerSwitchAck;
 
     /// <summary>
     /// 服务端已经明确要本端更新:收到以后就别再自动重连了 —— 版本没变,重连再多次也一样被拒。
@@ -289,6 +295,16 @@ public partial class ConnectViewModel : ViewModelBase, IDisposable
 
                 switch (packet.Type)
                 {
+                    // 多服数据分离:服务器清单(671),每行 "ID|名称|端口"
+                    case Protocol.ServerList:
+                        ServerListReceived?.Invoke(text);
+                        break;
+
+                    // 多服数据分离:切服回执(673),"ok|ID" 或 "err|原因"
+                    case Protocol.ServerSwitchAck:
+                        ServerSwitchAck?.Invoke(text.Trim());
+                        break;
+
                     // 会话加密协商:服务端公钥(381)
                     case Protocol.SessionHelloAck:
                         _sessionWait?.TrySetResult(packet.Data);

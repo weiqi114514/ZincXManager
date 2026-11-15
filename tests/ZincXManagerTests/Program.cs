@@ -786,7 +786,7 @@ var results = new List<SuiteResult>();
 
         if (ready)
         {
-            var h = cli.MainWindowHandle;
+            var h = Win32.MainWindowOf(cli.Id);
             r.Add("拿到窗口句柄", h != IntPtr.Zero);
             Win32.PlaceWindow(h, 400, 200, 760, 520);
             // 刚摆完的第一帧 GetWindowRect 可能还是 0x0,等它变成有效值再算断言
@@ -949,6 +949,21 @@ var results = new List<SuiteResult>();
 // ================= 套件 25:管理员界面(等级判定,纯函数) =================
 {
     await ZincXManagerTests.AdminNavSuite.RunAsync(results);
+}
+
+// ================= 套件 26:多服数据分离共享层(协议号 / 分区路径 / AsyncLocal) =================
+{
+    await ZincXManagerTests.DataSeparationSuite.RunAsync(results);
+}
+
+// ================= 套件 27:多服数据分离端到端(起真 ZXMS,走 670/671/672/673 + 配置键) =================
+{
+    await ZincXManagerTests.DataSeparationLiveSuite.RunAsync(results);
+}
+
+// ================= 套件 28:net close 的查找 / 断开 / 已离线判定(进程内,不起 ZXMS) =================
+{
+    await ZincXManagerTests.NetCloseSuite.RunAsync(results);
 }
 
 // ================= 汇总 =================

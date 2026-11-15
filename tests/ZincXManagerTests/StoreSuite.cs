@@ -127,6 +127,27 @@ public static class StoreSuite
             LoginStore.RemovePersistentLogin("ZXMTestPlayer");
             r.Add("删掉后不再免确认", !LoginStore.HasPersistentLogin("ZXMTestPlayer", "5.6.7.8"));
             r.Add("删一个不动另一个", LoginStore.HasPersistentLogin("Other", "9.9.9.9"));
+
+            // 有效期:手写两条记录,一条 40 天前、一条刚刚
+            File.WriteAllLines(saved,
+            [
+                "ZXMTestPlayer|5.6.7.8|" + DateTime.Now.AddDays(-40).ToString("yyyy/MM/dd HH:mm:ss"),
+                "Other|9.9.9.9|" + DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss"),
+            ]);
+            r.Add("超期的记录不免确认", !LoginStore.HasPersistentLogin("ZXMTestPlayer", "5.6.7.8", 30));
+            r.Add("没超期的记录照旧免确认", LoginStore.HasPersistentLogin("Other", "9.9.9.9", 30));
+            r.Add("不填天数 = 不限期(老行为)", LoginStore.HasPersistentLogin("ZXMTestPlayer", "5.6.7.8"));
+
+            // 老记录没有时间字段:升个版本不该把所有人重新踢去确认
+            File.WriteAllLines(saved, ["ZXMTestPlayer|5.6.7.8"]);
+            r.Add("没有时间字段的老记录当永不过期", LoginStore.HasPersistentLogin("ZXMTestPlayer", "5.6.7.8", 30));
+
+            // 「每次都要确认」打开时会清空:清完谁都不免确认
+            LoginStore.AddPersistentLogin("ZXMTestPlayer", "1.2.3.4");
+            LoginStore.AddPersistentLogin("Other", "9.9.9.9");
+            LoginStore.ClearPersistentLogins();
+            r.Add("清空后老玩家不免确认", !LoginStore.HasPersistentLogin("ZXMTestPlayer", "1.2.3.4"));
+            r.Add("清空后另一个也不免确认", !LoginStore.HasPersistentLogin("Other", "9.9.9.9"));
         }
         finally
         {

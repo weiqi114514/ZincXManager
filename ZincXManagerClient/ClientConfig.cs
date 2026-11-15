@@ -6,12 +6,15 @@ namespace ZincXManagerClient;
 /// <summary>
 /// 客户端自己的配置(config.ini),键名与两个服务端统一:
 /// czip/czport = 子服务端,ozip/ozport = 官方服务端,mode = 连接方式,
-/// role = 权限等级,wallpaper = 背景壁纸路径。
+/// role = 权限等级,wallpaper = 背景壁纸路径,mcserver = 选中的 MC 服务器编号。
 ///
 /// 启动时打开一次,全局共用这一份;缺键自动补缺省值。
 /// </summary>
 internal static class ClientConfig
 {
+    private const string KeyMcServer = "mcserver";   // 选中的 MC 服务器编号
+    private const int DefaultMcServer = 0;           // 0 = 还没选
+
     private static readonly ZFile File = Open();
 
     private static ZFile Open()
@@ -48,4 +51,21 @@ internal static class ClientConfig
 
     /// <summary>存值(立即落盘)。</summary>
     public static void Set(string key, string value) => File.WriteFileMap(key, value);
+
+    /// <summary>当前选中的 MC 服务器在本服列表里的编号;0 = 还没选。写坏了按 0 处理并写回缺省值。</summary>
+    public static int GetMcServer()
+    {
+        var raw = Get(KeyMcServer, DefaultMcServer.ToString()).Trim();
+        if (int.TryParse(raw, out var value) && value >= 0)
+        {
+            return value;
+        }
+
+        Logger.Log(LogLevel.Warning, $"[CONFIG]{KeyMcServer} 的值「{raw}」不是有效编号,已重置为 {DefaultMcServer}");
+        Set(KeyMcServer, DefaultMcServer.ToString());
+        return DefaultMcServer;
+    }
+
+    /// <summary>记住选中的 MC 服务器编号(立即落盘)。</summary>
+    public static void SetMcServer(int value) => Set(KeyMcServer, value.ToString());
 }

@@ -59,6 +59,17 @@ public class TcpServer : IServer
     /// <summary>连接登记表:自动登记接入、注销断开,收包计数;身份 / 模式由业务侧 SetRole 补上。</summary>
     public ClientRegistry Registry { get; } = new();
 
+    /// <summary>日志里怎么称呼这条连接:IP,已登录的再补上账号编号与名称。</summary>
+    /// <remarks>接入与未登录阶段的日志只有 IP,和加这一列之前完全一样。</remarks>
+    private string Where(TcpConnection connection)
+    {
+        var address = connection.RemoteEndPoint?.ToString() ?? "?";
+        var info = Registry.Find(connection.Id);
+        return info is null || info.User.Length == 0
+            ? address
+            : $"{address} [账号#{info.AccountId}/{info.User}]";
+    }
+
     /// <summary>开始监听;立即返回,端口占用等错误直接抛出。</summary>
     /// <exception cref="InvalidOperationException">重复调用</exception>
     public void Open()
@@ -95,7 +106,7 @@ public class TcpServer : IServer
             }
             catch (Exception ex)
             {
-                Logger.Log(LogLevel.Warning, $"[Network] 广播到 {connection.RemoteEndPoint} 失败: {ex.Message}");
+                Logger.Log(LogLevel.Warning, $"[Network] 广播到 {Where(connection)} 失败: {ex.Message}");
             }
         }
     }
@@ -138,7 +149,7 @@ public class TcpServer : IServer
             _dispatchers[connection.Id] = dispatcher;
 
             _clientTasks[connection.Id] = HandleClientAsync(connection);
-            Logger.Log(LogLevel.Info, $"[Network] 客户端接入 {connection.RemoteEndPoint} (id={connection.Id})");
+            Logger.Log(LogLevel.Info, $"[Network] 客户端接入 {Where(connection)} (id={connection.Id})");
             SafeInvoke(Connected, connection);
         }
     }
@@ -187,15 +198,15 @@ public class TcpServer : IServer
         }
         catch (IOException ex)
         {
-            Logger.Log(LogLevel.Warning, $"[Network] 连接 {connection.RemoteEndPoint} 中断: {ex.Message}");
+            Logger.Log(LogLevel.Warning, $"[Network] 连接 {Where(connection)} 中断: {ex.Message}");
         }
         catch (InvalidDataException ex)
         {
-            Logger.Log(LogLevel.Warning, $"[Network] 连接 {connection.RemoteEndPoint} 发送非法包,已断开: {ex.Message}");
+            Logger.Log(LogLevel.Warning, $"[Network] 连接 {Where(connection)} 发送非法包,已断开: {ex.Message}");
         }
         catch (Exception ex)
         {
-            Logger.Log(LogLevel.Error, $"[Network] 连接 {connection.RemoteEndPoint} 处理异常: {ex}");
+            Logger.Log(LogLevel.Error, $"[Network] 连接 {Where(connection)} 处理异常: {ex}");
         }
         finally
         {
@@ -218,10 +229,10 @@ public class TcpServer : IServer
                 }
             }
 
+            // 先打日志再注销:注销完登记表里就没这条连接了,拿不到账号
+            Logger.Log(LogLevel.Info, $"[Network] 客户端断开 {Where(connection)} (id={connection.Id})");
             Registry.Remove(connection.Id);
             await connection.DisposeAsync();
-
-            Logger.Log(LogLevel.Info, $"[Network] 客户端断开 {connection.RemoteEndPoint} (id={connection.Id})");
         }
     }
 
@@ -257,6 +268,47 @@ public class TcpServer : IServer
         {
             Logger.Log(LogLevel.Error, "[Network] 连接事件回调异常: " + ex.Message);
         }
+    }
+
+    /// <summary>按关键字找在线连接:先按「IP:端口」/ IP 精确比,再按连接 id 前缀比。</summary>
+    /// <param name="key">地址,或连接 id 的前几位(命令里只显示前 8 位)。</param>
+    public IReadOnlyList<TcpConnection> FindConnections(string key)
+    {
+        var wanted = key.Trim();
+        if (wanted.Length == 0)
+        {
+            return [];
+        }
+
+        var byAddress = _connections.Values
+            .Where(c => string.Equals(c.RemoteEndPoint?.ToString(), wanted, StringComparison.OrdinalIgnoreCase)
+                        || string.Equals(c.RemoteEndPoint?.Address.ToString(), wanted, StringComparison.OrdinalIgnoreCase))
+            .ToArray();
+        if (byAddress.Length > 0)
+        {
+            return byAddress;
+        }
+
+        return _connections.Values
+            .Where(c => c.Id.ToString().StartsWith(wanted, StringComparison.OrdinalIgnoreCase))
+            .ToArray();
+    }
+
+    /// <summary>手动断开一条连接(控制台命令用);这条连接已经断了就返回 false。</summary>
+    /// <remarks>
+    /// 两种「已经不在线」都算 false:已经从在线表里摘掉,或者连接已关闭但还没被摘掉。
+    /// 后一种是真会撞上的 —— 对端刚断、收尾还没走完的那一小段。
+    /// </remarks>
+    public async Task<bool> CloseConnectionAsync(TcpConnection connection)
+    {
+        if (!_connections.TryGetValue(connection.Id, out var live) || live.IsClosed)
+        {
+            return false;
+        }
+
+        Logger.Log(LogLevel.Warning, $"[Network] 手动断开 {live.RemoteEndPoint}(id={live.Id.ToString()[..8]})");
+        await live.DisposeAsync();
+        return true;
     }
 
     /// <summary>停止监听、关闭所有连接、释放资源;幂等。</summary>

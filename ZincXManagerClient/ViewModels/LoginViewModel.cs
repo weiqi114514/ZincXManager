@@ -159,7 +159,12 @@ public partial class LoginViewModel : ViewModelBase
     {
         LoadCachedAvatar(value);
 
-        if (value.Trim().Equals(LoginRecord.User, StringComparison.OrdinalIgnoreCase))
+        // 上次登录的可能是管理账号(LAdmin 之类)。没勾「登录管理账号」时下拉里只有 Player,
+        // 这时候把 LAdmin 回填进去会带着管理等级去登录 —— 服务端按「ZXMOS 管理账号」处理,
+        // 官方端没连就报「官方服务端未连接,无法登录 ZXMOS 管理账号」,玩家会一头雾水。
+        // 所以只有这个等级在当前下拉里可选时才回填。
+        if (value.Trim().Equals(LoginRecord.User, StringComparison.OrdinalIgnoreCase)
+            && Array.IndexOf(Levels, LoginRecord.Level) >= 0)
         {
             Level = LoginRecord.Level;
         }
@@ -203,6 +208,14 @@ public partial class LoginViewModel : ViewModelBase
     /// <summary>用记住的密文免登录(7 天内的记录)。</summary>
     public Task<bool> AutoLoginAsync()
     {
+        // 上次登录的是管理账号时不能静默顶用:那张登录窗没勾「登录管理账号」,
+        // 拿管理等级去登录只会被服务端按官方账号处理然后失败。让用户自己勾一次。
+        if (Array.IndexOf(Levels, LoginRecord.Level) < 0)
+        {
+            Message = $"上次登录的是管理账号({LoginRecord.Level}),请勾选「登录管理账号」后手动登录";
+            return Task.FromResult(false);
+        }
+
         Message = "正在用记住的账号登录…";
         return LoginCoreAsync(LoginRecord.User, LoginRecord.Hash, LoginRecord.Level, register: false, saveRecord: false);
     }
@@ -248,7 +261,23 @@ public partial class LoginViewModel : ViewModelBase
             ? $"{user}|{hash}|{MachineCode.Value}|{nonce}|{proof}|{version}"
             : $"{user}|{hash}|{level}|{side}|{MachineCode.Value}||{nonce}|{proof}|{version}";
 
-        if (!await _connect.SendAsync(type, payload))
+        bool sent;   // 登录包发出去了没;写包抛异常由下面的 catch 接住
+        try
+        {
+            sent = await _connect.SendAsync(type, payload);
+        }
+        catch (Exception ex)
+        {
+            // 链路断了但连接对象还在时,WriteAsync 会抛 IOException(10054)。
+            // 这里必须接住:异常沿着 async void 的点击事件一路冒到进程顶层,没有全局兜底就是整个客户端退出。
+            // 接住后按普通失败提示,并复位 IsBusy,让「登录」按钮能再点。
+            Logger.Log(LogLevel.Warning, $"[ZXMC] 登录包发送失败(连接已断开):{ex.Message}");
+            Fail("连接已断开", "连接已断开,请重试。");
+            IsBusy = false;
+            return false;
+        }
+
+        if (!sent)
         {
             Fail("发送失败", "连接不可用(数据源已断开)");
             IsBusy = false;

@@ -69,6 +69,13 @@ public partial class FunctionPickerView : UserControl
         var title = (ItemsHost.ItemsSource as System.Collections.Generic.IEnumerable<FunctionItem>)?
             .FirstOrDefault(i => i.Key == key)?.Title ?? key;
 
+        // 服务器管理:不是占位,要开真正的选择窗口(多服数据分离)
+        if (key == "mg-server")
+        {
+            (TopLevel.GetTopLevel(this) as MainWindow)?.OpenServerPicker();
+            return;
+        }
+
         var (source, hint) = key switch
         {
             "srv-square" => ("数据来源:子服务端(ZXMS)", "和锌源广场功能一样,只是社区内容来自你连的子服务端"),

@@ -51,6 +51,15 @@ public sealed class ZxmmApi : IAsyncDisposable
     /// <summary>ZXMM 推来"玩家进服"事件(玩家名, IP)。</summary>
     public event Action<string, string>? PlayerJoined;
 
+    /// <summary>ZXMM 连上后主动报的身份(服务器编号, 服务器名称);模组没报过时是 0 和空串。</summary>
+    public event Action<int, string>? ServerIdentified;
+
+    /// <summary>ZXMM 报上来的服务器编号(0 = 还没报)。</summary>
+    public int ServerId { get; private set; }
+
+    /// <summary>ZXMM 报上来的服务器名称(空 = 它没填,界面上用编号兜底)。</summary>
+    public string ServerName { get; private set; } = "";
+
     /// <summary>
     /// ZXMM 推来"玩家正在连接(configuration 阶段)"事件(玩家名, IP)。
     /// 这时还没有 ServerPlayer,踢人是断开登录连接,客户端会显示理由。
@@ -224,6 +233,24 @@ public sealed class ZxmmApi : IAsyncDisposable
     private void HandleLine(string line)
     {
         var parts = line.Split('|');   //拆分结果
+
+        // 服务器身份 id|编号|名称(模组连上后主动报的第一行):记下来,不能当未知行丢掉
+        if (parts.Length >= 2 && parts[0] == "id" && int.TryParse(parts[1].Trim(), out var ident) && ident > 0)
+        {
+            ServerId = ident;
+            ServerName = parts.Length > 2 ? parts[2].Trim() : "";
+            Log($"[ZXMM] 服务器身份: {ServerId} {ServerName}");
+            try
+            {
+                ServerIdentified?.Invoke(ServerId, ServerName);
+            }
+            catch (Exception ex)
+            {
+                Log($"[ZXMM] 处理服务器身份异常: {ex.Message}");
+            }
+
+            return;
+        }
 
         // 任务结果 res|id|ok|结果
         if (parts.Length >= 3 && parts[0] == "res" && long.TryParse(parts[1], out var id))

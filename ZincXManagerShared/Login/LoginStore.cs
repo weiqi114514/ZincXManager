@@ -3,6 +3,7 @@ using System.Collections.Generic;  // 列表
 using System.IO;  // 读写文件
 using System.Linq;  // 查询
 using System.Text;  // UTF-8
+using System.Threading;  // AsyncLocal:当前执行流的数据分区
 using ZincXManagerShared.Logging;  // 共享库
 
 namespace ZincXManagerShared.Login;
@@ -14,10 +15,12 @@ namespace ZincXManagerShared.Login;
 ///   <item><c>PersistentLogin.txt</c> —— 持久登录表,一行一条 <c>玩家名|玩家IP|时间</c></item>
 ///   <item><c>loginlog.log</c> —— 登录日志,带年月日</item>
 /// </list>
+/// <para>多服数据分离时,绑定表按 <c>scope</c> 分文件:<c>Data/SS-2/BindUser.txt</c>;
+/// 其余两项是登录态,与哪台 MC 服无关,始终只有一份。</para>
 /// </summary>
 public static class LoginStore
 {
-    /// <summary>绑定表文件。</summary>
+    /// <summary>共享区的绑定表文件。分区文件用 <see cref="BindFileOf"/> 拼。</summary>
     public const string BindFile = "Data/BindUser.txt";
 
     /// <summary>持久登录表文件。</summary>
@@ -29,8 +32,35 @@ public static class LoginStore
     // 保护文件读写
     private static readonly object _lock = new();
 
-    // 绑定表缓存(账号ID → 这个账号名下的玩家名,按绑定先后)
-    private static Dictionary<int, List<string>>? _cache;
+    // 绑定表缓存(scope → 账号ID → 玩家名)。scope 为空 = 共享区,非空 = 那台服的分区(SS-<id>)
+    private static readonly Dictionary<string, Dictionary<int, List<string>>> _cache = new();
+
+    /// <summary>
+    /// 当前执行流的数据分区。ZXMS 处理某个 ZXMM 推来的进服事件时设一次,
+    /// 方法内部就不用给每个 <see cref="LoginStore"/> 调用都补 scope 参数;
+    /// 由外部显式传了 scope 的调用优先,不看这里。
+    /// </summary>
+    public static readonly AsyncLocal<string> CurrentScope = new();
+
+    /// <summary>显式传了 scope 就用显式的;没传就用当前执行流设的分区。</summary>
+    private static string ResolveScope(string scope)
+    {
+        if (scope.Length > 0)
+        {
+            return scope;
+        }
+
+        return CurrentScope.Value ?? "";
+    }
+
+    /// <summary>
+    /// 按分区取绑定表路径。<paramref name="scope"/> 为空 = 共享区 <c>Data/BindUser.txt</c>;
+    /// 非空 = <c>Data/&lt;scope&gt;/BindUser.txt</c>(多服数据分离时 scope 形如 <c>SS-2</c>)。
+    /// </summary>
+    public static string BindFileOf(string scope)
+    {
+        return scope.Length == 0 ? BindFile : Path.Combine("Data", scope, "BindUser.txt");
+    }
 
     /// <summary>
     /// 追加一行:用 <see cref="FileShare.ReadWrite"/> 打开,别人 tail / 面板读日志时不会把这次写入顶掉。
@@ -86,40 +116,48 @@ public static class LoginStore
     }
 
     /// <summary>这个账号绑定的第一个玩家名(没绑返回空)。多绑时要全部,用 <see cref="PlayersOf"/>。</summary>
-    public static string PlayerOf(int accountId)
+    /// <param name="accountId">账号 ID。</param>
+    /// <param name="scope">数据分区,空 = 共享区。</param>
+    public static string PlayerOf(int accountId, string scope = "")
     {
         lock (_lock)
         {
-            return LoadBinds().TryGetValue(accountId, out var players) && players.Count > 0 ? players[0] : "";
+            return LoadBinds(scope).TryGetValue(accountId, out var players) && players.Count > 0 ? players[0] : "";
         }
     }
 
     /// <summary>这个账号名下的全部玩家名(按绑定先后;没绑返回空列表)。</summary>
-    public static List<string> PlayersOf(int accountId)
+    /// <param name="accountId">账号 ID。</param>
+    /// <param name="scope">数据分区,空 = 共享区。</param>
+    public static List<string> PlayersOf(int accountId, string scope = "")
     {
         lock (_lock)
         {
-            return LoadBinds().TryGetValue(accountId, out var players)
+            return LoadBinds(scope).TryGetValue(accountId, out var players)
                 ? new List<string>(players)
                 : new List<string>();
         }
     }
 
     /// <summary>这个账号名下有几个玩家。</summary>
-    public static int BindCount(int accountId)
+    /// <param name="accountId">账号 ID。</param>
+    /// <param name="scope">数据分区,空 = 共享区。</param>
+    public static int BindCount(int accountId, string scope = "")
     {
         lock (_lock)
         {
-            return LoadBinds().TryGetValue(accountId, out var players) ? players.Count : 0;
+            return LoadBinds(scope).TryGetValue(accountId, out var players) ? players.Count : 0;
         }
     }
 
     /// <summary>玩家绑在哪个账号上(没绑返回 0)。一个玩家始终只归一个账号,多绑只发生在账号这一侧。</summary>
-    public static int AccountOf(string player)
+    /// <param name="player">MC 玩家名。</param>
+    /// <param name="scope">数据分区,空 = 共享区。</param>
+    public static int AccountOf(string player, string scope = "")
     {
         lock (_lock)
         {
-            foreach (var pair in LoadBinds())
+            foreach (var pair in LoadBinds(scope))
             {
                 foreach (var name in pair.Value)
                 {
@@ -143,7 +181,8 @@ public static class LoginStore
     /// <param name="player">MC 玩家名。</param>
     /// <param name="maxBind">这个账号最多能绑几个玩家,<c>&lt;= 0</c> = 不限。</param>
     /// <param name="error">失败原因(成功时是空串)。</param>
-    public static bool Bind(int accountId, string player, int maxBind, out string error)
+    /// <param name="scope">数据分区,空 = 共享区。</param>
+    public static bool Bind(int accountId, string player, int maxBind, out string error, string scope = "")
     {
         error = "";
         player = player.Trim();
@@ -155,7 +194,7 @@ public static class LoginStore
 
         lock (_lock)
         {
-            var binds = LoadBinds();   //全部绑定
+            var binds = LoadBinds(scope);   //全部绑定
 
             // 玩家已经被别的账号绑了
             foreach (var pair in binds)
@@ -194,8 +233,8 @@ public static class LoginStore
 
             var added = new List<string>(mine) { player };
             binds[accountId] = added;
-            SaveBinds(binds);
-            Log($"[绑定] 账号 {accountId} 绑定了玩家 {player}(现在 {added.Count} 个)");
+            SaveBinds(scope, binds);
+            Log($"[绑定] 账号 {accountId} 绑定了玩家 {player}(现在 {added.Count} 个){(scope.Length == 0 ? "" : ",数据分区 " + scope)}");
             return true;
         }
     }
@@ -207,7 +246,8 @@ public static class LoginStore
     /// <param name="accountId">账号 ID。</param>
     /// <param name="player">MC 玩家名。</param>
     /// <param name="maxBind">这个账号最多能绑几个玩家,<c>&lt;= 0</c> = 不限。</param>
-    public static string CheckBindLimit(int accountId, string player, int maxBind)
+    /// <param name="scope">数据分区,空 = 共享区。</param>
+    public static string CheckBindLimit(int accountId, string player, int maxBind, string scope = "")
     {
         player = player.Trim();
         if (accountId <= 0 || player.Length == 0)
@@ -217,7 +257,7 @@ public static class LoginStore
 
         lock (_lock)
         {
-            var binds = LoadBinds();   //全部绑定
+            var binds = LoadBinds(scope);   //全部绑定
 
             foreach (var pair in binds)
             {
@@ -254,7 +294,11 @@ public static class LoginStore
     }
 
     /// <summary>解绑一个指定的玩家。<paramref name="removed"/> 是真正被解掉的玩家名。</summary>
-    public static bool Unbind(int accountId, string player, out string removed)
+    /// <param name="accountId">账号 ID。</param>
+    /// <param name="player">MC 玩家名。</param>
+    /// <param name="removed">真正被解掉的玩家名(失败时空串)。</param>
+    /// <param name="scope">数据分区,空 = 共享区。</param>
+    public static bool Unbind(int accountId, string player, out string removed, string scope = "")
     {
         removed = "";
         player = player.Trim();
@@ -265,7 +309,7 @@ public static class LoginStore
 
         lock (_lock)
         {
-            var binds = LoadBinds();   //全部绑定
+            var binds = LoadBinds(scope);   //全部绑定
             if (!binds.TryGetValue(accountId, out var mine))
             {
                 return false;
@@ -284,14 +328,16 @@ public static class LoginStore
                 binds.Remove(accountId);
             }
 
-            SaveBinds(binds);
-            Log($"[解绑] 账号 {accountId} 解绑了玩家 {removed}(还剩 {mine.Count} 个)");
+            SaveBinds(scope, binds);
+            Log($"[解绑] 账号 {accountId} 解绑了玩家 {removed}(还剩 {mine.Count} 个){(scope.Length == 0 ? "" : ",数据分区 " + scope)}");
             return true;
         }
     }
 
     /// <summary>解绑这个账号名下的全部玩家(老客户端的 628 负载是空的,按这条走)。</summary>
-    public static List<string> UnbindAll(int accountId)
+    /// <param name="accountId">账号 ID。</param>
+    /// <param name="scope">数据分区,空 = 共享区。</param>
+    public static List<string> UnbindAll(int accountId, string scope = "")
     {
         var removed = new List<string>();
         if (accountId <= 0)
@@ -301,7 +347,7 @@ public static class LoginStore
 
         lock (_lock)
         {
-            var binds = LoadBinds();   //全部绑定
+            var binds = LoadBinds(scope);   //全部绑定
             if (!binds.TryGetValue(accountId, out var mine) || mine.Count == 0)
             {
                 return removed;
@@ -309,20 +355,21 @@ public static class LoginStore
 
             removed.AddRange(mine);
             binds.Remove(accountId);
-            SaveBinds(binds);
-            Log($"[解绑] 账号 {accountId} 解绑了全部玩家 {string.Join(" , ", removed)}");
+            SaveBinds(scope, binds);
+            Log($"[解绑] 账号 {accountId} 解绑了全部玩家 {string.Join(" , ", removed)}{(scope.Length == 0 ? "" : ",数据分区 " + scope)}");
         }
 
         return removed;
     }
 
     /// <summary>全部绑定:一个玩家一行(同一个账号有多个玩家时会出现多行)。</summary>
-    public static List<KeyValuePair<int, string>> AllBinds()
+    /// <param name="scope">数据分区,空 = 共享区。</param>
+    public static List<KeyValuePair<int, string>> AllBinds(string scope = "")
     {
         lock (_lock)
         {
             var rows = new List<KeyValuePair<int, string>>();
-            foreach (var pair in LoadBinds().OrderBy(p => p.Key))
+            foreach (var pair in LoadBinds(scope).OrderBy(p => p.Key))
             {
                 foreach (var name in pair.Value)
                 {
@@ -404,7 +451,10 @@ public static class LoginStore
     }
 
     /// <summary>持久登录表里有没有这个玩家(同玩家 + 同 IP 才算免确认;换 IP 要重新确认)。</summary>
-    public static bool HasPersistentLogin(string player, string ip)
+    /// <param name="player">玩家名,大小写不敏感。</param>
+    /// <param name="ip">本次连接的 IP;传空串 = 不校验 IP(老数据兼容)。</param>
+    /// <param name="maxAgeDays">免确认有效期(天),0 = 不限期;超期的记录当作没有。</param>
+    public static bool HasPersistentLogin(string player, string ip, int maxAgeDays = 0)
     {
         lock (_lock)
         {
@@ -429,6 +479,11 @@ public static class LoginStore
                     // ip 传空 = 不校验 IP(控制台/历史数据兼容),正常登录都带 IP
                     if (ip.Length == 0 || string.Equals(savedIp, ip, StringComparison.OrdinalIgnoreCase))
                     {
+                        if (Expired(fields.Length > 2 ? fields[2].Trim() : "", maxAgeDays))
+                        {
+                            continue;
+                        }
+
                         return true;
                     }
                 }
@@ -439,6 +494,41 @@ public static class LoginStore
             }
 
             return false;
+        }
+    }
+
+    /// <summary>这条记录的确认时间是不是已经超过有效期。</summary>
+    /// <remarks>没有时间字段的老记录一律当永不过期 —— 升个版本不该把所有人重新踢去确认。</remarks>
+    private static bool Expired(string savedAt, int maxAgeDays)
+    {
+        if (maxAgeDays <= 0 || savedAt.Length == 0)
+        {
+            return false;
+        }
+
+        return DateTime.TryParse(savedAt, out var when) && DateTime.Now - when > TimeSpan.FromDays(maxAgeDays);
+    }
+
+    /// <summary>清空持久登录表:所有人下次进服都要重新确认一次。</summary>
+    public static void ClearPersistentLogins()
+    {
+        lock (_lock)
+        {
+            try
+            {
+                if (!File.Exists(PersistentFile))
+                {
+                    return;
+                }
+
+                var count = ReadLines(PersistentFile).Count(line => line.Trim().Length > 0);
+                WriteLines(PersistentFile, new List<string>());
+                Log($"[免确认] 已清空持久登录表({count} 条),之后的进服都要重新确认");
+            }
+            catch (Exception ex)
+            {
+                Logger.Log(LogLevel.Warning, "[登录] 清空持久登录表失败: " + ex.Message);
+            }
         }
     }
 
@@ -459,19 +549,22 @@ public static class LoginStore
     }
 
     /// <summary>读绑定表(读过就缓存)。每行 <c>账号ID=玩家名</c>,同一账号出现多行就是绑了多个玩家。</summary>
-    private static Dictionary<int, List<string>> LoadBinds()
+    /// <param name="scope">数据分区,空 = 共享区。</param>
+    private static Dictionary<int, List<string>> LoadBinds(string scope)
     {
-        if (_cache is not null)
+        scope = ResolveScope(scope);
+        if (_cache.TryGetValue(scope, out var cached))
         {
-            return _cache;
+            return cached;
         }
 
         var map = new Dictionary<int, List<string>>();
+        var file = BindFileOf(scope);
         try
         {
-            if (File.Exists(BindFile))
+            if (File.Exists(file))
             {
-                foreach (var line in ReadLines(BindFile))
+                foreach (var line in ReadLines(file))
                 {
                     var parts = line.Split('=', 2);   //拆分结果
                     if (parts.Length != 2 || !int.TryParse(parts[0].Trim(), out var id) || id <= 0)
@@ -504,16 +597,20 @@ public static class LoginStore
             Logger.Log(LogLevel.Warning, "[登录] 读绑定表失败,当作空的: " + ex.Message);
         }
 
-        _cache = map;
+        _cache[scope] = map;
         return map;
     }
 
     /// <summary>落盘绑定表(一个玩家一行,同一账号的多行挨在一起)。</summary>
-    private static void SaveBinds(Dictionary<int, List<string>> map)
+    /// <param name="scope">数据分区,空 = 共享区。</param>
+    /// <param name="map">账号 ID → 玩家名列表。</param>
+    private static void SaveBinds(string scope, Dictionary<int, List<string>> map)
     {
+        scope = ResolveScope(scope);
         try
         {
-            var dir = Path.GetDirectoryName(BindFile);
+            var file = BindFileOf(scope);
+            var dir = Path.GetDirectoryName(file);
             if (!string.IsNullOrEmpty(dir))
             {
                 Directory.CreateDirectory(dir);
@@ -521,8 +618,8 @@ public static class LoginStore
 
             var lines = map.OrderBy(p => p.Key)
                 .SelectMany(p => p.Value.Select(player => $"{p.Key}={player}"));
-            WriteLines(BindFile, lines);
-            _cache = map;
+            WriteLines(file, lines);
+            _cache[scope] = map;
         }
         catch (Exception ex)
         {

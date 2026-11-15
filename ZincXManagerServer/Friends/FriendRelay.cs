@@ -305,7 +305,12 @@ internal static partial class Program
             }
             catch (Exception ex)
             {
-                Logger.Log(LogLevel.Warning, $"[好友] 给 {connection.RemoteEndPoint} 推上下线失败(可能对方刚好下线):{ex.Message}");
+                //IP 后面带上收件人的账号,断了以后翻日志才知道是谁没收到
+                var target = _server?.Registry.Find(connection.Id);
+                var account = target is null || target.User.Length == 0
+                    ? ""
+                    : $" [账号#{target.AccountId}/{target.User}]";
+                Logger.Log(LogLevel.Warning, $"[好友] 给 {connection.RemoteEndPoint}{account} 推上下线失败(可能对方刚好下线):{ex.Message}");
             }
         }));
 

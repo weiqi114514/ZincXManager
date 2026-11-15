@@ -1,0 +1,24 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="ZincXManagerClient.Views.ProgressDialog"
+        Title="请稍候"
+        Width="360" Height="160" CanResize="False"
+        Background="{DynamicResource ThemeWindowVeil}"
+        TransparencyLevelHint="AcrylicBlur,Blur,Transparent"
+        FontFamily="Microsoft YaHei UI, Microsoft YaHei, Segoe UI"
+        WindowDecorations="None"
+        ShowInTaskbar="False"
+        WindowStartupLocation="CenterOwner">
+
+  <!-- 没有标题栏按钮:进度条跑完由调用方 Finish() 收掉 -->
+  <Grid RowDefinitions="4,*">
+    <Border Grid.Row="0" Background="{DynamicResource ThemePrimary}"/>
+
+    <StackPanel Grid.Row="1" Margin="20,14,20,16" Spacing="10" VerticalAlignment="Center">
+      <TextBlock Text="请稍候" FontSize="15" FontWeight="SemiBold" Foreground="#1F3B3A"/>
+      <TextBlock x:Name="MessageText" Text="正在处理…" FontSize="12.5" Foreground="#4A6B78" TextWrapping="Wrap"/>
+      <ProgressBar IsIndeterminate="True" Height="6" Margin="0,4,0,0"
+                   Foreground="{DynamicResource ThemePrimary}" Background="{DynamicResource ThemeLight}"/>
+    </StackPanel>
+  </Grid>
+</Window>

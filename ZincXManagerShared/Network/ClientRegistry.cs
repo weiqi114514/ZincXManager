@@ -19,6 +19,9 @@ public sealed class ClientInfo
     /// <summary>登录后的账号名(没登录就是空)。</summary>
     public string User { get; set; } = "";
 
+    /// <summary>登录后的账号 ID(没登录就是 0)。</summary>
+    public int AccountId { get; set; }
+
     /// <summary>权限等级(登录后由账号决定;没登录是 "-")。</summary>
     public string Level { get; set; } = "-";
 
@@ -87,13 +90,14 @@ public sealed class ClientRegistry
         }
     }
 
-    /// <summary>登录成功后补账号名与权限等级。</summary>
-    public void SetAccount(Guid id, string user, string level)
+    /// <summary>登录成功后补账号名、权限等级与账号 ID。</summary>
+    public void SetAccount(Guid id, string user, string level, int accountId = 0)
     {
         if (_map.TryGetValue(id, out var info))
         {
             info.User = user;
             info.Level = level;
+            info.AccountId = accountId;
         }
     }
 

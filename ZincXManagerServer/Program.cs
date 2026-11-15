@@ -20,6 +20,7 @@ using ZincXManagerServer.Command;  // 子服自身
 using TcpClient = ZincXManagerShared.Network.TcpClient;
 
 using ZincXManagerServer.Login;  // 归属地查询
+using ZincXManager.Server.Zxms;  // 多服数据分离:服务器登记 / 分区分层
 using ZincXManagerShared.Login;  // 绑定表 / 持久登录表 / 登录日志
 
 namespace ZincXManagerServer;
@@ -144,6 +145,9 @@ internal static partial class Program
 
     /// <summary>ZXMM 执行接口(懒创建)。</summary>
     private static Zxmm.ZxmmApi? _zxmmApi;
+
+    /// <summary>登记表里其它服务器的 ZXMM 专用通道(服务器编号 → 客户端);默认服那台仍旧走 <see cref="_zxmmApi"/>。</summary>
+    private static readonly Dictionary<int, Zxmm.ZxmmApi> _zxmmApis = new();
     // 官方服务端默认端口:25000(客户端默认也是 zxm.zincms.top:25000)
     private const string DefaultOsPort = "25000";
     private const string DefaultCzPort = "25566";
@@ -200,6 +204,27 @@ internal static partial class Program
     /// <summary>当前绑定上限(控制台 bind 命令要按同一条规矩判断)。</summary>
     internal static int BindMax => _bindMax;
 
+    /// <summary>多服数据分离开关(config 的 data-separation):1 = 数据按 MC 服分目录存,0 = 全部共享。</summary>
+    private const string KeyDataSeparation = "data-separation";
+
+    /// <summary>要按服分离的数据键号(config 的 data-separation-list),逗号分隔,键号见 countdataseparationkey.ini。</summary>
+    private const string KeyDataSeparationList = "data-separation-list";
+
+    /// <summary>免确认保持天数(config 的 persistdays):同玩家同 IP 在这几天内进服不用再确认。</summary>
+    private const string KeyPersistDays = "persistdays";
+
+    /// <summary>免确认保持天数的默认值:30 天,逾期要重新确认一次。</summary>
+    private const int DefaultPersistDays = 30;
+
+    /// <summary>每次都要确认(config 的 confirmalways):1 = 不看持久登录表,谁都弹窗。</summary>
+    private const string KeyConfirmAlways = "confirmalways";
+
+    /// <summary>免确认保持天数当前值(0 = 不限期)。</summary>
+    private static int _persistDays = DefaultPersistDays;
+
+    /// <summary>是不是每次登录都要确认(打开时持久登录表等于失效,并且启动/开启时会被清空)。</summary>
+    private static bool _confirmAlways;
+
 
 
     /// <summary>强制更新的门槛版本;空串表示"跟本端版本一致"。</summary>
@@ -219,6 +244,12 @@ internal static partial class Program
 
     /// <summary>监听 ZXMC / ZXMM 的服务端;登记表在它的 Registry 上,中转时也靠它推消息。</summary>
     private static TcpServer? _server;
+
+    /// <summary>客户端最近一次切换到的 MC 服务器编号(连接 → 编号),后续按服取数据时用它;连接断开就清掉。</summary>
+    private static readonly Dictionary<TcpConnection, int> _clientServer = new();
+
+    /// <summary>保护 <see cref="_clientServer"/>:收包在分派线程,断开回调在收发线程,两个都会动它。</summary>
+    private static readonly object _clientServerLock = new();
 
     /// <summary>账号表(users.ini):注册 / 登录都查它;控制台 account 命令也用它。</summary>
     private static readonly AccountStore Accounts = new("User/Data");
@@ -330,7 +361,7 @@ internal static partial class Program
         try
         {
             await packet.WriteAsync(new Packet(packet.Id, ackType, Encoding.UTF8.GetBytes(text)));
-            Logger.Log(LogLevel.Info, $"[{peer}] 已回复握手确认({ackName}) → {packet.Connection.RemoteEndPoint},握手完成");
+            Logger.Log(LogLevel.Info, $"[{peer}] 已回复握手确认({ackName}) → {Where(packet.Connection)},握手完成");
         }
         catch (Exception ex)
         {
@@ -503,13 +534,33 @@ internal static partial class Program
         }
     }
 
+    /// <summary>
+    /// 日志里描述一条连接:IP 后面补上已登录的账号(「[账号#ID/名称]」),没登录就只给 IP。
+    /// 账号信息来自 ClientRegistry(登录 / 注册成功时写入),断线后随连接一起消失。
+    /// </summary>
+    private static string Where(TcpConnection connection)
+    {
+        var address = connection.RemoteEndPoint?.ToString() ?? "?";
+        var info = _server?.Registry.Find(connection.Id);
+        return info is null || info.User.Length == 0
+            ? address
+            : $"{address} [账号#{info.AccountId}/{info.User}]";
+    }
+
     /// <summary>按 zxmmapi=host:port 建接口客户端(支持 [::1]:21200)</summary>
     private static Zxmm.ZxmmApi CreateZxmmApi()
+    {
+        var (host, port) = SplitZxmmApiAddress(_zxmmApiAddress);
+        return new Zxmm.ZxmmApi(host, port, _zxmmToken);
+    }
+
+    /// <summary>把 zxmmapi 的 host:port 拆开(支持 [::1]:21200);拆不出来时按 127.0.0.1:21200 兜底。</summary>
+    private static (string Host, int Port) SplitZxmmApiAddress(string address)
     {
         var host = "127.0.0.1";
         var port = 21200;
 
-        var text = _zxmmApiAddress.Trim();
+        var text = address.Trim();
 
         // IPv6 字面量必须带方括号,端口在方括号外:[::1]:21200
         if (text.StartsWith('['))
@@ -539,7 +590,56 @@ internal static partial class Program
             }
         }
 
-        return new Zxmm.ZxmmApi(host, port, _zxmmToken);
+        return (host, port);
+    }
+
+    /// <summary>
+    /// 按登记表给每台服务器连一条 ZXMM 专用通道;建不起来只记 Warn,不影响启动。
+    ///
+    /// <para>主机一律取 zxmmapi 配的 host 部分(同一台机器上的多个 MC 服只差端口),端口取登记表的 Port。
+    /// 同一端口只连一条 —— 模组接受多连接,连两条会让同一个进服事件上报两次。
+    /// 本期只建连备查:踢人 / 查询 / 广播仍旧走 <see cref="_zxmmApi"/>,不按服务器路由。</para>
+    /// </summary>
+    private static void ConnectAllZxmm()
+    {
+        if (Servers.All.Count == 0)
+        {
+            Logger.Log(LogLevel.Info, "[ZXMM] 登记表里没有服务器 → 只保留默认专用通道");
+            return;
+        }
+
+        var (host, defaultPort) = SplitZxmmApiAddress(_zxmmApiAddress);
+        var connectedPorts = new HashSet<int> { defaultPort };   //已经连过的端口,默认通道占一个
+
+        foreach (var entry in Servers.All)
+        {
+            if (!connectedPorts.Add(entry.Port))
+            {
+                Logger.Log(LogLevel.Info,
+                    $"[ZXMM] 服务器 {entry.Id}({entry.Name}) 的端口 {entry.Port} 已经有连接 → 不重复建连");
+                continue;
+            }
+
+            try
+            {
+                // 登记项自己带令牌就用它的,没填则跟全局 zxmmtoken
+                var api = new Zxmm.ZxmmApi(host, entry.Port, entry.Token.Length > 0 ? entry.Token : _zxmmToken);
+                api.ServerIdentified += (id, name) =>
+                    Logger.Log(LogLevel.Info, $"[ZXMM] 服务器 {entry.Id}({entry.Name}) 报上身份 {id}({name})");
+                api.Start();
+                _zxmmApis[entry.Id] = api;
+                _zxmmApi ??= api;   //默认接口已经建好时不会覆盖,只有兜底路径才由第一台顶上
+                Logger.Log(LogLevel.Info,
+                    $"[ZXMM] 服务器 {entry.Id}({entry.Name}) 专用通道 → {host}:{entry.Port}(断了自动重连)");
+            }
+            catch (Exception ex)
+            {
+                // 一台建不起来不能让整个启动失败
+                Logger.Log(LogLevel.Warning, $"[ZXMM] 服务器 {entry.Id}({entry.Name}) 专用通道建不起来 → {ex.Message}");
+            }
+        }
+
+        Logger.Log(LogLevel.Info, $"[ZXMM] 多服专用通道就绪 {_zxmmApis.Count} 条(默认通道另算)");
     }
 
     /// <summary>
@@ -607,7 +707,7 @@ internal static partial class Program
             return;
         }
 
-        if (LoginStore.HasPersistentLogin(player, ip))
+        if (!_confirmAlways && LoginStore.HasPersistentLogin(player, ip, _persistDays))
         {
             LoginStore.Log($"[配置阶段] 玩家 {player}({ip}) 在持久登录表里(同 IP),放行");
             return;
@@ -683,7 +783,7 @@ internal static partial class Program
         }
 
         // ③ 持久登录表 → 记进登录数组,放行
-        if (LoginStore.HasPersistentLogin(player, ip))
+        if (!_confirmAlways && LoginStore.HasPersistentLogin(player, ip, _persistDays))
         {
             AddToLoginArray(player);
             LoginStore.Log($"[持久登录] 玩家 {player}({ip}) 在持久登录表里,放行");
@@ -803,7 +903,7 @@ internal static partial class Program
         {
             Interlocked.Increment(ref _droppedPackets);
             WarnRateLimited(packet.Connection.Id.ToString(),
-                $"[限速] {packet.Connection.RemoteEndPoint} 发包太快,已丢弃 type={packet.Type}");
+                $"[限速] {Where(packet.Connection)} 发包太快,已丢弃 type={packet.Type}");
             return;
         }
 
@@ -830,7 +930,7 @@ internal static partial class Program
                 var handshake = new SessionHandshake();
                 await packet.Connection.SendAsync(Protocol.SessionHelloAck, handshake.PublicKey, packet.Id);
                 packet.Connection.Crypto = handshake.Complete(packet.Data, isServer: true);
-                Logger.Log(LogLevel.Info, $"[会话] 与 ZXMC 建立加密通道 ← {packet.Connection.RemoteEndPoint}");
+                Logger.Log(LogLevel.Info, $"[会话] 与 ZXMC 建立加密通道 ← {Where(packet.Connection)}");
                 break;
             }
 
@@ -840,7 +940,7 @@ internal static partial class Program
                 // 未协商加密的登录一律拒绝:登录凭据不能走明文链路(否则抓包就能重放)
                 if (packet.Connection.Crypto is null)
                 {
-                    Logger.Log(LogLevel.Warning, $"[安全] 拒绝明文登录 ← {packet.Connection.RemoteEndPoint}(客户端过旧,需更新)");
+                    Logger.Log(LogLevel.Warning, $"[安全] 拒绝明文登录 ← {Where(packet.Connection)}(客户端过旧,需更新)");
                     await packet.Connection.SendAsync(Protocol.AccountLoginAck,
                         "err|客户端版本过旧(缺少加密会话),请更新到 a0.3.1 或更高版本", packet.Id);
                     break;
@@ -913,9 +1013,9 @@ internal static partial class Program
                 if (ok)
                 {
                     _loginLimiter.RecordSuccess(fromIp);
-                    _server.Registry.SetAccount(packet.Connection.Id, account!.Name, account.Level);
+                    _server.Registry.SetAccount(packet.Connection.Id, account!.Name, account.Level, account.Id);
                     Accounts.Touch(account.Name, fromIp, machine);
-                    Logger.Log(LogLevel.Info, $"[账号] 登录成功:{account.Name}({account.Level}) ← {packet.Connection.RemoteEndPoint}");
+                    Logger.Log(LogLevel.Info, $"[账号] 登录成功:{account.Name}({account.Level}) ← {Where(packet.Connection)}");
                     ClientLog.Write(account.Level, $"登录 账号={account.Name} 地址={packet.Connection.RemoteEndPoint}");
 
                     await packet.SendAsync(Protocol.AccountLoginAck,
@@ -926,8 +1026,11 @@ internal static partial class Program
                 else
                 {
                     _loginLimiter.RecordFailure(fromIp);
-                    // 本该由官方端校验、但官方端掉线时,别只报「账号不存在」——玩家会以为是账号没了
-                    var reason = side == "zxmos" && _os is not { IsConnected: true }
+                    // 只有「本地确实没有这个账号」才提官方端:那种情况本来就该去官方端校验,掉线才是真原因;
+                    // 密码错误 / 等级不符本地就能判定,拼上官方端会让玩家以为必须连官方端才能登录
+                    // 文案与 AccountStore.TryLogin / TryLoginProof 里「账号不存在」那一支逐字一致
+                    const string missingAccount = "账号不存在";
+                    var reason = side == "zxmos" && _os is not { IsConnected: true } && error == missingAccount
                         ? error + "(官方服务端未连接,暂时无法校验官方账号,请稍后再试)"
                         : error;
 
@@ -990,9 +1093,9 @@ internal static partial class Program
                 {
                     _loginLimiter.RecordSuccess(regIp);
                     // 注册成功也要登记账号 + 记下 IP/机器码:否则这条连接在拉黑时踢不掉,也少一条连坐
-                    _server.Registry.SetAccount(packet.Connection.Id, account!.Name, account.Level);
+                    _server.Registry.SetAccount(packet.Connection.Id, account!.Name, account.Level, account.Id);
                     Accounts.Touch(account.Name, regIp, regMachine);
-                    Logger.Log(LogLevel.Info, $"[账号] 注册成功:{account.Name}({account.Level}) ← {packet.Connection.RemoteEndPoint}");
+                    Logger.Log(LogLevel.Info, $"[账号] 注册成功:{account.Name}({account.Level}) ← {Where(packet.Connection)}");
                     ClientLog.Write(account.Level, $"注册 账号={account.Name} 地址={packet.Connection.RemoteEndPoint}");
 
                     await packet.SendAsync(Protocol.AccountRegisterAck,
@@ -1020,7 +1123,7 @@ internal static partial class Program
                 // 没登录就不知道是谁报的:丢弃(账号名是这条缓存的键,没有键就存不了)
                 if (reporter is null || reporter.User.Length == 0)
                 {
-                    Logger.Log(LogLevel.Warning, $"[局域网地址] 未登录的连接上报了地址 {reportForLog},已忽略 ← {packet.Connection.RemoteEndPoint}");
+                    Logger.Log(LogLevel.Warning, $"[局域网地址] 未登录的连接上报了地址 {reportForLog},已忽略 ← {Where(packet.Connection)}");
                     break;
                 }
 
@@ -1446,7 +1549,7 @@ internal static partial class Program
             case Protocol.Notice:
             case Protocol.Push:
                 Logger.Log(LogLevel.Warning,
-                    $"[ZXMS] 客户端试图发服务端消息 type={packet.Type},已忽略 ← {packet.Connection.RemoteEndPoint}");
+                    $"[ZXMS] 客户端试图发服务端消息 type={packet.Type},已忽略 ← {Where(packet.Connection)}");
                 break;
 
             // ---- 好友:每个动作一行,真正的判断在 Friends 目录里的处理器 ----
@@ -1493,6 +1596,47 @@ internal static partial class Program
             case Protocol.FriendRemark:
                 await HandleFriendRemarkAsync(packet, config);
                 break;
+
+            // ---- 多服数据分离:客户端要服务器列表 / 切换当前服务器 ----
+            case Protocol.ServerListReq:
+            {
+                var lines = new List<string>();   //每行一台:编号|名称|端口
+                foreach (var entry in Servers.All)
+                {
+                    lines.Add($"{entry.Id}|{entry.Name}|{entry.Port}");
+                }
+
+                // 0 台时回空负载,客户端按空列表处理
+                var listText = string.Join('\n', lines);
+                await packet.WriteAsync(new Packet(packet.Id, Protocol.ServerList, Encoding.UTF8.GetBytes(listText)));
+                Logger.Log(LogLevel.Info,
+                    $"[数据分离] 客户端 {Where(packet.Connection)} 要服务器列表 → 回 {lines.Count} 台");
+                break;
+            }
+
+            case Protocol.ServerSwitchReq:
+            {
+                var targetText = Encoding.UTF8.GetString(packet.Data).Trim();   //目标服务器编号(十进制)
+                if (!int.TryParse(targetText, out var targetId) || !Servers.TryGet(targetId, out var target))
+                {
+                    var err = Encoding.UTF8.GetBytes("err|没有这个服务器");
+                    await packet.WriteAsync(new Packet(packet.Id, Protocol.ServerSwitchAck, err));
+                    Logger.Log(LogLevel.Warning,
+                        $"[数据分离] 客户端 {Where(packet.Connection)} 切到服务器「{targetText}」→ 没有这个服务器");
+                    break;
+                }
+
+                lock (_clientServerLock)
+                {
+                    _clientServer[packet.Connection] = target.Id;
+                }
+
+                var okText = Encoding.UTF8.GetBytes($"ok|{target.Id}");
+                await packet.WriteAsync(new Packet(packet.Id, Protocol.ServerSwitchAck, okText));
+                Logger.Log(LogLevel.Info,
+                    $"[数据分离] 客户端 {Where(packet.Connection)} 切到服务器 {target.Id}({target.Name}) → ok");
+                break;
+            }
 
             // 其它类型先记日志(ZXMM 模组端的类型还没定,定了在这里加 case)
             default:
@@ -1688,45 +1832,96 @@ internal static partial class Program
             ? $"[绑定] 上限:一个账号最多绑 {_bindMax} 个玩家(config 里 {KeyBindMax} 可改,0 = 不限)"
             : $"[绑定] 上限:不限(config 里 {KeyBindMax}=0)");
 
+        // 免确认保持天数:缺配置写默认(30 天),0 = 不限期
+        var persistDaysText = config.MapGet(KeyPersistDays).Trim();   //配置里的天数
+        if (persistDaysText.Length == 0)
+        {
+            config.WriteFileMap(KeyPersistDays, DefaultPersistDays.ToString());
+            persistDaysText = DefaultPersistDays.ToString();
+            Logger.Log(LogLevel.Info, $"[CONFIG]{KeyPersistDays} 未配置,已写入默认值 {DefaultPersistDays}(免确认保持天数,0 = 不限期)");
+        }
+
+        _persistDays = int.TryParse(persistDaysText, out var parsedPersistDays) && parsedPersistDays >= 0
+            ? parsedPersistDays
+            : DefaultPersistDays;
+
+        // 每次都要确认:开着就把持久登录表清掉,让所有人下一次进服都重新点一次
+        _confirmAlways = config.MapGet(KeyConfirmAlways).Trim() == "1";
+        if (_confirmAlways)
+        {
+            LoginStore.ClearPersistentLogins();
+        }
+
+        Logger.Log(LogLevel.Info, _confirmAlways
+            ? $"[免确认] 关:每次进服都要确认(config 里 {KeyConfirmAlways}=0 可恢复)"
+            : _persistDays > 0
+                ? $"[免确认] 开:同玩家同 IP {_persistDays} 天内不用再确认(config 里 {KeyPersistDays} 可改,0 = 不限期)"
+                : $"[免确认] 开:同玩家同 IP 永久免确认(config 里 {KeyPersistDays}=0)");
+
         // 令牌:和模组 config 里的 api.token 一致才校验。两边都空 = 不校验(默认)
         _zxmmToken = config.MapGet(KeyZxmmToken).Trim();
         Logger.Log(LogLevel.Info, _zxmmToken.Length > 0
             ? "[ZXMM] 令牌校验:开(config 里 zxmmtoken 非空)"
             : $"[ZXMM] 令牌校验:关(模组的 api.token 也留空才这样;要在 config 里补 {KeyZxmmToken}=…)");
 
+        // 多服数据分离:先读登记表,再读开关与键表,最后按上次留下的快照做一次迁移。
+        // 三步的顺序不能换 —— 迁移要按登记表列服务器、按键表定位文件,而且必须在绑定表被读之前跑完。
+        // 每一步的结论(读到几台 / 开关与键 / 迁没迁)在各自的类里已经打了日志,这里只补一句汇总,不重复刷屏。
+        Servers.Load();
+        DataSeparation.Load(config);
+        SeparationMigration.Run(config);
+        Logger.Log(LogLevel.Info, $"[数据分离] 启动就绪:登记服务器 {Servers.All.Count} 台," +
+            $"开关={(DataSeparation.Enabled ? "1(按服分目录)" : "0(全部共享)")}," +
+            $"分离键={(DataSeparation.SeparatedKeys.Count == 0 ? "无" : string.Join(",", DataSeparation.SeparatedKeys))}");
+
         // 和 ZXMM 建一条常驻连接:它推"玩家进服",我们下发"踢人/查询"任务
-        _zxmmApi = CreateZxmmApi();
-        _zxmmApi.PlayerJoined += (player, ip) =>
+        var zxmm = CreateZxmmApi();
+        _zxmmApi = zxmm;
+        zxmm.PlayerJoined += (player, ip) =>
         {
             // 异常必须打出来:Task.Run 里的异常没人看,静默吞掉就等于这条事件凭空消失
             _ = Task.Run(async () =>
             {
                 try
                 {
+                    // 这条事件属于哪台 MC 服:多服数据分离时绑定表就按它分目录(SS-<id>)
+                    LoginStore.CurrentScope.Value = DataSeparation.Scope("bind", zxmm.ServerId);
                     await HandlePlayerJoinedAsync(player, ip);
                 }
                 catch (Exception ex)
                 {
                     Logger.Log(LogLevel.Error, $"[ZXMM] 处理进服事件异常({player}): {ex}");
                 }
+                finally
+                {
+                    LoginStore.CurrentScope.Value = "";   // 线程会被复用,别把分区带给下一件事
+                }
             });
         };
-        _zxmmApi.PlayerJoining += (player, ip) =>
+        zxmm.PlayerJoining += (player, ip) =>
         {
             // configuration 阶段就来问一句:能放行就不回应,不能就踢(客户端显示理由、不会卡在加载界面)
             _ = Task.Run(async () =>
             {
                 try
                 {
+                    LoginStore.CurrentScope.Value = DataSeparation.Scope("bind", zxmm.ServerId);
                     await HandlePlayerJoiningAsync(player, ip);
                 }
                 catch (Exception ex)
                 {
                     Logger.Log(LogLevel.Error, $"[ZXMM] 处理连接中事件异常({player}): {ex}");
                 }
+                finally
+                {
+                    LoginStore.CurrentScope.Value = "";
+                }
             });
         };
-        _zxmmApi.Start();
+        zxmm.Start();
+
+        // 登记表里还有别的服务器:按同一套 host + 各自的端口把专用通道一并连上(本期只建连备查)
+        ConnectAllZxmm();
 
         return (config, serverName, connectOS);
     }
@@ -1755,7 +1950,7 @@ internal static partial class Program
         // 有人接进来:先中立记录身份未知,再主动报上"我是 ZXMS",让客户端按模式校验
         _server.Connected += async conn =>
         {
-            Logger.Log(LogLevel.Info, $"[网络] 连接接入 {conn.RemoteEndPoint}(等待握手识别身份)");
+            Logger.Log(LogLevel.Info, $"[网络] 连接接入 {Where(conn)}(等待握手识别身份)");
 
             try
             {
@@ -1796,7 +1991,13 @@ internal static partial class Program
             _packetLimiter.Forget(conn.Id.ToString());
             RateWarnedAt.TryRemove(conn.Id.ToString(), out _);
 
-            Logger.Log(LogLevel.Info, $"[{role}] 断开 {conn.RemoteEndPoint}");
+            // 记录过切服的连接也一起丢掉,不清理这个字典只增不减
+            lock (_clientServerLock)
+            {
+                _clientServer.Remove(conn);
+            }
+
+            Logger.Log(LogLevel.Info, $"[{role}] 断开 {Where(conn)}");
             if (info?.User is { Length: > 0 } gone)
             {
                 _ = AnnouncePresenceAsync(gone, Protocol.FriendEventKind.Offline);
@@ -1960,7 +2161,8 @@ internal static partial class Program
             whitelistProvider: () => Whitelist,
             serverAccountNameProvider: () => config.MapGet(KeyOsUser).Trim(),
             enterConfig: Command.ConfigMode.Enter,
-            zxmmProvider: () => _zxmmApi);
+            zxmmProvider: () => _zxmmApi,
+            serverProvider: () => _server);
 
         // 配置模式:进入后每一行都交给它,不再当命令分发
         cmd.LineInterceptor = line => Command.ConfigMode.Handle(line);
@@ -2485,7 +2687,7 @@ internal static partial class Program
                 }
                 catch (Exception ex)
                 {
-                    Logger.Log(LogLevel.Warning, $"[强制更新] 通知 {conn.RemoteEndPoint} 失败(对方可能已经断了): {ex.Message}");
+                    Logger.Log(LogLevel.Warning, $"[强制更新] 通知 {Where(conn)} 失败(对方可能已经断了): {ex.Message}");
                 }
             }
 
@@ -2500,7 +2702,7 @@ internal static partial class Program
                 }
                 catch (Exception ex)
                 {
-                    Logger.Log(LogLevel.Warning, $"[强制更新] 断开 {conn.RemoteEndPoint} 失败: {ex.Message}");
+                    Logger.Log(LogLevel.Warning, $"[强制更新] 断开 {Where(conn)} 失败: {ex.Message}");
                 }
             }
         }
@@ -2650,7 +2852,7 @@ internal static partial class Program
             }
             catch (Exception ex)
             {
-                Logger.Log(LogLevel.Warning, $"[消息] 发给 {conn.RemoteEndPoint} 失败(可能对方刚好下线): {ex.Message}");
+                Logger.Log(LogLevel.Warning, $"[消息] 发给 {Where(conn)} 失败(可能对方刚好下线): {ex.Message}");
             }
         }));
 
@@ -2721,6 +2923,10 @@ internal static partial class Program
             "forceupdate" => _forceUpdate ? "1" : "0",
             "minversion" => _minVersion,
             "bindmax" => _bindMax.ToString(),
+            KeyPersistDays => _persistDays.ToString(),
+            KeyConfirmAlways => _confirmAlways ? "1" : "0",
+            KeyDataSeparation => DataSeparation.Enabled ? "1" : "0",
+            KeyDataSeparationList => string.Join(",", DataSeparation.SeparatedKeys),
             _ => "",
         };
     }
@@ -2938,6 +3144,37 @@ internal static partial class Program
                     : "[绑定] 上限已改为不限(立刻生效)");
                 return "";
 
+            case KeyPersistDays:
+                if (!int.TryParse(value, out var persistDays) || persistDays is < 0 or > 3650)
+                {
+                    return "范围 0-3650(免确认保持多少天,0 = 不限期)";
+                }
+
+                _persistDays = persistDays;
+                config.WriteFileMap(KeyPersistDays, persistDays.ToString());
+                Logger.Log(LogLevel.Info, persistDays > 0
+                    ? $"[免确认] 保持天数已改成 {persistDays} 天(立刻生效)"
+                    : "[免确认] 已改为不限期(立刻生效)");
+                return "";
+
+            case KeyConfirmAlways:
+                if (value is not ("0" or "1"))
+                {
+                    return "只能是 1(每次都要确认)或 0(按天数免确认)";
+                }
+
+                _confirmAlways = value == "1";
+                config.WriteFileMap(KeyConfirmAlways, value);
+                if (_confirmAlways)
+                {
+                    LoginStore.ClearPersistentLogins();   //开了就当所有人重新确认一次
+                }
+
+                Logger.Log(LogLevel.Info, _confirmAlways
+                    ? "[免确认] 已关闭:持久登录表已清空,之后每次进服都要确认"
+                    : "[免确认] 已开启:同玩家同 IP 在期限内不用再确认");
+                return "";
+
             case "minversion":
                 // 留空 = 跟本端版本一致;填了必须是能认出类型的版本号,否则比较永远判旧、谁都进不来
                 if (value.Length > 0 && !LooksLikeVersion(value))
@@ -2957,6 +3194,47 @@ internal static partial class Program
                 }
 
                 return "";
+
+            case KeyDataSeparation:
+                // 只写文件:开关在启动时读进静态状态,热改会让内存里的分区规则和磁盘对不上
+                if (value is not ("0" or "1"))
+                {
+                    return "只能是 0 或 1";
+                }
+
+                config.WriteFileMap(KeyDataSeparation, value);
+                Logger.Log(LogLevel.Warning, $"[数据分离] 开关已写进 config = {value},重启 ZXMS 后生效");
+                return "";
+
+            case KeyDataSeparationList:
+            {
+                var separatedKeys = new List<int>();   //规范化后的键号(升序去重)
+                foreach (var raw in value.Split(','))
+                {
+                    var item = raw.Trim();
+                    if (item.Length == 0)
+                    {
+                        continue;
+                    }
+
+                    if (!int.TryParse(item, out var parsedKey) || parsedKey <= 0 || !DataSeparation.KeyTable.ContainsKey(parsedKey))
+                    {
+                        return $"键 {item} 不在 {DataSeparation.KeyTableFile} 里";
+                    }
+
+                    if (!separatedKeys.Contains(parsedKey))
+                    {
+                        separatedKeys.Add(parsedKey);
+                    }
+                }
+
+                separatedKeys.Sort();
+                var keysText = string.Join(",", separatedKeys);
+                config.WriteFileMap(KeyDataSeparationList, keysText);
+                Logger.Log(LogLevel.Warning,
+                    $"[数据分离] 分离键已写进 config = [{(keysText.Length == 0 ? "无" : keysText)}],重启 ZXMS 后生效");
+                return "";
+            }
 
             default:
                 return $"没有这个配置项:{key}(不能新增)";

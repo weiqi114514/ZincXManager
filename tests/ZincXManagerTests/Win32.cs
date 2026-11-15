@@ -174,6 +174,32 @@ public static class Win32
         return list;
     }
 
+    /// <summary>
+    /// 找进程的主窗口:可见、有标题、矩形有效,多个候选时取面积最大的那个。
+    /// 不用 Process.MainWindowHandle —— 它对 Avalonia 进程会挑到输入法之类的 0x0 窗口。
+    /// </summary>
+    public static IntPtr MainWindowOf(int processId)
+    {
+        var best = IntPtr.Zero;
+        var bestArea = 0;
+        foreach (var (h, _) in WindowsOf(processId))
+        {
+            if (!GetWindowRect(h, out var r))
+            {
+                continue;
+            }
+
+            var area = (r.Right - r.Left) * (r.Bottom - r.Top);
+            if (area > bestArea)
+            {
+                bestArea = area;
+                best = h;
+            }
+        }
+
+        return best;
+    }
+
     /// <summary>按标题片段找窗口(找不到返回 IntPtr.Zero)</summary>
     public static IntPtr FindWindowByTitle(int processId, string part)
     {
