@@ -54,6 +54,33 @@ if (-not $Version) {
 }
 Write-Host "版本 $Version,并行度 $Jobs" -ForegroundColor Green
 
+# 版本号单一来源:所有项目都按 $Version 写一遍,免得改了主仓忘了官方端
+# (ZXMOS / ZXMTL 曾长期停在 b0.3.3,打出来的成品显示旧版本)。
+function Sync-Versions([string]$v) {
+    $numeric = $v -replace '^[a-z]+', ''
+    $targets = @(
+        (Join-Path $root 'ZincXManagerClient\ZincXManagerClient.csproj'),
+        (Join-Path $root 'ZincXManagerServer\ZincXManagerServer.csproj'),
+        (Join-Path $root 'ZincXManagerShared\ZincXManagerShared.csproj'),
+        (Join-Path $root 'ZincXManagerChat\ZincXManagerChat.csproj'),
+        (Join-Path $root 'tests\ZincXManagerTests\ZincXManagerTests.csproj'),
+        (Join-Path $official 'ZincXManagerOServer\ZincXManagerOServer.csproj'),
+        (Join-Path $official 'ZincXManagerLicTool\ZincXManagerLicTool.csproj')
+    )
+    foreach ($p in $targets) {
+        if (-not (Test-Path $p)) { continue }
+        $t = [System.IO.File]::ReadAllText($p)
+        $new = $t -replace '<Version>[^<]*</Version>', "<Version>$numeric</Version>"
+        $new = $new -replace '<FileVersion>[^<]*</FileVersion>', "<FileVersion>$numeric.0</FileVersion>"
+        $new = $new -replace '<InformationalVersion>[^<]*</InformationalVersion>', "<InformationalVersion>$v</InformationalVersion>"
+        if ($new -ne $t) {
+            [System.IO.File]::WriteAllText($p, $new, (New-Object System.Text.UTF8Encoding($false)))
+            Write-Host "    版本同步:$(Split-Path $p -Leaf) -> $v" -ForegroundColor DarkGray
+        }
+    }
+}
+Sync-Versions $Version
+
 # MSI 只认 x.y.z:third = 小版本*100 + 修复字母序号(a=1)
 function Get-MsiVersion([string]$v) {
     if ($v -notmatch '^[a-z]?(\d+)\.(\d+)\.(\d+)([a-z]?)$') { throw "版本号 $v 不符合 [类型][大].[中].[小][极小]" }
@@ -319,6 +346,13 @@ foreach ($name in $map.Keys) {
     # 只覆盖程序文件,config.ini / logs 这些运行期的内容不动
     Get-ChildItem $src -File -Include *.exe, *.dll, *.pdb, *.MD -Recurse | Copy-Item -Destination $dst -Force
     Write-Host "    $($map[$name])" -ForegroundColor DarkGray
+}
+# 「测试」是老布局留下的客户端目录,以前不在刷新范围里,一直停在一个月前的版本
+$legacyTest = Join-Path $Desktop '测试'
+if (Test-Path $legacyTest) {
+    Get-ChildItem (Join-Path $out 'ZXMC-win-x64') -File -Include *.exe, *.dll, *.pdb, *.MD -Recurse |
+        Copy-Item -Destination $legacyTest -Force
+    Write-Host "    测试(旧布局目录,同步成最新客户端)" -ForegroundColor DarkGray
 }
 $modDesktop = Join-Path $Desktop '6-模组 ZXMM'
 Get-ChildItem $modDesktop -Filter 'ZXMM-*.jar' -File | Where-Object { $_.Name -ne $jar.Name } | Remove-Item -Force
