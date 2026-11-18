@@ -80,7 +80,7 @@
 
     <!-- 搜索 -->
     <Grid Grid.Row="2" ColumnDefinitions="*,Auto" Margin="12,10,12,6">
-      <TextBox Grid.Column="0" x:Name="SearchBox" Watermark="搜索好友" FontSize="12" TextChanged="OnSearchTextChanged"/>
+      <TextBox Grid.Column="0" x:Name="SearchBox" PlaceholderText="搜索好友" FontSize="12" TextChanged="OnSearchTextChanged"/>
       <Button Grid.Column="1" Width="30" Padding="0" Margin="6,0,0,0" Classes="iconOnly"
               Background="Transparent" BorderThickness="0" Click="OnAddFriendClick" ToolTip.Tip="添加好友">
         <Path Data="M6,0 L6,12 M0,6 L12,6" Stroke="Black" StrokeThickness="1.6"

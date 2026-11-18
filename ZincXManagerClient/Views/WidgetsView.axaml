@@ -73,7 +73,7 @@
   <Grid RowDefinitions="Auto,*" Margin="24,18,24,16" RowSpacing="12">
 
     <!-- 顶部搜索 -->
-    <TextBox x:Name="SearchBox" Grid.Row="0" Classes="fnsearch" Watermark="搜索功能…"/>
+    <TextBox x:Name="SearchBox" Grid.Row="0" Classes="fnsearch" PlaceholderText="搜索功能…"/>
 
     <!-- 下方左右两半 -->
     <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">

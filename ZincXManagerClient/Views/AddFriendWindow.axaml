@@ -83,7 +83,7 @@
 
     <!-- 搜索框:完整 ID / 账户名 / 编号 三种输入 -->
     <TextBox Grid.Row="1" x:Name="SearchBox" Margin="14,14,14,6" FontSize="12.5"
-             Watermark="输入完整 ID、账户名或账户编号" TextChanged="OnSearchTextChanged"/>
+             PlaceholderText="输入完整 ID、账户名或账户编号" TextChanged="OnSearchTextChanged"/>
 
     <!-- 解析提示:告诉玩家这次会去哪个服务端找 -->
     <TextBlock Grid.Row="2" x:Name="HintText" Margin="16,0,16,8" FontSize="11"

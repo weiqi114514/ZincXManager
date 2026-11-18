@@ -283,9 +283,9 @@
           <CheckBox Content="日志(ZXMC 运行日志)" IsChecked="{Binding CategoryLog}"/>
           <CheckBox Content="更新日志(根目录 UpdateLog.MD)" IsChecked="{Binding CategoryChangelog}"/>
           <CheckBox Content="自定义网页" IsChecked="{Binding CategoryWeb}"/>
-          <TextBox Classes="field" Watermark="页签名称(例如:社区公告)" Text="{Binding WebName}"
+          <TextBox Classes="field" PlaceholderText="页签名称(例如:社区公告)" Text="{Binding WebName}"
                    IsVisible="{Binding ShowWebUrl}"/>
-          <TextBox Classes="field" Watermark="网页地址 https://example.com" Text="{Binding WebUrl}"
+          <TextBox Classes="field" PlaceholderText="网页地址 https://example.com" Text="{Binding WebUrl}"
                    IsVisible="{Binding ShowWebUrl}"/>
         </StackPanel>
       </Grid>

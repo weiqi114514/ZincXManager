@@ -165,7 +165,7 @@
         <Grid ColumnDefinitions="*,Auto,Auto">
           <TextBox Grid.Column="0" x:Name="InputBox" Margin="0,0,10,0" FontSize="12.5" MinHeight="34"
                    VerticalContentAlignment="Center"
-                   Watermark="输入消息…" AcceptsReturn="False" KeyDown="OnInputKeyDown"/>
+                   PlaceholderText="输入消息…" AcceptsReturn="False" KeyDown="OnInputKeyDown"/>
 
           <Button Grid.Column="1" MinWidth="66" MinHeight="34" Padding="0"
                   HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
@@ -213,7 +213,7 @@
         <StackPanel Grid.Row="1" Margin="14,14" Spacing="14">
           <StackPanel Spacing="6">
             <TextBlock Text="对象备注" FontSize="11.5" Foreground="{DynamicResource ThemeMuted}"/>
-            <TextBox x:Name="RemarkBox" FontSize="12.5" Watermark="给这个好友起个备注"/>
+            <TextBox x:Name="RemarkBox" FontSize="12.5" PlaceholderText="给这个好友起个备注"/>
           </StackPanel>
 
           <StackPanel Spacing="6">

@@ -7,6 +7,7 @@ using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Runtime.InteropServices;
+using System.Runtime.Versioning;  // SupportedOSPlatform:标注只在某个平台可用的方法
 using System.Security.Cryptography;
 using System.Text.Json;
 using System.Threading;
@@ -67,19 +68,10 @@ public static class UpdateService
                     return true;
                 }
 
-                // 注册表里有卸载项且装了本程序 → 安装版
-                using var key = Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall");
-                if (key is not null)
+                // 注册表里有卸载项且装了本程序 → 安装版(注册表只有 Windows 有)
+                if (OperatingSystem.IsWindows() && HasUninstallEntry())
                 {
-                    foreach (var sub in key.GetSubKeyNames())
-                    {
-                        using var app = key.OpenSubKey(sub);
-                        var name = app?.GetValue("DisplayName") as string;
-                        if (name is not null && name.Contains("ZincXManager", StringComparison.OrdinalIgnoreCase))
-                        {
-                            return true;
-                        }
-                    }
+                    return true;
                 }
             }
             catch (Exception ex)
@@ -89,6 +81,29 @@ public static class UpdateService
 
             return false;
         }
+    }
+
+    /// <summary>注册表的卸载项里有没有本程序(仅 Windows)。</summary>
+    [SupportedOSPlatform("windows")]
+    private static bool HasUninstallEntry()
+    {
+        using var key = Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall");
+        if (key is null)
+        {
+            return false;
+        }
+
+        foreach (var sub in key.GetSubKeyNames())
+        {
+            using var app = key.OpenSubKey(sub);
+            var name = app?.GetValue("DisplayName") as string;
+            if (name is not null && name.Contains("ZincXManager", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /// <summary>检查更新(useCache=true 时 24 小时内直接拿缓存)</summary>

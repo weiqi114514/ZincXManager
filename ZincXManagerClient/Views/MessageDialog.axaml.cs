@@ -67,7 +67,7 @@ public partial class MessageDialog : Window
     }
 
     /// <summary>单按钮:提示 / 报错。</summary>
-    public static async Task InfoAsync(Window owner, string title, string text, string ok = "确认", string hint = "")
+    public static async Task InfoAsync(Window? owner, string title, string text, string ok = "确认", string hint = "")
         => await ShowAsync(owner, new DialogOptions
         {
             Title = title,
@@ -77,7 +77,7 @@ public partial class MessageDialog : Window
         });
 
     /// <summary>警告弹窗:标题栏红色 + 感叹号,单个「确认」按钮。</summary>
-    public static async Task WarnAsync(Window owner, string title, string text, string ok = "确认", string hint = "")
+    public static async Task WarnAsync(Window? owner, string title, string text, string ok = "确认", string hint = "")
         => await ShowAsync(owner, new DialogOptions
         {
             Title = title,
@@ -88,7 +88,7 @@ public partial class MessageDialog : Window
         });
 
     /// <summary>双按钮:是 / 否。</summary>
-    public static async Task<bool> ConfirmAsync(Window owner, string title, string text,
+    public static async Task<bool> ConfirmAsync(Window? owner, string title, string text,
         string yes = "是", string no = "否", string hint = "")
     {
         var result = await ShowAsync(owner, new DialogOptions
@@ -103,7 +103,7 @@ public partial class MessageDialog : Window
     }
 
     /// <summary>填空弹窗:返回输入内容(取消返回 null)。</summary>
-    public static async Task<string?> AskAsync(Window owner, string title, string text,
+    public static async Task<string?> AskAsync(Window? owner, string title, string text,
         string placeholder = "", string ok = "确认", string hint = "", string value = "")
     {
         var result = await ShowAsync(owner, new DialogOptions
@@ -120,7 +120,7 @@ public partial class MessageDialog : Window
     }
 
     /// <summary>选择弹窗:返回选中项(取消返回 null)。</summary>
-    public static async Task<string?> ChooseAsync(Window owner, string title, string text, string[] choices,
+    public static async Task<string?> ChooseAsync(Window? owner, string title, string text, string[] choices,
         string ok = "确认", string hint = "")
     {
         var result = await ShowAsync(owner, new DialogOptions
@@ -137,7 +137,7 @@ public partial class MessageDialog : Window
     }
 
     /// <summary>警示 + <b>读满 5 秒才能确认</b> 的双按钮弹窗(用于"改官方服务端地址"这类危险操作)。 返回 true = 用户读完并确认;false = 取消 / 直接关掉窗口。</summary>
-    public static async Task<bool> ReadConfirmAsync(Window owner, string title, string text,
+    public static async Task<bool> ReadConfirmAsync(Window? owner, string title, string text,
         string confirm = "我已阅读,继续自定义", string cancel = "算了,保持官方", int seconds = 5, string hint = "")
     {
         var result = await ShowAsync(owner, new DialogOptions
@@ -154,23 +154,34 @@ public partial class MessageDialog : Window
     }
 
     /// <summary>弹一个自定义弹窗,等用户点按钮。</summary>
-    public static async Task<DialogResult> ShowAsync(Window owner, DialogOptions options)
+    public static async Task<DialogResult> ShowAsync(Window? owner, DialogOptions options)
     {
         var dialog = new MessageDialog();
         dialog.Configure(options);
 
+        // 没有宿主窗口时(控件还没挂进可视树 TopLevel 就是 null)退化成屏幕居中的非模态窗口,
+        // 用 Closed 事件自己收结果;否则仍按宿主位置居中并模态显示。
+        if (owner is not { } host)
+        {
+            var closed = new TaskCompletionSource<DialogResult>(TaskCreationOptions.RunContinuationsAsynchronously);
+            dialog.Closed += (_, _) => closed.TrySetResult(dialog._result);
+            dialog.WindowStartupLocation = WindowStartupLocation.CenterScreen;
+            dialog.Show();
+            return await closed.Task;
+        }
+
         // 显式按宿主窗口居中:CenterOwner 在某些环境下会退化成“屏幕居中”,
         // 这里用 owner 的屏幕位置 + 尺寸自己算一遍,保证弹窗压在宿主正中。
         dialog.WindowStartupLocation = WindowStartupLocation.Manual;
-        var ow = owner.Bounds.Width;
-        var oh = owner.Bounds.Height;
+        var ow = host.Bounds.Width;
+        var oh = host.Bounds.Height;
         var dw = dialog.Width;
         var dh = 216;   // 弹窗高度(SizeToContent=Height,先按设计稿估值;显示后 Avalonia 会自己收)
         dialog.Position = new PixelPoint(
-            (int)Math.Round(owner.Position.X + (ow - dw) / 2),
-            (int)Math.Round(owner.Position.Y + (oh - dh) / 2));
+            (int)Math.Round(host.Position.X + (ow - dw) / 2),
+            (int)Math.Round(host.Position.Y + (oh - dh) / 2));
 
-        await dialog.ShowDialog(owner);
+        await dialog.ShowDialog(host);
         return dialog._result;
     }
 

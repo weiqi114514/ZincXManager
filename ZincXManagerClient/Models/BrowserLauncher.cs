@@ -2,6 +2,7 @@ using System;  // 基础类型 / 常用静态方法
 using System.Collections.Generic;  // 泛型集合
 using System.IO;  // 文件与目录读写
 using Microsoft.Win32;  // 注册表(读浏览器/系统设置)
+using System.Runtime.Versioning;  // SupportedOSPlatform:标注只在某个平台可用的方法
 
 namespace ZincXManagerClient.Models;
 
@@ -28,6 +29,39 @@ public static class BrowserLauncher
         }
 
         // 1) 注册表:StartMenuInternet(系统登记的默认浏览器都在这儿)
+        //    注册表只有 Windows 有,别的平台直接跳过,免得读到 PlatformNotSupportedException。
+        if (OperatingSystem.IsWindows())
+        {
+            foreach (var (display, path) in ReadRegistryBrowsers())
+            {
+                Add(display, path);
+            }
+        }
+
+        // 2) 常见安装位置兜底(注册表不一定有)
+        var pf = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
+        var pf86 = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86);
+        var local = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+
+        Add("Edge", Path.Combine(pf86, @"Microsoft\Edge\Application\msedge.exe"));
+        Add("Edge", Path.Combine(pf, @"Microsoft\Edge\Application\msedge.exe"));
+        Add("Chrome", Path.Combine(pf, @"Google\Chrome\Application\chrome.exe"));
+        Add("Chrome", Path.Combine(pf86, @"Google\Chrome\Application\chrome.exe"));
+        Add("Chrome", Path.Combine(local, @"Google\Chrome\Application\chrome.exe"));
+        Add("Firefox", Path.Combine(pf, @"Mozilla Firefox\firefox.exe"));
+        Add("Firefox", Path.Combine(pf86, @"Mozilla Firefox\firefox.exe"));
+        Add("360 浏览器", Path.Combine(local, @"360Chrome\Chrome\Application\360chrome.exe"));
+        Add("360 极速浏览器", Path.Combine(pf86, @"360\360Chrome\Chrome\Application\360chrome.exe"));
+
+        return found;
+    }
+
+    /// <summary>从注册表读出系统登记的浏览器(仅 Windows;路径没做存在性检查,交给调用方筛)。</summary>
+    [SupportedOSPlatform("windows")]
+    private static List<(string Display, string Command)> ReadRegistryBrowsers()
+    {
+        var list = new List<(string, string)>();
+
         foreach (var root in new[] { Registry.LocalMachine, Registry.CurrentUser })
         {
             try
@@ -64,7 +98,7 @@ public static class BrowserLauncher
                         }
                     }
 
-                    Add(display, path);
+                    list.Add((display, path));
                 }
             }
             catch
@@ -73,21 +107,6 @@ public static class BrowserLauncher
             }
         }
 
-        // 2) 常见安装位置兜底(注册表不一定有)
-        var pf = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
-        var pf86 = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86);
-        var local = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-
-        Add("Edge", Path.Combine(pf86, @"Microsoft\Edge\Application\msedge.exe"));
-        Add("Edge", Path.Combine(pf, @"Microsoft\Edge\Application\msedge.exe"));
-        Add("Chrome", Path.Combine(pf, @"Google\Chrome\Application\chrome.exe"));
-        Add("Chrome", Path.Combine(pf86, @"Google\Chrome\Application\chrome.exe"));
-        Add("Chrome", Path.Combine(local, @"Google\Chrome\Application\chrome.exe"));
-        Add("Firefox", Path.Combine(pf, @"Mozilla Firefox\firefox.exe"));
-        Add("Firefox", Path.Combine(pf86, @"Mozilla Firefox\firefox.exe"));
-        Add("360 浏览器", Path.Combine(local, @"360Chrome\Chrome\Application\360chrome.exe"));
-        Add("360 极速浏览器", Path.Combine(pf86, @"360\360Chrome\Chrome\Application\360chrome.exe"));
-
-        return found;
+        return list;
     }
 }

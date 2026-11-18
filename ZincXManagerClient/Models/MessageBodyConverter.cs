@@ -21,7 +21,7 @@ public class MessageBodyConverter : IValueConverter
         {
             return MessageFormat.Render(text);
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             // 渲染出错就退回纯文本,别让消息卡片空着
             return new Avalonia.Controls.TextBlock

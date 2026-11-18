@@ -41,14 +41,14 @@
       <!-- 备注(可选) -->
       <StackPanel Grid.Row="1" Spacing="6" Margin="0,16,0,0">
         <TextBlock Text="备注(可选)" FontSize="11.5" Foreground="{DynamicResource ThemeMuted}"/>
-        <TextBox x:Name="RemarkBox" FontSize="12.5" Watermark="给这个人起个你能认出来的名字"/>
+        <TextBox x:Name="RemarkBox" FontSize="12.5" PlaceholderText="给这个人起个你能认出来的名字"/>
       </StackPanel>
 
       <!-- 添加信息(必填:对方要知道是谁在申请) -->
       <StackPanel Grid.Row="2" Spacing="6" Margin="0,12,0,0">
         <TextBlock Text="添加信息" FontSize="11.5" Foreground="{DynamicResource ThemeMuted}"/>
         <TextBox x:Name="MessageBox" FontSize="12.5" Height="72" AcceptsReturn="True"
-                 TextWrapping="Wrap" Watermark="说一下你是谁,对方通过时能看到"
+                 TextWrapping="Wrap" PlaceholderText="说一下你是谁,对方通过时能看到"
                  TextChanged="OnMessageTextChanged"/>
         <!-- 空着点发送时的提示:不拦下这一步,服务端那边没有「申请者是谁」可看 -->
         <TextBlock x:Name="MessageHint" Text="" FontSize="10.5" Foreground="#C62828"
