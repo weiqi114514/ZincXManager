@@ -1,4 +1,5 @@
 using System;  // 基础类型 / 常用静态方法
+using System.Text;  // StringBuilder 拼多行块
 using System.Threading.Tasks;  // async / await 异步
 using ZincXManagerShared.Account;  // 共享库
 using System.Linq;  // LINQ 查询
@@ -639,7 +640,7 @@ public static class ZxmsCommands
         }
     }
 
-    /// <summary>注册封禁命令(ban add / user / del / list)</summary>
+    /// <summary>注册封禁命令(ban add / user / del / purge / list)</summary>
     private static void RegisterBanCommands(CommandHandler cmd, Func<AccountStore> accountProvider, Func<BanStore> banProvider)
     {
         cmd.Register("ban add", args => CmdBanAdd(banProvider(), args),
@@ -651,29 +652,102 @@ public static class ZxmsCommands
             "ban user tester 30d 开挂 --ip --machine");
 
         cmd.Register("ban del", args => CmdBanDel(banProvider(), args),
-            "解封:ban del <user|ip|machine> <值>",
-            "ban del ip 1.2.3.4");
+            "解封(带 confirm 才真删):ban del <user|ip|machine> <值> [confirm]",
+            "ban del ip 1.2.3.4 confirm");
+
+        cmd.Register("ban purge", args => CmdBanPurge(banProvider(), args),
+            "清理某类封禁(带 confirm 才真删):ban purge <user|ip|machine> [confirm]",
+            "ban purge machine confirm");
 
         cmd.Register("ban list", _ => CmdBanList(banProvider()),
             "查看封禁列表",
             "ban list");
     }
 
-    /// <summary>ban del:删掉一条封禁(按类型 + 值)。</summary>
+    /// <summary>ban purge:按类型清掉某类封禁记录(其它类型一条不动)。不带 confirm 只预览,一条都不删。</summary>
+    private static void CmdBanPurge(BanStore bans, string[] args)
+    {
+        if (args.Length < 1)
+        {
+            Logger.Log(LogLevel.Warning, "[封禁] 用法:ban purge <user|ip|machine> 或 ban purge <user|ip|machine> confirm");
+            return;
+        }
+
+        var kind = args[0].Trim().ToLowerInvariant();   // 要清理的类型
+        if (kind is not ("user" or "ip" or "machine"))
+        {
+            Logger.Log(LogLevel.Warning, "[封禁] 用法:ban purge <user|ip|machine> 或 ban purge <user|ip|machine> confirm");
+            return;
+        }
+
+        // 第二个词必须是 confirm 才真删;没写或写成别的都只预览(不可撤销的操作不给一次机会就执行)
+        var confirmed = args.Length >= 2 && args[1].Trim().Equals("confirm", StringComparison.OrdinalIgnoreCase);
+
+        if (!confirmed)
+        {
+            var count = bans.CountKind(kind);   // 这一类有多少条(含已过期,PurgeKind 也按这个口径删)
+            if (count == 0)
+            {
+                Logger.Log(LogLevel.Info, $"[封禁] 没有 {kind} 类记录,无需清理");
+                return;
+            }
+
+            var total = bans.StoredCount;   // 全部类型的条数(含已过期)
+            LogBlock(
+                $"[封禁] 将要清理 {kind} 类记录 {count} 条(共 {total} 条,剩余 {total - count} 条)\n" +
+                $"[封禁] 此操作不可撤销。确认请再执行:ban purge {kind} confirm");
+            return;
+        }
+
+        var before = bans.StoredCount;   // 清理前的总条数(含已过期)
+        var removed = bans.PurgeKind(kind);   // 清掉的条数
+        if (removed == 0)
+        {
+            Logger.Log(LogLevel.Info, $"[封禁] 没有 {kind} 类记录,无需清理");
+            return;
+        }
+
+        var left = bans.StoredCount;   // 清理后剩下的条数
+        Logger.Log(LogLevel.Info, $"[封禁] 已清理 {kind} 类记录 {removed} 条(共 {before} 条,剩余 {left} 条)");
+    }
+
+    /// <summary>ban del:删掉一条封禁(按类型 + 值)。不带 confirm 只预览,不删。</summary>
     private static void CmdBanDel(BanStore bans, string[] args)
     {
         if (args.Length < 2)
         {
-            Logger.Log(LogLevel.Warning, "[封禁] 用法:ban del <user|ip|machine> <值>");
+            Logger.Log(LogLevel.Warning, "[封禁] 用法:ban del <user|ip|machine> <值> 或 ban del <user|ip|machine> <值> confirm");
             return;
         }
 
-        Logger.Log(LogLevel.Info, bans.Remove(args[0], args[1])
-            ? $"[封禁] 已解封 {args[0]}={args[1]}"
+        var kind = args[0].Trim().ToLowerInvariant();   // 记录类型
+        var value = args[1].Trim();                     // 被封的值
+
+        // 先找这一条:不存在就没必要确认,直接回"没有这条封禁记录"
+        var hit = bans.All.FirstOrDefault(b => string.Equals(b.Kind, kind, StringComparison.OrdinalIgnoreCase)
+            && string.Equals(b.Value, value, StringComparison.OrdinalIgnoreCase));
+        if (hit is null)
+        {
+            Logger.Log(LogLevel.Info, "[封禁] 没有这条封禁记录");
+            return;
+        }
+
+        // 第三个词必须是 confirm 才真删;没写或写成别的都只预览
+        var confirmed = args.Length >= 3 && args[2].Trim().Equals("confirm", StringComparison.OrdinalIgnoreCase);
+        if (!confirmed)
+        {
+            LogBlock(
+                $"[封禁] 将要解封 {hit.Kind}={hit.Value}   剩余 {hit.Remain}   原因:{hit.Reason}\n" +
+                $"[封禁] 确认请再执行:ban del {hit.Kind} {hit.Value} confirm");
+            return;
+        }
+
+        Logger.Log(LogLevel.Info, bans.Remove(kind, value)
+            ? $"[封禁] 已解封 {kind}={value}"
             : "[封禁] 没有这条封禁记录");
     }
-/// <summary>ban list:列出当前所有封禁及剩余时间。</summary>
 
+    /// <summary>ban list:列出当前所有封禁及剩余时间(整块一次输出)。</summary>
     private static void CmdBanList(BanStore bans)
     {
         var all = bans.All;
@@ -683,10 +757,15 @@ public static class ZxmsCommands
             return;
         }
 
+        // 一条记录一行,先拼成一个块再打:每条各打一条日志会把多行信息散成一堆带时间戳的行
+        var sb = new StringBuilder();
+        sb.Append($"[封禁] 共 {all.Count} 条");
         foreach (var b in all)
         {
-            Logger.Log(LogLevel.Info, $"[封禁] {b.Kind,-8} {b.Value,-20} 剩余 {b.Remain,-12} 原因:{b.Reason}");
+            sb.Append('\n').Append($"[封禁] {b.Kind,-8} {b.Value,-20} 剩余 {b.Remain,-12} 原因:{b.Reason}");
         }
+
+        LogBlock(sb.ToString());
     }
 
     /// <summary>net status:打印当前网络状态(连接状态、目标地址与名称、接入的客户端数)</summary>
@@ -705,8 +784,8 @@ public static class ZxmsCommands
             $"[网络] 已接入客户端 {clientCount} 个");
     }
 
-    /// <summary>多行信息输出:先空一行再打印,免得第一行贴着命令行/提示符导致"错位"。</summary>
-    private static void LogBlock(string text) => Logger.Log(LogLevel.Info, Environment.NewLine + text);
+    /// <summary>多行信息整块输出:第一行只放日志信息,内容从第二行开始。</summary>
+    private static void LogBlock(string text) => Logger.Log(LogLevel.Info, text, LogLayout.NewLine);
 
     /// <summary>net clients:打印连接登记表(表格格式由共享库统一生成)</summary>
     private static void CmdClients(ClientRegistry? registry)

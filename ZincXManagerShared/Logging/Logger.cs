@@ -7,6 +7,16 @@ using ZincXManagerShared.FileIO;  // 共享库
 
 namespace ZincXManagerShared.Logging;
 
+/// <summary>多行日志的排版方式。</summary>
+public enum LogLayout
+{
+    /// <summary>0:内容不换行,直接跟在前缀后面。</summary>
+    Inline = 0,
+
+    /// <summary>1:第一行只放日志信息(等级/时间/类/线程),内容从第二行开始。</summary>
+    NewLine = 1,
+}
+
 /// <summary>
 /// 全局静态日志器(ZXMC / ZXMS / ZXMOS 共用)。
 /// 输出目标:
@@ -109,8 +119,9 @@ public static class Logger
     /// <summary>解析等级名。</summary>
     public static bool TryParseLevel(string? text, out LogLevel level) => LogLevelExtensions.TryParse(text, out level);
 
-    /// <summary>写一条日志。调用方不用传任何额外参数 —— 类名与线程标签在这里自动取。</summary>
-    public static void Log(LogLevel level, string message,
+    /// <summary>写一条日志。调用方不用传任何额外参数 —— 类名与线程标签在这里自动取。
+    /// 多行内容默认从第二行开始(<see cref="LogLayout.NewLine"/>);要让内容跟在前缀后面就传 <see cref="LogLayout.Inline"/>。</summary>
+    public static void Log(LogLevel level, string message, LogLayout layout = LogLayout.NewLine,
         [CallerFilePath] string callerFile = "",
         [CallerLineNumber] int callerLine = 0)
     {
@@ -121,8 +132,16 @@ public static class Logger
             sinks = _sinks.Count == 0 ? Array.Empty<ILogger>() : _sinks.ToArray();
         }
 
+        // 多行内容默认另起一行:首行若跟在前缀后面,整块第一行会比后面各行多出一大截前缀,表格对不齐。
+        // 只补一个换行(不是空行);消息本身已以换行开头时不再补,避免连续两个换行。
+        var text = message;   // 送进控制台与文件的那一份(可能补了前导换行)
+        if (layout == LogLayout.NewLine && text.IndexOf('\n') >= 0 && !text.StartsWith('\n') && !text.StartsWith('\r'))
+        {
+            text = Environment.NewLine + text;
+        }
+
         // 形如 [Info] [2026-10-24 14:30:00] [Program/Main] 消息
-        var line = $"[{level.GetName()}] [{DateTime.Now:yyyy-MM-dd HH:mm:ss}] [{ClassOf(callerFile)}/{ThreadOf()}] {message}";
+        var line = $"[{level.GetName()}] [{DateTime.Now:yyyy-MM-dd HH:mm:ss}] [{ClassOf(callerFile)}/{ThreadOf()}] {text}";
 
         // 锁外做实际 I/O:Logger 与 ZFile 各自持锁,错开可以彻底避免互锁
         if (EchoToConsole) Console.WriteLine(line);
@@ -137,6 +156,7 @@ public static class Logger
             {
                 try
                 {
+                    // 界面日志拿原始 message:排版补的前导换行只给控制台与文件,界面自己排
                     sink.Log(level, message);
                 }
                 catch

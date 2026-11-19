@@ -84,6 +84,9 @@ public sealed class BanStore
                 {
                     "user" => user is { Length: > 0 } && string.Equals(ban.Value, user, StringComparison.OrdinalIgnoreCase),
                     "ip" => ip is { Length: > 0 } && ban.Value == ip,
+                    // machine 分支必须先确认传进来的机器码非空:客户端取不到主板序列号时发来的是空串,
+                    // 让它去比较就会「所有缺码机器共用一个匹配键」—— 封一台等于封全部缺码机器。
+                    // (Add 也不接受空值,但 bans.json 可能是手改或老文件迁移来的,这里再兜一道)
                     "machine" => machine is { Length: > 0 } && string.Equals(ban.Value, machine, StringComparison.OrdinalIgnoreCase),
                     _ => false,
                 };
@@ -155,6 +158,70 @@ public sealed class BanStore
 
             return removed;
         }
+    }
+
+    /// <summary>封禁表里实际存着的记录条数(含已过期,不做剔除)。</summary>
+    public int StoredCount
+    {
+        get
+        {
+            lock (_sync)
+            {
+                return _list.Count;
+            }
+        }
+    }
+
+    /// <summary>某一类记录有多少条(含已过期,不做剔除);与 PurgeKind 的口径一致。</summary>
+    public int CountKind(string kind)
+    {
+        kind = (kind ?? "").Trim().ToLowerInvariant();
+        if (kind.Length == 0)
+        {
+            return 0;
+        }
+
+        lock (_sync)
+        {
+            var count = 0;   // 同类记录条数
+            foreach (var b in _list)
+            {
+                if (string.Equals(b.Kind, kind, StringComparison.OrdinalIgnoreCase))
+                {
+                    count++;
+                }
+            }
+
+            return count;
+        }
+    }
+
+    /// <summary>按类型一次性清掉封禁记录;返回清掉的条数。</summary>
+    public int PurgeKind(string kind)
+    {
+        kind = (kind ?? "").Trim().ToLowerInvariant();
+        if (kind.Length == 0)
+        {
+            return 0;
+        }
+
+        var removed = 0;   // 被清掉的条数
+        lock (_sync)
+        {
+            // 过期的同类记录也算在清理范围内,一起删掉
+            removed = _list.RemoveAll(b => string.Equals(b.Kind, kind, StringComparison.OrdinalIgnoreCase));
+            if (removed > 0)
+            {
+                Save();
+            }
+        }
+
+        if (removed > 0)
+        {
+            Logger.Log(LogLevel.Info, $"[封禁] 清理 {kind} 类记录 {removed} 条");
+        }
+
+        return removed;
     }
 
     /// <summary>把 "30d / 12h / 30m / perm" 解析成时长;null 表示永久。</summary>

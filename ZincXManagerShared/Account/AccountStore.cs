@@ -496,7 +496,15 @@ public sealed class AccountStore
         lock (_sync)
         {
             account.LastIp = ip;
-            account.Machine = machine;
+
+            // 机器码为空 = 客户端取不到主板序列号(服主的 machine.require=0 放它进来了):不写。
+            // 写下去会把账号里之前记着的真实机器码擦成空串,以后连坐封禁就再也定位不到这台机器;
+            // 保持原值也符合"缺码登录不记录机器码"的约定。
+            if (machine.Length > 0)
+            {
+                account.Machine = machine;
+            }
+
             Save();
         }
     }

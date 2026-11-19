@@ -242,8 +242,10 @@ var results = new List<SuiteResult>();
             r.Add("未封机器码可以注册", await p.RegisterAsync("good1", "pw123456", "MACH-OK"), p.LastAck ?? "");
         }
 
-        // 解封:用服务端命令 ban del 删掉那条机器码封禁
+        // 解封:ban del 现在要二次确认 —— 先发一次只预览(不删),再带 confirm 才真删
         ms.SendCmd("ban del machine MACH-BANNED");
+        await Task.Delay(500);
+        ms.SendCmd("ban del machine MACH-BANNED confirm");
         await Task.Delay(1000);
         using (var p = await Probe.ConnectAsync("127.0.0.1", 21405, "OS"))
         {
@@ -514,6 +516,40 @@ var results = new List<SuiteResult>();
             r.Add("机器码是 64 位十六进制",
                 ZincXManagerShared.Account.MachineCode.Value.Length == 64 &&
                 ZincXManagerShared.Account.MachineCode.Value.All(Uri.IsHexDigit),
+                ZincXManagerShared.Account.MachineCode.Value);
+
+            // 主板序列号占位串判定:每条单独计数,失败时打印输入值与期望/实际
+            // 期望 true = 判为出厂占位/无效值(不参与机器码区分);false = 当真序列号放行
+            var serialCases = new (string? Input, bool Expect, string Label)[]
+            {
+                (null, true, "null 判为占位"),
+                ("", true, "空串判为占位"),
+                ("   ", true, "纯空白判为占位"),
+                ("To Be Filled By O.E.M.", true, "OEM 占位串判为占位"),
+                ("to be filled by o.e.m.", true, "OEM 占位串小写判为占位"),
+                ("Default string", true, "Default string 判为占位"),
+                ("Default String", true, "Default String 首字母大写判为占位"),
+                ("None", true, "None 判为占位"),
+                ("N/A", true, "N/A 判为占位"),
+                ("Unknown", true, "Unknown 判为占位"),
+                ("System Serial Number", true, "System Serial Number 判为占位"),
+                ("0123456789", true, "0123456789 判为占位"),
+                ("00000000", true, "8 个 0 判为占位"),
+                ("0000000000000000", true, "16 个 0 判为占位"),
+                ("REAL-SERIAL-123", false, "真实序列号放行"),
+                ("  REAL-SERIAL-123  ", false, "前后带空白的真实序列号放行(Trim 后判定)"),
+                ("220606220502185", false, "本机真实主板号放行"),
+            };
+            foreach (var item in serialCases)
+            {
+                var actual = ZincXManagerShared.Account.MachineCode.IsPlaceholderSerial(item.Input);
+                r.Add(item.Label, actual == item.Expect,
+                    $"输入「{(item.Input is null ? "<null>" : item.Input)}」期望 {item.Expect} 实际 {actual}");
+            }
+
+            // 缓存生效:Value 是 _cached ??= Build(),连续两次必须是同一个串
+            r.Add("机器码连续两次取相同(缓存生效)",
+                ZincXManagerShared.Account.MachineCode.Value == ZincXManagerShared.Account.MachineCode.Value,
                 ZincXManagerShared.Account.MachineCode.Value);
 
             ms.SendCmd("info");

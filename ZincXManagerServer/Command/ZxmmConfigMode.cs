@@ -151,8 +151,11 @@ internal static class ZxmmConfigMode
         if (entry is null)
         {
             _state = State.Select;
-            Logger.Log(LogLevel.Info, Environment.NewLine + BuildTable() + Environment.NewLine +
-                "输入编号或名称选择一台,输入 exitc 退出");
+            // 多行内容由 LogLayout.NewLine 从第二行开始,这里不再手工补前导换行
+            Logger.Log(LogLevel.Info,
+                BuildTable() + "\n" +
+                "输入编号或名称选择一台,输入 exitc 退出",
+                LogLayout.NewLine);
             return;
         }
 
@@ -278,11 +281,13 @@ internal static class ZxmmConfigMode
         _entry = entry;
         _state = State.Edit;
 
-        Logger.Log(LogLevel.Info, Environment.NewLine +
-            $"已选中 {entry.Id} {entry.Name}({entry.Host}:{entry.Port},{ModeText(entry.ConsoleMode)})" + Environment.NewLine +
+        // 多行内容由 LogLayout.NewLine 从第二行开始,这里不再手工补前导换行
+        Logger.Log(LogLevel.Info,
+            $"已选中 {entry.Id} {entry.Name}({entry.Host}:{entry.Port},{ModeText(entry.ConsoleMode)})\n" +
             "逐项修改:输入 <键|中文名> <值>;可改 name/名称 host/主机 port/端口 token/令牌 " +
-            "consolemode/控制台模式 rconhost/RCON主机 rconport/RCON端口 rconpassword/RCON密码" + Environment.NewLine +
-            "info 查看这台服的全部字段,exitc 保存并退出");
+            "consolemode/控制台模式 rconhost/RCON主机 rconport/RCON端口 rconpassword/RCON密码\n" +
+            "info 查看这台服的全部字段,exitc 保存并退出",
+            LogLayout.NewLine);
     }
 
     // ---------- 编辑模式 ----------
@@ -458,11 +463,13 @@ internal static class ZxmmConfigMode
         if (entry.RconPassword.Length == 0 && entry.RconPort == ZxmmRegistry.DefaultRconPort)
         {
             _state = State.RconChoice;
-            Logger.Log(LogLevel.Info, Environment.NewLine +
-                $"这台服的 RCON 还是默认配置(RCON端口 {ZxmmRegistry.DefaultRconPort},密码空)。" + Environment.NewLine +
-                "[1] 保留默认 —— 只把模式记下来,你自己去改 server.properties" + Environment.NewLine +
-                "[2] 让我来改 —— 依次输入 IP / 端口 / 密码,确认后经 ZXMM 写进那台服的 server.properties" + Environment.NewLine +
-                "输入 1 或 2(exitc 放弃):");
+            // 多行内容由 LogLayout.NewLine 从第二行开始,这里不再手工补前导换行
+            Logger.Log(LogLevel.Info,
+                $"这台服的 RCON 还是默认配置(RCON端口 {ZxmmRegistry.DefaultRconPort},密码空)。\n" +
+                "[1] 保留默认 —— 只把模式记下来,你自己去改 server.properties\n" +
+                "[2] 让我来改 —— 依次输入 IP / 端口 / 密码,确认后经 ZXMM 写进那台服的 server.properties\n" +
+                "输入 1 或 2(exitc 放弃):",
+                LogLayout.NewLine);
             return;
         }
 
@@ -571,12 +578,14 @@ internal static class ZxmmConfigMode
         _state = State.RconConfirm;
 
         var host = _pendingRconHost.Length == 0 ? entry.Host : _pendingRconHost;   //留空 = 跟 ZXMM 主机
-        Logger.Log(LogLevel.Info, Environment.NewLine +
-            $"即将写入 {entry.Id} {entry.Name} 的 server.properties:" + Environment.NewLine +
+        // 多行内容由 LogLayout.NewLine 从第二行开始,这里不再手工补前导换行
+        Logger.Log(LogLevel.Info,
+            $"即将写入 {entry.Id} {entry.Name} 的 server.properties:\n" +
             $"  RCON 地址: {host}:{_pendingRconPort}" +
-            (_pendingRconHost.Length == 0 ? "(留空,跟 ZXMM 主机)" : "") + Environment.NewLine +
-            $"  密码: {PasswordText(_pendingRconPassword)}" + Environment.NewLine +
-            "确认请输入 y(其它任意输入放弃):");
+            (_pendingRconHost.Length == 0 ? "(留空,跟 ZXMM 主机)" : "") + "\n" +
+            $"  密码: {PasswordText(_pendingRconPassword)}\n" +
+            "确认请输入 y(其它任意输入放弃):",
+            LogLayout.NewLine);
         return true;
     }
 

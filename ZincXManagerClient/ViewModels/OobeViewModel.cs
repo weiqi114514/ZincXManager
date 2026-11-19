@@ -432,8 +432,8 @@ public partial class OobeViewModel : ViewModelBase
         // 最后一段是本端版本号:服务端开了强制更新时会拿它判断要不要拒登录 / 踢下线
         var version = ZincXManagerClient.Services.UpdateService.CurrentVersion;
         var payload = register
-            ? $"{UserName.Trim()}|{hash}|{MachineCode.Value}|{nonce}|{proof}|{version}"
-            : $"{UserName.Trim()}|{hash}|{Level}|{side}|{MachineCode.Value}||{nonce}|{proof}|{version}";
+            ? $"{UserName.Trim()}|{hash}|{MachineCode.ValueForLogin}|{nonce}|{proof}|{version}"
+            : $"{UserName.Trim()}|{hash}|{Level}|{side}|{MachineCode.ValueForLogin}||{nonce}|{proof}|{version}";
 
         if (!await _connect.SendAsync(type, payload))
         {

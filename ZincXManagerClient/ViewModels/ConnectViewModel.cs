@@ -540,7 +540,7 @@ public partial class ConnectViewModel : ViewModelBase, IDisposable
         var proof = ZincXManagerShared.Account.LoginProof.Compute(hash, nonce);   //挑战响应
         var version = ZincXManagerClient.Services.UpdateService.CurrentVersion;   //本端版本号(强制更新要它)
         var payload = $"{user}|{hash}|{ClientSession.LoginLevel}|{ClientSession.LoginSide}|" +
-                      $"{ZincXManagerShared.Account.MachineCode.Value}||{nonce}|{proof}|{version}";
+                      $"{ZincXManagerShared.Account.MachineCode.ValueForLogin}||{nonce}|{proof}|{version}";
 
         var wait = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);   //等 601
         void OnReply(ushort type, string text)

@@ -8,6 +8,12 @@ param(
     [string]$Pass = 'upd123'
 )
 
+# 输出编码固定成 UTF-8:PowerShell 默认按控制台代码页(本机 936/GBK)写出,
+# 父进程(测试项目)按 UTF-8 读就会把中文变成 U+FFFD 替换字符。两侧都用 UTF-8,只此一种。
+[Console]::OutputEncoding = [Text.Encoding]::UTF8
+$OutputEncoding = [Text.Encoding]::UTF8
+$PSDefaultParameterValues['Out-File:Encoding'] = 'utf8'
+
 $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName UIAutomationClient
 Add-Type -AssemblyName UIAutomationTypes

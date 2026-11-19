@@ -219,6 +219,17 @@ internal static partial class Program
     /// <summary>每次都要确认(config 的 confirmalways):1 = 不看持久登录表,谁都弹窗。</summary>
     private const string KeyConfirmAlways = "confirmalways";
 
+    /// <summary>机器码必填(config 的 machine.require,默认 1 = 开):
+    /// 开 = 客户端取不到主板序列号(机器码为空串)就拒绝登录/注册;
+    /// 关 = 允许登录,但不把机器码写进账号,机器码封禁对这类账号无效。</summary>
+    private const string KeyMachineRequire = "machine.require";
+
+    /// <summary>机器码必填的默认值:严格 —— 拿不到主板序列号不许登录。</summary>
+    private const bool DefaultMachineRequire = true;
+
+    /// <summary>机器码必填当前值(启动时读配置,配置模式里改立刻生效)。</summary>
+    private static bool _machineRequire = DefaultMachineRequire;
+
     /// <summary>免确认保持天数当前值(0 = 不限期)。</summary>
     private static int _persistDays = DefaultPersistDays;
 
@@ -1190,6 +1201,18 @@ internal static partial class Program
                     break;
                 }
 
+                // 机器码为空 = 客户端取不到主板序列号(见 MachineCode.ValueForLogin)。
+                // 严格模式直接拒:这种客户端算不出能区分机器的值,放进来等于没有机器码封禁;
+                // 宽松模式放行,但绝不把空串写进账号、也不拿空串去匹配机器码封禁(Bans.Check 对空串不命中)。
+                if (machine.Length == 0 && _machineRequire)
+                {
+                    Logger.Log(LogLevel.Warning,
+                        $"[机器码] 拒绝登录 {user}:客户端取不到主板序列号({KeyMachineRequire}=1) ← {Where(packet.Connection)}");
+                    await packet.SendAsync(Protocol.AccountLoginAck,
+                        "err|取不到主板序列号,本服要求绑定机器码;请确认主板序列号可读后重试,或联系服主关闭机器码必填", packet.Id);
+                    break;
+                }
+
                 if (Bans.Check(user, fromIp, machine, out var ban))
                 {
                     Logger.Log(LogLevel.Warning, $"[封禁] 拒绝登录 {user}({ban!.Kind}={ban.Value},剩余 {ban.Remain})");
@@ -1282,6 +1305,16 @@ internal static partial class Program
                         $"[限速] {regIp} 失败次数过多(注册 {user}),已拒绝");
                     await packet.SendAsync(Protocol.AccountRegisterAck,
                         "err|失败次数过多,请稍后再试", packet.Id);
+                    break;
+                }
+
+                // 注册这条分支的机器码规则与登录一致:空串 + 严格模式 → 拒绝,不写账号
+                if (regMachine.Length == 0 && _machineRequire)
+                {
+                    Logger.Log(LogLevel.Warning,
+                        $"[机器码] 拒绝注册 {user}:客户端取不到主板序列号({KeyMachineRequire}=1) ← {Where(packet.Connection)}");
+                    await packet.SendAsync(Protocol.AccountRegisterAck,
+                        "err|取不到主板序列号,本服要求绑定机器码;请确认主板序列号可读后重试,或联系服主关闭机器码必填", packet.Id);
                     break;
                 }
 
@@ -2204,6 +2237,21 @@ internal static partial class Program
             : _persistDays > 0
                 ? $"[免确认] 开:同玩家同 IP {_persistDays} 天内不用再确认(config 里 {KeyPersistDays} 可改,0 = 不限期)"
                 : $"[免确认] 开:同玩家同 IP 永久免确认(config 里 {KeyPersistDays}=0)");
+
+        // 机器码必填:缺配置就写默认(1 = 开),让服主知道有这个开关
+        var machineRequireText = config.MapGet(KeyMachineRequire).Trim();   //配置里的开关值
+        if (machineRequireText.Length == 0)
+        {
+            machineRequireText = DefaultMachineRequire ? "1" : "0";
+            config.WriteFileMap(KeyMachineRequire, machineRequireText);
+            Logger.Log(LogLevel.Info,
+                $"[CONFIG]{KeyMachineRequire} 未配置,已写入默认值 {machineRequireText}(1 = 取不到主板序列号就拒绝登录/注册)");
+        }
+
+        _machineRequire = machineRequireText != "0";
+        Logger.Log(LogLevel.Info, _machineRequire
+            ? $"[机器码] 必填:开(客户端取不到主板序列号就拒绝登录/注册;config 里 {KeyMachineRequire}=0 可关)"
+            : $"[机器码] 必填:关(取不到主板序列号也能登录,但不记录机器码,机器码封禁对这类账号无效)");
 
         // 令牌:和模组 config 里的 api.token 一致才校验。两边都空 = 不校验(默认)
         _zxmmToken = config.MapGet(KeyZxmmToken).Trim();
@@ -3308,6 +3356,7 @@ internal static partial class Program
             "bindmax" => _bindMax.ToString(),
             KeyPersistDays => _persistDays.ToString(),
             KeyConfirmAlways => _confirmAlways ? "1" : "0",
+            KeyMachineRequire => _machineRequire ? "1" : "0",
             KeyDataSeparation => DataSeparation.Enabled ? "1" : "0",
             KeyDataSeparationList => string.Join(",", DataSeparation.SeparatedKeys),
             _ => "",
@@ -3556,6 +3605,19 @@ internal static partial class Program
                 Logger.Log(LogLevel.Info, _confirmAlways
                     ? "[免确认] 已关闭:持久登录表已清空,之后每次进服都要确认"
                     : "[免确认] 已开启:同玩家同 IP 在期限内不用再确认");
+                return "";
+
+            case KeyMachineRequire:
+                if (value is not ("0" or "1"))
+                {
+                    return "只能填 1(取不到主板序列号就拒绝登录/注册)或 0(允许登录但不记录机器码)";
+                }
+
+                _machineRequire = value == "1";
+                config.WriteFileMap(KeyMachineRequire, value);
+                Logger.Log(LogLevel.Info, _machineRequire
+                    ? "[机器码] 已开启必填:取不到主板序列号的客户端拒绝登录/注册(立刻生效)"
+                    : "[机器码] 已关闭必填:取不到主板序列号也能登录,但不记录机器码,机器码封禁对这类账号无效(立刻生效)");
                 return "";
 
             case "minversion":

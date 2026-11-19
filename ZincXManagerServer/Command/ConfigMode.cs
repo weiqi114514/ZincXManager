@@ -48,6 +48,7 @@ internal static class ConfigMode
         new() { Key = "officialcheck", Cn = "对端校验",     Description = "1 = 对端不是官方就断开,0 = 只警告",       Type = "1/0" },
         new() { Key = "forceupdate",   Cn = "强制更新",     Description = "1 = 旧版 ZXMC 拒绝登录并踢下线,0 = 不检查", Type = "1/0" },
         new() { Key = "minversion",    Cn = "最低版本",     Description = "强制更新的门槛版本,留空 = 跟本端版本一致",   Type = "版本号如 b0.3.2a", AllowEmpty = true },
+        new() { Key = "machine.require", Cn = "机器码必填", Description = "1 = 取不到主板序列号就拒绝登录/注册;0 = 允许登录但不记录机器码,机器码封禁对这类账号无效", Type = "1/0" },
         new() { Key = "bindmax",       Cn = "绑定上限",     Description = "一个 ZXM 账号最多绑几个 MC 玩家",          Type = "0-1000,0=不限" },
         new() { Key = "persistdays",   Cn = "免确认天数",   Description = "同玩家同 IP 在这几天内进服不用再确认,0 = 不限期", Type = "0-3650" },
         new() { Key = "confirmalways", Cn = "每次都要确认", Description = "1 = 不看持久登录表,每次进服都弹窗;开启时清空已记的免确认", Type = "1/0" },
@@ -76,8 +77,11 @@ internal static class ConfigMode
     internal static void Enter()
     {
         _active = true;
-        Logger.Log(LogLevel.Info, Environment.NewLine + BuildTable() + Environment.NewLine +
-            "已进入配置模式:输入 <键名|中文名> <键值> 修改,输入 exitc 退出");
+        // 多行内容由 LogLayout.NewLine 从第二行开始,这里不再手工补前导换行
+        Logger.Log(LogLevel.Info,
+            BuildTable() + "\n" +
+            "已进入配置模式:输入 <键名|中文名> <键值> 修改,输入 exitc 退出",
+            LogLayout.NewLine);
     }
 
     /// <summary>退出配置模式。</summary>
@@ -177,13 +181,13 @@ internal static class ConfigMode
     private static string BuildTable()
     {
         var lines = new List<string> { "配置项(只能改这些,不能增删):" };
-        lines.Add($"  {Pad("中文名", 16)}{Pad("键名", 14)}{Pad("当前值", 34)}{Pad("类型", 18)}作用");
-        lines.Add("  " + new string('-', 100));
+        lines.Add($"  {Pad("中文名", 16)}{Pad("键名", 17)}{Pad("当前值", 34)}{Pad("类型", 18)}作用");
+        lines.Add("  " + new string('-', 103));
 
         foreach (var item in Items)
         {
             var value = Program.ConfigValue(item.Key);
-            lines.Add($"  {Pad(item.Cn, 16)}{Pad(item.Key, 14)}{Pad(value, 34)}{Pad(item.Type, 18)}{item.Description}");
+            lines.Add($"  {Pad(item.Cn, 16)}{Pad(item.Key, 17)}{Pad(value, 34)}{Pad(item.Type, 18)}{item.Description}");
         }
 
         return string.Join(Environment.NewLine, lines);

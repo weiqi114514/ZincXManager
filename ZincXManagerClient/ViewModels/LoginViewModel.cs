@@ -258,8 +258,8 @@ public partial class LoginViewModel : ViewModelBase
         // 最后一段是本端版本号:服务端开了强制更新时会拿它判断要不要拒登录 / 踢下线
         var version = ZincXManagerClient.Services.UpdateService.CurrentVersion;
         var payload = register
-            ? $"{user}|{hash}|{MachineCode.Value}|{nonce}|{proof}|{version}"
-            : $"{user}|{hash}|{level}|{side}|{MachineCode.Value}||{nonce}|{proof}|{version}";
+            ? $"{user}|{hash}|{MachineCode.ValueForLogin}|{nonce}|{proof}|{version}"
+            : $"{user}|{hash}|{level}|{side}|{MachineCode.ValueForLogin}||{nonce}|{proof}|{version}";
 
         bool sent;   // 登录包发出去了没;写包抛异常由下面的 catch 接住
         try

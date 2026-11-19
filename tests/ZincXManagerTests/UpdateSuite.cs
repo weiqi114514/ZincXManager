@@ -147,6 +147,9 @@ public static class UpdateSuite
                         RedirectStandardError = true,
                         UseShellExecute = false,
                         CreateNoWindow = true,
+                        // 脚本那头已固定成 UTF-8;这里必须同名解码,否则中文窗口名变 U+FFFD
+                        StandardOutputEncoding = Encoding.UTF8,
+                        StandardErrorEncoding = Encoding.UTF8,
                     };
                     psi.ArgumentList.Add("-NoProfile");
                     psi.ArgumentList.Add("-File");
