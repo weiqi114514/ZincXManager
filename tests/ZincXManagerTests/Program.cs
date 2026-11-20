@@ -1,5 +1,6 @@
 using System.Diagnostics;  // 进程 / 调试
 using System.Text;  // 文本编码与 StringBuilder
+using System.Text.Json;  // JsonDocument:检查落盘文件是不是完整 JSON
 using ZincXManagerTests;  // 测试项目自身命名空间
 
 const string Ws = @"G:\文档\deepseek-harness\default-workspace";
@@ -272,6 +273,181 @@ var results = new List<SuiteResult>();
             var logged = ms.Out.Contains("踢") || ms.Out.Contains("封禁");
             r.Add("在线封禁把连接踢掉", !alive, alive ? "连接仍能收到回执" : "");
         }
+
+        // ---------- 封禁表落盘(纯存储;用独立目录,免得和上面运行中的服务端抢同一把锁) ----------
+        var storeDir = Path.Combine(Ws, "_zxt", "banstore");
+        if (Directory.Exists(storeDir)) { Directory.Delete(storeDir, true); }
+        Directory.CreateDirectory(storeDir);
+
+        // ① 坏文件必须被保留:100 条截成半截,载入成空表后原文件留成 .bad-*
+        var badPath = Path.Combine(storeDir, "bans.json");
+        var good = new StringBuilder("[");   // 100 条的正常文件内容
+        for (var i = 0; i < 100; i++)
+        {
+            if (i > 0) { good.Append(','); }
+            good.Append("{\"kind\":\"user\",\"value\":\"u").Append(i).Append("\",\"expireAt\":null,\"reason\":\"批量\"}");
+        }
+        good.Append(']');
+        var goodBytes = Encoding.UTF8.GetBytes(good.ToString());
+        var half = goodBytes[..(goodBytes.Length / 2)];   // 截半:正好停在某条记录中间
+        File.WriteAllBytes(badPath, half);
+
+        using (var store = new ZincXManagerShared.Account.BanStore(badPath))
+        {
+            r.Add("坏文件载入成空表", store.StoredCount == 0, "条数 " + store.StoredCount);
+            var bads = Directory.GetFiles(storeDir, "bans.json.bad-*");
+            r.Add("坏文件被改名保留", bads.Length == 1, bads.Length == 0 ? "没留 .bad 文件" : string.Join(";", bads));
+            r.Add("保留内容与坏文件一致", bads.Length == 1 && File.ReadAllBytes(bads[0]).AsSpan().SequenceEqual(half),
+                bads.Length == 1 ? "字节数 " + new FileInfo(bads[0]).Length + " / 坏文件 " + half.Length : "");
+            r.Add("坏文件之后仍能加封禁", store.Add("machine", "M-BAD", null, "坏文件之后", out var badErr), badErr);
+        }
+
+        var rereadCount = -1;   // 写回之后的条数
+        try { using var reread = JsonDocument.Parse(File.ReadAllBytes(badPath)); rereadCount = reread.RootElement.GetArrayLength(); } catch { }
+        r.Add("空表写回后文件可解析且只有 1 条", rereadCount == 1, "条数 " + rereadCount);
+
+        // ② 原子写:6 个写线程 × 150 次 Add,同时一个读者每 5 ms 读盘解析
+        var atomicPath = Path.Combine(storeDir, "atomic.json");
+        var parseFails = 0;   // 读者解析失败次数
+        var reads = 0;   // 读者成功读取次数
+        var stopRead = false;
+        using (var store = new ZincXManagerShared.Account.BanStore(atomicPath))
+        {
+            store.Add("user", "seed", null, "种子", out _);
+
+            var reader = new Thread(() =>
+            {
+                while (!Volatile.Read(ref stopRead))
+                {
+                    try
+                    {
+                        byte[] bytes;
+                        // 允许共享读的读者:和写者同时挂着句柄,只关心读到的字节能不能解析
+                        using (var fs = new FileStream(atomicPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete))
+                        using (var ms2 = new MemoryStream())
+                        {
+                            fs.CopyTo(ms2);
+                            bytes = ms2.ToArray();
+                        }
+
+                        if (bytes.Length > 0)
+                        {
+                            using var doc = JsonDocument.Parse(bytes);
+                            _ = doc.RootElement.GetArrayLength();
+                        }
+
+                        Interlocked.Increment(ref reads);
+                    }
+                    catch (JsonException) { Interlocked.Increment(ref parseFails); }
+                    catch (IOException) { }   // 读者自己抢不到句柄不算数据坏
+                    Thread.Sleep(5);
+                }
+            }) { IsBackground = true, Name = "ban-reader" };
+            reader.Start();
+
+            var writers = new Thread[6];
+            for (var t = 0; t < writers.Length; t++)
+            {
+                var id = t;
+                writers[t] = new Thread(() =>
+                {
+                    for (var i = 0; i < 150; i++) { store.Add("user", $"r{id}-{i}", null, "并发", out _); }
+                }) { Name = "ban-w" + id };
+                writers[t].Start();
+            }
+            foreach (var w in writers) { w.Join(); }
+            Volatile.Write(ref stopRead, true);
+            reader.Join();
+
+            r.Add("并发写期间读者没读到坏文件", parseFails == 0 && reads > 0, $"读 {reads} 次 / 解析失败 {parseFails}");
+            var tmpLeft = Directory.GetFiles(storeDir, "atomic.json.tmp").Length;
+            r.Add("没留下 .tmp 残留", tmpLeft == 0, "残留 " + tmpLeft);
+        }
+
+        var atomicCount = -1;   // 并发写完后的条数
+        try { using var atomicDoc = JsonDocument.Parse(File.ReadAllBytes(atomicPath)); atomicCount = atomicDoc.RootElement.GetArrayLength(); } catch { }
+        r.Add("并发写完文件可解析且条数正确", atomicCount == 901, "期望 901(1 种子 + 900 并发),实际 " + atomicCount);
+
+        // ③ 同一路径两个实例:后启动的只读,不许覆盖前一个写到盘上的表
+        var roPath = Path.Combine(storeDir, "ro.json");
+        using (var first = new ZincXManagerShared.Account.BanStore(roPath))
+        {
+            first.Add("user", "u1", null, "先写的", out _);
+            first.Add("user", "u2", null, "先写的", out _);
+            first.Add("user", "u3", null, "先写的", out _);
+
+            using (var second = new ZincXManagerShared.Account.BanStore(roPath))
+            {
+                r.Add("第二个实例进只读", second.ReadOnly, "ReadOnly=" + second.ReadOnly);
+                r.Add("只读实例读得到盘上 3 条", second.StoredCount == 3, "条数 " + second.StoredCount);
+                second.Add("user", "intruder", null, "不该落盘", out var roErr);
+                var onDisk = File.ReadAllText(roPath, Encoding.UTF8);
+                r.Add("只读实例不覆盖盘上文件", !onDisk.Contains("intruder"), onDisk.Contains("intruder") ? "intruder 被写进盘了" : roErr);
+            }
+        }
+
+        using (var third = new ZincXManagerShared.Account.BanStore(roPath))
+        {
+            r.Add("锁释放后新实例可写且数据没被吃", !third.ReadOnly && third.StoredCount == 3,
+                "ReadOnly=" + third.ReadOnly + " 条数 " + third.StoredCount);
+        }
+
+        // ④ 写盘失败必须对调用方可见:把 bans.json.tmp 占成目录,Add 的 out error 不能再是空串
+        var failPath = Path.Combine(storeDir, "fail.json");
+        File.WriteAllText(failPath, "[{\"kind\":\"user\",\"value\":\"seed\",\"expireAt\":null,\"reason\":\"预置\"}]", Encoding.UTF8);
+        using (var store = new ZincXManagerShared.Account.BanStore(failPath))
+        {
+            var tmpAsDir = failPath + ".tmp";   // 临时文件的位置被目录占住,写入必然失败
+            Directory.CreateDirectory(tmpAsDir);
+            var memBefore = store.StoredCount;   // 加之前的内存条数
+            var ok = store.Add("user", "blocked", null, "写盘失败用例", out var writeErr);
+            r.Add("写盘失败时 Add 的 error 非空", writeErr.Length > 0, "原文:[" + writeErr + "]");
+            r.Add("写盘失败的 error 写明写盘失败", writeErr.Contains("写盘失败", StringComparison.Ordinal), writeErr);
+            r.Add("写盘失败时 Add 仍返回 true(内存已生效)", ok, "返回 " + ok);
+            r.Add("写盘失败时内存条数增加", store.StoredCount == memBefore + 1, memBefore + " → " + store.StoredCount);
+            var onDiskAfterFail = File.ReadAllText(failPath, Encoding.UTF8);   // 盘上原文
+            r.Add("写盘失败时盘上数据没变", !onDiskAfterFail.Contains("blocked"), onDiskAfterFail);
+            Directory.Delete(tmpAsDir, true);
+        }
+
+        // ⑤ 已释放的实例不许再碰盘:否则会拿旧内存覆盖下一个实例新写的数据
+        var zombiePath = Path.Combine(storeDir, "zombie.json");
+        var zombieA = new ZincXManagerShared.Account.BanStore(zombiePath);
+        zombieA.Add("user", "z1", null, "A 的", out _);
+        zombieA.Add("user", "z2", null, "A 的", out _);
+        zombieA.Add("user", "z3", null, "A 的", out _);
+        zombieA.Dispose();
+        using (var next = new ZincXManagerShared.Account.BanStore(zombiePath))
+        {
+            r.Add("A 释放后 B 抢到锁可写", !next.ReadOnly, "ReadOnly=" + next.ReadOnly);
+            next.Add("user", "b-new", null, "B 追加", out _);
+            var addAfterDispose = zombieA.Add("user", "ghost", null, "释放之后", out var zombieErr);
+            r.Add("Dispose 后 Add 返回失败", !addAfterDispose, "返回 " + addAfterDispose);
+            r.Add("Dispose 后 Add 的 error 写明已释放", zombieErr.Contains("已释放", StringComparison.Ordinal), zombieErr);
+            var diskText = File.ReadAllText(zombiePath, Encoding.UTF8);   // 盘上原文
+            r.Add("Dispose 后 Add 不覆盖别人的新数据",
+                diskText.Contains("b-new", StringComparison.Ordinal) && !diskText.Contains("ghost", StringComparison.Ordinal),
+                diskText);
+            zombieA.Dispose();   // 幂等:第二次不抛
+            r.Add("Dispose 幂等(连调两次不抛异常)", true, "");
+        }
+
+        // ⑥ 坏文件被隔离后不能凭空造一个空 bans.json(运维现场会误判成"封禁表空了")
+        var emptyDir = Path.Combine(storeDir, "quarantine");
+        Directory.CreateDirectory(emptyDir);
+        var quarPath = Path.Combine(emptyDir, "bans.json");
+        File.WriteAllBytes(quarPath, goodBytes[..(int)(goodBytes.Length * 0.6)]);   // 截 60% 的坏文件
+        var quarBytes = File.ReadAllBytes(quarPath);   // 截断后的原字节,用来比对隔离件
+        using (var store = new ZincXManagerShared.Account.BanStore(quarPath))
+        {
+            r.Add("隔离后内存是空表", store.StoredCount == 0, "条数 " + store.StoredCount);
+            var quarBads = Directory.GetFiles(emptyDir, "bans.json.bad-*");
+            r.Add("隔离后原文件留成 .bad", quarBads.Length == 1, quarBads.Length == 0 ? "没留" : quarBads[0]);
+        }
+        r.Add("隔离后 Dispose 不造空 bans.json", !File.Exists(quarPath), "bans.json 存在=" + File.Exists(quarPath));
+        var quarBadsAfter = Directory.GetFiles(emptyDir, "bans.json.bad-*");
+        r.Add("隔离件内容与原坏文件一致", quarBadsAfter.Length == 1 && File.ReadAllBytes(quarBadsAfter[0]).AsSpan().SequenceEqual(quarBytes),
+            quarBadsAfter.Length == 1 ? "字节数 " + new FileInfo(quarBadsAfter[0]).Length + " / 原文件 " + quarBytes.Length : "");
     }
     catch (Exception ex)
     {

@@ -3015,7 +3015,8 @@ internal static partial class Program
         {
             Logger.Log(LogLevel.Warning,
                 $"[强制更新] 拒绝{protocol} {user}(客户端={DescribeVersion(clientVersion)},本条要求 ≥ {need})");
-            return $"{Protocol.UpdateRequiredMarker}:请更新到最新版 ZXMC(当前 {DescribeVersion(clientVersion)},本服要求 {need})";
+            var shown = clientVersion.Length > 0 ? clientVersion : "老客户端未上报版本";   //给玩家看的版本描述:空版本说人话,不写「未知版本」
+            return $"{Protocol.UpdateRequiredMarker}:请更新到最新版 ZXMC(当前 {shown},本服要求 {need})。新版下载: {Protocol.DownloadPageUrl}";
         }
 
         Logger.Log(LogLevel.Info, $"[强制更新] {protocol}放行 {user}(客户端={clientVersion} ≥ {need})");
@@ -3114,7 +3115,7 @@ internal static partial class Program
                 try
                 {
                     await conn.SendAsync(Protocol.ClientTooOld,
-                        $"{Protocol.UpdateRequiredMarker}:请更新到最新版 ZXMC(本服要求 {need})", 0, "ZXMC");
+                        $"{Protocol.UpdateRequiredMarker}:请更新到最新版 ZXMC(本服要求 {need})。新版下载: {Protocol.DownloadPageUrl}", 0, "ZXMC");
                 }
                 catch (Exception ex)
                 {

@@ -381,6 +381,9 @@ public static class Protocol
     /// </summary>
     public const string UpdateRequiredMarker = "本服已开启强制更新";
 
+    /// <summary>客户端下载页地址:强制更新拒绝时写进提示里,让玩家知道去哪拿新版。</summary>
+    public const string DownloadPageUrl = "http://zxm.zincms.top/download.html";
+
     /// <summary>
     /// 服务端 → 客户端:服务端配置(客户端连上后下发一次),负载按行 <c>键=值</c>。
     /// 目前只有 <c>msgdays</c> = 这个子服务端的消息保留天数(客户端据此决定本地留多久;不认识的行忽略)。
