@@ -1,3 +1,4 @@
+using System;  // IDisposable
 using Avalonia.Controls;  // 窗口与控件
 using Avalonia.Input;  // 鼠标键盘输入
 using Avalonia.Interactivity;  // 路由事件
@@ -21,6 +22,9 @@ public partial class LoginWindow : Window
                 vm.ErrorRaised += (title, text) => _ = MessageDialog.InfoAsync(this, title, text, hint: "");
             }
         };
+
+        // 关窗就把视图模型从模块开关事件上摘下来:静态事件不退订会把整个视图模型钉在内存里
+        Closed += (_, _) => (Vm as IDisposable)?.Dispose();
     }
 
     private LoginViewModel? Vm => DataContext as LoginViewModel;

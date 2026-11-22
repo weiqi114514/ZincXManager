@@ -288,7 +288,8 @@
             </ItemsControl.ItemsPanel>
             <ItemsControl.ItemTemplate>
               <DataTemplate x:DataType="models:NavItem">
-                <Button Classes="nav" Classes.selected="{Binding IsSelected}" Click="OnNavItemClick">
+                <Button Classes="nav" Classes.selected="{Binding IsSelected}" Click="OnNavItemClick"
+                        IsVisible="{Binding IsVisible}">
                   <Grid ColumnDefinitions="3,*" MinHeight="40">
                     <!-- 贴在界面左边缘的小条,每行都有;选中时由样式高亮 -->
                     <Rectangle Grid.Column="0" Classes="bar"/>

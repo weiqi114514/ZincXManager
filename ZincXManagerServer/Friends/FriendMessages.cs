@@ -25,7 +25,7 @@ internal static partial class Program
     private const int SeenMessageLimit = 4096;
 
     /// <summary>400 入口:给好友发一句话。</summary>
-    private static async Task HandleFriendMessageAsync(ServerboundPacket packet, ZFile config)
+    internal static async Task HandleFriendMessageAsync(ServerboundPacket packet, ZFile config)
     {
         var self = PlayerOf(packet.Connection.Id, config);
         if (self.IsEmpty)
@@ -94,7 +94,7 @@ internal static partial class Program
     }
 
     /// <summary>402 入口:拉序号大于起点的聊天记录。</summary>
-    private static async Task HandleFriendHistoryQueryAsync(ServerboundPacket packet, ZFile config)
+    internal static async Task HandleFriendHistoryQueryAsync(ServerboundPacket packet, ZFile config)
     {
         var self = PlayerOf(packet.Connection.Id, config);
         if (self.IsEmpty)
@@ -120,7 +120,7 @@ internal static partial class Program
     }
 
     /// <summary>405 入口:本人把这段对话读到第几号了(用来算对方看到的未读数,以及回已读)。</summary>
-    private static async Task HandleFriendReadMarkAsync(ServerboundPacket packet, ZFile config)
+    internal static async Task HandleFriendReadMarkAsync(ServerboundPacket packet, ZFile config)
     {
         var self = PlayerOf(packet.Connection.Id, config);
         if (self.IsEmpty)

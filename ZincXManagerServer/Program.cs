@@ -10,6 +10,7 @@ using ZincXManagerShared.Command;  // 共享库
 using ZincXManagerShared.FileIO;  // 共享库
 using ZincXManagerShared.History;  // 补发游标
 using ZincXManagerShared.Logging;  // 共享库
+using ZincXManagerShared.Modules;  // ModuleIds / ModuleRules:模块编号与包归属规则
 using ZincXManagerShared.Network;  // 共享库
 using ZincXManagerShared.Security;  // 共享库
 using ZincXManagerShared.Update;  // 版本号比较(强制更新)
@@ -20,6 +21,7 @@ using ZincXManagerServer.Command;  // 子服自身
 using TcpClient = ZincXManagerShared.Network.TcpClient;
 
 using ZincXManagerServer.Login;  // 归属地查询
+using ZincXManagerServer.Modules;  // ModuleRegistry / ServerModule:模块装配
 using ZincXManager.Server.Zxms;  // 多服数据分离:服务器登记 / 分区分层
 using ZincXManagerShared.Login;  // 绑定表 / 持久登录表 / 登录日志
 
@@ -629,6 +631,35 @@ internal static partial class Program
     }
 
     /// <summary>
+    /// 发这个包的连接是不是管理账号(LAdmin / HAdmin / System)。
+    /// 半加载的模块只对管理账号放行,所以每条半加载模块的包都要问一次。
+    /// 还没登录的连接(等级为空)一律算玩家 —— 注册包就发生在登录之前。
+    /// </summary>
+    /// <param name="connection">发请求的连接。</param>
+    private static bool IsModuleCallerAdmin(TcpConnection connection)
+    {
+        var info = _server?.Registry.Find(connection.Id);   //这条连接的登录信息
+        return info is not null && Protocol.IsManagementLevel(info.Level);
+    }
+
+    /// <summary>
+    /// 玩家碰到半加载的模块:按请求-回执配对回一条「该功能已关闭」,什么都不执行。
+    /// 有回执的包客户端能当场提示,不用干等超时;没有回执的单向包(如已读标记)只记日志。
+    /// </summary>
+    /// <param name="packet">玩家发来的包。</param>
+    /// <param name="module">这个包归属的半加载模块。</param>
+    private static async Task RejectHalfModulePacketAsync(ServerboundPacket packet, Modules.ServerModule module)
+    {
+        if (ModuleRules.TryGetReply(packet.Type, out var replyType))
+        {
+            await packet.SendAsync(replyType, ModuleRules.DisabledPayload(module.Title), packet.Id);
+        }
+
+        Logger.Log(LogLevel.Debug,
+            $"[模块] 玩家发来半加载模块「{module.Title}」({module.Id})的包 type={packet.Type},已拒绝 ← {Where(packet.Connection)}");
+    }
+
+    /// <summary>
     /// 把某台服的一行控制台输出推给正在监听它的客户端。
     /// </summary>
     /// <param name="serverId">服务器编号。</param>
@@ -885,6 +916,9 @@ internal static partial class Program
         }
 
         // ① 白名单(开启时):按通联标比对(玩家名 / 绑定账号名 / 绑定账号ID),未命中直接黄字踢出
+        //    这一段的强制力和模块开关是解耦的:它只认 Whitelist.Enabled(wl on/off 管的那个)。
+        //    as.whitelist 模块是开、是半加载、还是关,都只决定「客户端看不看得见白名单入口」和「wl 命令还能不能用」,
+        //    不决定「进服拦不拦人」—— 白名单服关掉模块照样按名单挡人,否则服主关一下界面就成公开服了。
         if (Whitelist.Enabled)
         {
             var wlBound = LoginStore.AccountOf(player);   //这个玩家绑的账号ID(没绑定就是 0)
@@ -948,6 +982,15 @@ internal static partial class Program
             LoginStore.Log($"[未绑定] 玩家 {player}({ip}) 拿到绑定码 {code}(连接阶段)");
             await KickViaZxmmAsync(player,
                 "请先绑定账号。绑定码：" + code + " —— 在 ZXMC 的「小功能组 → 绑定/解绑」里输入这 6 位");
+            return;
+        }
+
+        // ④ 登录确认模块关着:没有"等账号主人点同意"这一环,直接放行并补记一条免确认
+        if (!ModuleRegistry.IsOn(ModuleIds.LoginConfirm))
+        {
+            AddToLoginArray(player);
+            LoginStore.AddPersistentLogin(player, ip);
+            LoginStore.Log($"[配置阶段] 玩家 {player}({ip}) 放行(登录确认模块已关闭,不再弹窗确认)");
             return;
         }
 
@@ -1025,6 +1068,15 @@ internal static partial class Program
             LoginStore.Log($"[未绑定] 玩家 {player}({ip}) 拿到绑定码 {code}");
             await KickViaZxmmAsync(player,
                 "请先绑定账号。绑定码：" + code + " —— 在 ZXMC 的「小功能组 → 绑定/解绑」里输入这 6 位");
+            return;
+        }
+
+        // ④ 登录确认模块关着:没人会弹窗,直接放行并补记一条免确认(后面的查重 / 等 622 都不做)
+        if (!ModuleRegistry.IsOn(ModuleIds.LoginConfirm))
+        {
+            AddToLoginArray(player);
+            LoginStore.AddPersistentLogin(player, ip);
+            LoginStore.Log($"[进服] 玩家 {player}({ip}) 放行(登录确认模块已关闭,不再弹窗确认)");
             return;
         }
 
@@ -1130,6 +1182,21 @@ internal static partial class Program
             return;
         }
 
+        // 模块分发:装配好的模块认自己的包,命中就交给它,不再往下走核心 switch。
+        // 没装配的模块不会出现在这张表里,所以关掉的功能连解析都不会做。
+        // 半加载的模块在这张表里,但只放行管理账号:玩家发来的包在这儿就回 err,不进处理体。
+        if (ModuleRegistry.TryGetModule(packet.Type, out var module))
+        {
+            if (ModuleRegistry.IsHalf(module.Id) && !IsModuleCallerAdmin(packet.Connection))
+            {
+                await RejectHalfModulePacketAsync(packet, module);
+                return;
+            }
+
+            await module.OnPacketAsync(packet, ModuleRegistry.Context!);
+            return;
+        }
+
         switch (packet.Type)
         {
             // ---- ZXMC(客户端)上线:负载形如 "ZXMC:SAOS"(客户端把自己的连接模式报上来) ----
@@ -1139,7 +1206,7 @@ internal static partial class Program
                 var parts = text.Split(':', 2);   //拆分结果
                 var mode = parts.Length > 1 ? parts[1] : "-";
 
-                _server.Registry.SetRole(packet.Connection.Id, "ZXMC", mode);
+                server.Registry.SetRole(packet.Connection.Id, "ZXMC", mode);
                 Logger.Log(LogLevel.Info, $"[ZXMC] 上线(握手): {text} 模式={mode}");
                 ClientLog.Online("ZXMC", mode, packet.Connection.RemoteEndPoint?.ToString() ?? "?");
 
@@ -1182,7 +1249,7 @@ internal static partial class Program
                 var loginVersion = parts.Length > 8 ? parts[8].Trim() : "";
                 var fromIp = packet.Connection.RemoteEndPoint?.Address.ToString() ?? "";
 
-                _server.Registry.SetVersion(packet.Connection.Id, loginVersion);
+                server.Registry.SetVersion(packet.Connection.Id, loginVersion);
 
                 // 强制更新:版本不够直接回 err,不耗限速额度(旧客户端会一直重连,别把整个 IP 的额度用光)
                 if (RejectOutdatedClient(loginVersion, protocol: "登录", user) is { } outdatedLogin)
@@ -1248,7 +1315,7 @@ internal static partial class Program
                 if (ok)
                 {
                     _loginLimiter.RecordSuccess(fromIp);
-                    _server.Registry.SetAccount(packet.Connection.Id, account!.Name, account.Level, account.Id);
+                    server.Registry.SetAccount(packet.Connection.Id, account!.Name, account.Level, account.Id);
                     Accounts.Touch(account.Name, fromIp, machine);
                     Logger.Log(LogLevel.Info, $"[账号] 登录成功:{account.Name}({account.Level}) ← {Where(packet.Connection)}");
                     ClientLog.Write(account.Level, $"登录 账号={account.Name} 地址={packet.Connection.RemoteEndPoint}");
@@ -1271,86 +1338,6 @@ internal static partial class Program
 
                     Logger.Log(LogLevel.Warning, $"[账号] 登录失败:{user} —— {reason}");
                     await packet.SendAsync(Protocol.AccountLoginAck, "err|" + reason, packet.Id);
-                }
-
-                break;
-            }
-
-            // ---- 账号:注册(负载 "名称|密码密文";等级固定 Player) ----
-            case Protocol.AccountRegister:
-            {
-                var parts = Encoding.UTF8.GetString(packet.Data).Split('|');   //包内容
-                var user = parts.Length > 0 ? parts[0].Trim() : "";
-                var passwordHash = parts.Length > 1 ? parts[1] : "";
-                // 第 3 段是客户端机器码(老客户端没这段,当空处理)
-                var regMachine = parts.Length > 2 ? parts[2].Trim() : "";
-                // 注册负载最后一段也是客户端版本(名称|密文|机器码|nonce|proof|版本)
-                var regVersion = parts.Length > 5 ? parts[5].Trim() : "";
-
-                var regIp = packet.Connection.RemoteEndPoint?.Address.ToString() ?? "";
-
-                _server.Registry.SetVersion(packet.Connection.Id, regVersion);
-
-                // 强制更新对注册同样生效:旧客户端注册进来也一样用不了
-                if (RejectOutdatedClient(regVersion, protocol: "注册", user) is { } outdatedReg)
-                {
-                    await packet.SendAsync(Protocol.AccountRegisterAck, "err|" + outdatedReg, packet.Id);
-                    break;
-                }
-
-                // 注册和登录共用同一份失败计数:否则可以拿注册接口反过来试口令 / 刷账号
-                if (_loginLimiter.IsBlocked(regIp))
-                {
-                    WarnRateLimited("login:" + regIp,
-                        $"[限速] {regIp} 失败次数过多(注册 {user}),已拒绝");
-                    await packet.SendAsync(Protocol.AccountRegisterAck,
-                        "err|失败次数过多,请稍后再试", packet.Id);
-                    break;
-                }
-
-                // 注册这条分支的机器码规则与登录一致:空串 + 严格模式 → 拒绝,不写账号
-                if (regMachine.Length == 0 && _machineRequire)
-                {
-                    Logger.Log(LogLevel.Warning,
-                        $"[机器码] 拒绝注册 {user}:客户端取不到主板序列号({KeyMachineRequire}=1) ← {Where(packet.Connection)}");
-                    await packet.SendAsync(Protocol.AccountRegisterAck,
-                        "err|取不到主板序列号,本服要求绑定机器码;请确认主板序列号可读后重试,或联系服主关闭机器码必填", packet.Id);
-                    break;
-                }
-
-                if (Bans.Check(user, regIp, regMachine, out var regBan))
-                {
-                    Logger.Log(LogLevel.Warning, $"[封禁] 拒绝注册 {user}({regBan!.Kind}={regBan.Value})");
-                    await packet.SendAsync(Protocol.AccountRegisterAck, $"err|已被封禁:{regBan.Reason}({regBan.Remain})", packet.Id);
-                    break;
-                }
-
-                // 玩家账号优先在官方服务端注册(SAOS 下也必须经 ZXMS 中转,不能绕过);
-                // 带 "|relay" 让官方服务端知道这是替玩家注册,不是 ZXMS 自己注册服务端账号
-                if (await TryRelayAccountAsync(packet, Protocol.AccountRegister, "|relay"))
-                {
-                    break;
-                }
-
-                Logger.Log(LogLevel.Info, "[账号] 官方服务端未连接,玩家账号在本端注册");
-
-                if (Accounts.TryRegister(user, passwordHash, out var account, out var error))
-                {
-                    _loginLimiter.RecordSuccess(regIp);
-                    // 注册成功也要登记账号 + 记下 IP/机器码:否则这条连接在拉黑时踢不掉,也少一条连坐
-                    _server.Registry.SetAccount(packet.Connection.Id, account!.Name, account.Level, account.Id);
-                    Accounts.Touch(account.Name, regIp, regMachine);
-                    Logger.Log(LogLevel.Info, $"[账号] 注册成功:{account.Name}({account.Level}) ← {Where(packet.Connection)}");
-                    ClientLog.Write(account.Level, $"注册 账号={account.Name} 地址={packet.Connection.RemoteEndPoint}");
-
-                    await packet.SendAsync(Protocol.AccountRegisterAck,
-                        $"ok|{account.Name}|{account.Id}|{account.Level}|{LocalPlayerId(account, config).Full}", packet.Id);
-                }
-                else
-                {
-                    _loginLimiter.RecordFailure(regIp);
-                    Logger.Log(LogLevel.Warning, $"[账号] 注册失败:{user} —— {error}");
-                    await packet.SendAsync(Protocol.AccountRegisterAck, "err|" + error, packet.Id);
                 }
 
                 break;
@@ -1387,7 +1374,7 @@ internal static partial class Program
             // ---- 头像:取当前账号的头像(负载空) ----
             case Protocol.AccountAvatarReq:
             {
-                var info = _server.Registry.Find(packet.Connection.Id);
+                var info = server.Registry.Find(packet.Connection.Id);
                 var avatar = AvatarStore.Load(info?.User ?? "");
 
                 // 有头像就把图片字节原样发回去;没有就发空负载
@@ -1400,7 +1387,7 @@ internal static partial class Program
             // ---- 头像:设置当前账号的头像(负载 = 图片字节) ----
             case Protocol.AccountAvatarSet:
             {
-                var info = _server.Registry.Find(packet.Connection.Id);
+                var info = server.Registry.Find(packet.Connection.Id);
 
                 if (info is null || info.User.Length == 0)
                 {
@@ -1416,612 +1403,33 @@ internal static partial class Program
                 break;
             }
 
-            // ---- 卡片动作(502):客户端点了公告 / 推送卡片上的按钮 ----
-            case Protocol.CardAction:
-            {
-                var text = Encoding.UTF8.GetString(packet.Data);   //包内容
-                var who = _server?.Registry.Find(packet.Connection.Id)?.User ?? "?";
-
-                if (!MessageCard.TryParseAction(text, out var talk))
-                {
-                    Logger.Log(LogLevel.Warning, "[消息] 卡片动作负载格式不对,已忽略:" + text);
-                    await packet.SendAsync(Protocol.CardActionAck, "err|动作格式不对", packet.Id);
-                    break;
-                }
-
-                // 卡片是官方服务端发的(来源 ZXMOS-…):转交过去,让官方端知道是谁点的
-                var forwarded = talk.CardSource.StartsWith("ZXMOS-", StringComparison.OrdinalIgnoreCase) &&
-                                await TryForwardCardActionAsync(who, text);
-
-                // 玩家返回单独记一份:Data/MegBack.txt(一行一条)
-                var originId = MessageCard.TryParse(talk.Card, out var origin) ? origin.Id : 0;
-                var originEntry = originId > 0 ? MessageArchive.Find(originId) : null;
-                var originTarget = originEntry is null || originEntry.Target.Trim().Length == 0
-                    ? (talk.CardSource.Length > 0 ? talk.CardSource : "notice")
-                    : originEntry.Target;
-                CardResponses.Append(DateTime.Now, originId, originTarget,
-                    (await ResolveAccountAsync(who))?.Id ?? 0, MessageCard.ActionText(text));
-
-                Logger.Log(LogLevel.Info,
-                    $"[消息] {who} 在卡片「{talk.CardTitle}」上点了「{MessageCard.ActionText(text)}」" +
-                    (forwarded ? "(已转交官方服务端)" : "(本服卡片)"));
-
-                await packet.SendAsync(Protocol.CardActionAck,
-                    forwarded ? "ok|已转交官方服务端" : "ok|本服已收到你的选择", packet.Id);
-                break;
-            }
-
-            // ---- 补发请求(505):客户端登录后要一次历史消息 → 转给官方服务端,回包再按包 Id 转回这条连接 ----
-            case Protocol.MessageHistoryReq:
-            {
-                var who = _server?.Registry.Find(packet.Connection.Id)?.User ?? "?";
-                var intent = Encoding.UTF8.GetString(packet.Data).Trim();   //包内容
-                if (intent.Length == 0)
-                {
-                    intent = "client";
-                }
-
-                var forClient = !string.Equals(intent, "self", StringComparison.OrdinalIgnoreCase);
-
-                // ① 先把本服自己的存档给出去:官方端掉线 / OS 模式(只连子服)时也能补到本服消息。
-                //    官方端连着时跳过"从官方端转下来的那些"(官方那边本来就会给,免得发两遍、506 数字虚高)
-                var osLive = _os is { IsConnected: true };
-                var localSent = await SendLocalHistoryAsync(packet, who, forClient, osLive);
-
-                // ② 官方端连着就再要一批;收尾时把"官方条数 + 本服条数"合成一条 506 回给客户端
-                var os = _os;
-                if (os is null || !os.IsConnected)
-                {
-                    Logger.Log(LogLevel.Info,
-                        $"[消息] {who} 来要补发:官方服务端未连接,只补本服 {localSent} 条");
-                    await packet.SendAsync(Protocol.MessageHistoryDone, localSent.ToString(), packet.Id);
-                    break;
-                }
-
-                var relayId = Interlocked.Increment(ref _relayId);
-                HistoryRelay[relayId] = (packet.Connection.Id, packet.Id, localSent);
-
-                try
-                {
-                    await os.WriteAsync(new Packet(relayId, Protocol.MessageHistoryReq,
-                        Encoding.UTF8.GetBytes(intent)));
-                    Logger.Log(LogLevel.Info,
-                        $"[消息] 已替 {who} 向官方服务端要补发(relay={relayId}),本服已先给 {localSent} 条");
-                }
-                catch (Exception ex)
-                {
-                    HistoryRelay.TryRemove(relayId, out _);
-                    Logger.Log(LogLevel.Error, "[消息] 转发补发请求失败: " + ex.Message);
-                    await packet.SendAsync(Protocol.MessageHistoryDone, localSent.ToString(), packet.Id);
-                }
-
-                break;
-            }
-
-            // ---- 官方端回包(509):-os 查询结果,唤醒等待的命令 ----
-            case Protocol.MegBackAck:
-            {
-                var ackText = Encoding.UTF8.GetString(packet.Data);   //包内容
-                if (MegBackWaits.TryRemove((int)packet.Id, out var pending))
-                {
-                    pending.TrySetResult(ackText);
-                }
-                break;
-            }
-
-            // ---- 620 已废:现在 ZXMM 走专用长连接推 evt|joined(见 HandlePlayerJoinedAsync) ----
-            case Protocol.LoginRequest:
-                break;
-
-            // ---- 客户端回答(622):同意 / 拒绝 ----
-            case Protocol.LoginAnswer:
-            {
-                var answerText = Encoding.UTF8.GetString(packet.Data).Trim();   //回答负载
-                var answerParts = answerText.Split('|');   //拆分结果
-                if (answerParts.Length < 2 || !int.TryParse(answerParts[0], out var requestId) ||
-                    !PendingLogins.TryGetValue(requestId, out var pending))
-                {
-                    break;
-                }
-
-                var agree = string.Equals(answerParts[1], "yes", StringComparison.OrdinalIgnoreCase);
-                var answerInfo = _server?.Registry.Find(packet.Connection.Id);
-                var answerIp = answerInfo?.Address ?? "?";
-
-                // 只有被问的那个账号能回答:否则任何一个登录着的 ZXMC 都能替别人点"同意",
-                // 白白给别的玩家写一条持久登录(以后免确认进服)。越权的回答不能把请求吃掉。
-                var answerAccount = (await ResolveAccountAsync(answerInfo?.User ?? ""))?.Id ?? 0;
-                if (answerAccount != pending.AccountId)
-                {
-                    Logger.Log(LogLevel.Warning,
-                        $"[安全] 越权回答登录请求 请求 {requestId}(属于账号 {pending.AccountId}) ← 账号 {answerAccount}({answerInfo?.User ?? "?"})");
-                    LoginStore.Log($"[登录拒绝] 请求 {requestId} 被非绑定账号(账号 {answerAccount})回答，已忽略");
-                    break;
-                }
-
-                // 认领这条请求(并发下只让一个人处理)
-                if (!PendingLogins.TryRemove(requestId, out pending))
-                {
-                    break;
-                }
-
-                LoginStore.Log(agree
-                    ? $"[登录通过] 玩家 {pending.Player},账号 {pending.AccountId},发起 IP {pending.Ip},同意 IP {answerIp}"
-                    : $"[登录拒绝] 玩家 {pending.Player},账号 {pending.AccountId},发起 IP {pending.Ip},拒绝 IP {answerIp}");
-
-                // ZXMM 的上报是短连接，早就关了；这里只做决策，结果不再回给它
-
-                if (agree)
-                {
-                    // 流程:允许 → 进登录数组(5 分钟) + 写持久登录表,之后直接放行
-                    AddToLoginArray(pending.Player);
-                    LoginStore.AddPersistentLogin(pending.Player, pending.Ip);
-                }
-                else
-                {
-                    // 流程:拒绝 → 由 ZXMS 通过执行接口让 ZXMM 去踢
-                    // 不 await:踢人要等 ZXMM 回执(最长 10 秒),等在这儿会把整条连接的报文处理堵住
-                    _ = KickViaZxmmAsync(pending.Player, "账号主人拒绝了这次登录");
-                }
-                break;
-            }
-
-            // ---- 绑定码转交(625):ZXMM 把玩家手里的码转给服务端 ----
-            case Protocol.BindNotice:
-            {
-                var noticeText = Encoding.UTF8.GetString(packet.Data).Trim();   //包内容
-                var noticeParts = noticeText.Split('|');   //拆分结果
-                if (noticeParts.Length >= 2 && noticeParts[0].Trim().Length > 0)
-                {
-                    lock (BindCodes)
-                    {
-                        BindCodes[noticeParts[0].Trim().ToUpperInvariant()] = (noticeParts[1].Trim(), DateTime.Now);
-                    }
-                }
-                break;
-            }
-
-            // ---- 绑定(626):客户端提交绑定码 —— 只校验并生成确认令牌,真正写绑定要等 631 ----
-            case Protocol.BindApply:
-            {
-                var code = Encoding.UTF8.GetString(packet.Data).Trim().ToUpperInvariant();   //包内容
-                var bindWho = _server?.Registry.Find(packet.Connection.Id)?.User ?? "";
-                var bindAccount = (await ResolveAccountAsync(bindWho))?.Id ?? 0;
-                if (bindAccount <= 0)
-                {
-                    await packet.SendAsync(Protocol.BindAck, "err|请先登录(这条连接没有登录态,断线重连后请重新登录一次)", packet.Id);
-                    break;
-                }
-
-                var bindPlayer = "";
-                lock (BindCodes)
-                {
-                    if (BindCodes.TryGetValue(code, out var entry) && (DateTime.Now - entry.At).TotalMinutes <= 30)
-                    {
-                        bindPlayer = entry.Player;
-                    }
-                }
-
-                if (bindPlayer.Length == 0)
-                {
-                    await packet.SendAsync(Protocol.BindAck, "err|绑定码无效或已过期", packet.Id);
-                    break;
-                }
-
-                // 绑定表按这条连接当前选的服务器取:客户端切到哪台,就只认那台的分区(没开分离时 Scope 返回空串)
-                var bindScope = DataSeparation.Scope("bind", ServerOf(packet.Connection));
-
-                // 绑定码只是"玩家本人的凭证":码可能被别人看到或转发,
-                // 所以真正落盘前还要账号主人在 ZXMC 上亲眼确认一次(631)
-                var alreadyOwner = LoginStore.AccountOf(bindPlayer, bindScope);
-                if (alreadyOwner > 0 && alreadyOwner != bindAccount)
-                {
-                    await packet.SendAsync(Protocol.BindAck, $"err|这个玩家已经被账号 {alreadyOwner} 绑定了", packet.Id);
-                    break;
-                }
-
-                // 上限在提交码这一步就先挡:让用户当场看到"先解绑一个",而不是输了码点了确认才失败
-                var bindLimit = LoginStore.CheckBindLimit(bindAccount, bindPlayer, _bindMax, bindScope);
-                if (bindLimit.Length > 0)
-                {
-                    await packet.SendAsync(Protocol.BindAck, "err|" + bindLimit, packet.Id);
-                    break;
-                }
-
-                var token = Guid.NewGuid().ToString("N")[..8].ToUpperInvariant();   //确认令牌
-                PendingBinds[token] = new PendingBind(bindAccount, bindPlayer, code, DateTime.Now);
-                await packet.SendAsync(Protocol.BindAck, $"pending|{token}|{bindPlayer}", packet.Id);
-                Logger.Log(LogLevel.Info,
-                    $"[绑定] 账号 {bindWho}(ID {bindAccount}) 提交绑定码,待确认玩家 {bindPlayer} 令牌 {token}");
-                break;
-            }
-
-            // ---- 绑定二次确认(631):用户点了"确定绑定"才真正写绑定表 ----
-            case Protocol.BindConfirm:
-            {
-                var token = Encoding.UTF8.GetString(packet.Data).Trim().ToUpperInvariant();   //包内容
-                var confirmWho = _server?.Registry.Find(packet.Connection.Id)?.User ?? "";
-                var confirmAccount = (await ResolveAccountAsync(confirmWho))?.Id ?? 0;
-                if (confirmAccount <= 0)
-                {
-                    await packet.SendAsync(Protocol.BindAck, "err|请先登录(这条连接没有登录态,断线重连后请重新登录一次)", packet.Id);
-                    break;
-                }
-
-                // 令牌只给发起账号用,别让另一条连接拿着它把别人的码绑到自己名下
-                if (!PendingBinds.TryRemove(token, out var pending) ||
-                    pending.AccountId != confirmAccount ||
-                    (DateTime.Now - pending.At).TotalMinutes > BindConfirmMinutes)
-                {
-                    await packet.SendAsync(Protocol.BindAck, "err|确认已过期,请重新输入绑定码", packet.Id);
-                    break;
-                }
-
-                // 这个账号名下的旧玩家不做任何处理:上限拦着不许顶掉旧的,
-                // 真要让他失去免确认只能走 628 解绑(解绑会清登录数组、持久登录表并踢人)
-                if (!LoginStore.Bind(confirmAccount, pending.Player, _bindMax, out var bindError,
-                        DataSeparation.Scope("bind", ServerOf(packet.Connection))))
-                {
-                    await packet.SendAsync(Protocol.BindAck, "err|" + bindError, packet.Id);
-                    break;
-                }
-
-                // 码用过就作废(一次性):只在真正绑成之后才删,取消确认的码还能重试
-                lock (BindCodes)
-                {
-                    if (BindCodes.TryGetValue(pending.Code, out var used) &&
-                        string.Equals(used.Player, pending.Player, StringComparison.OrdinalIgnoreCase))
-                    {
-                        BindCodes.Remove(pending.Code);
-                    }
-                }
-
-                LoginStore.Log($"[绑定] 账号 {confirmAccount} 确认绑定玩家 {pending.Player}(令牌 {token})");
-                await packet.SendAsync(Protocol.BindAck, $"ok|{pending.Player}", packet.Id);
-
-                // 多绑之后不再有"改绑顶掉旧玩家":旧玩家仍在这个账号名下,他的免登录与在线状态都不能动
-                // (要让他失去免确认,只能走 628 解绑)
-
-                break;
-            }
-
-            // ---- 解绑(628):负载是玩家名(空 = 这个账号名下全部解掉,兼容老客户端) ----
-            case Protocol.Unbind:
-            {
-                var unbindWho = _server?.Registry.Find(packet.Connection.Id)?.User ?? "";
-                var unbindAccount = (await ResolveAccountAsync(unbindWho))?.Id ?? 0;
-                var unbindTarget = Encoding.UTF8.GetString(packet.Data).Trim();   //要解掉哪个玩家
-                if (unbindAccount <= 0)
-                {
-                    await packet.SendAsync(Protocol.BindAck, "err|请先登录(这条连接没有登录态,断线重连后请重新登录一次)", packet.Id);
-                    break;
-                }
-
-                // 只解自己名下的:负载里的玩家名必须真在这个账号名下,不能拿别人的名字来解绑
-                var unbindScope = DataSeparation.Scope("bind", ServerOf(packet.Connection));   //解绑只动当前选中那台服的分区
-                List<string> removed;
-                if (unbindTarget.Length == 0)
-                {
-                    removed = LoginStore.UnbindAll(unbindAccount, unbindScope);
-                }
-                else
-                {
-                    removed = LoginStore.Unbind(unbindAccount, unbindTarget, out var one, unbindScope) ? [one] : [];
-                }
-
-                if (removed.Count == 0)
-                {
-                    await packet.SendAsync(Protocol.BindAck,
-                        unbindTarget.Length == 0 ? "err|没有绑定记录" : $"err|这个账号没有绑定玩家 {unbindTarget}", packet.Id);
-                    break;
-                }
-
-                // 解绑要立刻失效:登录数组、持久登录表都清掉,再通过执行接口把在线的人踢掉
-                foreach (var player in removed)
-                {
-                    LoginArray.TryRemove(player, out _);
-                    LoginStore.RemovePersistentLogin(player);
-                }
-
-                await packet.SendAsync(Protocol.BindAck, $"ok|{string.Join(",", removed)}", packet.Id);
-
-                // 踢人不 await(同上),否则回执会被这条踢人拖到 10 秒后
-                foreach (var player in removed)
-                {
-                    _ = KickViaZxmmAsync(player, "账号已解绑，请重新绑定后再进入");
-                }
-
-                break;
-            }
-
-            // ---- 查绑定(629):ZXMM 查全部;ZXMC 只查自己绑了哪些 ----
-            case Protocol.BindQuery:
-            {
-                var queryInfo = _server?.Registry.Find(packet.Connection.Id);
-
-                if (queryInfo?.Role == "ZXMC")
-                {
-                    // 客户端来查:只回自己名下的玩家,一行一个(解绑页按行做列表)
-                    var selfId = (await ResolveAccountAsync(queryInfo.User))?.Id ?? 0;
-                    var selfPlayers = selfId > 0
-                        ? LoginStore.PlayersOf(selfId, DataSeparation.Scope("bind", ServerOf(packet.Connection)))   //只回这台服分区里的玩家
-                        : [];
-
-                    if (selfPlayers.Count > 0)
-                    {
-                        var selfLines = selfPlayers.Select(p => $"{p}={queryInfo.User}");
-                        await packet.SendAsync(Protocol.BindList, string.Join("\n", selfLines), packet.Id);
-                        break;
-                    }
-
-                    // 还没绑定:只说"没绑",不带任何别人的玩家名/绑定码 —— 绑定码是玩家的私密凭据,
-                    // 服务端在未绑定时并不知道这个账号对应哪个玩家,推"最近进服那个"就是跨玩家泄漏
-                    await packet.SendAsync(Protocol.BindList, "nobind||", packet.Id);
-                    break;
-                }
-
-                var lines = LoginStore.AllBinds()
-                    .Select(pair => $"{pair.Value}={Accounts.FindById(pair.Key)?.Name ?? "?"}");
-                await packet.SendAsync(Protocol.BindList, string.Join("\n", lines), packet.Id);
-                break;
-            }
-
-            // ---- 客户端回执(507):这几条它已经收下了,记进已发清单 ----
-            case Protocol.MessageAck:
-            {
-                var ackWho = _server?.Registry.Find(packet.Connection.Id)?.User ?? "";
-                var ackId = (await ResolveAccountAsync(ackWho))?.Id ?? 0;
-                var ackText = Encoding.UTF8.GetString(packet.Data).Trim();   //包内容
-                var ackIds = ackText.Split(' ', StringSplitOptions.RemoveEmptyEntries)
-                    .Select(t => int.TryParse(t, out var v) ? v : 0).Where(v => v > 0).ToArray();
-                if (ackId > 0 && ackIds.Length > 0)
-                {
-                    SentMessages.Add(ackId, ackIds);
-                    Logger.Log(LogLevel.Info, $"[消息] {ackWho} 回执:已收 {ackIds.Length} 条");
-                }
-
-                // 官方服那边也存了这批消息:回执要原样转过去,
-                // 不然它没有"已发"记录,客户端每次重启它都会再补一遍
-                var ackOs = _os;
-                if (ackOs is { IsConnected: true } && ackIds.Length > 0)
-                {
-                    try
-                    {
-                        await ackOs.WriteAsync(new Packet(0, Protocol.MessageAck, packet.Data));
-                    }
-                    catch (Exception ex)
-                    {
-                        Logger.Log(LogLevel.Warning, "[消息] 转发回执给官方服失败: " + ex.Message);
-                    }
-                }
-                break;
-            }
-
-            // ---- 服务端消息:公告(500)/ 定向推送(501)只有服务端能发,客户端发来一律忽略 ----
-            case Protocol.Notice:
-            case Protocol.Push:
-                Logger.Log(LogLevel.Warning,
-                    $"[ZXMS] 客户端试图发服务端消息 type={packet.Type},已忽略 ← {Where(packet.Connection)}");
-                break;
-
-            // ---- 好友:每个动作一行,真正的判断在 Friends 目录里的处理器 ----
-            case Protocol.FriendMsg:
-                await HandleFriendMessageAsync(packet, config);
-                break;
-
-            case Protocol.FriendMsgHistory:
-                await HandleFriendHistoryQueryAsync(packet, config);
-                break;
-
-            case Protocol.FriendReadMark:
-                await HandleFriendReadMarkAsync(packet, config);
-                break;
-
-            case Protocol.FriendAvatarReq:
-                await HandleFriendAvatarAsync(packet, config);
-                break;
-
-            case Protocol.FriendListQuery:
-                await HandleFriendListQueryAsync(packet, config);
-                break;
-
-            case Protocol.FriendRequest:
-                await HandleFriendRequestAsync(packet, config);
-                break;
-
-            case Protocol.FriendRequestsQuery:
-                await HandleFriendRequestsQueryAsync(packet, config);
-                break;
-
-            case Protocol.FriendAnswer:
-                await HandleFriendAnswerAsync(packet, config);
-                break;
-
-            case Protocol.FriendRemove:
-                await HandleFriendRemoveAsync(packet, config);
-                break;
-
-            case Protocol.FriendSearch:
-                await HandleFriendSearchAsync(packet, config);
-                break;
-
-            case Protocol.FriendRemark:
-                await HandleFriendRemarkAsync(packet, config);
-                break;
-
-            // ---- 多服数据分离:客户端要服务器列表 / 切换当前服务器 ----
-            case Protocol.ServerListReq:
-            {
-                var lines = new List<string>();   //每行一台:编号|名称|端口
-                foreach (var entry in Servers.All)
-                {
-                    lines.Add($"{entry.Id}|{entry.Name}|{entry.Port}");
-                }
-
-                // 0 台时回空负载,客户端按空列表处理
-                var listText = string.Join('\n', lines);
-                await packet.WriteAsync(new Packet(packet.Id, Protocol.ServerList, Encoding.UTF8.GetBytes(listText)));
-                Logger.Log(LogLevel.Info,
-                    $"[数据分离] 客户端 {Where(packet.Connection)} 要服务器列表 → 回 {lines.Count} 台");
-                break;
-            }
-
-            case Protocol.ServerSwitchReq:
-            {
-                var targetText = Encoding.UTF8.GetString(packet.Data).Trim();   //目标服务器编号(十进制)
-                if (!int.TryParse(targetText, out var targetId) || !Servers.TryGet(targetId, out var target))
-                {
-                    var err = Encoding.UTF8.GetBytes("err|没有这个服务器");
-                    await packet.WriteAsync(new Packet(packet.Id, Protocol.ServerSwitchAck, err));
-                    Logger.Log(LogLevel.Warning,
-                        $"[数据分离] 客户端 {Where(packet.Connection)} 切到服务器「{targetText}」→ 没有这个服务器");
-                    break;
-                }
-
-                lock (_clientServerLock)
-                {
-                    _clientServer[packet.Connection] = target.Id;
-                }
-
-                var okText = Encoding.UTF8.GetBytes($"ok|{target.Id}");
-                await packet.WriteAsync(new Packet(packet.Id, Protocol.ServerSwitchAck, okText));
-                Logger.Log(LogLevel.Info,
-                    $"[数据分离] 客户端 {Where(packet.Connection)} 切到服务器 {target.Id}({target.Name}) → ok");
-                break;
-            }
-
-            // ---- 控制台:列服务器 / 执行一条命令 / 开关持续输出 ----
-            case Protocol.ConsoleServersReq:
-            {
-                var lines = new List<string>();   //每行一台:编号|名称|控制台模式|桥接在线|RCON在线
-                foreach (var entry in Servers.All)
-                {
-                    var bridge = Zxms.ConsoleRouter.IsBridgeOnline(entry.Id) ? 1 : 0;   //ZXMM 通道通不通
-                    var rcon = entry.ConsoleMode == Zxms.ZxmmRegistry.ConsoleModeRcon && Zxms.RconHub.IsOnline(entry.Id) ? 1 : 0;   //RCON 会话在不在
-                    lines.Add($"{entry.Id}|{entry.Name}|{entry.ConsoleMode}|{bridge}|{rcon}");
-                }
-
-                // 0 台时回空负载,客户端按空列表处理
-                var listText = string.Join('\n', lines);
-                await packet.WriteAsync(new Packet(packet.Id, Protocol.ConsoleServers, Encoding.UTF8.GetBytes(listText)));
-                Logger.Log(LogLevel.Info,
-                    $"[控制台] 客户端 {Where(packet.Connection)} 要控制台服务器列表 → 回 {lines.Count} 台");
-                break;
-            }
-
-            case Protocol.ConsoleCommand:
-            {
-                // 先卡权限:没权限的连接连表都不查、命令也不执行
-                if (!CanUseConsole(packet.Connection))
-                {
-                    var denied = Encoding.UTF8.GetBytes("err|没有这个服务器控制台的权限");
-                    await packet.WriteAsync(new Packet(packet.Id, Protocol.ConsoleResult, denied));
-                    Logger.Log(LogLevel.Warning,
-                        $"[控制台] 客户端 {Where(packet.Connection)} 想执行控制台命令 → 不是 HAdmin/System,已拒绝");
-                    break;
-                }
-
-                var text = Encoding.UTF8.GetString(packet.Data);   //负载:服务器编号|命令
-                var bar = text.IndexOf('|');   //命令里可能还有竖线,只切第一根
-                if (bar <= 0 || !int.TryParse(text[..bar].Trim(), out var serverId))
-                {
-                    var bad = Encoding.UTF8.GetBytes("err|参数不对");
-                    await packet.WriteAsync(new Packet(packet.Id, Protocol.ConsoleResult, bad));
-                    break;
-                }
-
-                var command = text[(bar + 1)..].Trim();   //要执行的 MC 命令(不带前导斜杠)
-                if (command.Length == 0)
-                {
-                    var empty = Encoding.UTF8.GetBytes("err|命令是空的");
-                    await packet.WriteAsync(new Packet(packet.Id, Protocol.ConsoleResult, empty));
-                    break;
-                }
-
-                // 命令日志要记是谁发的:登录信息随连接走,没登录取不到就按「控制台」记
-                var info = _server?.Registry.Find(packet.Connection.Id);
-                var operatorName = info?.User ?? "";   //操作人名称
-                if (operatorName.Length == 0)
-                {
-                    operatorName = "控制台";
-                }
-
-                var accountId = info?.AccountId ?? 0;   //操作人账号编号,0 = 没有账号
-                var (ok, result) = await Zxms.ConsoleRouter.SendAsync(serverId, command, operatorName, accountId);
-                var reply = Encoding.UTF8.GetBytes(ok ? $"ok|{result}" : $"err|{result}");
-                await packet.WriteAsync(new Packet(packet.Id, Protocol.ConsoleResult, reply));
-                break;
-            }
-
-            case Protocol.ConsoleTap:
-            {
-                if (!CanUseConsole(packet.Connection))
-                {
-                    var denied = Encoding.UTF8.GetBytes("err|没有这个服务器控制台的权限");
-                    await packet.WriteAsync(new Packet(packet.Id, Protocol.ConsoleResult, denied));
-                    Logger.Log(LogLevel.Warning,
-                        $"[控制台] 客户端 {Where(packet.Connection)} 想收控制台输出 → 不是 HAdmin/System,已拒绝");
-                    break;
-                }
-
-                var text = Encoding.UTF8.GetString(packet.Data);   //负载:服务器编号|1(开) 或 |0(关)
-                var bar = text.IndexOf('|');
-                var flag = bar > 0 ? text[(bar + 1)..].Trim() : "";
-                if (bar <= 0 || flag is not ("0" or "1") || !int.TryParse(text[..bar].Trim(), out var serverId))
-                {
-                    var bad = Encoding.UTF8.GetBytes("err|参数不对");
-                    await packet.WriteAsync(new Packet(packet.Id, Protocol.ConsoleResult, bad));
-                    break;
-                }
-
-                if (!Servers.TryGet(serverId, out var tapEntry))
-                {
-                    var missing = Encoding.UTF8.GetBytes("err|没有这个服务器");
-                    await packet.WriteAsync(new Packet(packet.Id, Protocol.ConsoleResult, missing));
-                    break;
-                }
-
-                var on = flag == "1";   //1 = 开始收,0 = 停止
-                int? previous = null;   //这条连接原来在收哪台:换台或关掉时要把旧那台的推送停掉
-                lock (_consoleTapLock)
-                {
-                    if (_consoleTaps.TryGetValue(packet.Connection, out var was))
-                    {
-                        previous = was;
-                    }
-
-                    if (on)
-                    {
-                        _consoleTaps[packet.Connection] = serverId;
-                    }
-                    else
-                    {
-                        _consoleTaps.Remove(packet.Connection);
-                    }
-                }
-
-                // 旧那台可能已经没人订阅了,先让它停;再按新目标重算
-                if (previous is int oldId && oldId != serverId)
-                {
-                    RefreshTap(oldId);
-                }
-
-                RefreshTap(serverId);
-
-                var ack = Encoding.UTF8.GetBytes(on
-                    ? $"ok|已开始接收 {serverId} 号服务器的控制台输出"
-                    : "ok|已停止");
-                await packet.WriteAsync(new Packet(packet.Id, Protocol.ConsoleResult, ack));
-                Logger.Log(LogLevel.Info, on
-                    ? $"[控制台] 客户端 {Where(packet.Connection)} 在收 {serverId}({tapEntry.Name}) 的控制台输出"
-                    : $"[控制台] 客户端 {Where(packet.Connection)} 停止接收 {serverId}({tapEntry.Name}) 的控制台输出");
-                break;
-            }
-
-            // 其它类型先记日志(ZXMM 模组端的类型还没定,定了在这里加 case)
+            // 剩下的类型:属于某个没装完整的模块就按规则回"功能已关闭",其他才记未处理
+            // 半加载的模块通常在上面的分发表里就被接住了;这里兜住那些没写进模块 Packets 清单的包。
+            // 半加载的管理账号照样放行:半加载只挡玩家。
             default:
-                Logger.Log(LogLevel.Warning, $"[网络] 未处理的包 type={packet.Type} len={packet.Data.Length}");
+            {
+                var ownerId = ModuleRules.PacketOf(packet.Type);   //这个包归哪个模块管
+                if (ownerId.Length > 0 && !ModuleRegistry.IsOn(ownerId)
+                    && !(ModuleRegistry.IsHalf(ownerId) && IsModuleCallerAdmin(packet.Connection)))
+                {
+                    var title = ModuleCatalog.TitleOf(ownerId);   //模块名(给用户看的)
+                    if (ModuleRules.TryGetReply(packet.Type, out var replyType))
+                    {
+                        // 有对应回包的:按规则回一条 err,客户端好当场提示,不用干等超时
+                        await packet.SendAsync(replyType, ModuleRules.DisabledPayload(title), packet.Id);
+                    }
+
+                    Logger.Log(LogLevel.Debug,
+                        $"[模块] 包 type={packet.Type} 属于{(ModuleRegistry.IsHalf(ownerId) ? "半加载" : "已关闭")}" +
+                        $"的「{title}」({ownerId}),已回 err");
+                }
+                else
+                {
+                    Logger.Log(LogLevel.Warning, $"[网络] 未处理的包 type={packet.Type} len={packet.Data.Length}");
+                }
+
                 break;
+            }
         }
     }
 
@@ -2269,12 +1677,10 @@ internal static partial class Program
         Zxms.ConsoleRouter.Attach(
             id => Zxms.ZxmmRegistry.TryGet(id, out var entry) ? entry : null,
             ZxmmApiOf);
-        Servers.Load();
-        DataSeparation.Load(config);
-        SeparationMigration.Run(config);
-        Logger.Log(LogLevel.Info, $"[数据分离] 启动就绪:登记服务器 {Servers.All.Count} 台," +
-            $"开关={(DataSeparation.Enabled ? "1(按服分目录)" : "0(全部共享)")}," +
-            $"分离键={(DataSeparation.SeparatedKeys.Count == 0 ? "无" : string.Join(",", DataSeparation.SeparatedKeys))}");
+        Servers.Load();   //登记表总要读:客户端切服 / 控制台列服都靠它,和模块开关无关
+
+        // 数据分离的两步(读开关+键表、按快照迁一次)跟着 datasep 模块走,
+        // 已经挪进 DataSeparationModule.OnLoad —— 模块关着就一个目录都不碰。
 
         // 和 ZXMM 建一条常驻连接:它推"玩家进服",我们下发"踢人/查询"任务
         var zxmm = CreateZxmmApi();
@@ -2320,10 +1726,9 @@ internal static partial class Program
                 }
             });
         };
-        zxmm.Start();
-
-        // 登记表里还有别的服务器:按同一套 host + 各自的端口把专用通道一并连上(本期只建连备查)
-        ConnectAllZxmm();
+        // 连 ZXMM 的动作放到 Main 里做:那之前要先装配模块,数据分离(绑定表按服分目录)得先就位,
+        // 否则刚连上就来的第一条"玩家进服"会拿到空分区、把绑定写到共享目录去。
+        // 事件处理器在上面已经挂好,这儿只留一句说明。
 
         // Connected 要等握手才为真,所以刚启动时这里的「在线」经常是 0,属正常
         var bridgeOnline = 0;   //ZXMM 通道已经握上手的台数
@@ -2353,11 +1758,26 @@ internal static partial class Program
         // 读 config.ini:名称 / 服务端码 / 是否连官方 / 端口 / 消息天数,缺项会问一次并写回
         var (config, serverName, connectOS) = LoadConfig();
 
-        // 聊天后端:BareChat 宿主跑独立进程(NativeAOT 编不进 ASP.NET Core),起不来只影响好友聊天
-        StartChatHost(config);
+        // 命令表要在装配模块之前建好:模块自己的命令是装配时往它上面注册的。
+        var cmd = new CommandHandler();   //命令线程
 
-        // 聊天后端:BareChat 宿主跑独立进程(NativeAOT 编不进 ASP.NET Core),起不来只影响好友聊天
+        // ================= 装配模块:开着的实例化 + 接管包 / 注册命令,关着的一个字节都不加载 =================
+        ModuleRegistry.Load(config, CreateModuleContext(cmd));
 
+        // 配置里开着强制更新、模块却被关了:说清楚,免得服主以为旧版本还在被拦
+        if (_forceUpdate && !ModuleRegistry.IsOn(ModuleIds.ForceUpdate))
+        {
+            Logger.Log(LogLevel.Warning,
+                "[模块] 强制更新模块已关闭:config 里 forceupdate=1 不再生效,旧版本客户端不会再被拦住");
+        }
+
+        // 连 ZXMM 放到装配之后:数据分离已经把绑定表的分区定好,来的第一条进服事件才不会写错目录
+        _zxmmApi?.Start();
+
+        // 登记表里还有别的服务器:按同一套 host + 各自的端口把专用通道一并连上(本期只建连备查)
+        ConnectAllZxmm();
+
+        // 聊天后端由 ChatModule.OnLoad 拉起(模块关着就不起),这里不再直调 StartChatHost
         // ================= 启动监听:ZXMC / ZXMM 都连这个端口 =================
         _server = new TcpServer(IPAddress.Any, ushort.Parse(_czport));
 
@@ -2377,14 +1797,11 @@ internal static partial class Program
 
                 await conn.WriteAsync(new Packet(0, ServerIdent, Encoding.UTF8.GetBytes("ZXMS")));
                 await conn.WriteAsync(new Packet(0, Protocol.ServerName, Encoding.UTF8.GetBytes(liveName)));
-                var squareName = config.MapGet(KeySquareName).Trim();   //配置值
-                if (squareName.Length == 0)
-                {
-                    squareName = "服务器广场";
-                }
 
+                // 202:消息天数 + 广场名 + 本次启动关掉的模块。
+                // 模块清单交给 BuildServerConfigPayload 拼,客户端靠它隐藏入口并自动关窗口。
                 await conn.WriteAsync(new Packet(0, Protocol.ServerConfig,
-                    Encoding.UTF8.GetBytes($"msgdays={_msgDays}\nsquarename={squareName}")));
+                    Encoding.UTF8.GetBytes(BuildServerConfigPayload())));
                 Logger.Log(LogLevel.Info,
                     $"[ZXMS] 已发送身份包(200):ZXMS,名称(201):{liveName},消息保留(202):{_msgDays} 天");
             }
@@ -2548,7 +1965,7 @@ internal static partial class Program
             }
         });
 
-        var cmd = new CommandHandler();//命令线程
+        // 命令表上面(装配模块之前)就建好了,这里只补本端专属命令
 
         // 本端专属命令(共享类库里没有),必须在 Start() 之前挂上
         cmd.RegisterZxmsCommands(
@@ -2599,9 +2016,21 @@ internal static partial class Program
         cmd.LineInterceptor = line => Command.ConfigMode.Handle(line);
         cmd.IsConfigMode = () => Command.ConfigMode.Active;
 
+        // 命令归属已关闭模块时的统一拒绝:命令处理器每次分发都先问它一句
+        cmd.CommandBlocked = ModuleRegistry.CommandBlocked;
+
         cmd.Start();
         Logger.Log(LogLevel.Info, "启动成功");
-        await Task.Delay(Timeout.Infinite);
+
+        try
+        {
+            await Task.Delay(Timeout.Infinite);
+        }
+        finally
+        {
+            // 进程退出前让装配过的模块各自收尾(聊天宿主进程 / 长连接),别留到被系统强杀
+            ModuleRegistry.UnloadAll();
+        }
     }
 
     /// <summary>本 ZXMS 在 ZXMOS 上注册的账号名(config.ini 的 osuser)</summary>
@@ -2994,6 +2423,13 @@ internal static partial class Program
     private static string MinimumVersion => _minVersion.Length > 0 ? _minVersion : AppVersion;
 
     /// <summary>
+    /// 强制更新到底管不管用:配置开着 <b>且</b> forceupdate 模块完整装配了才算。
+    /// <para>模块关着时配置里的 1 不再生效(功能和它的开关一起消失),所以拦版本 / 踢人的地方都看这个。</para>
+    /// <para>半加载也不算:那时客户端看不到更新入口,再拦人就成了"进不来也没处更新"。</para>
+    /// </summary>
+    private static bool ForceUpdateOn => _forceUpdate && ModuleRegistry.IsOn(ModuleIds.ForceUpdate);
+
+    /// <summary>
     /// 强制更新:这个客户端版本能不能放进来。返回 null = 放行;返回非空 = 该回给玩家的原因。
     /// <para>开关没开一律放行(开关关着时版本号对错都不该拦人)。开关开着而版本缺失(老客户端没报版本)
     /// 按"太旧"处理 —— 否则只要不发最后一段就能绕过强制更新。</para>
@@ -3003,7 +2439,7 @@ internal static partial class Program
     /// <param name="user">账号名,只用于日志。</param>
     private static string? RejectOutdatedClient(string clientVersion, string protocol, string user)
     {
-        if (!_forceUpdate)
+        if (!ForceUpdateOn)
         {
             return null;
         }
@@ -3065,7 +2501,7 @@ internal static partial class Program
     private static int KickOutdatedClients()
     {
         var server = _server;
-        if (server is null || !_forceUpdate)
+        if (server is null || !ForceUpdateOn)
         {
             return 0;
         }
@@ -3358,8 +2794,13 @@ internal static partial class Program
             KeyPersistDays => _persistDays.ToString(),
             KeyConfirmAlways => _confirmAlways ? "1" : "0",
             KeyMachineRequire => _machineRequire ? "1" : "0",
-            KeyDataSeparation => DataSeparation.Enabled ? "1" : "0",
-            KeyDataSeparationList => string.Join(",", DataSeparation.SeparatedKeys),
+            //数据分离模块没装配时,DataSeparation.Load 没跑,运行期状态是空的;这时按 config.ini 里的原值显示
+            KeyDataSeparation => ModuleRegistry.IsOn(ModuleIds.DataSeparation)
+                ? (DataSeparation.Enabled ? "1" : "0")
+                : (config.MapGet(KeyDataSeparation).Trim() == "1" ? "1" : "0"),
+            KeyDataSeparationList => ModuleRegistry.IsOn(ModuleIds.DataSeparation)
+                ? string.Join(",", DataSeparation.SeparatedKeys)
+                : config.MapGet(KeyDataSeparationList).Trim(),
             _ => "",
         };
     }
@@ -3556,6 +2997,14 @@ internal static partial class Program
                     return "";
                 }
 
+                // 配置开着、模块却没装配:说清楚是"模块没装"而不是"配置没生效",否则服主会以为已经在拦旧版本
+                if (!ModuleRegistry.IsOn(ModuleIds.ForceUpdate))
+                {
+                    Logger.Log(LogLevel.Warning,
+                        "[强制更新] 配置已写成 1,但强制更新模块这次没装配:执行 module on forceupdate 再重启 ZXMS 才会真的拦旧版本");
+                    return "";
+                }
+
                 // 开着就得有个门槛:minversion 留空时用本端版本
                 Logger.Log(LogLevel.Info, $"[强制更新] 已开启,门槛 {MinimumVersion};正在检查在线客户端");
                 var kicked = KickOutdatedClients();
@@ -3631,7 +3080,7 @@ internal static partial class Program
                 _minVersion = value;
                 config.WriteFileMap(KeyMinVersion, value);
                 Logger.Log(LogLevel.Info, $"[强制更新] 门槛已设为 {MinimumVersion}");
-                if (_forceUpdate)
+                if (ForceUpdateOn)
                 {
                     var kickedByVersion = KickOutdatedClients();
                     Logger.Log(LogLevel.Info, kickedByVersion > 0
@@ -3654,6 +3103,14 @@ internal static partial class Program
 
             case KeyDataSeparationList:
             {
+                //键表只有模块装配时才会载入;没有键表就分不清合法键,先提示打开模块,别把合法键报成不存在
+                if (DataSeparation.KeyTable.Count == 0)
+                {
+                    return ModuleRegistry.IsOn(ModuleIds.DataSeparation)
+                        ? $"{DataSeparation.KeyTableFile} 是空的,先把键表补好再设置分离键"
+                        : "[数据分离] 该功能已关闭,先 module on datasep 并重启 ZXMS";
+                }
+
                 var separatedKeys = new List<int>();   //规范化后的键号(升序去重)
                 foreach (var raw in value.Split(','))
                 {

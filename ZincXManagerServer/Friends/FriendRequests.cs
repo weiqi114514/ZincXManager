@@ -17,7 +17,7 @@ namespace ZincXManagerServer;
 internal static partial class Program
 {
     /// <summary>654 入口:玩家点了「发送申请」。</summary>
-    private static async Task HandleFriendRequestAsync(ServerboundPacket packet, ZFile config)
+    internal static async Task HandleFriendRequestAsync(ServerboundPacket packet, ZFile config)
     {
         var self = PlayerOf(packet.Connection.Id, config);
         if (self.IsEmpty)
@@ -94,14 +94,14 @@ internal static partial class Program
     }
 
     /// <summary>656 入口:要「别人发给我的申请」列表。</summary>
-    private static async Task HandleFriendRequestsQueryAsync(ServerboundPacket packet, ZFile config)
+    internal static async Task HandleFriendRequestsQueryAsync(ServerboundPacket packet, ZFile config)
     {
         var self = PlayerOf(packet.Connection.Id, config);
         await packet.Connection.SendAsync(Protocol.FriendRequestsReply, RequestsPayload(self), packet.Id);
     }
 
     /// <summary>658 入口:玩家点了「同意 / 拒绝」。</summary>
-    private static async Task HandleFriendAnswerAsync(ServerboundPacket packet, ZFile config)
+    internal static async Task HandleFriendAnswerAsync(ServerboundPacket packet, ZFile config)
     {
         var self = PlayerOf(packet.Connection.Id, config);
         if (self.IsEmpty)

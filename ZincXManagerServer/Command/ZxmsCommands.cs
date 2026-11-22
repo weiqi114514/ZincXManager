@@ -8,6 +8,8 @@ using ZincXManagerShared.Logging;  // 共享库
 using ZincXManagerShared.History;  // megback 查询
 using ZincXManagerShared.Login;  // 绑定关系(手动 bind / unbind 用)
 using ZincXManagerShared.Network;  // 共享库
+using ZincXManagerShared.Modules;  // ModuleMode:开 / 半加载 / 关 三态
+using ZincXManagerServer.Modules;  // ModuleRegistry:模块开关(module 命令)
 
 // 与 BCL 的 TcpClient 同名,起个别名
 using TcpClient = ZincXManagerShared.Network.TcpClient;
@@ -263,13 +265,38 @@ public static class ZxmsCommands
         cmd.Register("config", _ => enterConfig(),
             "进入配置模式(表格:键名/中文名/作用/类型/当前值;exitc 退出)",
             "config");
+
+        // ---- 模块开关:只写 config.ini,运行期不热更,改完要重启 ZXMS ----
+        cmd.Register("module", args => CmdModule(args),
+            "模块开关(开/半加载/关;改完要重启才生效)",
+            "module list | module on|full <编号> | module half <编号> | module off <编号>");
+
+        cmd.Register("module list", _ => CmdModuleList(),
+            "列出全部模块的开关与装配状态(改完要重启才生效)",
+            "module list");
+
+        cmd.Register("module on", args => CmdModuleSwitch(args, ModuleMode.On),
+            "完整打开一个模块(改完要重启才生效);父模块关着时要先打开父模块",
+            "module on nav.friends");
+
+        cmd.Register("module full", args => CmdModuleSwitch(args, ModuleMode.On),
+            "把半加载的模块恢复成完整开启(改完要重启才生效)",
+            "module full msg");
+
+        cmd.Register("module half", args => CmdModuleSwitch(args, ModuleMode.Half),
+            "设为半加载:客户端包一律回 err、界面入口隐藏,但控制台命令照常能用(改完要重启才生效)",
+            "module half wd.bind");
+
+        cmd.Register("module off", args => CmdModuleSwitch(args, ModuleMode.Off),
+            "关闭一个模块(改完要重启才生效);锁死的模块关不掉",
+            "module off nav.friends");
     }
 
     /// <summary>控制台命令的首词 —— 用来判断"这行输入其实是命令,不是账号名/密码"。</summary>
     private static readonly string[] CommandWords =
     {
         "help", "echo", "exit", "info", "infopc", "msgdays", "srvmsgdays", "name",
-        "msg", "osuser", "srv", "user", "ban", "file", "net", "config", "exitc",
+        "msg", "osuser", "srv", "user", "ban", "file", "net", "config", "exitc", "module",
     };
 
     /// <summary>这行输入看起来像控制台命令吗(像的话就不该被当成账号名 / 密码收下)。</summary>
@@ -367,6 +394,88 @@ public static class ZxmsCommands
             Logger.Log(LogLevel.Warning,
                 "[服务端账号] 这个名字像是误输入(像命令 / 带空格);要改:osuser <新名> <新密码>(会先问官方端同意)");
         }
+    }
+
+
+    // ---------- module:模块开关 ----------
+
+    /// <summary>module 用法提示(缺参数 / 不认识的子命令时用)。</summary>
+    private static void CmdModuleUsage()
+    {
+        Logger.Log(LogLevel.Warning,
+            "[模块] 用法:module list(看清单) / module on|full <编号>(完整开启) / " +
+            "module half <编号>(半加载:只留控制台命令,客户端包一律回 err) / module off <编号>(关闭);" +
+            "改完要重启 ZXMS 才生效");
+    }
+
+    /// <summary>module:单独输入等同 module list,也接 list / on / full / half / off 的直写形式。</summary>
+    /// <param name="args">子命令与参数,如 ["list"] / ["half","msg"]。</param>
+    private static void CmdModule(string[] args)
+    {
+        if (args.Length == 0)
+        {
+            CmdModuleList();
+            return;
+        }
+
+        var sub = args[0].Trim();
+        if (sub.Equals("list", StringComparison.OrdinalIgnoreCase))
+        {
+            CmdModuleList();
+            return;
+        }
+
+        if (sub.Equals("on", StringComparison.OrdinalIgnoreCase) ||
+            sub.Equals("full", StringComparison.OrdinalIgnoreCase))
+        {
+            CmdModuleSwitch(args[1..], ModuleMode.On);
+            return;
+        }
+
+        if (sub.Equals("half", StringComparison.OrdinalIgnoreCase))
+        {
+            CmdModuleSwitch(args[1..], ModuleMode.Half);
+            return;
+        }
+
+        if (sub.Equals("off", StringComparison.OrdinalIgnoreCase))
+        {
+            CmdModuleSwitch(args[1..], ModuleMode.Off);
+            return;
+        }
+
+        CmdModuleUsage();
+    }
+
+    /// <summary>module list:整块打印 ModuleRegistry.Describe()(64 项,一行一条)。</summary>
+    private static void CmdModuleList()
+    {
+        Logger.Log(LogLevel.Info, ModuleRegistry.Describe());
+    }
+
+    /// <summary>
+    /// module on / full / half / off:只写 config.ini 里的 modules 名单,不碰运行期状态;
+    /// 校验(编号是否存在、是否锁死、父模块是否关着)全在 ModuleRegistry.SetMode 里做。
+    /// </summary>
+    /// <param name="args">第一个参数是模块编号。</param>
+    /// <param name="mode">要设成的三态。</param>
+    private static void CmdModuleSwitch(string[] args, ModuleMode mode)
+    {
+        if (args.Length < 1 || args[0].Trim().Length == 0)
+        {
+            CmdModuleUsage();
+            return;
+        }
+
+        var config = Program.ModuleConfig;   //config.ini 句柄
+        if (config is null)
+        {
+            Logger.Log(LogLevel.Warning, "[模块] 配置还没加载完,现在改不了开关;这个设置改完要重启 ZXMS 才生效");
+            return;
+        }
+
+        var (ok, message) = ModuleRegistry.SetMode(config, args[0].Trim(), mode);
+        Logger.Log(ok ? LogLevel.Info : LogLevel.Warning, message);
     }
 
 

@@ -19,7 +19,7 @@ internal static partial class Program
     private const string UnknownServerName = "未知";
 
     /// <summary>663 入口。</summary>
-    private static async Task HandleFriendSearchAsync(ServerboundPacket packet, ZFile config)
+    internal static async Task HandleFriendSearchAsync(ServerboundPacket packet, ZFile config)
     {
         var keyword = Encoding.UTF8.GetString(packet.Data).Trim();   //玩家输入的原样
         var self = PlayerOf(packet.Connection.Id, config);           //搜索者

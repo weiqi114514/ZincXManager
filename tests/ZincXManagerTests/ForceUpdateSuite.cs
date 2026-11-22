@@ -63,6 +63,9 @@ public static class ForceUpdateSuite
                 ["linkname"] = "0",
                 ["name"] = "CSharp-强制更新服",
                 ["czport"] = czport.ToString(),
+                // 强制更新模块默认关着(模块系统上线后);config 的 forceupdate 开关只在模块装配时才生效,
+                // 所以这里显式摆一份"除数据分离外全开"的名单,和这套用例原来的运行环境一致
+                ["modules"] = "datasep",
             });
 
             r.Add("ZXMS 监听 " + czport, ms.WaitPort(czport));

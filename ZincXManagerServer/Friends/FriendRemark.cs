@@ -18,7 +18,7 @@ internal static partial class Program
     private const int RemarkMaxLength = 32;
 
     /// <summary>665 入口:负载 <c>对方完整ID\t备注</c>,备注为空串表示清除。</summary>
-    private static async Task HandleFriendRemarkAsync(ServerboundPacket packet, ZFile config)
+    internal static async Task HandleFriendRemarkAsync(ServerboundPacket packet, ZFile config)
     {
         var self = PlayerOf(packet.Connection.Id, config);
         if (self.IsEmpty)

@@ -6,6 +6,7 @@ using Avalonia.Input;  // 鼠标键盘输入
 using Avalonia.Layout;  // Orientation 枚举
 using Avalonia.Interactivity;  // 路由事件
 using ZincXManagerClient.Models;  // 客户端自身
+using ZincXManagerClient.Modules;  // 模块登记处:按 key 查这个功能还开着没
 
 namespace ZincXManagerClient.Views;
 
@@ -63,6 +64,14 @@ public partial class FunctionPickerView : UserControl
     {
         if (sender is not Control { Tag: string key } || key.Length == 0)
         {
+            return;
+        }
+
+        // 模块已经关掉:卡片本来就不显示,这里再兜一次 —— 键盘 / 自动化也可能点到旧引用
+        if (ModuleRegistry.Find(key) is { IsOn: false } module)
+        {
+            _ = MessageDialog.InfoAsync(TopLevel.GetTopLevel(this) as Window, module.Title,
+                "该功能已关闭", hint: "在服务端的模块配置里重新打开它,重启后重连即可。");
             return;
         }
 

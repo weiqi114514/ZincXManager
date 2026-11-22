@@ -1,4 +1,4 @@
-﻿<UserControl xmlns="https://github.com/avaloniaui"
+<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:models="using:ZincXManagerClient.Models"
              xmlns:vm="using:ZincXManagerClient.ViewModels"
@@ -81,37 +81,35 @@
 
     <ScrollViewer Grid.Row="1" Margin="0,16,0,0" VerticalScrollBarVisibility="Auto"
                   HorizontalScrollBarVisibility="Disabled">
-      <StackPanel Spacing="12">
-
-        <Border Classes="card" PointerPressed="OnStorePressed">
-          <Grid>
-            <!-- 内容整体上下居中(相对整张卡片);按钮单独贴右下 -->
-            <StackPanel Orientation="Horizontal" Spacing="14" Margin="16,0,0,0" VerticalAlignment="Center">
-              <Path Classes="cardIconStroke" Data="{x:Static models:Icons.Store}"/>
-              <StackPanel Spacing="4" VerticalAlignment="Center">
-                <TextBlock Classes="cardTitle" Text="商店"/>
-                <TextBlock Classes="cardDesc" Text="官方与玩家的交易市场"/>
-              </StackPanel>
-            </StackPanel>
-            <Button Classes="go" Content="进入" HorizontalAlignment="Right" VerticalAlignment="Bottom" Click="OnStoreEnter"/>
-          </Grid>
-        </Border>
-
-        <Border Classes="card" PointerPressed="OnBankPressed">
-          <Grid>
-            <!-- 内容整体上下居中(相对整张卡片);按钮单独贴右下 -->
-            <StackPanel Orientation="Horizontal" Spacing="14" Margin="16,0,0,0" VerticalAlignment="Center">
-              <Path Classes="cardIconStroke" Data="{x:Static models:Icons.Bank}"/>
-              <StackPanel Spacing="4" VerticalAlignment="Center">
-                <TextBlock Classes="cardTitle" Text="银行"/>
-                <TextBlock Classes="cardDesc" Text="存钱、转账、借贷"/>
-              </StackPanel>
-            </StackPanel>
-            <Button Classes="go" Content="进入" HorizontalAlignment="Right" VerticalAlignment="Bottom" Click="OnBankEnter"/>
-          </Grid>
-        </Border>
-
-      </StackPanel>
+      <!-- 卡片清单来自模块登记处(商店 / 银行各一张),关掉的那张自己藏起来 -->
+      <ItemsControl ItemsSource="{Binding EconomyCards}">
+        <ItemsControl.ItemsPanel>
+          <ItemsPanelTemplate>
+            <StackPanel Spacing="12"/>
+          </ItemsPanelTemplate>
+        </ItemsControl.ItemsPanel>
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="models:FunctionItem">
+            <Border Classes="card" IsVisible="{Binding IsVisible}" Tag="{Binding Key}" PointerPressed="OnCardPressed">
+              <Grid>
+                <!-- 内容整体上下居中(相对整张卡片);按钮单独贴右下 -->
+                <Grid ColumnDefinitions="Auto,14,*" Margin="16,0,0,0" VerticalAlignment="Center">
+                  <Path Grid.Column="0" Classes="cardIconStroke" Data="{Binding Icon}"
+                        IsVisible="{Binding ShowStrokeIcon}"/>
+                  <Path Grid.Column="0" Classes="cardIcon" Data="{Binding Icon}"
+                        IsVisible="{Binding ShowVectorIcon}"/>
+                  <StackPanel Grid.Column="2" Spacing="4" VerticalAlignment="Center">
+                    <TextBlock Classes="cardTitle" Text="{Binding Title}"/>
+                    <TextBlock Classes="cardDesc" Text="{Binding Description}"/>
+                  </StackPanel>
+                </Grid>
+                <Button Classes="go" Content="进入" Tag="{Binding Key}"
+                        HorizontalAlignment="Right" VerticalAlignment="Bottom" Click="OnEnterClick"/>
+              </Grid>
+            </Border>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
     </ScrollViewer>
   </Grid>
 </UserControl>

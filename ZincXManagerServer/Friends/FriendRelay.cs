@@ -4,7 +4,10 @@ using ZincXManagerShared.Account;        // Account:本服账号
 using ZincXManagerShared.FileIO;         // ZFile:config.ini
 using ZincXManagerShared.Friend;         // PlayerId / FriendStore / FriendCodec
 using ZincXManagerShared.Logging;        // Logger / LogLevel
+using ZincXManagerShared.Modules;        // ModuleIds:模块编号
+
 using ZincXManagerShared.Network;        // Protocol / ServerboundPacket
+using ZincXManagerServer.Modules;        // ModuleRegistry:模块是否装配
 
 namespace ZincXManagerServer;
 
@@ -455,6 +458,12 @@ internal static partial class Program
     /// <summary>告诉全网「某个人上线/下线了」;别服会自己过滤出跟他有关的人。</summary>
     private static async Task AnnouncePresenceAsync(string userName, string state)
     {
+        //好友模块关着就不该再为它干活:上线、离线两条路径都在这里挡住
+        if (!ModuleRegistry.IsLoaded(ModuleIds.NavFriends))
+        {
+            return;
+        }
+
         var os = _os;
         var config = _config;
         if (os is null || config is null)

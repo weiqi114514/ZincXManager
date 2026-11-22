@@ -34,4 +34,10 @@ public partial class FunctionItem : ObservableObject
     /// <summary>当前是否显示(按模式 / 是否连官方动态控制)。</summary>
     [ObservableProperty]
     public partial bool IsVisible { get; set; } = true;
+
+    /// <summary>这个卡片对应的模块编号(见 <see cref="ZincXManagerShared.Modules.ModuleIds"/>);空串 = 不受模块开关控制。</summary>
+    public string ModuleId { get; init; } = "";
+
+    /// <summary>基准可见性:连接方式 / 是否连官方这类条件算出来的结果。最终显不显示 = 基准可见 且 模块开着。</summary>
+    public bool BaseVisible { get; set; } = true;
 }

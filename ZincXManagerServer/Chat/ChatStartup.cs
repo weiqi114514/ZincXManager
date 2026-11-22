@@ -15,7 +15,10 @@ using ZincXManagerServer.Chat;   // ChatHostRunner
 /// </summary>
 internal static partial class Program
 {
-    /// <summary>配置键:是否启用聊天后端(默认 1)。</summary>
+    /// <summary>
+    /// 旧配置键:是否启用聊天后端。运行期不再读它 —— 聊天宿主起不起由 ChatModule 模块开关决定;
+    /// 这个键名只留给 ModuleRegistry.WriteDefaults 迁移旧配置时认(只有 "0" 才算关)。
+    /// </summary>
     private const string KeyChatEnabled = "chatenabled";
 
     /// <summary>配置键:聊天宿主监听端口(默认 czport+300)。</summary>
@@ -37,17 +40,18 @@ internal static partial class Program
     private static ChatHostRunner? _chatHost;
 
     /// <summary>
-    /// 按配置拉起聊天宿主。失败只记日志,不影响子服主流程。
+    /// config.ini 句柄 —— 给命令层写配置用(module on/off、config 里的模块开关)。
+    /// Program 那边的 _config 是私有字段,这里开个只读口子,别在别处另开一个。
+    /// </summary>
+    internal static ZFile? ModuleConfig => _config;
+
+    /// <summary>
+    /// 拉起聊天宿主。失败只记日志,不影响子服主流程。
+    /// 起不起由聊天模块的开关决定(模块关闭时这个方法的调用方根本不会走到这里)。
     /// </summary>
     /// <param name="config">已加载的 config.ini。</param>
     internal static void StartChatHost(ZFile config)
     {
-        if (config.MapGet(KeyChatEnabled).Trim() == "0")
-        {
-            Logger.Log(LogLevel.Info, "[聊天] 已按配置关闭(chatenabled=0),好友聊天不可用");
-            return;
-        }
-
         var port = ResolveChatPort(config);
         var secret = ResolveChatSecret(config);
         var executable = config.MapGet(KeyChatExe).Trim();   //配置值
@@ -68,6 +72,23 @@ internal static partial class Program
         _chatHost = runner;
         AppDomain.CurrentDomain.ProcessExit += (_, _) => _chatHost?.Dispose();
         Logger.Log(LogLevel.Info, $"[聊天] 聊天宿主已拉起:端口 {port},数据 {data}");
+    }
+
+    /// <summary>
+    /// 停掉聊天宿主(聊天模块关掉时用);本来就没起来就什么都不做。
+    /// 先置空再 Dispose:收尾里若再回调进来,不会对同一个句柄停两次。
+    /// </summary>
+    internal static void StopChatHost()
+    {
+        var host = _chatHost;   //要停掉的宿主
+        if (host is null)
+        {
+            return;
+        }
+
+        _chatHost = null;
+        host.Dispose();   // kill 整棵进程树 + 关 job 句柄
+        Logger.Log(LogLevel.Info, "[聊天] 宿主已停止");
     }
 
     /// <summary>

@@ -1,6 +1,9 @@
 using System;  // 基础类型 / 常用静态方法
 using System.Collections.Generic;  // 泛型集合
+using System.Linq;  // LINQ 查询
+using ZincXManagerServer.Modules;  // ModuleRegistry:模块开关
 using ZincXManagerShared.Logging;  // 共享库
+using ZincXManagerShared.Modules;  // ModuleCatalog:模块清单
 
 namespace ZincXManagerServer.Command;
 
@@ -54,6 +57,7 @@ internal static class ConfigMode
         new() { Key = "confirmalways", Cn = "每次都要确认", Description = "1 = 不看持久登录表,每次进服都弹窗;开启时清空已记的免确认", Type = "1/0" },
         new() { Key = "data-separation", Cn = "多服数据分离", Description = "1 = 按 MC 服分目录存数据,0 = 全部共享;改完要重启", Type = "1/0" },
         new() { Key = "data-separation-list", Cn = "分离数据键", Description = "逗号分隔的键号,见 countdataseparationkey.ini,如 4 = bind;改完要重启", Type = "如 4,1", AllowEmpty = true },
+        new() { Key = "modules", Cn = "模块开关", Description = "禁用名单,逗号分隔;项后加 :half = 半加载(只留服务端命令,客户端全隐藏);none = 全开;改完要重启", Type = "如 wd.bind:half", AllowEmpty = true },
         new() { Key = "ozname",        Cn = "官方端名称",   Description = "ZXMOS 下发的名称(只读)",                 Type = "只读",       ReadOnly = true },
         new() { Key = "servercode",    Cn = "服务端码",     Description = "本实例的身份证(只读)",                   Type = "只读",       ReadOnly = true },
         new() { Key = "oshash",        Cn = "官方账号密文", Description = "本端在 ZXMOS 上的账号密文(下次连接生效)",  Type = "64 位十六进制" },
@@ -64,7 +68,7 @@ internal static class ConfigMode
     private static readonly string[] Commands =
     {
         "help", "echo", "exit", "info", "infopc", "msgdays", "srvmsgdays", "name",
-        "msg", "osuser", "srv", "user", "ban", "file", "net", "config",
+        "msg", "osuser", "srv", "user", "ban", "file", "net", "config", "module",
     };
 
     // 是否处于配置模式。
@@ -150,6 +154,13 @@ internal static class ConfigMode
             return true;
         }
 
+        // 模块开关不在 Program 的配置表里:整份禁用名单归模块层管(module on/off 写的也是这一项)
+        if (item.Key.Equals(ModuleRegistry.KeyModules, StringComparison.OrdinalIgnoreCase))
+        {
+            SetModules(value);
+            return true;
+        }
+
         var error = Program.SetConfigItem(item.Key, value);
         if (error.Length > 0)
         {
@@ -186,10 +197,98 @@ internal static class ConfigMode
 
         foreach (var item in Items)
         {
-            var value = Program.ConfigValue(item.Key);
+            var value = CurrentValue(item);   //当前值
             lines.Add($"  {Pad(item.Cn, 16)}{Pad(item.Key, 17)}{Pad(value, 34)}{Pad(item.Type, 18)}{item.Description}");
         }
 
         return string.Join(Environment.NewLine, lines);
+    }
+
+    /// <summary>
+    /// 配置表里显示的当前值。模块开关读 config.ini 的 modules:
+    /// Program 的配置表里没有这一项,直接问它会得到空串。
+    /// </summary>
+    private static string CurrentValue(Item item)
+    {
+        if (item.Key.Equals(ModuleRegistry.KeyModules, StringComparison.OrdinalIgnoreCase))
+        {
+            var modules = Program.ModuleConfig?.MapGet(ModuleRegistry.KeyModules).Trim() ?? "";   //配置值
+            return modules.Length > 0 ? modules : "(未配置)";
+        }
+
+        return Program.ConfigValue(item.Key);
+    }
+
+    /// <summary>
+    /// 改模块开关(modules):只写 config.ini,运行期不热更 —— 和 module on/off/half/full 写的是同一项。
+    /// 值 = 逗号分隔的模块编号,项后加 :half 是半加载(只留控制台命令、客户端包一律回 err);
+    /// none = 一个都不关;清空 = 下次启动按默认与旧开关重新生成。
+    /// </summary>
+    private static void SetModules(string value)
+    {
+        var config = Program.ModuleConfig;   //config.ini 句柄
+        if (config is null)
+        {
+            Logger.Log(LogLevel.Warning, "[模块] 配置还没加载完,现在改不了模块开关");
+            return;
+        }
+
+        var text = value.Trim();
+        if (text.Length == 0)
+        {
+            config.WriteFileMap(ModuleRegistry.KeyModules, "");
+            Logger.Log(LogLevel.Info, "[模块] 模块开关已清空:下次启动 ZXMS 时按默认与旧开关重新生成");
+            return;
+        }
+
+        if (string.Equals(text, ModuleRegistry.NoneToken, StringComparison.OrdinalIgnoreCase))
+        {
+            config.WriteFileMap(ModuleRegistry.KeyModules, ModuleRegistry.NoneToken);
+            Logger.Log(LogLevel.Info, "[模块] 模块开关已设为 none(一个都不关),重启 ZXMS 后生效");
+            return;
+        }
+
+        //先按和启动时完全相同的规则解析(分隔符、:half 后缀、同一编号两边都有以关为准)
+        var off = new HashSet<string>(StringComparer.OrdinalIgnoreCase);    //完全关闭
+        var half = new HashSet<string>(StringComparer.OrdinalIgnoreCase);   //半加载
+        ModuleModes.Parse(text, off, half);
+
+        foreach (var rawId in off.Concat(half).ToArray())
+        {
+            var def = ModuleCatalog.Find(rawId);   //模块声明
+            if (def is null)
+            {
+                Logger.Log(LogLevel.Warning, $"[模块] 没有这个模块:{rawId}(输入 exitc 退出后用 module list 看清单)");
+                return;
+            }
+
+            if (def.Locked)
+            {
+                Logger.Log(LogLevel.Warning, $"[模块] {def.Title}({def.Id}) 是锁死的,不能关闭;这次没有写入任何改动");
+                return;
+            }
+
+            //半加载的父模块关着也说不通:子模块整块都不装配了,没有"只留命令"可言
+            if (half.Contains(def.Id) && def.Parent.Length > 0 && off.Contains(def.Parent))
+            {
+                Logger.Log(LogLevel.Warning,
+                    $"[模块] 父模块「{ModuleCatalog.TitleOf(def.Parent)}」已关闭,不能把 {def.Title}({def.Id}) 设成半加载;" +
+                    "这次没有写入任何改动");
+                return;
+            }
+        }
+
+        if (off.Count == 0 && half.Count == 0)
+        {
+            Logger.Log(LogLevel.Warning,
+                "[模块] 用法:模块开关 <编号,...>,项后加 :half 表示半加载,或 none;例:模块开关 nav.friends,wd.bind:half");
+            return;
+        }
+
+        //按模块全集顺序写,和 module on/off/half 写出来的格式保持一致
+        var encoded = ModuleModes.Encode(off, half);
+        config.WriteFileMap(ModuleRegistry.KeyModules, encoded);
+        Logger.Log(LogLevel.Info,
+            $"[模块] 模块开关已写入:{encoded}(关闭 {off.Count} 个,半加载 {half.Count} 个),重启 ZXMS 后生效");
     }
 }

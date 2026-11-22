@@ -6,6 +6,7 @@ using Avalonia;  // 界面框架入口
 using Avalonia.Animation;  // 界面框架
 using Avalonia.Animation.Easings;  // 界面框架
 using Avalonia.Controls;  // 窗口与控件
+using Avalonia.Controls.ApplicationLifetimes;  // 桌面生命周期:拿全部窗口,收掉关掉功能的窗口
 using Avalonia.Controls.Shapes;  // 图形(线 / 矩形 / 路径)
 using Avalonia.Styling;  // 样式与主题
 using Avalonia.Input;  // 鼠标键盘输入
@@ -14,10 +15,12 @@ using Avalonia.Media;  // 画刷 / 颜色 / 几何
 using Avalonia.Input.Platform;  // ClipboardExtensions:IClipboard 没有 SetTextAsync 实例方法,要靠扩展
 using ZincXManagerClient.Chat;  // ChatBridge:收 510 时登记聊天后端地址
 using ZincXManagerClient.Models;  // 客户端自身
+using ZincXManagerClient.Modules;  // 模块登记处 / 开关状态
 using ZincXManagerClient.Services;  // 导入 UpdateService(启动查更新)
 using ZincXManagerClient.ViewModels;  // 客户端自身
 using ZincXManagerShared.Friend;  // FriendCodec / ChatLog:好友负载编解码与本地聊天记录
 using ZincXManagerShared.Logging;  // 共享库
+using ZincXManagerShared.Modules;  // 模块编号
 using ZincXManagerShared.Network;  // 共享库
 
 namespace ZincXManagerClient.Views;
@@ -113,6 +116,17 @@ public partial class MainWindow : Window
 
         // 登录后才建立连接:前几秒每秒核对一次"官方社区"该不该显示(连上就显示,断开就收)
         Opened += (_, _) => StartOfficialWatch();
+
+        // 模块开关一变:把功能已经关掉的那些窗口收起来(好友条 / 聊天窗 / 镜像窗等)
+        Opened += (_, _) =>
+        {
+            CloseWindowsOfDisabledModules();
+            ModuleState.Changed += CloseWindowsOfDisabledModules;
+        };
+        Closed += (_, _) => ModuleState.Changed -= CloseWindowsOfDisabledModules;
+
+        // 窗口关掉就把视图模型从开关事件上摘下来:否则旧实例被静态事件钉住,重连后会有好几个在跑
+        Closed += (_, _) => (Vm as IDisposable)?.Dispose();
 
         // 窗口材质只在这里定一次:运行中改 TransparencyLevelHint 会让 Windows 重建窗口,
         // 屏幕上会闪出"像多了一个窗口"的东西,所以开关只换材料、不动材质
@@ -886,6 +900,15 @@ public partial class MainWindow : Window
 
         var text = Encoding.UTF8.GetString(packet.Data);   //包内容
 
+        // 模块开关:这个功能已经关掉了,属于它的包一律不收(服务端也不会再发,这里是客户端兜底)。
+        // 但 "err|该功能已关闭:xxx" 这种回包要照常放行:它就是告诉用户"这功能关了"的那句话,
+        // 按包类型归属算又和请求同属一个模块,一起丢掉的话界面上永远看不到提示。
+        if (!text.StartsWith("err|", StringComparison.Ordinal) && !ModuleState.PacketAllowed(packet.Type))
+        {
+            Logger.Log(LogLevel.Info, $"[ZXMC] 模块已关闭,丢弃包 {packet.Type}");
+            return;
+        }
+
         switch (packet.Type)
         {
             case Protocol.Notice:
@@ -1002,6 +1025,8 @@ public partial class MainWindow : Window
 
             // 服务端配置(202):目前是子服务端的消息保留天数
             case Protocol.ServerConfig:
+                // 主界面已经在的时候收到的 202(重连 / 服务端重发):名单可能变了,再解析一次(幂等)
+                ModuleState.Configure(text);
                 vm.ApplyServerConfig(text);
                 break;
 
@@ -1378,7 +1403,7 @@ public partial class MainWindow : Window
     /// <summary>点右上角关闭按钮:关掉这个窗口。</summary>
     private void OnCloseClick(object? sender, RoutedEventArgs e) => Close();
 
-    /// <summary>把各页的子功能清单交给通用子功能页</summary>
+    /// <summary>把各页的子功能清单交给通用子功能页。页面与分区的对应关系写在这张表里,卡片本身来自模块登记处。</summary>
     private void RefreshFunctionPages()
     {
         if (Vm is null)
@@ -1386,15 +1411,22 @@ public partial class MainWindow : Window
             return;
         }
 
-        this.FindControl<FunctionPickerView>("CommunityPage")?.SetContent("社区", Vm.CommunityItems);
-        this.FindControl<FunctionPickerView>("OrganizationPage")?.SetContent("组织", Vm.OrganizationItems);
-        this.FindControl<FunctionPickerView>("ManagePage")?.SetContent("管理", Vm.ManageItems);
+        // 页面名 → (分区编号, 页面标题)。标题写法沿用旧界面,管理端四个带「类」「/」字样
+        (string Page, string Section, string Title)[] pages =
+        [
+            ("CommunityPage", ModuleIds.NavCommunity, "社区"),
+            ("OrganizationPage", ModuleIds.NavOrganization, "组织"),
+            ("ManagePage", ModuleIds.NavManage, "管理"),
+            ("AdminServerPage", ModuleIds.NavAdminServer, "MC 服务器管理类"),
+            ("AdminFunctionPage", ModuleIds.NavAdminFunction, "功能类"),
+            ("AdminZxmPage", ModuleIds.NavAdminZxm, "ZXM 管理"),
+            ("AdminQueryPage", ModuleIds.NavAdminQuery, "查询/统计"),
+        ];
 
-        // 管理端四个大类:标题给全称,左侧导航上用的是短名
-        this.FindControl<FunctionPickerView>("AdminServerPage")?.SetContent("MC 服务器管理类", Vm.AdminServerItems);
-        this.FindControl<FunctionPickerView>("AdminFunctionPage")?.SetContent("功能类", Vm.AdminFunctionItems);
-        this.FindControl<FunctionPickerView>("AdminZxmPage")?.SetContent("ZXM 管理", Vm.AdminZxmItems);
-        this.FindControl<FunctionPickerView>("AdminQueryPage")?.SetContent("查询/统计", Vm.AdminQueryItems);
+        foreach (var (page, section, title) in pages)
+        {
+            this.FindControl<FunctionPickerView>(page)?.SetContent(title, ModuleRegistry.CardsOf(section));
+        }
     }
 
     /// <summary>回默认页。</summary>
@@ -1404,6 +1436,12 @@ public partial class MainWindow : Window
     private void OnNavItemClick(object? sender, RoutedEventArgs e)
     {
         if (sender is not Button { DataContext: NavItem item }) return;
+
+        // 模块关掉的分区:导航项本来就藏起来了,这里再挡一次(键盘 / 自动化也点不进来)
+        if (!item.IsVisible)
+        {
+            return;
+        }
 
         // 好友是独立窗体(好友条 + 聊天窗),不进主界面内容区
         if (item.Label == "好友")
@@ -1438,6 +1476,40 @@ public partial class MainWindow : Window
         _friendsWindow.Closed += (_, _) => _friendsWindow = null;
         _friendsWindow.Show();
     }
+
+    /// <summary>
+    /// 功能被关掉之后,把它已经开着的窗口收掉(好友条 / 聊天窗 / 镜像窗等)。
+    /// 从桌面生命周期里把现有窗口过一遍,按窗口类型找它属于哪个模块,模块关了就 Close。
+    /// </summary>
+    private void CloseWindowsOfDisabledModules()
+    {
+        if (Application.Current?.ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop)
+        {
+            return;
+        }
+
+        foreach (var window in desktop.Windows.ToList())   // Close 会改窗口集合,先拷一份再遍历
+        {
+            var module = ModuleOf(window);
+            if (module.Length == 0 || ModuleState.IsOn(module))
+            {
+                continue;
+            }
+
+            Logger.Log(LogLevel.Info,
+                $"[ZXMC] 模块「{ModuleCatalog.TitleOf(module)}」已关闭,收掉窗口:{window.GetType().Name}");
+            window.Close();
+        }
+    }
+
+    /// <summary>这个窗口属于哪个模块;不认识的窗口返回空串(= 不受模块开关控制,永远留着)。</summary>
+    private static string ModuleOf(Window window) => window switch
+    {
+        FriendsWindow or ChatWindow or AddFriendWindow or AddFriendRequestWindow or FriendRequestsWindow
+            => ModuleIds.NavFriends,
+        MirrorWindow => ModuleIds.ManageSource,
+        _ => "",
+    };
 
     /// <summary>左下角按钮:消息面板 500ms 内滑开铺满,再点收回 312</summary>
     private void OnOpenMessagesFullClick(object? sender, RoutedEventArgs e)

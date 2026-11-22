@@ -72,6 +72,12 @@ public class CommandHandler
     public Func<bool>? IsConfigMode { get; set; }
 
     /// <summary>
+    /// 模块门禁:返回非 null 表示这条命令属于已关闭的功能模块,直接把这个字符串当结果输出,不执行命令。
+    /// 命令根本不会注册到表里是很常见的情况,那是模块压根没加载;这里兜的是入口词重合或残留命令。
+    /// </summary>
+    public Func<string, string?>? CommandBlocked { get; set; }
+
+    /// <summary>
     /// 这一行是不是机密(比如正在输 RCON 密码)：返回 true 时日志里只记 ******，不记原文。
     /// 拦在回显之前判断 —— 拦截器拿到这行时日志已经写过了，事后没法补救。
     /// </summary>
@@ -132,6 +138,13 @@ public class CommandHandler
 
             if (_commands.TryGetValue(key, out var handler))
             {
+                var blocked = CommandBlocked?.Invoke(key);   //模块门禁的拒绝理由,正常命令为 null
+                if (blocked is not null)
+                {
+                    Logger.Log(LogLevel.Warning, blocked);
+                    return;
+                }
+
                 var args = parts.Length > take ? parts[take..] : Array.Empty<string>();
                 try
                 {
@@ -161,6 +174,13 @@ public class CommandHandler
         }
         else
         {
+            //命令没注册也可能只是模块没加载:先问一次门禁,能给出明确理由就别报「未知命令」
+            if (CommandBlocked?.Invoke(prefix) is { } blockedText)
+            {
+                Logger.Log(LogLevel.Warning, blockedText);
+                return;
+            }
+
             Logger.Log(LogLevel.Warning, $"[Command] 未知命令: {prefix} 输入 help 查看可用命令");
         }
     }
@@ -234,6 +254,11 @@ public class CommandHandler
             // 精确匹配
             if (_commands.ContainsKey(name))
             {
+                if (CommandBlocked?.Invoke(name) is { } blockedText)
+                {
+                    Logger.Log(LogLevel.Warning, blockedText);
+                    return;
+                }
                 ShowCommandDetail(name);
                 return;
             }
@@ -242,6 +267,7 @@ public class CommandHandler
             var matched = _commands.Keys
                 .Where(k => k.StartsWith(name + " ", StringComparison.OrdinalIgnoreCase)
                          || k.Equals(name, StringComparison.OrdinalIgnoreCase))
+                .Where(k => CommandBlocked?.Invoke(k) is null)   //已关闭模块的命令不列出来
                 .OrderBy(k => k)
                 .ToList();
 
@@ -274,6 +300,7 @@ public class CommandHandler
         // 顶层命令
         var topLevel = _commands.Keys
             .Where(k => !k.Contains(' '))
+            .Where(k => CommandBlocked?.Invoke(k) is null)   //已关闭模块的命令不列出来
             .OrderBy(k => k)
             .ToList();
 
@@ -286,6 +313,7 @@ public class CommandHandler
         // 分支命令，按前缀分组
         var branches = _commands.Keys
             .Where(k => k.Contains(' '))
+            .Where(k => CommandBlocked?.Invoke(k) is null)   //已关闭模块的命令不列出来
             .GroupBy(k => k.Split(' ')[0])
             .OrderBy(g => g.Key);
 

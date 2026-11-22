@@ -33,6 +33,13 @@ public partial class NavItem : ObservableObject
     /// <summary>图标是描边图形(24x24 线条,靠 Stroke 画)还是填充图形(旧的 5x5 轮廓)。</summary>
     public bool IconStroke { get; }
 
+    /// <summary>这个导航项对应的模块编号(见 <see cref="ZincXManagerShared.Modules.ModuleIds"/>);空串 = 不受模块开关控制。</summary>
+    public string ModuleId { get; init; } = "";
+
+    /// <summary>当前是否显示:模块关掉(或父分区关掉)时整行收起来。</summary>
+    [ObservableProperty]
+    public partial bool IsVisible { get; set; } = true;
+
     /// <summary>描边图标:模板里那条 Stroke 用的 Path 显示。</summary>
     public bool ShowStrokeIcon => IconStroke;
 

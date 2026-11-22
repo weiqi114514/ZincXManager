@@ -16,7 +16,7 @@ namespace ZincXManagerServer;
 internal static partial class Program
 {
     /// <summary>650 入口:把好友列表发回去。</summary>
-    private static async Task HandleFriendListQueryAsync(ServerboundPacket packet, ZFile config)
+    internal static async Task HandleFriendListQueryAsync(ServerboundPacket packet, ZFile config)
     {
         var self = PlayerOf(packet.Connection.Id, config);
         if (self.IsEmpty)
@@ -77,7 +77,7 @@ internal static partial class Program
     }
 
     /// <summary>660 入口:删掉一个好友。本侧立刻删,别服那边交给 ZXMOS 通知它删。</summary>
-    private static async Task HandleFriendRemoveAsync(ServerboundPacket packet, ZFile config)
+    internal static async Task HandleFriendRemoveAsync(ServerboundPacket packet, ZFile config)
     {
         var self = PlayerOf(packet.Connection.Id, config);
         if (self.IsEmpty)

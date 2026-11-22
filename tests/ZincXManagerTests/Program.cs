@@ -1187,6 +1187,11 @@ var results = new List<SuiteResult>();
     await ZincXManagerTests.ConsoleSuite.RunAsync(results);
 }
 
+// ================= 套件 30:模块系统(装配 / 开关 / 关闭即不加载,真起 ZXMS) =================
+{
+    await ZincXManagerTests.ModuleSuite.RunAsync(results, Ws, DebugMs);
+}
+
 // ================= 汇总 =================
 Console.WriteLine();
 Console.WriteLine("================= 总表 =================");

@@ -25,7 +25,7 @@ internal static partial class Program
     private sealed record AvatarWaiter(Guid ConnectionId, ulong PacketId, string Name, DateTime AskedAt);
 
     /// <summary>607 入口:客户端要某个账号的头像(通常是好友条上的)。</summary>
-    private static async Task HandleFriendAvatarAsync(ServerboundPacket packet, ZFile config)
+    internal static async Task HandleFriendAvatarAsync(ServerboundPacket packet, ZFile config)
     {
         var self = PlayerOf(packet.Connection.Id, config);
         var raw = Encoding.UTF8.GetString(packet.Data).Trim();

@@ -10,6 +10,8 @@ using Avalonia.Media.Imaging;  // 位图
 using ZincXManagerShared.Account;  // 共享库
 using CommunityToolkit.Mvvm.ComponentModel;  // MVVM 可观察对象
 using ZincXManagerClient.Models;  // 客户端自身
+using ZincXManagerClient.Modules;  // 模块登记处 / 开关状态
+using ZincXManagerShared.Modules;  // 模块编号
 using ZincXManagerShared.Friend;  // PlayerId:把完整 ID 拆成最后的编号
 using ZincXManagerShared.Logging;  // 共享库
 using ZincXManagerShared.Network;  // 共享库
@@ -20,57 +22,16 @@ namespace ZincXManagerClient.ViewModels;
 /// 主界面视图模型:左侧导航、顶部模式、右侧内容。
 /// 选中左侧"设置"时,右侧换成设置页(<see cref="Settings"/>),否则是内容区 + 消息面板。
 /// </summary>
-public partial class MainViewModel : ViewModelBase
+public partial class MainViewModel : ViewModelBase, IDisposable
 {
     public MainViewModel()
     {
-        // 子功能清单(图标先占位,后面替换)
-        var isOos = ClientConfig.GetOrEmpty("mode") == "OOS";
-        var officialOn = ClientConfig.GetOrEmpty("connectOS") == "1";
-
-        // 两个广场功能一样(看社区内容),区别是数据来源:服务器广场走 ZXMS,锌源广场走官方 ZXMOS
-        CommunityItems.Add(new Models.FunctionItem
+        // 左侧导航与各页的功能卡片全部来自模块登记处(Modules\ModuleRegistry.cs):
+        // 加一个入口只改那边的一个类,这里不再手写清单。
+        foreach (var nav in ModuleRegistry.BuildNavItems())
         {
-            Key = "srv-square", Title = "服务器广场", Description = "本服的帖子与资源",
-            IconSvg = "avares://ZincXManagerClient/Assets/icons/server-square.svg", Icon = Models.Icons.ServerSquare, IconStroke = true, IsVisible = !isOos,
-        });
-        CommunityItems.Add(new Models.FunctionItem
-        {
-            Key = "zinc-square", Title = "锌源广场", Description = "官方的共享交流广场 交流/资源",
-            IconSvg = "avares://ZincXManagerClient/Assets/icons/official-square.svg", Icon = Models.Icons.OfficialSquare, IconStroke = true, IsVisible = false,
-        });
-
-        OrganizationItems.Add(new Models.FunctionItem { Key = "org-personal", Title = "个人组织", Description = "个人的组织形式 开发区/基地/机器", Icon = Models.Icons.PersonalOrg, IconStroke = true });
-        OrganizationItems.Add(new Models.FunctionItem { Key = "org-team", Title = "团队组织", Description = "多人的团队组织形式 开发区/基地/机器", Icon = Models.Icons.TeamOrg, IconStroke = true });
-        OrganizationItems.Add(new Models.FunctionItem { Key = "org-company", Title = "企业组织", Description = "大规模的多人组织形式", Icon = Models.Icons.CompanyOrg, IconStroke = true });
-
-        ManageItems.Add(new Models.FunctionItem { Key = "mg-version", Title = "版本管理", Description = "版本、mod、材质包", Icon = Models.Icons.VersionManage, IconStroke = true });
-        ManageItems.Add(new Models.FunctionItem { Key = "mg-source", Title = "数据源管理", Description = "数据源 切换/管理/删除", Icon = Models.Icons.SourceManage, IconStroke = true });
-        ManageItems.Add(new Models.FunctionItem { Key = "mg-server", Title = "服务器管理", Description = "数据源下的服务器管理/使用/选择", Icon = Models.Icons.ServerManage, IconStroke = true });
-        ManageItems.Add(new Models.FunctionItem { Key = "mg-stats", Title = "数据统计", Description = "各类数据统计", Icon = Models.Icons.StatsManage, IconStroke = true });
-
-        // 顺序:设置沉到功能列表最底下,小功能组顶替它原来的位置
-        // 管理账号登录后,左侧整栏换成管理端的大类;玩家那几页不再出现
-        if (IsAdmin)
-        {
-            NavItems.Add(new NavItem("服务器管理", Icons.AdminServer, iconStroke: true));
-            NavItems.Add(new NavItem("功能", Icons.AdminFunction, iconStroke: true));
-            NavItems.Add(new NavItem("ZXM 管理", Icons.AdminZxm, iconStroke: true));
-            NavItems.Add(new NavItem("查询统计", Icons.AdminQuery, iconStroke: true));
+            NavItems.Add(nav);
         }
-        else
-        {
-            NavItems.Add(new NavItem("经济", Icons.Economy));
-            NavItems.Add(new NavItem("社区", Icons.Community));
-            NavItems.Add(new NavItem("组织", Icons.Organization));
-            NavItems.Add(new NavItem("好友", Icons.Friends, 5, 3));
-            NavItems.Add(new NavItem("小功能组", Icons.Widgets));
-            NavItems.Add(new NavItem("管理", Icons.Manage, 5, 4));
-        }
-
-        NavItems.Add(new NavItem("设置", Icons.Settings));
-
-        BuildAdminItems();
 
         // 设置页里改了权限等级 / 连接方式,标题栏那句要跟着变
         Settings.PropertyChanged += OnSettingsChanged;
@@ -122,7 +83,19 @@ public partial class MainViewModel : ViewModelBase
             var startSection = ClientConfig.GetOrEmpty("startsection");
             Settings.ShowSection(startSection.Length > 0 ? startSection : "模式与数据源");
         }
+
+        // 模块开关:先按上次记下的名单把关掉的入口藏起来(还没连上服务端也能立刻生效),
+        // 之后由服务端 202 里的 modules= 行改写名单,ModuleState 一通知就重算。
+        ModuleState.LoadFromCache();
+        ApplyModules();
+        ModuleState.Changed += ApplyModules;
     }
+
+    /// <summary>
+    /// 窗口关掉时退订:ModuleState.Changed 是静态事件,不退订的话这个视图模型会被一直钉在内存里,
+    /// 每次重连新建的实例还会跟着开关变化继续跑 ApplyModules。
+    /// </summary>
+    public void Dispose() => ModuleState.Changed -= ApplyModules;
 
     /// <summary>设置页视图模型。</summary>
     public SettingsViewModel Settings { get; } = new();
@@ -160,17 +133,22 @@ public partial class MainViewModel : ViewModelBase
             official = true;
         }
 
-        foreach (var item in CommunityItems)
+        foreach (var item in ModuleRegistry.CardsOf(ModuleIds.NavCommunity))
         {
             if (item.Key == "zinc-square")
             {
-                item.IsVisible = official;
+                // 基准可见性记在卡片上,最终显不显示还要过模块开关那一关
+                item.BaseVisible = official;
+                item.IsVisible = official && ModuleState.IsOn(item.ModuleId);
             }
         }
+
+        // 基准可见性变了,整个分区可能一张卡都不剩(比如 OOS 下两个广场都看不见),导航要跟着重算
+        ApplyModules();
     }
 
-    /// <summary>消息窗口只在默认页(没选任何功能页)显示;进功能页就收起来。</summary>
-    public bool ShowMessages => CurrentPage.Length == 0;
+    /// <summary>消息窗口只在默认页(没选任何功能页)显示;进功能页就收起来。消息模块整体关掉时也不显示。</summary>
+    public bool ShowMessages => CurrentPage.Length == 0 && ModuleState.IsOn(ModuleIds.Message);
 
     /// <summary>没选任何页面(点了 Logo)时不显示"该页面还没做"。</summary>
     public bool IsPlaceholder => CurrentPage.Length > 0 && !IsEconomy && !IsWidgets
@@ -201,78 +179,64 @@ public partial class MainViewModel : ViewModelBase
     /// <summary>RCON / ZXMM 桥接控制台页是否显示。</summary>
     public bool IsConsole => CurrentPage == "ad-console";
 
-    /// <summary>社区页的子功能(按模式 / 是否连官方决定显示)。</summary>
-    public System.Collections.ObjectModel.ObservableCollection<Models.FunctionItem> CommunityItems { get; } = new();
+    /// <summary>经济页的功能卡片(商店 / 银行):数据来自模块登记处,关掉的那张自己藏起来。</summary>
+    public IReadOnlyList<Models.FunctionItem> EconomyCards => ModuleRegistry.CardsOf(ModuleIds.NavEconomy);
 
-    /// <summary>组织页的子功能。</summary>
-    public System.Collections.ObjectModel.ObservableCollection<Models.FunctionItem> OrganizationItems { get; } = new();
-
-    /// <summary>管理页的子功能。</summary>
-    public System.Collections.ObjectModel.ObservableCollection<Models.FunctionItem> ManageItems { get; } = new();
-
-    /// <summary>管理端「服务器管理」大类的子项(占位)。</summary>
-    public System.Collections.ObjectModel.ObservableCollection<Models.FunctionItem> AdminServerItems { get; } = new();
-
-    /// <summary>管理端「功能」大类的子项(占位)。</summary>
-    public System.Collections.ObjectModel.ObservableCollection<Models.FunctionItem> AdminFunctionItems { get; } = new();
-
-    /// <summary>管理端「ZXM 管理」大类的子项(占位)。</summary>
-    public System.Collections.ObjectModel.ObservableCollection<Models.FunctionItem> AdminZxmItems { get; } = new();
-
-    /// <summary>管理端「查询统计」大类的子项(占位)。</summary>
-    public System.Collections.ObjectModel.ObservableCollection<Models.FunctionItem> AdminQueryItems { get; } = new();
-
-    /// <summary>
-    /// 填管理端四个大类的子项。清单来自桌面"功能介绍.txt"的 Admin 段,这一版全是占位卡片。
-    /// 每个子项目前各配各的图标(24x24 描边),卡片本身还没接真实功能。
-    /// </summary>
-    private void BuildAdminItems()
+    /// <summary>按模块开关重算所有入口:关掉的分区不出现在左侧,关掉的功能不出现在各页上。</summary>
+    public void ApplyModules()
     {
-        void Add(System.Collections.ObjectModel.ObservableCollection<Models.FunctionItem> host, string key, string title, string desc, string icon)
+        // 先算卡片:分区的显隐要看它下面还剩几张卡
+        ModuleRegistry.ApplyCardVisibility();
+
+        SyncNavItems();
+
+        // 正停在某个刚被关掉的分区上:退回默认页,别让人对着空白页发愣
+        if (CurrentPage.Length > 0 && NavItems.FirstOrDefault(nav => nav.IsSelected) is null or { IsVisible: false })
         {
-            host.Add(new Models.FunctionItem { Key = key, Title = title, Description = desc, Icon = icon, IconStroke = true });
+            ClearSelection();
         }
 
-        // 服务器管理:MC 服本身的操作
-        Add(AdminServerItems, "ad-rcon", "RCON/ZXMM桥接控制台", "与 mc 服务器连接的远程控制台", Icons.AdminRcon);
-        Add(AdminServerItems, "ad-listen", "监听服务器", "监听 mc 服的输出", Icons.AdminListen);
-        Add(AdminServerItems, "ad-file", "文件管理", "管理 mc 服或 ZXMS 所在机器的文件", Icons.AdminFile);
-        Add(AdminServerItems, "ad-plugin", "mod/插件管理", "管理 mc 服的插件 / mod", Icons.AdminPlugin);
-        Add(AdminServerItems, "ad-map", "地图管理", "管理 mc 服的地图", Icons.AdminMap);
-        Add(AdminServerItems, "ad-mapswitch", "地图备份切换", "快速切换 mc 服地图的备份", Icons.AdminMapSwitch);
-        Add(AdminServerItems, "ad-playerdata", "玩家数据管理", "直接修改玩家的数据文件", Icons.AdminPlayerData);
-        Add(AdminServerItems, "ad-op", "op 管理", "设置 / 取消 op", Icons.AdminOp);
-        Add(AdminServerItems, "ad-inventory", "玩家背包管理", "查看、管理玩家背包", Icons.AdminInventory);
-        Add(AdminServerItems, "ad-whitelist", "白名单", "mc 服的白名单管理", Icons.AdminWhitelist);
+        OnPropertyChanged(nameof(ShowMessages));   // 消息模块关掉时,右侧消息面板也要收起来
+    }
 
-        // 功能:跨系统对接与全服级操作
-        Add(AdminFunctionItems, "ad-mapbackup", "mc 地图备份", "备份 mc 服的地图", Icons.AdminMapBackup);
-        Add(AdminFunctionItems, "ad-multisync", "多服数据互通", "自动同步多个服的玩家数据", Icons.AdminMultiSync);
-        Add(AdminFunctionItems, "ad-mcserver", "与 mc 服的连接设置", "连哪个服、用什么端口", Icons.AdminMcServer);
-        Add(AdminFunctionItems, "ad-qqbot", "qqbot 连接", "与 qqbot 框架对接", Icons.AdminQqBot);
-        Add(AdminFunctionItems, "ad-stats", "统计", "玩家人数、经济等", Icons.AdminStats);
-        Add(AdminFunctionItems, "ad-qqbind", "qq 绑定", "zxmc 账户与 qq 绑定", Icons.AdminQqBind);
-        Add(AdminFunctionItems, "ad-ban", "联 ban", "在 zxmc 里 ban 玩家,同时推送 zxmc 与 qq 群", Icons.AdminBan);
-        Add(AdminFunctionItems, "ad-vote", "投票发布", "小区域(特定人)/ 全区(整个 zxms)", Icons.AdminVote);
+    /// <summary>
+    /// 把左侧导航对齐到「现在该有的那批」:分区可能因为半加载而补进来(管理账号看玩家端分区),
+    /// 也可能因为卡片全关而整块消失,光改已有项的 IsVisible 处理不了这两种增删。
+    /// 复用同 ModuleId 的旧对象,选中态与徽标不会丢。
+    /// </summary>
+    private void SyncNavItems()
+    {
+        var wanted = ModuleRegistry.BuildNavItems();
+        var existing = new Dictionary<string, NavItem>(StringComparer.OrdinalIgnoreCase);
+        foreach (var nav in NavItems)
+        {
+            existing[nav.ModuleId] = nav;
+        }
 
-        // ZXM 管理:ZXM 自己那套账户 / 社区 / 组织 / 官方业务
-        Add(AdminZxmItems, "ad-account", "账户管理", "管理 zxm 的账户", Icons.AdminAccount);
-        Add(AdminZxmItems, "ad-post", "帖子管理", "社区帖子", Icons.AdminPost);
-        Add(AdminZxmItems, "ad-resource", "资源管理", "社区资源库", Icons.AdminResource);
-        Add(AdminZxmItems, "ad-chatroom", "聊天室管理", "社区聊天室与房间", Icons.AdminChatRoom);
-        Add(AdminZxmItems, "ad-company", "企业管理", "组织里的企业", Icons.AdminCompany);
-        Add(AdminZxmItems, "ad-personal", "个人管理", "组织里的个人", Icons.AdminPersonal);
-        Add(AdminZxmItems, "ad-team", "团队管理", "组织里的团队", Icons.AdminTeam);
-        Add(AdminZxmItems, "ad-shop", "官方商店", "管理官方商店、设置上架", Icons.AdminShop);
-        Add(AdminZxmItems, "ad-loan", "官方贷款", "官方贷款业务", Icons.AdminLoan);
-        Add(AdminZxmItems, "ad-bond", "官方债券", "官方债券业务", Icons.AdminBond);
-        Add(AdminZxmItems, "ad-zone", "开发区/机器/基地管理", "登记信息与后续校验", Icons.AdminZone);
+        for (var i = 0; i < wanted.Count; i++)
+        {
+            var want = wanted[i];
+            if (existing.TryGetValue(want.ModuleId, out var old))
+            {
+                old.IsVisible = want.IsVisible;
+                existing.Remove(want.ModuleId);
 
-        // 查询统计:记录类,只读为主
-        Add(AdminQueryItems, "ad-zonecheck", "开发区/机器位置校验", "自动检查登记的坐标是否真有机器", Icons.AdminZoneCheck);
-        Add(AdminQueryItems, "ad-joinlog", "玩家出入服务器记录", "自动记录玩家进出", Icons.AdminJoinLog);
-        Add(AdminQueryItems, "ad-grouplog", "群聊天记录", "记录群聊天", Icons.AdminGroupLog);
-        Add(AdminQueryItems, "ad-serverlog", "服聊天记录", "记录服内聊天", Icons.AdminServerLog);
+                var currentIndex = NavItems.IndexOf(old);
+                if (currentIndex >= 0 && currentIndex != i)
+                {
+                    NavItems.Move(currentIndex, i);
+                }
+
+                continue;
+            }
+
+            NavItems.Insert(Math.Min(i, NavItems.Count), want);
+        }
+
+        foreach (var leftover in existing.Values)
+        {
+            NavItems.Remove(leftover);
+        }
     }
 
     /// <summary>顶部那句:权限等级 - 连接方式(如 Player - SAOS),两段都来自设置页。</summary>
@@ -673,7 +637,7 @@ public partial class MainViewModel : ViewModelBase
             // 服务器广场的名称由 ZXMS 自己定(config 的 squarename),客户端照它改卡片标题
             if (key == "squarename" && value.Length > 0)
             {
-                foreach (var item in CommunityItems)
+                foreach (var item in ModuleRegistry.CardsOf(ModuleIds.NavCommunity))
                 {
                     if (item.Key == "srv-square")
                     {

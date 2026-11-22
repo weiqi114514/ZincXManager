@@ -61,6 +61,9 @@ public partial class OobeWindow : Window
         Closed += (_, _) =>
         {
             _wordTimer?.Stop();
+
+            // 关窗就把视图模型从模块开关事件上摘下来:静态事件不退订会把整个视图模型钉在内存里
+            (Vm as IDisposable)?.Dispose();
         };
 
         // 出错(被封禁 / 连不上服务器)弹窗告诉用户

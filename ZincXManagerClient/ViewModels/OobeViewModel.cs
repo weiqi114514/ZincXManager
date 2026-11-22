@@ -3,8 +3,10 @@ using System.Threading.Tasks;  // async / await 异步
 using Avalonia.Threading;  // UI 线程调度
 using CommunityToolkit.Mvvm.ComponentModel;  // MVVM 可观察对象
 using ZincXManagerClient.Models;  // 客户端自身
+using ZincXManagerClient.Modules;  // 客户端模块开关
 using ZincXManagerShared.Account;  // 共享库
 using ZincXManagerShared.Logging;  // 共享库
+using ZincXManagerShared.Modules;  // 共享库:模块编号
 using ZincXManagerShared.Network;  // 共享库
 
 namespace ZincXManagerClient.ViewModels;
@@ -18,7 +20,7 @@ namespace ZincXManagerClient.ViewModels;
 ///
 /// <para>完成后把选择写进 config.ini(含 <c>oobe=1</c>),下次启动直接进主界面。</para>
 /// </summary>
-public partial class OobeViewModel : ViewModelBase
+public partial class OobeViewModel : ViewModelBase, IDisposable
 {
     /// <summary>OOS 模式不连 ZXMS,所以不给 S1/S2(ZXMS 的欢迎/介绍) */}
     public int LastStep => Mode == "OOS" ? 6 : 8;
@@ -260,8 +262,11 @@ public partial class OobeViewModel : ViewModelBase
     /// <summary>SAOS 才需要选"哪一端的管理账号"。</summary>
     public bool AdminSideVisible => IsAdminAccount && Mode == "SAOS";
 
-    /// <summary>管理账号不能在客户端注册。</summary>
-    public bool CanRegister => !IsAdminAccount;
+    /// <summary>
+    /// 管理账号不能在客户端注册;服务端把「账号注册」模块关掉或半加载时也不给注册。
+    /// 半加载对注册一律不给:注册发生在登录之前,当时服务器还不知道来的是谁。
+    /// </summary>
+    public bool CanRegister => !IsAdminAccount && ModuleState.RegisterAllowed;
 
     /// <summary>提示语。</summary>
     public string LevelHint => IsAdminAccount
@@ -347,6 +352,27 @@ public partial class OobeViewModel : ViewModelBase
         {
             Step = step;
         }
+
+        // 服务端可能在引导窗已经开起来之后才下发开关名单(202 来晚了):跟着重算注册按钮的显隐
+        ModuleState.Changed += OnModulesChanged;
+    }
+
+    /// <summary>
+    /// 退订模块开关事件(窗口关掉时调)。<see cref="ModuleState.Changed"/> 是静态事件,
+    /// 不退订的话这个视图模型会被一直钉在内存里。
+    /// </summary>
+    public void Dispose() => ModuleState.Changed -= OnModulesChanged;
+
+    /// <summary>模块开关变了:注册入口要跟着显示 / 隐藏。</summary>
+    private void OnModulesChanged()
+    {
+        if (Dispatcher.UIThread.CheckAccess())
+        {
+            OnPropertyChanged(nameof(CanRegister));
+            return;
+        }
+
+        Dispatcher.UIThread.Post(() => OnPropertyChanged(nameof(CanRegister)));
     }
 
     /// <summary>取消息的纯文本正文(不带格式段)。</summary>
@@ -372,7 +398,17 @@ public partial class OobeViewModel : ViewModelBase
     public Task<bool> LoginAsync() => AccountAsync(register: false);
 
     /// <summary>注册(等级固定 Player)。</summary>
-    public Task<bool> RegisterAsync() => AccountAsync(register: true);
+    public Task<bool> RegisterAsync()
+    {
+        if (!ModuleState.RegisterAllowed)
+        {
+            // 兜底:服务器把注册模块关掉 / 半加载后注册入口已经隐藏,快捷键或自动化再点进来也不发注册包
+            Logger.Log(LogLevel.Info, "[ZXMC] 账号注册模块不可用(已关闭或仅限管理员),不发注册包");
+            return Task.FromResult(false);
+        }
+
+        return AccountAsync(register: true);
+    }
 
     private async Task<bool> AccountAsync(bool register)
     {

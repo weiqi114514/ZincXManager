@@ -9,6 +9,7 @@ using CommunityToolkit.Mvvm.ComponentModel;  // MVVM 可观察对象
 using ZincXManagerClient.Logging;  // 客户端自身
 using ZincXManagerClient.Models;  // 客户端自身
 using ZincXManagerClient.Chat;  // ChatBridge:聊天后端的门牌(510)
+using ZincXManagerClient.Modules;  // 模块开关:202 里的 modules= 在连接页就要解析
 using ZincXManagerShared.Logging;  // 共享库
 using ZincXManagerShared.Network;  // 共享库
 using ZincXManagerShared.Verify;  // 共享库
@@ -308,6 +309,12 @@ public partial class ConnectViewModel : ViewModelBase, IDisposable
                         CheckServerIdent(client, text.Trim(), host, port);
                         break;
 
+                    // 服务端配置(202):这里的 modules= 是功能开关名单,必须在连接页就解析 ——
+                    // 首次连接时主界面还没建好,主界面那边的处理收不到这一包。
+                    case Protocol.ServerConfig:
+                        ModuleState.Configure(text);
+                        break;
+
                     // 服务端名称(201):名称由服务端给 —— 存进 config,设置页显示的就是它
                     case Protocol.ServerName:
                         ServerName = text.Trim();
@@ -502,6 +509,11 @@ public partial class ConnectViewModel : ViewModelBase, IDisposable
             return false;
         }
 
+        if (!ModuleState.SendAllowed(type))
+        {
+            return false;   // 半加载的模块:客户端不许发,该功能在这边完全不存在
+        }
+
         await _client.SendAsync(type, data, id);
         return true;
     }
@@ -512,6 +524,11 @@ public partial class ConnectViewModel : ViewModelBase, IDisposable
         if (_client is null)
         {
             return false;
+        }
+
+        if (!ModuleState.SendAllowed(type))
+        {
+            return false;   // 半加载的模块:客户端不许发,该功能在这边完全不存在
         }
 
         await _client.SendAsync(type, text, id);
