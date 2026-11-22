@@ -43,7 +43,7 @@ public partial class TerminalView : UserControl
         }, DispatcherPriority.Background);
     }
 
-    /// <summary>开关被拨动就发 683;等 VM 回填的同值不重复发。</summary>
+    /// <summary>开关被拨动就发 6083;等 VM 回填的同值不重复发。</summary>
     private void OnTapSwitchPropertyChanged(object? sender, AvaloniaPropertyChangedEventArgs e)
     {
         if (e.Property != ToggleSwitch.IsCheckedProperty || _viewModel is null)

@@ -62,7 +62,7 @@ public partial class TerminalViewModel : ViewModelBase
     [ObservableProperty]
     public partial string InputText { get; set; } = "";
 
-    /// <summary>是否开着持续输出(682);只有桥接模式的服支持。</summary>
+    /// <summary>是否开着持续输出(6082);只有桥接模式的服支持。</summary>
     [ObservableProperty]
     public partial bool TapEnabled { get; set; }
 
@@ -125,7 +125,7 @@ public partial class TerminalViewModel : ViewModelBase
         }
     }
 
-    /// <summary>发 684 要服务器清单;没人回也不等,界面空着就行。</summary>
+    /// <summary>发 6084 要服务器清单;没人回也不等,界面空着就行。</summary>
     public async Task RefreshServersAsync()
     {
         var connect = ClientSession.Connect;
@@ -141,7 +141,7 @@ public partial class TerminalViewModel : ViewModelBase
         }
     }
 
-    /// <summary>处理 685:每行 <c>ID|名称|控制台模式|桥接在线|RCON在线</c>,坏行跳过。</summary>
+    /// <summary>处理 6085:每行 <c>ID|名称|控制台模式|桥接在线|RCON在线</c>,坏行跳过。</summary>
     public void ApplyServers(string payload)
     {
         var servers = new List<ConsoleServer>();  //解析出来的新清单
@@ -178,7 +178,7 @@ public partial class TerminalViewModel : ViewModelBase
         });
     }
 
-    /// <summary>发 680 一条命令:负载是 <c>选中编号|命令</c>,编号取下拉当前选中的那台。</summary>
+    /// <summary>发 6080 一条命令:负载是 <c>选中编号|命令</c>,编号取下拉当前选中的那台。</summary>
     public async Task SendAsync(string command)
     {
         var text = command.Trim();
@@ -223,7 +223,7 @@ public partial class TerminalViewModel : ViewModelBase
         }
     }
 
-    /// <summary>处理 681:<c>序号|ok|文本</c> 或 <c>序号|err|原因</c>;对不上序号也照样上屏。</summary>
+    /// <summary>处理 6081:<c>序号|ok|文本</c> 或 <c>序号|err|原因</c>;对不上序号也照样上屏。</summary>
     public void ApplyResult(string payload)
     {
         var parts = payload.Split('|', 3);  //文本里可能还有竖线,只切两刀
@@ -252,7 +252,7 @@ public partial class TerminalViewModel : ViewModelBase
         });
     }
 
-    /// <summary>处理 682 的一行持续输出;只显示当前目标服的,别把别的服串进来。</summary>
+    /// <summary>处理 6082 的一行持续输出;只显示当前目标服的,别把别的服串进来。</summary>
     public void AppendOutput(int serverId, string text)
     {
         Dispatcher.UIThread.Post(() =>
@@ -266,7 +266,7 @@ public partial class TerminalViewModel : ViewModelBase
         });
     }
 
-    /// <summary>发 683 开 / 关持续输出;编号取下拉当前选中的那台,发不出去就把开关拨回去。</summary>
+    /// <summary>发 6083 开 / 关持续输出;编号取下拉当前选中的那台,发不出去就把开关拨回去。</summary>
     public async Task SetTapAsync(bool on)
     {
         var target = Target;
@@ -400,7 +400,7 @@ public partial class TerminalViewModel : ViewModelBase
             return;
         }
 
-        // 打开控制台拉完清单、切到另一台,都会走到这里:开关开着就重新发 683,让推送跟着目标走
+        // 打开控制台拉完清单、切到另一台,都会走到这里:开关开着就重新发 6083,让推送跟着目标走
         if (TapEnabled)
         {
             _ = ReapplyTapAsync();

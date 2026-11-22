@@ -226,13 +226,13 @@ public partial class MainWindow : Window
             Vm?.RefreshOfficialVisibility();
         }
 
-        // 窗口开起来再要一次历史消息(504 补发):这一刻收包事件才挂上,不然补发的包没人接。
+        // 窗口开起来再要一次历史消息(5004 补发):这一刻收包事件才挂上,不然补发的包没人接。
         // 已经在登录成功时要过一次的,这里再要一次也不要紧 —— 客户端按「来源+消息号」去重,不会多出一条。
         if (Vm is { } vm)
         {
             _ = vm.RequestMessageHistoryAsync();
 
-            // 进主界面先问一次好友申请(656):657 回来才知道「好友」那一行的红点亮不亮
+            // 进主界面先问一次好友申请(6056):6057 回来才知道「好友」那一行的红点亮不亮
             _ = vm.RequestFriendRequestsAsync();
         }
     }
@@ -378,7 +378,7 @@ public partial class MainWindow : Window
             connect.UpdateRequiredRaised -= OnUpdateRequired;
         }
 
-        // 好友窗是独立顶层窗,主窗关了它不会跟着关:留着它只会照常发 650/656 却再也收不到 651/662
+        // 好友窗是独立顶层窗,主窗关了它不会跟着关:留着它只会照常发 6050/6056 却再也收不到 6051/6062
         _friendsWindow?.Close();
         _friendsWindow = null;
     }
@@ -432,13 +432,13 @@ public partial class MainWindow : Window
     /// <summary>绑定/解绑回执:窗口在就订阅显示,没人订阅直接弹框</summary>
     public event Action<bool, string>? BindAckArrived;
 
-    /// <summary>打开「选择 MC 服务器」弹窗:先拉列表(670),选完切服(672),清单在 <c>Data/Servers.txt</c>。</summary>
+    /// <summary>打开「选择 MC 服务器」弹窗:先拉列表(6070),选完切服(6072),清单在 <c>Data/Servers.txt</c>。</summary>
     public void OpenServerPicker()
     {
         _ = OpenServerPickerAsync();
     }
 
-    /// <summary>打开 RCON / ZXMM 桥接控制台:切页,把配置里选中的服同步成目标服,再拉一次清单(684)。</summary>
+    /// <summary>打开 RCON / ZXMM 桥接控制台:切页,把配置里选中的服同步成目标服,再拉一次清单(6084)。</summary>
     public void OpenConsole()
     {
         if (Vm is not { } vm)
@@ -448,7 +448,7 @@ public partial class MainWindow : Window
 
         vm.Console.PreferServer(ClientConfig.GetMcServer());
         vm.CurrentPage = "ad-console";
-        Logger.Log(LogLevel.Info, "[控制台] 打开 RCON / ZXMM 桥接控制台,请求服务器清单(684)");
+        Logger.Log(LogLevel.Info, "[控制台] 打开 RCON / ZXMM 桥接控制台,请求服务器清单(6084)");
         _ = vm.Console.RefreshServersAsync();
     }
 
@@ -466,7 +466,7 @@ public partial class MainWindow : Window
 
             var picker = new ServerPickWindow();
 
-            //671 走的是网络读线程,改界面必须回 UI 线程
+            //6071 走的是网络读线程,改界面必须回 UI 线程
             void OnList(string payload) => Avalonia.Threading.Dispatcher.UIThread.Post(
                 () => picker.SetServers(ParseServerList(payload), ClientConfig.GetMcServer()));
 
@@ -474,7 +474,7 @@ public partial class MainWindow : Window
             picker.Applied += id => _ = ApplyServerAsync(picker, connect, id);
             picker.Closed += (_, _) => connect.ServerListReceived -= OnList;
 
-            Logger.Log(LogLevel.Info, "[数据分离] 打开选服窗口,请求服务器列表(670)");
+            Logger.Log(LogLevel.Info, "[数据分离] 打开选服窗口,请求服务器列表(6070)");
             _ = connect.SendAsync(Protocol.ServerListReq, string.Empty);
             await picker.ShowDialog(this);
             Logger.Log(LogLevel.Info, "[数据分离] 选服窗口已关闭");
@@ -505,7 +505,7 @@ public partial class MainWindow : Window
     }
 
     /// <summary>
-    /// 应用切服:写 mcserver → 「正在请求」→ 发 672 → 「正在等待数据」→ 等 673 →
+    /// 应用切服:写 mcserver → 「正在请求」→ 发 6072 → 「正在等待数据」→ 等 6073 →
     /// 「正在加载数据」→ 重新拉一次绑定关系 → 关框。任一步失败都回滚 mcserver。
     /// </summary>
     private async Task ApplyServerAsync(Window owner, ConnectViewModel connect, int serverId)
@@ -554,7 +554,7 @@ public partial class MainWindow : Window
             }
 
             progress.SetText("正在加载数据");
-            QueryBindAsync();                 // 切完重新拉一次绑定关系(629),回来直接刷成那台服的数据
+            QueryBindAsync();                 // 切完重新拉一次绑定关系(6029),回来直接刷成那台服的数据
             await ReloadAfterServerSwitchAsync(serverId);   // 好友 / 申请 / 历史一起重拉,别留着上一台服的界面
             await Task.Delay(400);            // 让「正在加载数据」这一级看得见
             progress.Finish();
@@ -573,7 +573,7 @@ public partial class MainWindow : Window
         }
     }
 
-    /// <summary>问服务端:我这个账号绑了谁(629,回 630)。</summary>
+    /// <summary>问服务端:我这个账号绑了谁(6029,回 6030)。</summary>
     private async void QueryBindAsync()
     {
         var connect = ClientSession.Connect;
@@ -593,7 +593,7 @@ public partial class MainWindow : Window
     }
 
     /// <summary>
-    /// 切服成功后的重拉:好友列表(650)/ 好友申请(656)/ 历史消息(505)。
+    /// 切服成功后的重拉:好友列表(6050)/ 好友申请(6056)/ 历史消息(5005)。
     /// 切服本身已经成功,任一步失败只记 Warn,不回滚、不弹窗打断用户。
     /// </summary>
     /// <param name="serverId">刚切过去的服务器编号(只用于日志)。</param>
@@ -629,13 +629,13 @@ public partial class MainWindow : Window
             }
         }
 
-        await SendStepAsync("好友列表(650)", () => connect.SendAsync(Protocol.FriendListQuery, ""));
-        await SendStepAsync("好友申请(656)", () => connect.SendAsync(Protocol.FriendRequestsQuery, ""));
+        await SendStepAsync("好友列表(6050)", () => connect.SendAsync(Protocol.FriendListQuery, ""));
+        await SendStepAsync("好友申请(6056)", () => connect.SendAsync(Protocol.FriendRequestsQuery, ""));
 
-        // 历史消息走现有的补发入口(505):它自己会判连接在不在
+        // 历史消息走现有的补发入口(5005):它自己会判连接在不在
         if (Vm is { } vm && connect.IsConnected)
         {
-            await SendStepAsync("历史消息(505)", async () =>
+            await SendStepAsync("历史消息(5005)", async () =>
             {
                 await vm.RequestMessageHistoryAsync();
                 return true;
@@ -676,7 +676,7 @@ public partial class MainWindow : Window
         }
     }
 
-    /// <summary>收到登录请求(621):弹窗问玩家,回答发回服务端(622)。 绑定码窗口做好之前先用通用对话框顶着。</summary>
+    /// <summary>收到登录请求(6021):弹窗问玩家,回答发回服务端(6022)。 绑定码窗口做好之前先用通用对话框顶着。</summary>
     /// <param name="requestId">请求 ID(622 要原样带回)。</param>
     /// <param name="player">要进服的 MC 玩家名。</param>
     /// <param name="ip">服务端看到的连接 IP(经隧道时可能是 127.0.0.1)。</param>
@@ -767,7 +767,7 @@ public partial class MainWindow : Window
         {
             BindHeader.Text = "解绑";
             UnbindPanel.IsVisible = true;
-            // 列表在 ShowBindOverlay 里那次 629 的 630 回执里已经填好;这里不重复问一遍
+            // 列表在 ShowBindOverlay 里那次 6029 的 6030 回执里已经填好;这里不重复问一遍
             if (UnbindListPanel.Children.Count == 0)
             {
                 UnbindInfo.Text = "正在查询…";
@@ -775,7 +775,7 @@ public partial class MainWindow : Window
         }
     }
 
-    /// <summary>按 630 的玩家名重建解绑列表:一个玩家一行,行尾一个解绑按钮。</summary>
+    /// <summary>按 6030 的玩家名重建解绑列表:一个玩家一行,行尾一个解绑按钮。</summary>
     /// <param name="players">这个账号名下的玩家名(顺序按服务端给的)。</param>
     private void RebuildUnbindList(System.Collections.Generic.List<string> players)
     {
@@ -840,7 +840,7 @@ public partial class MainWindow : Window
         };
     }
 
-    /// <summary>列表里点了某一个玩家的「解绑」:先确认,再发 628(负载是玩家名)。</summary>
+    /// <summary>列表里点了某一个玩家的「解绑」:先确认,再发 6028(负载是玩家名)。</summary>
     private async Task UnbindOneAsync(string player)
     {
         if (Vm is not { } vm)
@@ -864,7 +864,7 @@ public partial class MainWindow : Window
         }
     }
 
-    /// <summary>提交绑定码(626)。</summary>
+    /// <summary>提交绑定码(6026)。</summary>
     private async void OnBindSubmitClick(object? sender, RoutedEventArgs e)
     {
         var code = string.Concat(Code0.Text, Code1.Text, Code2.Text, Code3.Text, Code4.Text, Code5.Text)
@@ -917,7 +917,7 @@ public partial class MainWindow : Window
                 Logger.Log(LogLevel.Info, "[ZXMC] 收到公告:" + MessageCard.Summary(text));
                 break;
 
-            // 补发的一条历史消息(504):本地已经有的会自己跳过
+            // 补发的一条历史消息(5004):本地已经有的会自己跳过
             case Protocol.MessageHistory:
                 _ = vm.AckMessageAsync(text);
                 Logger.Log(LogLevel.Info, vm.AddHistoryCard(text)
@@ -925,17 +925,17 @@ public partial class MainWindow : Window
                     : "[ZXMC] 这条历史消息本地已经有了,跳过");
                 break;
 
-            // 补发结束(506):负载是服务端一共发了多少条
+            // 补发结束(5006):负载是服务端一共发了多少条
             case Protocol.MessageHistoryDone:
                 vm.OnHistoryDone(text);
                 break;
 
-            // 卡片动作的回执(503):把服务端的话显示在状态栏
+            // 卡片动作的回执(5003):把服务端的话显示在状态栏
             case Protocol.CardActionAck:
                 vm.ShowCardReply(text);
                 break;
 
-            // ---- 登录请求(621):问玩家是/否,回答回 622 ----
+            // ---- 登录请求(6021):问玩家是/否,回答回 6022 ----
             case Protocol.LoginAsk:
             {
                 var askParts = text.Split('|');   //拆分结果
@@ -959,7 +959,7 @@ public partial class MainWindow : Window
                 break;
             }
 
-            // ---- 绑定关系(630):回答"我这个账号绑了哪些玩家",一行一个 ----
+            // ---- 绑定关系(6030):回答"我这个账号绑了哪些玩家",一行一个 ----
             case Protocol.BindList:
             {
                 var line = text.Trim();
@@ -986,10 +986,10 @@ public partial class MainWindow : Window
                 break;
             }
 
-            // ---- 绑定/解绑回执(627) ----
+            // ---- 绑定/解绑回执(6027) ----
             case Protocol.BindAck:
             {
-                // 服务端只校验了绑定码:真正落盘要用户在这里亲眼点一次确定(631)
+                // 服务端只校验了绑定码:真正落盘要用户在这里亲眼点一次确定(6031)
                 if (text.StartsWith("pending|", StringComparison.OrdinalIgnoreCase))
                 {
                     var pendingParts = text.Split('|');   //拆分结果
@@ -1023,7 +1023,7 @@ public partial class MainWindow : Window
                 break;
             }
 
-            // 服务端配置(202):目前是子服务端的消息保留天数
+            // 服务端配置(2002):目前是子服务端的消息保留天数
             case Protocol.ServerConfig:
                 // 主界面已经在的时候收到的 202(重连 / 服务端重发):名单可能变了,再解析一次(幂等)
                 ModuleState.Configure(text);
@@ -1055,18 +1055,18 @@ public partial class MainWindow : Window
                 Logger.Log(LogLevel.Info, "[ZXMC] 收到定向推送:" + MessageCard.Summary(cardText));
                 break;
 
-            // 好友列表(651):列表窗开着就交给它画;开着的聊天窗顺带把备注同步一下
+            // 好友列表(6051):列表窗开着就交给它画;开着的聊天窗顺带把备注同步一下
             case Protocol.FriendListReply:
                 _friendsWindow?.FillList(text);
                 SyncRemarks(text);
                 break;
 
-            // 好友备注回执(666):交给刚发过 665 的那个聊天窗
+            // 好友备注回执(6066):交给刚发过 6065 的那个聊天窗
             case Protocol.FriendRemarkAck:
                 ChatWindow.RemarkAck(text);
                 break;
 
-            // 好友申请列表(657):列表窗只要红点,通知窗要整张列表
+            // 好友申请列表(6057):列表窗只要红点,通知窗要整张列表
             case Protocol.FriendRequestsReply:
             {
                 // 未处理条数就是这份列表的行数:谁问的、推来的都按这个数覆盖最准
@@ -1083,12 +1083,12 @@ public partial class MainWindow : Window
                 break;
             }
 
-            // 好友事件(662):有人加我 / 同意我 / 删了我 / 上线 / 下线
+            // 好友事件(6062):有人加我 / 同意我 / 删了我 / 上线 / 下线
             case Protocol.FriendEvent:
                 HandleFriendEvent(text);
                 break;
 
-            // 搜索结果(664):通知窗会自己发 663 查申请人名字,按请求编号认领,认不出的给加好友窗
+            // 搜索结果(6064):通知窗会自己发 6063 查申请人名字,按请求编号认领,认不出的给加好友窗
             case Protocol.FriendSearchReply:
                 if (FriendRequestsWindow.Current?.TakeSearchReply(packet.Id, text) != true)
                 {
@@ -1097,7 +1097,7 @@ public partial class MainWindow : Window
 
                 break;
 
-            // 头像(608):存本地,列表重画
+            // 头像(6008):存本地,列表重画
             case Protocol.FriendAvatarAck:
                 if (FriendCodec.TryParseAvatarAck(text, out var avatarName, out var avatarBytes))
                 {
@@ -1106,7 +1106,7 @@ public partial class MainWindow : Window
 
                 break;
 
-            // 收到好友私聊(400):聊天窗开着就上屏,没开就只留个日志
+            // 收到好友私聊(4000):聊天窗开着就上屏,没开就只留个日志
             case Protocol.FriendMsg:
                 HandleIncomingMessage(text);
                 break;
@@ -1116,17 +1116,17 @@ public partial class MainWindow : Window
                 ChatWindow.DeliverHistory(text);
                 break;
 
-            // 送达 / 已读回执(404)
+            // 送达 / 已读回执(4004)
             case Protocol.FriendMsgReceipt:
                 ChatWindow.DeliverReceipt(text);
                 break;
 
-            // 发消息 / 发申请 / 回申请 / 删好友的回执(401 / 655 / 659 / 661)
+            // 发消息 / 发申请 / 回申请 / 删好友的回执(4001 / 6055 / 6059 / 6061)
             case Protocol.FriendMsgAck:
                 HandleMessageAck(text);
                 break;
 
-            // 回申请的回执(659)先给通知窗:它要立刻把那一行摘掉并弹自己的提示;
+            // 回申请的回执(6059)先给通知窗:它要立刻把那一行摘掉并弹自己的提示;
             // 不是它发的那条才落到通用回执上
             case Protocol.FriendAnswerAck:
                 if (FriendRequestsWindow.Current?.HandleAnswerAck(packet.Id, text) != true)
@@ -1143,17 +1143,17 @@ public partial class MainWindow : Window
                 HandleFriendReceipt(packet.Type, text);
                 break;
 
-            // 终端命令回执(681):序号|ok|文本 或 序号|err|原因
+            // 终端命令回执(6081):序号|ok|文本 或 序号|err|原因
             case Protocol.ConsoleResult:
                 Vm?.Console.ApplyResult(text);
                 break;
 
-            // 终端持续输出(682):服务器ID|一行文本
+            // 终端持续输出(6082):服务器ID|一行文本
             case Protocol.ConsoleOutput:
                 HandleConsoleOutput(text);
                 break;
 
-            // 终端服务器清单(685)
+            // 终端服务器清单(6085)
             case Protocol.ConsoleServers:
                 Vm?.Console.ApplyServers(text);
                 break;
@@ -1172,7 +1172,7 @@ public partial class MainWindow : Window
         Vm?.Console.AppendOutput(serverId, parts[1]);
     }
 
-    /// <summary>处理 662:按事件种类刷新列表 / 在线状态 / 红点。</summary>
+    /// <summary>处理 6062:按事件种类刷新列表 / 在线状态 / 红点。</summary>
     private void HandleFriendEvent(string payload)
     {
         var parts = payload.Split('|', 2);
@@ -1189,7 +1189,7 @@ public partial class MainWindow : Window
                 _friendsWindow?.SetOnline(other, online: false);
                 break;
             case Protocol.FriendEventKind.Request:
-                // 别人来申请:先加一让红点立刻亮;服务端紧接着会推 657,真值以那一包为准
+                // 别人来申请:先加一让红点立刻亮;服务端紧接着会推 6057,真值以那一包为准
                 if (Vm is { } requestVm)
                 {
                     requestVm.BumpFriendRequestCount();
@@ -1233,7 +1233,7 @@ public partial class MainWindow : Window
         _friendsWindow?.Touch(fromId);
 
         // 私聊只会改变好友行的末句与未读数,不碰申请列表:这里只重拉 650,
-        // 别再顺手发 656 —— 对方连发几条就是几个 656,而服务端每收一个都要读一遍申请档
+        // 别再顺手发 6056 —— 对方连发几条就是几个 6056,而服务端每收一个都要读一遍申请档
         _friendsWindow?.RefreshList();
     }
 

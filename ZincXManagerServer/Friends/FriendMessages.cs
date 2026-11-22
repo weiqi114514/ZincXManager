@@ -8,7 +8,7 @@ using ZincXManagerShared.Network;        // Protocol / ServerboundPacket
 namespace ZincXManagerServer;
 
 /// <summary>
-/// 好友私聊(400 发 / 401 回执 / 402 查 / 403 回 / 404 送达与已读 / 405 已读上报)。
+/// 好友私聊(4000 发 / 4001 回执 / 4002 查 / 4003 回 / 4004 送达与已读 / 4005 已读上报)。
 ///
 /// <para>只有好友之间能说话 —— 校验在这里做,客户端说「我们是好友」不算数。
 /// 正文按原样存,但换行和制表符会压成空格,否则存档里的行就乱了。</para>
@@ -146,7 +146,7 @@ internal static partial class Program
         await RelayFriendActionAsync(Protocol.FriendRelayAction.Receipt, self, peer, $"{seq}|read", 0);
     }
 
-    /// <summary>收 615 里「发消息」这种动作:别服的人给我发了一句话(<c>消息编号|正文</c>)。</summary>
+    /// <summary>收 6015 里「发消息」这种动作:别服的人给我发了一句话(<c>消息编号|正文</c>)。</summary>
     private static async Task ApplyRemoteMessageAsync(PlayerId from, PlayerId target, string extra)
     {
         var cut = extra.IndexOf(FriendCodec.PipeSeparator);
@@ -165,7 +165,7 @@ internal static partial class Program
         }
     }
 
-    /// <summary>收 615 里的「已读」:对方读到了第几号。</summary>
+    /// <summary>收 6015 里的「已读」:对方读到了第几号。</summary>
     private static async Task ApplyRemoteReceiptAsync(PlayerId from, PlayerId target, string extra)
     {
         var cut = extra.IndexOf(FriendCodec.PipeSeparator);

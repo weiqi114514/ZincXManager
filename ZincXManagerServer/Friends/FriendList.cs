@@ -8,7 +8,7 @@ using ZincXManagerShared.Network;        // Protocol / ServerboundPacket
 namespace ZincXManagerServer;
 
 /// <summary>
-/// 好友列表(650 查 / 651 回)与删除好友(660 删 / 661 回执)。
+/// 好友列表(6050 查 / 6051 回)与删除好友(6060 删 / 6061 回执)。
 ///
 /// <para>列表里只放「我这侧」的档;对方是不是也把我当好友,那边有它自己的档。
 /// 在线状态是查出来的,不落盘 —— 落盘就会变成过期数据。</para>

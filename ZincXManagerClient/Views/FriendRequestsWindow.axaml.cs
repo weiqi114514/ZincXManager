@@ -19,11 +19,11 @@ namespace ZincXManagerClient.Views;
 /// <summary>
 /// 好友通知窗:别人发来的申请一条一行,可以同意或拒绝。
 ///
-/// <para>列表、同意、拒绝全部以服务端为准:开窗发 656,同意/拒绝发 658,
-/// 659 说成了才把这一行摘掉。客户端不判断「能不能加」「是不是好友」,那些是服务端的事。</para>
+/// <para>列表、同意、拒绝全部以服务端为准:开窗发 6056,同意/拒绝发 6058,
+/// 6059 说成了才把这一行摘掉。客户端不判断「能不能加」「是不是好友」,那些是服务端的事。</para>
 ///
 /// <para>657 里只有申请人的完整 ID 没有名字,所以每遇到一个没见过的申请人就用
-/// 663 查一次名字(664 带编号回来),查不到就照旧显示完整 ID —— 不为显示名字新增协议。</para>
+/// 6063 查一次名字(6064 带编号回来),查不到就照旧显示完整 ID —— 不为显示名字新增协议。</para>
 /// </summary>
 public partial class FriendRequestsWindow : Window
 {
@@ -33,10 +33,10 @@ public partial class FriendRequestsWindow : Window
     /// <summary>662 可能连着来几条,拉列表按这个间隔合并,不跟着刷屏。</summary>
     private const int RefreshThrottleMs = 600;
 
-    /// <summary>当前开着的通知窗(主窗收到 657 时找它刷新)。</summary>
+    /// <summary>当前开着的通知窗(主窗收到 6057 时找它刷新)。</summary>
     public static FriendRequestsWindow? Current { get; private set; }
 
-    private readonly List<FriendRequestEntry> _entries = [];                                  // 服务端最近一次给的全部申请(657)
+    private readonly List<FriendRequestEntry> _entries = [];                                  // 服务端最近一次给的全部申请(6057)
     private readonly Dictionary<string, string> _names = new(StringComparer.OrdinalIgnoreCase); // 申请人完整ID → 查到的名字
     private readonly Dictionary<ulong, string> _pendingNames = [];                            // 查名字的请求编号 → 申请人完整ID
 
@@ -47,7 +47,7 @@ public partial class FriendRequestsWindow : Window
     private ulong _answerTicket;           // 这一步 658 的请求编号,659 回来时按它认
     private FriendRequestEntry? _answeringEntry;  // 正在处理的那条,成功后就从列表里摘掉
     private bool _answerAgree;             // 这一步是同意还是拒绝,决定提示文案
-    private long _lastQueryTicks;          // 上一次发 656 的时刻,用于刷新节流
+    private long _lastQueryTicks;          // 上一次发 6056 的时刻,用于刷新节流
 
     public FriendRequestsWindow()
     {
@@ -67,7 +67,7 @@ public partial class FriendRequestsWindow : Window
         _ = QueryAsync();
     }
 
-    /// <summary>服务端回了申请列表(657)。</summary>
+    /// <summary>服务端回了申请列表(6057)。</summary>
     public void FillRequests(string payload)
     {
         if (!Dispatcher.UIThread.CheckAccess())
@@ -91,7 +91,7 @@ public partial class FriendRequestsWindow : Window
     }
 
     /// <summary>
-    /// 收到 662(对方同意 / 撤销申请)后重拉一次列表。
+    /// 收到 6062(对方同意 / 撤销申请)后重拉一次列表。
     /// 662 会连着来,600 毫秒内只发一个 656。
     /// </summary>
     public void RefreshRequests()
@@ -113,7 +113,7 @@ public partial class FriendRequestsWindow : Window
     }
 
     /// <summary>
-    /// 664 搜索结果回来了,如果是我为申请人名字发的那次就吃掉它。
+    /// 6064 搜索结果回来了,如果是我为申请人名字发的那次就吃掉它。
     /// 返回 true = 这条 664 归本窗,主窗不要再转给加好友窗。
     /// </summary>
     public bool TakeSearchReply(ulong packetId, string payload)
@@ -144,7 +144,7 @@ public partial class FriendRequestsWindow : Window
     }
 
     /// <summary>
-    /// 659 回执回来了。返回 true = 这条归本窗(已经弹了提示),主窗不要再走通用的「操作没成功」弹窗。
+    /// 6059 回执回来了。返回 true = 这条归本窗(已经弹了提示),主窗不要再走通用的「操作没成功」弹窗。
     /// </summary>
     public bool HandleAnswerAck(ulong packetId, string payload)
     {
@@ -371,7 +371,7 @@ public partial class FriendRequestsWindow : Window
         }
     }
 
-    /// <summary>点同意/拒绝:发 658,等 659 回来才算成。同一时刻只放一条申请过去。</summary>
+    /// <summary>点同意/拒绝:发 6058,等 6059 回来才算成。同一时刻只放一条申请过去。</summary>
     private async Task AnswerAsync(FriendRequestEntry entry, bool agree, Button agreeButton, Button refuseButton)
     {
         if (_answering)
@@ -396,7 +396,7 @@ public partial class FriendRequestsWindow : Window
         try
         {
             await connect.SendAsync(Protocol.FriendAnswer, FriendCodec.BuildFriendAnswer(entry.FromId, agree), _answerTicket);
-            Logger.Log(LogLevel.Info, $"[好友] 已把「{(agree ? "同意" : "拒绝")} {entry.FromId}」发给服务端(658)");
+            Logger.Log(LogLevel.Info, $"[好友] 已把「{(agree ? "同意" : "拒绝")} {entry.FromId}」发给服务端(6058)");
             _ = WatchAnswerAsync(_answerTicket);
         }
         catch (Exception ex)
@@ -421,7 +421,7 @@ public partial class FriendRequestsWindow : Window
 
         _answering = false;
         _answeringEntry = null;
-        Logger.Log(LogLevel.Warning, "[好友] 回申请的 659 回执没在 10 秒内到,先放开按钮并重拉列表");
+        Logger.Log(LogLevel.Warning, "[好友] 回申请的 6059 回执没在 10 秒内到,先放开按钮并重拉列表");
         PaintRows(force: true);
         await QueryAsync();
     }
@@ -435,7 +435,7 @@ public partial class FriendRequestsWindow : Window
         }
     }
 
-    /// <summary>向服务端要一次申请列表(656)。</summary>
+    /// <summary>向服务端要一次申请列表(6056)。</summary>
     private async Task QueryAsync()
     {
         if (ClientSession.Connect is not { } connect)

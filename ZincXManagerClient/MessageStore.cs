@@ -15,7 +15,7 @@ namespace ZincXManagerClient;
 /// <para><b>保留期按来源分三档:</b></para>
 /// <list type="bullet">
 ///   <item><c>ZXMOS-…</c>(官方服务端):固定最多 <see cref="ZxmosKeepDays"/> 天,客户端不能改</item>
-///   <item><c>ZXMS-…</c>(子服务端):按子服务端的设置(它连上时用 202 配置包告诉客户端,默认 7 天)</item>
+///   <item><c>ZXMS-…</c>(子服务端):按子服务端的设置(它连上时用 2002 配置包告诉客户端,默认 7 天)</item>
 ///   <item><c>ZXMC</c>(客户端本地产的):按高级设置里的天数(默认 60 天)</item>
 /// </list>
 /// </summary>
@@ -27,7 +27,7 @@ internal static class MessageStore
     /// <summary>官方(ZXMOS)消息的保留上限(天):服务端策略,客户端不可改。</summary>
     public const int ZxmosKeepDays = 20;
 
-    /// <summary>子服务端消息的默认保留天数(没收到 202 时用)。</summary>
+    /// <summary>子服务端消息的默认保留天数(没收到 2002 时用)。</summary>
     public const int DefaultZxmsKeepDays = 7;
 
     /// <summary>本地消息的默认保留天数。</summary>

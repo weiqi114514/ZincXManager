@@ -8,7 +8,7 @@ namespace ZincXManagerShared.History;
 
 /// <summary>
 /// 已发消息清单:每个用户一个文件 <c>User/Message/{用户ID}.txt</c>,内容是一行空格分隔的消息号。
-/// <para>流程:服务端准备消息列表 → 查这里剔除发过的 → 发出去 → 客户端回执(507) → 才写进这里。</para>
+/// <para>流程:服务端准备消息列表 → 查这里剔除发过的 → 发出去 → 客户端回执(5007) → 才写进这里。</para>
 /// <para>写进这里之后,这条消息对该用户就算"已发",以后补发不会再给。</para>
 /// </summary>
 public static class SentMessages

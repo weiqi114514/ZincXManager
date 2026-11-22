@@ -490,12 +490,12 @@ public partial class MainViewModel : ViewModelBase, IDisposable
     /// <summary>又有人来申请(662 request):先加一让红点立刻亮,657 回来再按真值对齐。</summary>
     public void BumpFriendRequestCount() => FriendRequestCount++;
 
-    /// <summary>主动要一次「别人发给我的好友申请」(656):657 回来才知道红点亮不亮。</summary>
+    /// <summary>主动要一次「别人发给我的好友申请」(6056):6057 回来才知道红点亮不亮。</summary>
     public async Task RequestFriendRequestsAsync()
     {
         if (ClientSession.Connect is not { } connect || !connect.IsConnected)
         {
-            Logger.Log(LogLevel.Info, "[好友] 未连接服务端,这次不拉申请列表(656)");
+            Logger.Log(LogLevel.Info, "[好友] 未连接服务端,这次不拉申请列表(6056)");
             return;
         }
 
@@ -503,12 +503,12 @@ public partial class MainViewModel : ViewModelBase, IDisposable
         {
             if (!await connect.SendAsync(Protocol.FriendRequestsQuery, ""))
             {
-                Logger.Log(LogLevel.Warning, "[好友] 申请列表(656)没发出去:连接已断开");
+                Logger.Log(LogLevel.Warning, "[好友] 申请列表(6056)没发出去:连接已断开");
             }
         }
         catch (Exception ex)
         {
-            Logger.Log(LogLevel.Warning, "[好友] 拉取申请列表(656)失败: " + ex.Message);
+            Logger.Log(LogLevel.Warning, "[好友] 拉取申请列表(6056)失败: " + ex.Message);
         }
     }
 
@@ -619,7 +619,7 @@ public partial class MainViewModel : ViewModelBase, IDisposable
     }
 
     /// <summary>
-    /// 应用服务端配置(202):按行 <c>键=值</c>。目前认 <c>msgdays</c>(子服务端的消息保留天数)。
+    /// 应用服务端配置(2002):按行 <c>键=值</c>。目前认 <c>msgdays</c>(子服务端的消息保留天数)。
     /// </summary>
     public void ApplyServerConfig(string payload)
     {
@@ -660,7 +660,7 @@ public partial class MainViewModel : ViewModelBase, IDisposable
     }
 
     /// <summary>
-    /// 把服务端下发的消息卡片(公告 500 / 定向推送 501 / 补发 504)加进消息面板。参数是卡片原文(7 段,
+    /// 把服务端下发的消息卡片(公告 5000 / 定向推送 5001 / 补发 5004)加进消息面板。参数是卡片原文(7 段,
     /// 第 8 段可选 = 消息号),解析不出来只记一条警告 ——
     /// 原文也会存进 <see cref="MessageItem.RawCard"/>,回动作时原样带给服务端。
     ///
@@ -722,7 +722,7 @@ public partial class MainViewModel : ViewModelBase, IDisposable
         return true;
     }
 
-    /// <summary>实时收到一条服务端消息(公告 500 / 定向推送 501):进消息面板,顺带弹一条提示条。 补发(504)不走这里 —— 补十条就弹十条太吵。</summary>
+    /// <summary>实时收到一条服务端消息(公告 5000 / 定向推送 5001):进消息面板,顺带弹一条提示条。 补发(5004)不走这里 —— 补十条就弹十条太吵。</summary>
     public bool ReceiveCard(string rawCard)
     {
         if (!AddCard(rawCard))
@@ -738,7 +738,7 @@ public partial class MainViewModel : ViewModelBase, IDisposable
         return true;
     }
 
-    /// <summary>告诉服务端"这条我确实收到了"(507)。服务端收到回执才记进已发清单, 以后补发不会再给同一条;删掉后重开也不会再冒出来。</summary>
+    /// <summary>告诉服务端"这条我确实收到了"(5007)。服务端收到回执才记进已发清单, 以后补发不会再给同一条;删掉后重开也不会再冒出来。</summary>
     public async Task AckMessageAsync(string rawCard)
     {
         var connect = ClientSession.Connect;
@@ -762,7 +762,7 @@ public partial class MainViewModel : ViewModelBase, IDisposable
         }
     }
 
-    /// <summary>用绑定码绑定当前账号(626)。</summary>
+    /// <summary>用绑定码绑定当前账号(6026)。</summary>
     public async Task<bool> SendBindAsync(string code)
     {
         var connect = ClientSession.Connect;
@@ -783,7 +783,7 @@ public partial class MainViewModel : ViewModelBase, IDisposable
         }
     }
 
-    /// <summary>解绑当前账号名下的一个玩家(628,负载是玩家名)。</summary>
+    /// <summary>解绑当前账号名下的一个玩家(6028,负载是玩家名)。</summary>
     /// <param name="player">要解绑的 MC 玩家名。</param>
     public async Task<bool> SendUnbindAsync(string player)
     {
@@ -805,14 +805,14 @@ public partial class MainViewModel : ViewModelBase, IDisposable
         }
     }
 
-    // ---------- 补发(504 / 505 / 506) ----------
+    // ---------- 补发(5004 / 5005 / 5006) ----------
     /// <summary>本轮补发里真正新收到的条数(506 收尾时用来报提示)。</summary>
     private int _historyReceived;
 
     /// <summary>这次开窗已经报过一次"历史消息"的提示条了(两次请求别弹两条差不多的)。</summary>
     private bool _historyAnnounced;
 
-    /// <summary>登录成功后向服务端要一次补发(505 = MessageHistoryReq):服务端会把保留期内、我还没收到的 消息**逐条**(504)回过来,最后回一条 506 收尾。 没连上就什么都不做(不假装发过)。</summary>
+    /// <summary>登录成功后向服务端要一次补发(5005 = MessageHistoryReq):服务端会把保留期内、我还没收到的 消息**逐条**(5004)回过来,最后回一条 5006 收尾。 没连上就什么都不做(不假装发过)。</summary>
     public async Task RequestMessageHistoryAsync()
     {
         var connect = ClientSession.Connect;
@@ -826,7 +826,7 @@ public partial class MainViewModel : ViewModelBase, IDisposable
         await connect.RequestHistoryAsync();
     }
 
-    /// <summary>服务端补发的一条历史消息(504):和实时消息走同一条路,只是要按「来源+消息号」去重。</summary>
+    /// <summary>服务端补发的一条历史消息(5004):和实时消息走同一条路,只是要按「来源+消息号」去重。</summary>
     public bool AddHistoryCard(string rawCard)
     {
         if (!AddCard(rawCard))
@@ -838,7 +838,7 @@ public partial class MainViewModel : ViewModelBase, IDisposable
         return true;
     }
 
-    /// <summary>服务端补发结束(506,负载 = 服务端发了多少条)。</summary>
+    /// <summary>服务端补发结束(5006,负载 = 服务端发了多少条)。</summary>
     public void OnHistoryDone(string payload)
     {
         var text = payload.Trim();
@@ -866,7 +866,7 @@ public partial class MainViewModel : ViewModelBase, IDisposable
     /// <summary>设置当前用户(名称与 ID 都是可变的)。左下角只显示最后的编号(如 14),完整 ID 另存 <see cref="UserIdFull"/> 供复制用。</summary>
     /// <param name="userName">账号名。</param>
     /// <param name="userId">数字 ID(老服务端只有这个)。</param>
-    /// <param name="fullId">完整 ID(形如 ZXMS-子服名-1-14),服务端 601/603 的第五段。</param>
+    /// <param name="fullId">完整 ID(形如 ZXMS-子服名-1-14),服务端 6001/6003 的第五段。</param>
     public void SetUser(string userName, string userId, string fullId = "")
     {
         UserName = string.IsNullOrWhiteSpace(userName) ? "未登录" : userName.Trim();
@@ -979,7 +979,7 @@ public partial class MainViewModel : ViewModelBase, IDisposable
         Logger.Log(LogLevel.Info, "[ZXMC] 切换页面:" + item.Label);
     }
 
-    /// <summary>把卡片上的动作上报给服务端(202 = CardAction,负载 动作|输入|原卡片)。 没连上服务端就只提示一下,不假装发成功。</summary>
+    /// <summary>把卡片上的动作上报给服务端(2002 = CardAction,负载 动作|输入|原卡片)。 没连上服务端就只提示一下,不假装发成功。</summary>
     public async Task SendCardActionAsync(MessageItem item, string action, string input)
     {
         var payload = MessageCard.BuildAction(action, input, item.RawCard);
@@ -999,7 +999,7 @@ public partial class MainViewModel : ViewModelBase, IDisposable
         await connect.SendAsync(Protocol.CardAction, payload);
     }
 
-    /// <summary>服务端对卡片动作的回执(503):ok|提示 / err|原因。</summary>
+    /// <summary>服务端对卡片动作的回执(5003):ok|提示 / err|原因。</summary>
     public void ShowCardReply(string text)
     {
         var ok = text.StartsWith("ok|");

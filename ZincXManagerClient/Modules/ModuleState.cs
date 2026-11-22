@@ -13,7 +13,7 @@ namespace ZincXManagerClient.Modules;
 /// <c>none</c> 表示一个都没关),半加载的编号带 <c>:half</c> 尾巴(也接受单独一行 <c>half=</c>)。
 /// 收到就记进客户端 config 的 <c>modules</c> 键,下次启动还没连上服务端时也能先按上次的名单
 /// 把该藏的东西藏起来(<see cref="LoadFromCache"/>)。开关要重启 ZXMS 才生效,
-/// 客户端只在收到 202 的那一刻重算一次。</para>
+/// 客户端只在收到 2002 的那一刻重算一次。</para>
 ///
 /// <para><b>半加载只给管理员</b>:半加载的意思是「玩家用不了,服主还能用」——
 /// 玩家账号登录时入口、卡片、窗口全都不显示,相关的包也不收不发;
@@ -135,7 +135,7 @@ public static class ModuleState
     }
 
     /// <summary>
-    /// 解析 202 的服务端配置包,认 <c>modules=</c> 和 <c>half=</c> 两行:
+    /// 解析 2002 的服务端配置包,认 <c>modules=</c> 和 <c>half=</c> 两行:
     /// 值是逗号隔开的编号,半加载的编号带 <c>:half</c> 尾巴,<c>none</c>(或空)表示没有。
     /// 两行都没有就什么都不做 —— 老服务端不下发名单,客户端保持原样。
     /// </summary>

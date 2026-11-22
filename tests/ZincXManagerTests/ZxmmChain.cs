@@ -209,7 +209,7 @@ public static class ZxmmChain
                     await WaitOutAsync(ms, "下发踢人任务 mcplayer → 没有这个在线玩家", 6000), LastLines(ms, 2));
             }
 
-            // ② 用绑定码绑定:626 只校验并回 pending,确认(631)之后才真正写绑定表
+            // ② 用绑定码绑定:6026 只校验并回 pending,确认(6031)之后才真正写绑定表
             if (code1.Length == 6)
             {
                 await probe.SendAsync(11, Protocol.BindApply, Encoding.UTF8.GetBytes(code1));
@@ -235,7 +235,7 @@ public static class ZxmmChain
             // ③ 已绑定再进服 → 621 弹窗，IP 必须是纯地址(证明 /ip:port 被压平了)
             fake.PushJoined("mcplayer", "/203.0.113.9:51516");
             var ask = await probe.TakeQueuedAsync(Protocol.LoginAsk, 8000);
-            r.Add("已绑定 → 收到 621 登录请求", ask is not null, ask ?? "没收到");
+            r.Add("已绑定 → 收到 6021 登录请求", ask is not null, ask ?? "没收到");
             r.Add("621 里的 IP 是纯地址(无端口/无斜杠)",
                 ask is not null && ask.Split('|').Length > 2 && ask.Split('|')[2] == "203.0.113.9", ask ?? "");
 

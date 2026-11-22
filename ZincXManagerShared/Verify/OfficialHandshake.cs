@@ -6,7 +6,7 @@ using System.Text;  // 文本编码与 StringBuilder
 namespace ZincXManagerShared.Verify;
 
 /// <summary>
-/// 官方验证<b>第二层</b>的握手(协议 <c>520 OfficialChallenge</c> / <c>521 OfficialProof</c>)。
+/// 官方验证<b>第二层</b>的握手(协议 <c>5020 OfficialChallenge</c> / <c>5021 OfficialProof</c>)。
 ///
 /// <para><b>流程:</b>验证方(官方发行的 ZXMS / ZXMC)在登录成功之后发一个一次性 nonce;
 /// 对方(ZXMOS)回 <c>Base64(许可证原文)|nonce|HMAC-SHA256(pepper, nonce)</c>。</para>

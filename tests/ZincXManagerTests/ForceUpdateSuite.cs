@@ -3,7 +3,7 @@ using System.Collections.Generic;  // List<SuiteResult>
 using System.IO;  // 文件与目录
 using System.Linq;  // 取输出行
 using System.Threading.Tasks;  // Task
-using ZincXManagerShared.Network;  // Protocol:601 / 603 / 634
+using ZincXManagerShared.Network;  // Protocol:6001 / 6003 / 6034
 
 namespace ZincXManagerTests;
 
@@ -99,7 +99,7 @@ public static class ForceUpdateSuite
             r.Add("minversion 填非版本号被拒绝",
                 await WaitOutAsync(ms, "要填版本号", 8000), LastLines(ms, 3));
 
-            // ---------- ⑤ 打开开关:老客户端被拒,且回的是 601 上的 err ----------
+            // ---------- ⑤ 打开开关:老客户端被拒,且回的是 6001 上的 err ----------
             ms.SendCmd("forceupdate 1");
             r.Add("config 里 forceupdate 1 设置成功",
                 await WaitOutAsync(ms, "forceupdate(强制更新)已设置为 1", 8000), LastLines(ms, 3));
@@ -175,7 +175,7 @@ public static class ForceUpdateSuite
                     await oldProbe.LoginAsync("oldclient", "pw123456", "MACH-OLD", "Player", "zxms"), oldProbe.LastAck ?? "");
             }
 
-            // ---------- ⑪ 在线旧版被踢:先收 634 讲原因,再断开 ----------
+            // ---------- ⑪ 在线旧版被踢:先收 6034 讲原因,再断开 ----------
             var veteran = await Probe.ConnectAsync("127.0.0.1", czport, "OS");
             r.Add("踢线前先让老客户端在线登录",
                 await veteran.LoginAsync("oldclient", "pw123456", "MACH-OLD", "Player", "zxms"), veteran.LastAck ?? "");
@@ -186,7 +186,7 @@ public static class ForceUpdateSuite
                 await WaitOutAsync(ms, "forceupdate(强制更新)已设置为 1", 8000), LastLines(ms, 3));
 
             var notice = await veteran.TakeQueuedAsync(Protocol.ClientTooOld, 10000);
-            r.Add("在线旧版收到 634", notice is not null, notice ?? "没收到 634");
+            r.Add("在线旧版收到 6034", notice is not null, notice ?? "没收到 6034");
             r.Add("634 说的是统一记号 + 本服要求",
                 notice is not null && notice.StartsWith(Protocol.UpdateRequiredMarker, StringComparison.Ordinal)
                     && notice.Contains("本服要求"), notice ?? "");

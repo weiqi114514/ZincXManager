@@ -101,7 +101,7 @@ internal static partial class Program
     // ===================== 账号注册模块(az.register)接管的包 =====================
 
     /// <summary>
-    /// 账号注册(602):负载 "名称|密码密文|机器码|nonce|proof|版本";等级固定 Player,回 603。
+    /// 账号注册(6002):负载 "名称|密码密文|机器码|nonce|proof|版本";等级固定 Player,回 6003。
     /// <para>这段原来写在核心分发表的大 switch 里,原样搬出来给模块用 —— 逻辑一行没改。</para>
     /// </summary>
     /// <param name="packet">客户端发来的包。</param>
@@ -234,7 +234,7 @@ internal static partial class Program
             forwarded ? "ok|已转交官方服务端" : "ok|本服已收到你的选择", packet.Id);
     }
 
-    /// <summary>补发请求(505):客户端登录后要一次历史消息 → 转给官方服务端,回包再按包 Id 转回这条连接。</summary>
+    /// <summary>补发请求(5005):客户端登录后要一次历史消息 → 转给官方服务端,回包再按包 Id 转回这条连接。</summary>
     /// <param name="packet">客户端发来的包。</param>
     internal static async Task HandleMessageHistoryReqAsync(ServerboundPacket packet)
     {
@@ -280,7 +280,7 @@ internal static partial class Program
         }
     }
 
-    /// <summary>官方端回包(509):-os 查询结果,唤醒等待的命令。</summary>
+    /// <summary>官方端回包(5009):-os 查询结果,唤醒等待的命令。</summary>
     /// <param name="packet">官方端发来的包。</param>
     internal static Task HandleMegBackAckAsync(ServerboundPacket packet)
     {
@@ -293,7 +293,7 @@ internal static partial class Program
         return Task.CompletedTask;
     }
 
-    /// <summary>客户端回执(507):这几条它已经收下了,记进已发清单。</summary>
+    /// <summary>客户端回执(5007):这几条它已经收下了,记进已发清单。</summary>
     /// <param name="packet">客户端发来的包。</param>
     internal static async Task HandleMessageAckAsync(ServerboundPacket packet)
     {
@@ -326,7 +326,7 @@ internal static partial class Program
 
     // ===================== 绑定模块(wd.bind)接管的包 =====================
 
-    /// <summary>绑定码转交(625):ZXMM 把玩家手里的码转给服务端。</summary>
+    /// <summary>绑定码转交(6025):ZXMM 把玩家手里的码转给服务端。</summary>
     /// <param name="packet">ZXMM 发来的包。</param>
     internal static Task HandleBindNoticeAsync(ServerboundPacket packet)
     {
@@ -375,7 +375,7 @@ internal static partial class Program
         var bindScope = DataSeparation.Scope("bind", ServerOf(packet.Connection));
 
         // 绑定码只是"玩家本人的凭证":码可能被别人看到或转发,
-        // 所以真正落盘前还要账号主人在 ZXMC 上亲眼确认一次(631)
+        // 所以真正落盘前还要账号主人在 ZXMC 上亲眼确认一次(6031)
         var alreadyOwner = LoginStore.AccountOf(bindPlayer, bindScope);
         if (alreadyOwner > 0 && alreadyOwner != bindAccount)
         {
@@ -398,7 +398,7 @@ internal static partial class Program
             $"[绑定] 账号 {bindWho}(ID {bindAccount}) 提交绑定码,待确认玩家 {bindPlayer} 令牌 {token}");
     }
 
-    /// <summary>绑定二次确认(631):用户点了"确定绑定"才真正写绑定表。</summary>
+    /// <summary>绑定二次确认(6031):用户点了"确定绑定"才真正写绑定表。</summary>
     /// <param name="packet">客户端发来的包。</param>
     internal static async Task HandleBindConfirmAsync(ServerboundPacket packet)
     {
@@ -421,7 +421,7 @@ internal static partial class Program
         }
 
         // 这个账号名下的旧玩家不做任何处理:上限拦着不许顶掉旧的,
-        // 真要让他失去免确认只能走 628 解绑(解绑会清登录数组、持久登录表并踢人)
+        // 真要让他失去免确认只能走 6028 解绑(解绑会清登录数组、持久登录表并踢人)
         if (!LoginStore.Bind(confirmAccount, pending.Player, _bindMax, out var bindError,
                 DataSeparation.Scope("bind", ServerOf(packet.Connection))))
         {
@@ -443,10 +443,10 @@ internal static partial class Program
         await packet.SendAsync(Protocol.BindAck, $"ok|{pending.Player}", packet.Id);
 
         // 多绑之后不再有"改绑顶掉旧玩家":旧玩家仍在这个账号名下,他的免登录与在线状态都不能动
-        // (要让他失去免确认,只能走 628 解绑)
+        // (要让他失去免确认,只能走 6028 解绑)
     }
 
-    /// <summary>解绑(628):负载是玩家名(空 = 这个账号名下全部解掉,兼容老客户端)。</summary>
+    /// <summary>解绑(6028):负载是玩家名(空 = 这个账号名下全部解掉,兼容老客户端)。</summary>
     /// <param name="packet">客户端发来的包。</param>
     internal static async Task HandleUnbindAsync(ServerboundPacket packet)
     {
@@ -494,7 +494,7 @@ internal static partial class Program
         }
     }
 
-    /// <summary>查绑定(629):ZXMM 查全部;ZXMC 只查自己绑了哪些。</summary>
+    /// <summary>查绑定(6029):ZXMM 查全部;ZXMC 只查自己绑了哪些。</summary>
     /// <param name="packet">查询方发来的包。</param>
     internal static async Task HandleBindQueryAsync(ServerboundPacket packet)
     {
@@ -528,7 +528,7 @@ internal static partial class Program
 
     // ===================== 登录确认模块(loginconfirm)接管的包 =====================
 
-    /// <summary>客户端回答(622):同意 / 拒绝。</summary>
+    /// <summary>客户端回答(6022):同意 / 拒绝。</summary>
     /// <param name="packet">客户端发来的包。</param>
     internal static async Task HandleLoginAnswerAsync(ServerboundPacket packet)
     {
@@ -583,7 +583,7 @@ internal static partial class Program
 
     // ===================== 服务器列表模块(serverlist)接管的包 =====================
 
-    /// <summary>客户端要服务器列表(670):回 671,每行一台(编号|名称|端口)。</summary>
+    /// <summary>客户端要服务器列表(6070):回 6071,每行一台(编号|名称|端口)。</summary>
     /// <param name="packet">客户端发来的包。</param>
     internal static async Task HandleServerListReqAsync(ServerboundPacket packet)
     {
@@ -600,7 +600,7 @@ internal static partial class Program
             $"[数据分离] 客户端 {Where(packet.Connection)} 要服务器列表 → 回 {lines.Count} 台");
     }
 
-    /// <summary>客户端切服(672):记住这条连接当前选的是哪台,回 673。</summary>
+    /// <summary>客户端切服(6072):记住这条连接当前选的是哪台,回 6073。</summary>
     /// <param name="packet">客户端发来的包。</param>
     internal static async Task HandleServerSwitchReqAsync(ServerboundPacket packet)
     {
@@ -627,7 +627,7 @@ internal static partial class Program
 
     // ===================== 控制台模块(console)接管的包 =====================
 
-    /// <summary>列服务器(684):每行一台(编号|名称|控制台模式|桥接在线|RCON在线)。</summary>
+    /// <summary>列服务器(6084):每行一台(编号|名称|控制台模式|桥接在线|RCON在线)。</summary>
     /// <param name="packet">客户端发来的包。</param>
     internal static async Task HandleConsoleServersReqAsync(ServerboundPacket packet)
     {
@@ -646,7 +646,7 @@ internal static partial class Program
             $"[控制台] 客户端 {Where(packet.Connection)} 要控制台服务器列表 → 回 {lines.Count} 台");
     }
 
-    /// <summary>执行一条控制台命令(680):负载是 服务器编号|命令,回 681。</summary>
+    /// <summary>执行一条控制台命令(6080):负载是 服务器编号|命令,回 6081。</summary>
     /// <param name="packet">客户端发来的包。</param>
     internal static async Task HandleConsoleCommandAsync(ServerboundPacket packet)
     {
@@ -691,7 +691,7 @@ internal static partial class Program
         await packet.WriteAsync(new Packet(packet.Id, Protocol.ConsoleResult, reply));
     }
 
-    /// <summary>开关持续输出(683):负载是 服务器编号|1 或 0,回 681。</summary>
+    /// <summary>开关持续输出(6083):负载是 服务器编号|1 或 0,回 6081。</summary>
     /// <param name="packet">客户端发来的包。</param>
     internal static async Task HandleConsoleTapAsync(ServerboundPacket packet)
     {

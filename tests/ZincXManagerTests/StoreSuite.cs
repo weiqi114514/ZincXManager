@@ -296,7 +296,7 @@ public static class StoreSuite
             Path.Combine(dir, AccountStore.NextIdFileName));
     }
 
-    /// <summary>账号名不能带协议分隔符:名字要拼进 648/649 的竖线负载和官方端的 名称.dat。</summary>
+    /// <summary>账号名不能带协议分隔符:名字要拼进 6048/6049 的竖线负载和官方端的 名称.dat。</summary>
     private static void AccountNames(SuiteResult r, string root)
     {
         var dir = Path.Combine(root, "names");

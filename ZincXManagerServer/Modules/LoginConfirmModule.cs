@@ -7,9 +7,9 @@ using ZincXManagerShared.Network;  // Protocol / ServerboundPacket
 namespace ZincXManagerServer.Modules;
 
 /// <summary>
-/// 进服登录确认(loginconfirm):弹窗问账号主人,等客户端回 622。
+/// 进服登录确认(loginconfirm):弹窗问账号主人,等客户端回 6022。
 /// <para>这个模块关着时,进服流程里不再有"等确认"这一环(见 Program 里进服判断处的分支),
-/// 玩家直接放行并记一条免确认;620/622 也不会再送到账号那边。</para>
+/// 玩家直接放行并记一条免确认;6020/6022 也不会再送到账号那边。</para>
 /// </summary>
 internal sealed class LoginConfirmModule : ServerModule
 {

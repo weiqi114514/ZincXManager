@@ -91,7 +91,7 @@ internal static partial class Program
         }
     }
 
-    /// <summary>收 648:别服来要这张图。有就给,没有就明确说没有。</summary>
+    /// <summary>收 6048:别服来要这张图。有就给,没有就明确说没有。</summary>
     private static async Task HandleAvatarRelayAsync(Packet packet)
     {
         var text = Encoding.UTF8.GetString(packet.Data);
@@ -114,7 +114,7 @@ internal static partial class Program
             : $"[好友] {requesterId} 来要 {accountName} 的头像(目标是 {targetServerId}),本服也没有");
     }
 
-    /// <summary>收 649:别服把图送回来了(也可能是「我也没有」的空图)。</summary>
+    /// <summary>收 6049:别服把图送回来了(也可能是「我也没有」的空图)。</summary>
     private static async Task HandleAvatarRelayAckAsync(Packet packet, ZFile config)
     {
         var text = Encoding.UTF8.GetString(packet.Data);

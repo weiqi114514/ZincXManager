@@ -1,7 +1,7 @@
 namespace ZincXManagerShared.Network;
 
 /// <summary>
-/// 服务端下发的消息卡片(公告 500 / 定向推送 501 / 补发 504 的负载)。
+/// 服务端下发的消息卡片(公告 5000 / 定向推送 5001 / 补发 5004 的负载)。
 ///
 /// <para><b>线格式 —— 固定 7 段,顺序不能变(第 8 段可选 = 消息号):</b></para>
 /// <code>
@@ -75,7 +75,7 @@ public static class MessageCard
     public static string DedupeKey(string source, int id)
         => id > 0 ? (source ?? "").Trim() + "#" + id : "";
 
-    /// <summary>拆 501 的负载;格式不对返回 false。</summary>
+    /// <summary>拆 5001 的负载;格式不对返回 false。</summary>
     public static bool TryParsePush(string text, out string target, out string card)
     {
         target = "";

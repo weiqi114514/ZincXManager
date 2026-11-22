@@ -45,10 +45,10 @@ public static class DataSeparationSuite
     /// <summary>四个新协议号的值,以及全表不撞号。</summary>
     private static void ProtocolNumbers(SuiteResult r)
     {
-        r.AddTrue("ServerListReq = 670", Protocol.ServerListReq == 670, $"实际 {Protocol.ServerListReq}");
-        r.AddTrue("ServerList = 671", Protocol.ServerList == 671, $"实际 {Protocol.ServerList}");
-        r.AddTrue("ServerSwitchReq = 672", Protocol.ServerSwitchReq == 672, $"实际 {Protocol.ServerSwitchReq}");
-        r.AddTrue("ServerSwitchAck = 673", Protocol.ServerSwitchAck == 673, $"实际 {Protocol.ServerSwitchAck}");
+        r.AddTrue("ServerListReq = 6070", Protocol.ServerListReq == 6070, $"实际 {Protocol.ServerListReq}");
+        r.AddTrue("ServerList = 6071", Protocol.ServerList == 6071, $"实际 {Protocol.ServerList}");
+        r.AddTrue("ServerSwitchReq = 6072", Protocol.ServerSwitchReq == 6072, $"实际 {Protocol.ServerSwitchReq}");
+        r.AddTrue("ServerSwitchAck = 6073", Protocol.ServerSwitchAck == 6073, $"实际 {Protocol.ServerSwitchAck}");
 
         // 协议号撞了不会报错,只会让两边的 case 抢同一条包 —— 只能靠反射把整张表翻一遍
         var fields = typeof(Protocol)

@@ -142,7 +142,7 @@ internal static partial class Program
     private const int ChatTokenLifetimeSeconds = 3600;
 
     /// <summary>
-    /// 中转登录(账号由官方端校验)之后补发 510。这条路上本地账号是「按需镜像」的,
+    /// 中转登录(账号由官方端校验)之后补发 5010。这条路上本地账号是「按需镜像」的,
     /// 镜像可能还没落地,所以给最多 2 秒等它出现;等不到就只记一条日志。
     /// </summary>
     /// <param name="connection">刚登录成功的这条连接。</param>

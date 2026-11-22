@@ -2,7 +2,7 @@ namespace ZincXManagerShared.Modules;
 
 /// <summary>
 /// 模块编号集中定义：服务端与客户端共用同一串编号，开关在服务端改一次、两端一起生效。
-/// 编号写进服务端 config.ini 的 modules 键（写禁用名单），客户端从 202 包拿到同样的名单。
+/// 编号写进服务端 config.ini 的 modules 键（写禁用名单），客户端从 2002 包拿到同样的名单。
 /// 命名规则：导航分区用 nav. 前缀，卡片用两位分区缩写加点，后台功能用单词。
 /// </summary>
 public static class ModuleIds
@@ -151,7 +151,7 @@ public static class ModuleIds
     /// <summary>账户管理</summary>
     public const string AdminZxmAccount = "az.account";
 
-    /// <summary>账号注册(客户端 602 注册新账号)</summary>
+    /// <summary>账号注册(客户端 6002 注册新账号)</summary>
     public const string AdminZxmRegister = "az.register";
 
     /// <summary>帖子管理</summary>

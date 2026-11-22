@@ -106,7 +106,7 @@ public static class FriendSuite
         r.Add("搜索结果 3 段往返", hits.Count == 1 && hits[0].Id == "ZXMS-a-1-2" && hits[0].Name == "weiqi2" && hits[0].Level == "Player");
 
         // 全网账号表:4 段 / 3 段首段是完整ID / 3 段首段是数字 / 多于 4 段
-        // 614 的字段分隔符是竖线(见 FriendCodec.BuildNetworkAccounts),不是 tab
+        // 6014 的字段分隔符是竖线(见 FriendCodec.BuildNetworkAccounts),不是 tab
         var fourSeg = "ZXMS-testserver2-2|13|zeta2|Player";
         var threeFull = "ZXMS-testserver-1-14|relay03|Player";
         var threeLegacy = "5|fr01|Player";
@@ -155,7 +155,7 @@ public static class FriendSuite
         r.Add("回答同意/拒绝", FriendCodec.TryParseFriendAnswer(FriendCodec.BuildFriendAnswer("ZXMS-a-1-2", true), out _, out var agree) && agree
             && FriendCodec.TryParseFriendAnswer(FriendCodec.BuildFriendAnswer("ZXMS-a-1-2", false), out _, out var refuse) && !refuse);
 
-        // 614 里「不属于任何子服」的账号用「-编号」表示,负号是标记不是编号
+        // 6014 里「不属于任何子服」的账号用「-编号」表示,负号是标记不是编号
         var minusRows = FriendCodec.ParseNetworkAccounts("-13|阿丽丝|5", out var minusBad);
         r.Add("614 的 -13 不再当脏行丢掉", minusBad == 0 && minusRows.Count == 1 && minusRows[0].ServerId.Length == 0
             && minusRows[0].Code == 13 && minusRows[0].Name == "阿丽丝", minusRows.Count.ToString());

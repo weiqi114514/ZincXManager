@@ -9,7 +9,7 @@ namespace ZincXManagerServer.Modules;
 /// <summary>
 /// 客户端强制更新(forceupdate):旧版本客户端拒绝登录 / 在线旧版踢下线。
 /// <para>模块关着时 config 里的 forceupdate=1 不再生效(见 Program.ForceUpdateOn),
-/// 634 也不会发出去 —— 现在连"客户端发 634"这种事都不再理。</para>
+/// 6034 也不会发出去 —— 现在连"客户端发 6034"这种事都不再理。</para>
 /// </summary>
 internal sealed class ForceUpdateModule : ServerModule
 {

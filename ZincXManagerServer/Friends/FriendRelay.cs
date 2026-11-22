@@ -12,7 +12,7 @@ using ZincXManagerServer.Modules;        // ModuleRegistry:模块是否装配
 namespace ZincXManagerServer;
 
 /// <summary>
-/// 跨服好友中转(615 发 / 收)、上下线广播(616)、服务器名上报与映射(617 / 618)。
+/// 跨服好友中转(6015 发 / 收)、上下线广播(6016)、服务器名上报与映射(6017 / 6018)。
 ///
 /// <para>本服管不了别服的事:申请、同意、删除都先在本服落盘,再把动作交给 ZXMOS 转给对方服,
 /// 由对方服自己写自己的档。ZXMOS 只是传话的,不判断业务。</para>
@@ -20,7 +20,7 @@ namespace ZincXManagerServer;
 internal static partial class Program
 {
     /// <summary>
-    /// 已经交给 ZXMOS、还没等到回执的跨服动作:键 = 发 615 时用的包 Id。
+    /// 已经交给 ZXMOS、还没等到回执的跨服动作:键 = 发 6015 时用的包 Id。
     /// 官方端在目标子服连不上时会把同一个 Id 带回来,靠它找回是哪个玩家在等。
     /// </summary>
     private static readonly ConcurrentDictionary<ulong, PendingRelay> PendingRelays = new();
@@ -71,7 +71,7 @@ internal static partial class Program
     }
 
     /// <summary>
-    /// 收 ZXMOS 的「中转没送到」回执(401 / 655 / 659 / 661):按包 Id 找回发起人,把原因原样转给他的客户端。
+    /// 收 ZXMOS 的「中转没送到」回执(4001 / 6055 / 6059 / 6061):按包 Id 找回发起人,把原因原样转给他的客户端。
     /// ZXMOS 只会在目标子服连不上时这么回,所以这就是一次按需的链路探活 —— 不发额外查询,没有轮询,也没有定时任务。
     /// </summary>
     private static async Task HandleRelayFailureAsync(Packet packet)
@@ -131,7 +131,7 @@ internal static partial class Program
         }
     }
 
-    /// <summary>中转不可用时给玩家一句人话(有 packetId 才回,没有就只记日志)。回执类型按动作选,别一律发 655。</summary>
+    /// <summary>中转不可用时给玩家一句人话(有 packetId 才回,没有就只记日志)。回执类型按动作选,别一律发 6055。</summary>
     private static async Task ReplyRelayUnavailableAsync(PlayerId self, string action, ulong packetId)
     {
         if (packetId == 0)
@@ -156,7 +156,7 @@ internal static partial class Program
         }
     }
 
-    /// <summary>收 615:ZXMOS 把别服的动作转过来。负载 `动作|发起者完整ID|目标完整ID|附带`。</summary>
+    /// <summary>收 6015:ZXMOS 把别服的动作转过来。负载 `动作|发起者完整ID|目标完整ID|附带`。</summary>
     private static async Task HandleFriendRelayAsync(Packet packet, ZFile config)
     {
         var text = Encoding.UTF8.GetString(packet.Data);
@@ -204,7 +204,7 @@ internal static partial class Program
         }
     }
 
-    /// <summary>别服的人来加本服的人:写申请 + 推 657。</summary>
+    /// <summary>别服的人来加本服的人:写申请 + 推 6057。</summary>
     private static async Task ApplyRemoteRequestAsync(PlayerId from, PlayerId target, string message)
     {
         if (!FriendStore.AppendRequest(target,
@@ -260,7 +260,7 @@ internal static partial class Program
         await NotifyAsync(target, Protocol.FriendEventKind.Remove, from.Full);
     }
 
-    /// <summary>收 616:别服好友上线/下线。先记进在线表(651 的在线位靠它),再推给把他当好友的人。</summary>
+    /// <summary>收 6016:别服好友上线/下线。先记进在线表(6051 的在线位靠它),再推给把他当好友的人。</summary>
     private static async Task HandleFriendPresenceAsync(Packet packet, ZFile config)
     {
         var parts = Encoding.UTF8.GetString(packet.Data).Split('|');
@@ -320,19 +320,19 @@ internal static partial class Program
         Logger.Log(LogLevel.Info, $"[好友] {who.Full} {state},已通知 {targets.Count} 个把他当好友的人");
     }
 
-    /// <summary>收 618:ZXMOS 下发的「服务端编号 → 名字」映射,好友条的来源服就靠它显示。</summary>
+    /// <summary>收 6018:ZXMOS 下发的「服务端编号 → 名字」映射,好友条的来源服就靠它显示。</summary>
     private static void HandleServerNameMapAsync(Packet packet, ZFile config)
     {
         var payload = Encoding.UTF8.GetString(packet.Data);
         var count = IndexServerNames(payload);
         Logger.Log(LogLevel.Info, $"[好友] 收到服务端名字映射:{count} 条");
 
-        // 618 是第一处「本服知道自己是谁」的地方(第一行 self=);官方端表里没有本服名字就立刻补报,
+        // 6018 是第一处「本服知道自己是谁」的地方(第一行 self=);官方端表里没有本服名字就立刻补报,
         // 否则要等第一个玩家登录,期间别服好友条只能显示服ID
         _ = ReportSelfNameIfNeededAsync(config);
     }
 
-    /// <summary>617 上报:告诉 ZXMOS「我是哪台、我叫什么」,它再广播给各服。本服没配名字就不报。</summary>
+    /// <summary>6017 上报:告诉 ZXMOS「我是哪台、我叫什么」,它再广播给各服。本服没配名字就不报。</summary>
     private static async Task ReportServerNameAsync(ZFile config)
     {
         var os = _os;
@@ -362,8 +362,8 @@ internal static partial class Program
     }
 
     /// <summary>
-    /// 官方端名字表里没有本服、或者名字跟配置不一致时补报一次(617)。收到 618、与官方端重连成功后都调它。
-    /// 上报会触发官方端重发 618,所以名字已经对上就不再发,免得两头来回刷;本服没配名字时直接跳过。
+    /// 官方端名字表里没有本服、或者名字跟配置不一致时补报一次(6017)。收到 6018、与官方端重连成功后都调它。
+    /// 上报会触发官方端重发 6018,所以名字已经对上就不再发,免得两头来回刷;本服没配名字时直接跳过。
     /// </summary>
     private static async Task ReportSelfNameIfNeededAsync(ZFile config)
     {
@@ -396,10 +396,10 @@ internal static partial class Program
         await ReportServerNameAsync(config);
     }
 
-    /// <summary>最近一次补报本服名字的时间(Environment.TickCount64),给 617/618 回环做冷却。</summary>
+    /// <summary>最近一次补报本服名字的时间(Environment.TickCount64),给 6017/6018 回环做冷却。</summary>
     private static long _lastNameReportAt;
 
-    /// <summary>补报冷却:官方端名字表异常时不让 617/618 无限来回。</summary>
+    /// <summary>补报冷却:官方端名字表异常时不让 6017/6018 无限来回。</summary>
     private const int NameReportCooldownMs = 10_000;
 
     /// <summary>玩家登录成功后:把本服账号表整份上报给 ZXMOS,再告诉各服「他上线了」。</summary>
@@ -432,7 +432,7 @@ internal static partial class Program
         await AnnouncePresenceAsync(name, Protocol.FriendEventKind.Online);
     }
 
-    /// <summary>把本服账号表整份报给 ZXMOS(613);它据此算出每个账号的归属服,再广播给全网。</summary>
+    /// <summary>把本服账号表整份报给 ZXMOS(6013);它据此算出每个账号的归属服,再广播给全网。</summary>
     private static async Task PushUserListUpAsync(ZFile config)
     {
         var os = _os;

@@ -22,7 +22,7 @@ namespace ZincXManagerTests;
 ///   <item>写不认识的编号:启动日志「已忽略」,服务照常起来;</item>
 ///   <item>半加载(<c>wd.bind:half</c>):202 的 modules 与 half 各归各家,客户端包回 err 但控制台命令照常;</item>
 ///   <item>半加载只挡玩家:同一个 626,玩家连接回 <c>err|该功能已关闭</c>,LAdmin 连接交给真处理器;</item>
-///   <item>半加载与完全关闭的区别:同样是 505 回 err,<c>msg notice</c> 在完全关闭时被门禁拒、半加载时能跑;</item>
+///   <item>半加载与完全关闭的区别:同样是 5005 回 err,<c>msg notice</c> 在完全关闭时被门禁拒、半加载时能跑;</item>
 ///   <item><see cref="ModuleModes.Parse"/> 的纯函数行为(空串 / none / 后缀 / 混分隔符 / 只有后缀)。</item>
 /// </list>
 /// </summary>
@@ -205,11 +205,11 @@ public static class ModuleSuite
         try
         {
             using var probe = await Probe.ConnectAsync("127.0.0.1", PortDisabled, "OS");
-            r.Add("380/381 加密协商", true);
+            r.Add("3080/3081 加密协商", true);
 
             await probe.SendAsync(1, Protocol.FriendListQuery, Array.Empty<byte>());
             var reply = await probe.TakeAsync(Protocol.FriendListReply, 8000);
-            r.Add("好友关着时 650 有回应(651)", reply is not null, reply ?? "8 秒没回");
+            r.Add("好友关着时 6050 有回应(6051)", reply is not null, reply ?? "8 秒没回");
             r.Add("651 以 err| 开头", reply is not null && reply.StartsWith("err|", StringComparison.Ordinal), reply ?? "");
             r.Add("err 里说明是好友功能关了",
                 reply is not null && reply.Contains("该功能已关闭", StringComparison.Ordinal) && reply.Contains("好友", StringComparison.Ordinal),
@@ -295,7 +295,7 @@ public static class ModuleSuite
             using var probe = await Probe.ConnectAsync("127.0.0.1", PortNone, "OS");
             await probe.SendAsync(1, Protocol.FriendListQuery, Array.Empty<byte>());
             var reply = await probe.TakeAsync(Protocol.FriendListReply, 8000);
-            r.Add("好友装着时 650 有回应(651)", reply is not null, reply ?? "8 秒没回");
+            r.Add("好友装着时 6050 有回应(6051)", reply is not null, reply ?? "8 秒没回");
             r.Add("回复走的是真处理器,不是「该功能已关闭」",
                 reply is not null && !reply.StartsWith("err|该功能已关闭", StringComparison.Ordinal),
                 reply ?? "");
@@ -344,7 +344,7 @@ public static class ModuleSuite
     // ---------- ⑤ 半加载:命令在、包不回 ----------
 
     /// <summary>
-    /// <c>modules=wd.bind:half</c>:202 的 modules=none、half=wd.bind;626 包回 err,
+    /// <c>modules=wd.bind:half</c>:2002 的 modules=none、half=wd.bind;6026 包回 err,
     /// 但控制台的 <c>bind list</c> 照常能跑 —— 这是半加载与完全关闭的唯一区别。
     /// </summary>
     private static async Task HalfBindAsync(SuiteResult r, string ws, string debugMs)
@@ -380,18 +380,18 @@ public static class ModuleSuite
         {
             using var probe = await Probe.ConnectAsync("127.0.0.1", PortHalfBind, "OS");
 
-            // 202 的负载:modules 只放完全关闭的,half 单独一行
+            // 2002 的负载:modules 只放完全关闭的,half 单独一行
             var config = await probe.WaitAsync(Protocol.ServerConfig, 4000);
             var modulesLine = KeyLine(config, "modules");
             var halfLine = KeyLine(config, "half");
             r.Add("半加载时 202 的 modules 是 none", modulesLine == "none", "modules=" + modulesLine);
             r.Add("半加载时 202 的 half 是 wd.bind", halfLine == "wd.bind", "half=" + halfLine);
 
-            // 626 绑定申请:半加载 → 包一律回 err
+            // 6026 绑定申请:半加载 → 包一律回 err
             await probe.SendAsync(2, Protocol.BindApply, Encoding.UTF8.GetBytes("testuser|Player"));
             var ack = await probe.TakeAsync(Protocol.BindAck, 8000);
             var packetText = ack ?? "";
-            r.Add("半加载的绑定模块收到 626 回 627", ack is not null, packetText.Length > 0 ? packetText : "8 秒没回");
+            r.Add("半加载的绑定模块收到 6026 回 6027", ack is not null, packetText.Length > 0 ? packetText : "8 秒没回");
             r.Add("627 是 err| 且点名绑定功能关闭",
                 packetText.StartsWith("err|该功能已关闭:绑定 / 解绑", StringComparison.Ordinal), packetText);
 
@@ -416,7 +416,7 @@ public static class ModuleSuite
     // ---------- ⑥ 半加载只挡玩家、放行管理账号 ----------
 
     /// <summary>
-    /// <c>modules=wd.bind:half</c> 下同样发 626:玩家连接回 <c>err|该功能已关闭</c>,
+    /// <c>modules=wd.bind:half</c> 下同样发 6026:玩家连接回 <c>err|该功能已关闭</c>,
     /// LAdmin 连接交给真处理器(回「绑定码无效」)。这条证明半加载不是「谁都别用」,
     /// 而是「玩家看不到,管理员照样能做」。
     /// </summary>
@@ -458,7 +458,7 @@ public static class ModuleSuite
             await player.SendAsync(2, Protocol.BindApply, Encoding.UTF8.GetBytes("ABCD1234"));
             var playerAck = await player.TakeAsync(Protocol.BindAck, 8000);
             var playerText = playerAck ?? "";
-            r.Add("玩家发 626 被挡(回 627)", playerAck is not null, playerText.Length > 0 ? playerText : "8 秒没回");
+            r.Add("玩家发 6026 被挡(回 6027)", playerAck is not null, playerText.Length > 0 ? playerText : "8 秒没回");
             r.Add("玩家的 627 是 err|该功能已关闭",
                 playerText.StartsWith("err|该功能已关闭:绑定 / 解绑", StringComparison.Ordinal), playerText);
 
@@ -530,7 +530,7 @@ public static class ModuleSuite
             await probe.SendAsync(2, Protocol.AccountRegister, Encoding.UTF8.GetBytes("halfuser|hash|machine"));
             var ack = await probe.TakeAsync(Protocol.AccountRegisterAck, 8000);
             var packetText = ack ?? "";
-            r.Add("半加载的注册模块收到 602 回 603", ack is not null, packetText.Length > 0 ? packetText : "8 秒没回");
+            r.Add("半加载的注册模块收到 6002 回 6003", ack is not null, packetText.Length > 0 ? packetText : "8 秒没回");
             r.Add("603 是 err| 且点名账号注册关闭",
                 packetText.StartsWith("err|该功能已关闭:账号注册", StringComparison.Ordinal), packetText);
 
@@ -620,11 +620,11 @@ public static class ModuleSuite
             r.Add("202 的 half 是两个半加载模块",
                 KeyLine(config, "half") == "wd.bind,as.whitelist", "half=" + KeyLine(config, "half"));
 
-            // 505(消息历史请求)在两种状态下都回 err —— 但下面命令层的表现不同
+            // 5005(消息历史请求)在两种状态下都回 err —— 但下面命令层的表现不同
             await probe.SendAsync(2, Protocol.MessageHistoryReq, Encoding.UTF8.GetBytes("0|20"));
             var reply = await probe.TakeAsync(Protocol.MessageHistoryDone, 8000);
             var packetText = reply ?? "";
-            r.Add("完全关闭的 msg 收到 505 回 506", reply is not null, packetText.Length > 0 ? packetText : "8 秒没回");
+            r.Add("完全关闭的 msg 收到 5005 回 5006", reply is not null, packetText.Length > 0 ? packetText : "8 秒没回");
             r.Add("506 是 err| 且点名消息与公告关闭",
                 packetText.StartsWith("err|该功能已关闭:消息与公告", StringComparison.Ordinal), packetText);
         }

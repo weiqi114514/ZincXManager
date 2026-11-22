@@ -166,7 +166,7 @@ public static class OfficialBindChain
             // ---------- ③ 已绑定官方玩家再进服 → 621 发给账号主人 → 玩家被踢 ----------
             fake.PushJoining("osplayer", "/198.51.100.7:50002");
             var ask = await probe.TakeQueuedAsync(Protocol.LoginAsk, 12000);
-            r.Add("官方账号主人收到 621 登录请求", ask is not null, ask ?? "没收到");
+            r.Add("官方账号主人收到 6021 登录请求", ask is not null, ask ?? "没收到");
             var askParts = (ask ?? "").Split('|');   //请求ID|玩家|IP|归属地
             r.Add("621 里的 IP 是纯地址(无端口/无斜杠)",
                 askParts.Length > 2 && askParts[2] == "198.51.100.7", ask ?? "");
@@ -178,7 +178,7 @@ public static class OfficialBindChain
                 kickAsk is not null && kickAsk.Contains("点「同意」后重新进入"), kickAsk ?? "没收到:" + fake.Dump());
             if (kickAsk is not null) { await fake.ReplyAsync(kickAsk, "err", "没有这个在线玩家"); }
 
-            // ---------- ④ 账号主人点同意(622) → 登录数组 + 持久登录表 ----------
+            // ---------- ④ 账号主人点同意(6022) → 登录数组 + 持久登录表 ----------
             if (askParts.Length > 0 && askParts[0].Length > 0)
             {
                 await probe.SendAsync(12, Protocol.LoginAnswer, Encoding.UTF8.GetBytes(askParts[0] + "|yes"));
@@ -219,7 +219,7 @@ public static class OfficialBindChain
             r.Add("多绑不动第一个玩家的持久登录", persistentAfter.Contains("osplayer|198.51.100.7|"), persistentAfter.Trim());
             r.Add("多绑后第一个玩家没被踢", await fake.TakeAsync("|kick|osplayer|", 2500) is null, fake.Dump());
 
-            // 630 列表:客户端查自己名下,应该一行一个玩家(解绑页按行渲染)
+            // 6030 列表:客户端查自己名下,应该一行一个玩家(解绑页按行渲染)
             await probe.SendAsync(18, Protocol.BindQuery, Encoding.UTF8.GetBytes("osbind"));
             var listText = await probe.TakeQueuedAsync(Protocol.BindList, 10000);   // 绑定列表
             var names = (listText ?? "").Split('\n', StringSplitOptions.RemoveEmptyEntries)

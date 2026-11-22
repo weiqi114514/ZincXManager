@@ -884,7 +884,7 @@ public static class ZxmsCommands
             ? "未连接"
             : os.IsConnected ? "已连接" : "已断开(对象还在,可 net reconnect)";
 
-        // 名称是官方服务端在连接时下发的(201),没收到就只显示地址
+        // 名称是官方服务端在连接时下发的(2001),没收到就只显示地址
         var name = osName.Length > 0 ? $"(名称:{osName})" : "(名称:未收到)";
 
         LogBlock(

@@ -7,10 +7,10 @@ using ZincXManagerShared.Network;        // Protocol / ServerboundPacket
 namespace ZincXManagerServer;
 
 /// <summary>
-/// 665 好友备注:设 / 清「我给对方起的备注」。
+/// 6065 好友备注:设 / 清「我给对方起的备注」。
 ///
 /// <para>备注是本端私有的展示信息,只写自己那份好友档,不通知对方,
-/// 所以不经 615 中继 —— 对方服既无从也无需知道我叫他什么。</para>
+/// 所以不经 6015 中继 —— 对方服既无从也无需知道我叫他什么。</para>
 /// </summary>
 internal static partial class Program
 {

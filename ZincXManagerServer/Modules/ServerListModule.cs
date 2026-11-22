@@ -6,7 +6,7 @@ using ZincXManagerShared.Network;  // Protocol / ServerboundPacket
 namespace ZincXManagerServer.Modules;
 
 /// <summary>
-/// 多服服务器列表(serverlist):客户端要列表 → 回 671;客户端切服 → 记住并回 673。
+/// 多服服务器列表(serverlist):客户端要列表 → 回 6071;客户端切服 → 记住并回 6073。
 /// <para>关掉之后客户端拿不到列表、也切不了服,包按规则回 err。</para>
 /// </summary>
 internal sealed class ServerListModule : ServerModule

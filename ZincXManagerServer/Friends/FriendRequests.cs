@@ -9,7 +9,7 @@ using ZincXManagerShared.Network;        // Protocol / ServerboundPacket
 namespace ZincXManagerServer;
 
 /// <summary>
-/// 好友申请(654 发申请 / 655 回执 / 656 拉列表 / 657 列表 / 658 回答 / 659 回答回执)。
+/// 好友申请(6054 发申请 / 6055 回执 / 6056 拉列表 / 6057 列表 / 6058 回答 / 6059 回答回执)。
 ///
 /// <para>判断全在这里:能不能加、是不是已经好友、目标在哪台服。客户端不许自己拦(它拦得对不对没人检查),
 /// 它只管把玩家的动作发上来。</para>
@@ -57,7 +57,7 @@ internal static partial class Program
         }
 
         // 申请时填的备注先挂在自己名下(PendingRemarks.dat),对方同意那一刻才落进 Friends.dat;拒绝就作废。
-        // 限长与 665 聊天窗备注同一把尺子。
+        // 限长与 6065 聊天窗备注同一把尺子。
         var remark = pendingRemark.Length > RemarkMaxLength ? pendingRemark[..RemarkMaxLength].Trim() : pendingRemark;
         FriendStore.SetPendingRemark(self, target.Full, remark);
 
@@ -86,7 +86,7 @@ internal static partial class Program
         }
 
         await packet.SendAsync(Protocol.FriendRequestAck, "ok|", packet.Id);
-        // 662 的 Request 语义是「有人给我发了好友申请」,要推给被申请人
+        // 6062 的 Request 语义是「有人给我发了好友申请」,要推给被申请人
         await NotifyAsync(target, Protocol.FriendEventKind.Request, self.Full);
         await PushRequestsAsync(target);
 
@@ -121,7 +121,7 @@ internal static partial class Program
         var pending = FriendStore.ReadRequests(self, out var requestError);
         if (requestError.Length > 0)
         {
-            Logger.Log(LogLevel.Warning, $"[好友] 读 {self.Full} 的申请列表(658): {requestError}");
+            Logger.Log(LogLevel.Warning, $"[好友] 读 {self.Full} 的申请列表(6058): {requestError}");
         }
 
         if (!pending.Any(one => string.Equals(one.FromId, from.Full, StringComparison.Ordinal)))
@@ -222,7 +222,7 @@ internal static partial class Program
         return FriendCodec.BuildFriendRequests(entries);
     }
 
-    /// <summary>给某个玩家推一条好友事件(662);不在线就什么也不做。</summary>
+    /// <summary>给某个玩家推一条好友事件(6062);不在线就什么也不做。</summary>
     private static async Task NotifyAsync(PlayerId target, string kind, string otherFullId)
     {
         await SendToPlayerAsync(target, Protocol.FriendEvent, $"{kind}|{otherFullId}");

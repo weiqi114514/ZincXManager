@@ -9,7 +9,7 @@ using System.Threading.Tasks;  // Task
 using ZincXManagerShared.Account;  // PasswordHash
 using ZincXManagerShared.Chat;  // ChatToken / ChatChannel
 using ZincXManagerShared.Friend;  // FriendCodec / PlayerId
-using ZincXManagerShared.Network;  // Protocol:510 / 654 / 658
+using ZincXManagerShared.Network;  // Protocol:5010 / 6054 / 6058
 
 namespace ZincXManagerTests;
 
@@ -182,7 +182,7 @@ public static class ChatChannelSuite
             one.StartReader();
             r.Add("账号一 经中转注册并登录", oneReg && oneLogin, one.LastAck ?? "");
             var helloOne = await one.TakeQueuedAsync(Protocol.ChatHello, 15000);   //账号一的 510
-            r.Add("账号一 收到 510", helloOne is not null, LastLines(ms, 3));
+            r.Add("账号一 收到 5010", helloOne is not null, LastLines(ms, 3));
 
             using var two = await Probe.ConnectAsync("127.0.0.1", czport, "OS");
             var twoReg = await two.RegisterAsync("chattwo", "pw123456", "MACH-CHAT-2");
@@ -190,7 +190,7 @@ public static class ChatChannelSuite
             two.StartReader();
             r.Add("账号二 经中转注册并登录", twoReg && twoLogin, two.LastAck ?? "");
             var helloTwo = await two.TakeQueuedAsync(Protocol.ChatHello, 15000);   //账号二的 510
-            r.Add("账号二 收到 510", helloTwo is not null, LastLines(ms, 3));
+            r.Add("账号二 收到 5010", helloTwo is not null, LastLines(ms, 3));
 
             // 510 只留四段:端口 / 令牌 / 本服完整ID / 自己的本服编号
             var partsOne = (helloOne ?? "").Split('\t');   //账号一 510 的四段
@@ -209,7 +209,7 @@ public static class ChatChannelSuite
             var selfIdTwo = int.TryParse(partsTwo[3], out var codeTwo) ? codeTwo : 0;   //账号二的本服编号
             var serverId = partsOne[2];   //本服完整服ID
 
-            // 601 的第三段是官方编号(现场 bug 里客户端拿的就是它)
+            // 6001 的第三段是官方编号(现场 bug 里客户端拿的就是它)
             var officialOne = (one.LastAck ?? "").Split('|') is { Length: > 2 } ackOne ? ackOne[2] : "";   //账号一的官方编号
 
             r.Add("第四段是自己的本服编号(>0)", selfIdOne > 0 && selfIdTwo > 0, $"一号={selfIdOne} 二号={selfIdTwo}");
@@ -227,15 +227,15 @@ public static class ChatChannelSuite
             // ---------- 加好友:一号申请 → 二号同意 ----------
             await one.SendAsync(40, Protocol.FriendRequest,
                 Encoding.UTF8.GetBytes(FriendCodec.BuildFriendRequest(fullTwo, "来自一号的申请", "")));
-            var requestAck = await one.TakeQueuedAsync(Protocol.FriendRequestAck, 10000);   //655 回执
+            var requestAck = await one.TakeQueuedAsync(Protocol.FriendRequestAck, 10000);   //6055 回执
             r.Add("一号发好友申请成功", requestAck?.StartsWith("ok|") == true, requestAck ?? "没收到");
-            var pushed = await two.TakeQueuedAsync(Protocol.FriendRequestsReply, 8000);   //657 推送
+            var pushed = await two.TakeQueuedAsync(Protocol.FriendRequestsReply, 8000);   //6057 推送
             if (pushed is null) { pushed = await two.TakeQueuedAsync(Protocol.FriendEvent, 3000); }
             r.Add("二号收到申请推送", pushed is not null, pushed ?? LastLines(ms, 3));
 
             await two.SendAsync(41, Protocol.FriendAnswer,
                 Encoding.UTF8.GetBytes(FriendCodec.BuildFriendAnswer(fullOne, true)));
-            var answerAck = await two.TakeQueuedAsync(Protocol.FriendAnswerAck, 10000);   //659 回执
+            var answerAck = await two.TakeQueuedAsync(Protocol.FriendAnswerAck, 10000);   //6059 回执
             r.Add("二号同意好友", answerAck?.StartsWith("ok|") == true, answerAck ?? "没收到");
 
             // ---------- 服务端按两人的本服编号建频道 ----------

@@ -27,7 +27,7 @@ public partial class OobeViewModel : ViewModelBase, IDisposable
 
     public int StepCount => LastStep + 1;
 
-    /// <summary>OOBE 内部自己用的连接(负责 300 握手与收账号回复)。</summary>
+    /// <summary>OOBE 内部自己用的连接(负责 3000 握手与收账号回复)。</summary>
     private readonly ConnectViewModel _connect = new();
 
     // 上次连上的目标(用来判断要不要重连)
@@ -512,7 +512,7 @@ public partial class OobeViewModel : ViewModelBase, IDisposable
         return true;
     }
 
-    /// <summary>收到账号类回执(601/603)后更新界面状态。</summary>
+    /// <summary>收到账号类回执(6001/6003)后更新界面状态。</summary>
     private void OnAccountReply(ushort type, string text)
     {
         // 负载:"ok|名称|ID|等级|完整ID" 或 "err|原因"
@@ -536,7 +536,7 @@ public partial class OobeViewModel : ViewModelBase, IDisposable
             // 登录成功:顺手把服务端保留期内还没收到的消息补齐(505 → 逐条 504 → 506 收尾)
             _ = _connect.RequestHistoryAsync();
 
-            // 直连官方服务端时,再要一张"你确实是官方服务端"的证明(520 / 521)
+            // 直连官方服务端时,再要一张"你确实是官方服务端"的证明(5020 / 5021)
             _ = _connect.VerifyOfficialAsync();
         }
 
@@ -560,7 +560,7 @@ public partial class OobeViewModel : ViewModelBase, IDisposable
         ClientConfig.Set("czip", CzIp.Trim());
         ClientConfig.Set("czport", CzPort.Trim());
         ClientConfig.Set("ozip", OzIp.Trim());
-        // 服务端名称不在这写:连接后由服务端下发(201),客户端只收不填
+        // 服务端名称不在这写:连接后由服务端下发(2001),客户端只收不填
         ClientConfig.Set("ozport", OzPort.Trim());
     }
 

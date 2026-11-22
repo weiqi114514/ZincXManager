@@ -19,7 +19,7 @@ internal sealed class BindModule : ServerModule
     [
         Protocol.BindNotice,    // 625 ZXMM 把玩家手里的绑定码转过来
         Protocol.BindApply,     // 626 客户端提交绑定码
-        Protocol.BindAck,       // 627 回执(客户端不该发,收到就当无效包忽略)
+        Protocol.BindAck,       // 6027 回执(客户端不该发,收到就当无效包忽略)
         Protocol.BindQuery,     // 629 查绑定关系
         Protocol.Unbind,        // 628 解绑
         Protocol.BindConfirm,   // 631 账号主人二次确认

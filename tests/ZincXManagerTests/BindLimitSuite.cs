@@ -5,7 +5,7 @@ using System.Linq;  // 取输出行 / 拆分列表
 using System.Text;  // UTF-8
 using System.Text.RegularExpressions;  // 绑定码
 using System.Threading.Tasks;  // Task
-using ZincXManagerShared.Network;  // 协议常量 626/627/628/629/630/631
+using ZincXManagerShared.Network;  // 协议常量 6026/6027/6028/6029/6030/6031
 
 namespace ZincXManagerTests;
 
@@ -132,7 +132,7 @@ public static class BindLimitSuite
                 r.Add("放宽上限后 · 第二个玩家绑定成功", ack2?.StartsWith("ok|limitplayer2") == true, ack2 ?? "没收到回执");
             }
 
-            // ---------- ⑧ 630 列表:解绑页按行渲染,两个玩家都要在 ----------
+            // ---------- ⑧ 6030 列表:解绑页按行渲染,两个玩家都要在 ----------
             await probe.SendAsync(17, Protocol.BindQuery, Encoding.UTF8.GetBytes("limituser"));
             var listText = await probe.TakeQueuedAsync(Protocol.BindList, 8000);   //绑定列表
             var names = (listText ?? "").Split('\n', StringSplitOptions.RemoveEmptyEntries)

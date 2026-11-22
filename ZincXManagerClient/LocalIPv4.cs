@@ -10,7 +10,7 @@ namespace ZincXManagerClient;
 /// <summary>
 /// 本机局域网 IPv4(网卡地址,例如 <c>192.168.1.23</c>)。
 ///
-/// <para><b>为什么放在客户端而不是共享库:</b>只有 ZXMC 需要报自己的局域网地址(632),
+/// <para><b>为什么放在客户端而不是共享库:</b>只有 ZXMC 需要报自己的局域网地址(6032),
 /// ZXMS / ZXMOS 从不读自己机器的网卡地址做这件事 —— 放进 ZincXManagerShared 只会让两个服务端
 /// 项目多背一份没人调用的代码。</para>
 ///
@@ -32,7 +32,7 @@ internal static class LocalIPv4
     /// <summary>
     /// 本机局域网 IPv4;取不到返回空串(调用处负责记 Warn,别静默)。
     ///
-    /// <para>结果缓存 <see cref="CacheSeconds"/> 秒:上报只在登录成功与收到 633 时发生,本来就不频繁,
+    /// <para>结果缓存 <see cref="CacheSeconds"/> 秒:上报只在登录成功与收到 6033 时发生,本来就不频繁,
     /// 但也不能一辈子只算一次 —— 笔记本换网络、网卡刚开机才启用都会让旧值失效。</para>
     /// </summary>
     public static string Value

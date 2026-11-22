@@ -13,7 +13,7 @@ var results = new List<SuiteResult>();
 
 // ================= 套件 1:冒烟(起 ZXMS → 握手 → 身份包) =================
 {
-    var r = new SuiteResult { Name = "1 冒烟:ZXMS 起服 + 380/381 + 身份包" };
+    var r = new SuiteResult { Name = "1 冒烟:ZXMS 起服 + 3080/3081 + 身份包" };
     results.Add(r);
     var dir = Svc.PrepareBin(DebugMs, Path.Combine(Ws, "_zxt", "smoke"));
     try
@@ -32,12 +32,12 @@ var results = new List<SuiteResult>();
         if (up)
         {
             using var probe = await Probe.ConnectAsync("127.0.0.1", 21401, "OS");
-            r.Add("380/381 加密协商", true);
+            r.Add("3080/3081 加密协商", true);
 
             var hello = await probe.WaitAsync(ZincXManagerShared.Network.Protocol.ServerIdent, 6000);
-            r.Add("收到服务端身份包(200)", hello is not null, hello ?? "没收到");
+            r.Add("收到服务端身份包(2000)", hello is not null, hello ?? "没收到");
             var name201 = await probe.WaitAsync(ZincXManagerShared.Network.Protocol.ServerName, 6000);
-            r.Add("收到服务端名称(201)", name201 is not null && name201.Contains("CSharp-冒烟服"), name201 ?? "没收到");
+            r.Add("收到服务端名称(2001)", name201 is not null && name201.Contains("CSharp-冒烟服"), name201 ?? "没收到");
         }
     }
     catch (Exception ex)
@@ -117,7 +117,7 @@ var results = new List<SuiteResult>();
         // ---- 公告 500 ----
         ms.SendCmd("msg notice text 维护公告 今晚23:00停机维护10分钟");
         var notice = await probe.WaitAsync(ZincXManagerShared.Network.Protocol.Notice, 8000);
-        r.Add("收到公告(500)", notice is not null, notice ?? "没收到");
+        r.Add("收到公告(5000)", notice is not null, notice ?? "没收到");
         if (notice is not null)
         {
             // 卡片负载:种类|标题|正文|来源|主动作|次动作|选项|序号(种类在第 0 段)
@@ -131,7 +131,7 @@ var results = new List<SuiteResult>();
         // ---- 定向推送 501 ----
         ms.SendCmd("msg push msgplayer text 私信 这条只有你能看到");
         var push = await probe.WaitAsync(ZincXManagerShared.Network.Protocol.Push, 8000);
-        r.Add("收到定向推送(501)", push is not null, push ?? "没收到");
+        r.Add("收到定向推送(5001)", push is not null, push ?? "没收到");
         if (push is not null)
         {
             var parts = push.Split('|');
@@ -196,8 +196,8 @@ var results = new List<SuiteResult>();
 
         using var p2 = await Probe.ConnectAsync("127.0.0.1", 21404, "OS");
         await p2.LoginAsync("offplayer", "pw123456", "MACH-OFF", "Player", "zxms");
-        // 登录后客户端会要历史(505),服务端逐条发 504,最后 506
-        // 客户端登录后会发 505 要历史,服务端逐条回 504,最后 506 收尾
+        // 登录后客户端会要历史(5005),服务端逐条发 5004,最后 5006
+        // 客户端登录后会发 5005 要历史,服务端逐条回 5004,最后 5006 收尾
         await p2.SendAsync(7, ZincXManagerShared.Network.Protocol.MessageHistoryReq, Array.Empty<byte>());
         var gotHistory = await p2.WaitAsync(ZincXManagerShared.Network.Protocol.MessageHistory, 8000);
         r.Add("离线期间发的公告,上线后补收到", gotHistory is not null && gotHistory.Contains("离线公告"), gotHistory ?? "没收到");
@@ -526,7 +526,7 @@ var results = new List<SuiteResult>();
             var nonce = ZincXManagerShared.Verify.OfficialHandshake.NewNonce();
             await probe.SendAsync(6, ZincXManagerShared.Network.Protocol.OfficialChallenge, Encoding.UTF8.GetBytes(nonce));
             var proof = await probe.WaitAsync(ZincXManagerShared.Network.Protocol.OfficialProof, 8000);
-            r.Add("收到官方证明(521)", proof is not null, proof ?? "没收到");
+            r.Add("收到官方证明(5021)", proof is not null, proof ?? "没收到");
             if (proof is not null)
             {
                 var verdict = ZincXManagerShared.Verify.OfficialHandshake.Verify(proof, nonce);
@@ -606,9 +606,9 @@ var results = new List<SuiteResult>();
 }
 
 
-// ================= 套件 7:改名 + 201 下发 =================
+// ================= 套件 7:改名 + 2001 下发 =================
 {
-    var r = new SuiteResult { Name = "7 改名 / 201 下发 / info" };
+    var r = new SuiteResult { Name = "7 改名 / 2001 下发 / info" };
     results.Add(r);
     var dir = Svc.PrepareBin(DebugMs, Path.Combine(Ws, "_zxt", "rename"));
     try
@@ -624,7 +624,7 @@ var results = new List<SuiteResult>();
         using (var p = await Probe.ConnectAsync("127.0.0.1", 21408, "OS"))
         {
             var name = await p.WaitAsync(ZincXManagerShared.Network.Protocol.ServerName, 6000);
-            r.Add("首次连接收到 201 = CSharp-老名", name == "CSharp-老名", name ?? "没收到");
+            r.Add("首次连接收到 2001 = CSharp-老名", name == "CSharp-老名", name ?? "没收到");
         }
 
         // 2) info 显示本端名称
@@ -640,7 +640,7 @@ var results = new List<SuiteResult>();
         using (var p2 = await Probe.ConnectAsync("127.0.0.1", 21408, "OS"))
         {
             var name2 = await p2.WaitAsync(ZincXManagerShared.Network.Protocol.ServerName, 6000);
-            r.Add("改名后新连接收到 201 = CSharp-新名", name2 == "CSharp-新名", name2 ?? "没收到");
+            r.Add("改名后新连接收到 2001 = CSharp-新名", name2 == "CSharp-新名", name2 ?? "没收到");
         }
 
         // 4) 落盘:config.ini 里 name 已更新(ZXMS 还开着这个文件,要共享读)
@@ -802,7 +802,7 @@ var results = new List<SuiteResult>();
             {
                 using var probe = await Probe.ConnectAsync("127.0.0.1", 21410, "OS");
                 var name = await probe.WaitAsync(ZincXManagerShared.Network.Protocol.ServerName, 6000);
-                r.Add("AOT 版 ZXMS 下发 201", name == "CSharp-AOT子服", name ?? "没收到");
+                r.Add("AOT 版 ZXMS 下发 2001", name == "CSharp-AOT子服", name ?? "没收到");
                 r.Add("AOT 版 ZXMS 能注册账号", await probe.RegisterAsync("aotplayer", "pw123456", "MACH-AOT"), probe.LastAck ?? "");
             }
         }
@@ -1142,7 +1142,7 @@ var results = new List<SuiteResult>();
     await ZincXManagerTests.PasswordSuite.RunAsync(results);
 }
 
-// ================= 套件 21:局域网地址上报(632/633 + 621 第五段,真起 ZXMS) =================
+// ================= 套件 21:局域网地址上报(6032/6033 + 6021 第五段,真起 ZXMS) =================
 {
     await ZincXManagerTests.ClientIpSuite.RunAsync(results, Ws, DebugMs);
 }
@@ -1172,7 +1172,7 @@ var results = new List<SuiteResult>();
     await ZincXManagerTests.DataSeparationSuite.RunAsync(results);
 }
 
-// ================= 套件 27:多服数据分离端到端(起真 ZXMS,走 670/671/672/673 + 配置键) =================
+// ================= 套件 27:多服数据分离端到端(起真 ZXMS,走 6070/6071/6072/6073 + 配置键) =================
 {
     await ZincXManagerTests.DataSeparationLiveSuite.RunAsync(results);
 }

@@ -37,7 +37,7 @@ public partial class ChatWindow : Window
     /// <summary>等这么久还没等到 403,就当那次回包丢了,别让它把后面每一次回包都错开一个窗口。</summary>
     private const int HistoryWaitTtlMs = 15_000;
 
-    /// <summary>刚发过 665、在等 666 的那个窗口:666 的负载里也不带对方 ID,只能记下是谁问的。</summary>
+    /// <summary>刚发过 6065、在等 6066 的那个窗口:6066 的负载里也不带对方 ID,只能记下是谁问的。</summary>
     private static ChatWindow? _remarkWaiter;
 
     /// <summary>两条消息隔多久就在中间插一条时间分隔条。</summary>
@@ -46,7 +46,7 @@ public partial class ChatWindow : Window
     /// <summary>
     /// 气泡下面那个状态位的等级:数值越大越「确定」,只许往大改。
     /// <para>失败排在「已发送」下面:迟到的成功回执能纠正它,失败本身不能把已经确认的消息打回去;
-    /// 「对方离线」排在「已发送」上面:服务端回 401 后才知道对方不在,这个结果得盖住「已发送」。</para>
+    /// 「对方离线」排在「已发送」上面:服务端回 4001 后才知道对方不在,这个结果得盖住「已发送」。</para>
     /// </summary>
     private enum BubbleState
     {
@@ -346,7 +346,7 @@ public partial class ChatWindow : Window
     public static ChatWindow? ForPeer(string peerId) =>
         Open.FirstOrDefault(one => string.Equals(one._peerId, peerId.Trim(), StringComparison.OrdinalIgnoreCase));
 
-    /// <summary>666 回到客户端:只可能是我刚才那次修改的回执,交给当时发 665 的窗口。</summary>
+    /// <summary>6066 回到客户端:只可能是我刚才那次修改的回执,交给当时发 6065 的窗口。</summary>
     public static void RemarkAck(string payload)
     {
         var waiter = _remarkWaiter;
@@ -401,7 +401,7 @@ public partial class ChatWindow : Window
             return;
         }
 
-        // 先找还在等回执的;已经「已发送」的也要能找到 —— 跨服那条是 401 之后才被中转判失败
+        // 先找还在等回执的;已经「已发送」的也要能找到 —— 跨服那条是 4001 之后才被中转判失败
         if (!_pending.TryGetValue(_lastPendingId, out var label) && !_sentLabels.TryGetValue(_lastPendingId, out label))
         {
             Logger.Log(LogLevel.Warning, $"[聊天] 发送失败的记录对不上任何待回执的消息:{reason}");
@@ -417,7 +417,7 @@ public partial class ChatWindow : Window
         FriendsWindow.Current?.ReleaseLocalPreview(_peerId);
     }
 
-    /// <summary>服务端回了历史(403):把每行补上屏,然后上报「我读到这里了」。</summary>
+    /// <summary>服务端回了历史(4003):把每行补上屏,然后上报「我读到这里了」。</summary>
     public void OnHistoryReply(string payload)
     {
         var lines = FriendCodec.ParseHistoryReply(payload, out var badLines);
@@ -468,7 +468,7 @@ public partial class ChatWindow : Window
         _ = MarkReadAsync();
     }
 
-    /// <summary>服务端收下了我这条(401):记下序号,状态改成「已发送」;重发过就把「重发」标出来。</summary>
+    /// <summary>服务端收下了我这条(4001):记下序号,状态改成「已发送」;重发过就把「重发」标出来。</summary>
     public void OnAck(string messageId, int seq, bool duplicate)
     {
         if (!_pending.Remove(messageId, out var label))
@@ -507,7 +507,7 @@ public partial class ChatWindow : Window
     }
 
     /// <summary>
-    /// 回执(404):编号对应「对方收到了」,序号对应「对方读到第几号」。
+    /// 回执(4004):编号对应「对方收到了」,序号对应「对方读到第几号」。
     /// 两个都可能来,来的次序不保证,所以只往「更好」的方向改(见 <see cref="SetState"/>)。
     /// </summary>
     public void OnReceipt(string key, string state)
@@ -1062,7 +1062,7 @@ public partial class ChatWindow : Window
         DrawerHost.Width = _settingsOpen ? 286 : 0;
     }
 
-    /// <summary>保存备注:本地先改显示,再把 665 发给服务端;失败原因由 666 回执带回来。</summary>
+    /// <summary>保存备注:本地先改显示,再把 6065 发给服务端;失败原因由 6066 回执带回来。</summary>
     private async Task SaveRemarkAsync()
     {
         var remark = (RemarkBox.Text ?? "").Trim();
@@ -1075,7 +1075,7 @@ public partial class ChatWindow : Window
             return;
         }
 
-        //666 的负载里不带对方 ID,只能先记下是谁在等这个回执
+        //6066 的负载里不带对方 ID,只能先记下是谁在等这个回执
         _remarkWaiter = this;
         if (!await connect.SendAsync(Protocol.FriendRemark, _peerId + "\t" + remark))
         {
@@ -1092,7 +1092,7 @@ public partial class ChatWindow : Window
         RefreshTitle();
     }
 
-    /// <summary>收到 666 备注回执:成功就让好友条重拉一遍(行名要跟着变),失败把原因摆出来。</summary>
+    /// <summary>收到 6066 备注回执:成功就让好友条重拉一遍(行名要跟着变),失败把原因摆出来。</summary>
     public void OnRemarkAck(string payload)
     {
         if (payload.StartsWith("ok", StringComparison.OrdinalIgnoreCase))

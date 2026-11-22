@@ -253,7 +253,7 @@ public partial class LoginViewModel : ViewModelBase, IDisposable
         return LoginCoreAsync(LoginRecord.User, LoginRecord.Hash, LoginRecord.Level, register: false, saveRecord: false);
     }
 
-    /// <summary>真正走一次登录:发 600 登录包,等 601 回执。</summary>
+    /// <summary>真正走一次登录:发 6000 登录包,等 6001 回执。</summary>
     private async Task<bool> LoginCoreAsync(string user, string hash, string level, bool register, bool saveRecord)
     {
         if (IsBusy)
@@ -354,7 +354,7 @@ public partial class LoginViewModel : ViewModelBase, IDisposable
         return true;
     }
 
-    /// <summary>收到账号类回执(601/603)后更新界面状态。</summary>
+    /// <summary>收到账号类回执(6001/6003)后更新界面状态。</summary>
     private void OnAccountReply(ushort type, string text)
     {
         // 负载:"ok|名称|ID|等级|完整ID" 或 "err|原因"
@@ -378,7 +378,7 @@ public partial class LoginViewModel : ViewModelBase, IDisposable
             // 登录成功:顺手把服务端保留期内还没收到的消息补齐(505 → 逐条 504 → 506 收尾)
             _ = _connect.RequestHistoryAsync();
 
-            // 直连官方服务端时,再要一张"你确实是官方服务端"的证明(520 / 521)
+            // 直连官方服务端时,再要一张"你确实是官方服务端"的证明(5020 / 5021)
             _ = _connect.VerifyOfficialAsync();
         }
 

@@ -19,7 +19,7 @@ internal sealed class FriendsModule : ServerModule
     [
         Protocol.FriendMsg,             // 400 发好友消息
         Protocol.FriendMsgHistory,      // 402 拉好友聊天记录
-        Protocol.FriendReadMark,        // 405 已读标记
+        Protocol.FriendReadMark,        // 4005 已读标记
         Protocol.FriendAvatarReq,       // 607 要好友头像
         Protocol.FriendListQuery,       // 650 好友列表
         Protocol.FriendRequest,         // 654 加好友

@@ -6,7 +6,7 @@ using ZincXManagerShared.Network;  // Protocol / ServerboundPacket
 namespace ZincXManagerServer.Modules;
 
 /// <summary>
-/// 账号注册(az.register):客户端发来的注册请求(602),回 603。
+/// 账号注册(az.register):客户端发来的注册请求(6002),回 6003。
 /// <para>处理体在 Program.ModuleHandlers.cs(从核心分发表里原样搬出来的);命令 user reg 也归它。</para>
 /// <para>这个模块最适合半加载:关掉或不装配时客户端注册不了,但服主还能在控制台用
 /// <c>user reg</c> 手动开账号 —— 白名单服常见这么用。</para>

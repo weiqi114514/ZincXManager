@@ -57,7 +57,7 @@ public partial class WidgetsView : UserControl
     }
 
     /// <summary>
-    /// 开关名单变了(重连 / 切服后 202 才到):页面还开着也要把已经关掉的小功能移走。
+    /// 开关名单变了(重连 / 切服后 2002 才到):页面还开着也要把已经关掉的小功能移走。
     /// 收包线程也可能触发,所以不在 UI 线程时先 post 回去。
     /// </summary>
     private void OnModulesChanged()

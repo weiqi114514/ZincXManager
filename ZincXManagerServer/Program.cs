@@ -43,7 +43,7 @@ internal static partial class Program
     /// <summary>默认与官方账号名一致 —— 玩家看到的服务端名称就是本端在 ZXMOS 上的账号名。</summary>
     private const string DefaultLinkName = "1";
 
-    /// <summary>官方服务端名称(收到 201 后写进 config.ini 的 ozname)。</summary>
+    /// <summary>官方服务端名称(收到 2001 后写进 config.ini 的 ozname)。</summary>
     private const string KeyOsName = "ozname";
 
     /// <summary>本服消息保留天数(config.ini 的 msgdays,默认 7):下发给客户端,决定客户端本地留多久。</summary>
@@ -409,7 +409,7 @@ internal static partial class Program
         }
     }
 
-    /// <summary>回复握手确认(收到 300 回 301)。 成功/失败都记日志 —— 否则服务端这边只有"上线",看不出确认包有没有发出去。</summary>
+    /// <summary>回复握手确认(收到 3000 回 3001)。 成功/失败都记日志 —— 否则服务端这边只有"上线",看不出确认包有没有发出去。</summary>
     static async Task ReplyHandshakeAsync(ServerboundPacket packet, ushort ackType, string ackName, string peer, string text)
     {
         try
@@ -431,7 +431,7 @@ internal static partial class Program
 
     /// <summary>处理一条来自 ZXMC / ZXMM 的报文:按 Type 分派。</summary>
     /// <param name="packet">收到的报文包(带连接上下文)。</param>
-    /// <summary>替命令查官方端的玩家返回记录(msg backget ... -os):发 508,等 509 回包。</summary>
+    /// <summary>替命令查官方端的玩家返回记录(msg backget ... -os):发 5008,等 5009 回包。</summary>
     /// <param name="args">查询参数(命令里 -os 之前那部分)。</param>
     /// <returns>官方端渲染好的文本;连不上/超时返回原因。</returns>
     private static async Task<string> QueryOsMegBackAsync(string args)
@@ -508,7 +508,7 @@ internal static partial class Program
     }
 
     /// <summary>
-    /// 拼 621 的负载:<c>请求ID|玩家名|连接IP|归属地[|上报的局域网IP]</c>。
+    /// 拼 6021 的负载:<c>请求ID|玩家名|连接IP|归属地[|上报的局域网IP]</c>。
     ///
     /// <para>前四段是老格式,老客户端只读前四段,所以第五段<b>只在真有上报值时才追加</b> —— 不会让它错位。</para>
     /// <para>归属地由调用处固定用<b>连接 IP</b> 查:上报值是本机的局域网地址,拿它查归属地只会得到「内网」。</para>
@@ -527,11 +527,11 @@ internal static partial class Program
         => text.Length <= max ? text : text[..max] + $"…(共 {text.Length} 字符)";
 
     /// <summary>
-    /// 玩家进服时这个账号没有上报过局域网地址(或已过期),就向它的客户端要一次(633)。
+    /// 玩家进服时这个账号没有上报过局域网地址(或已过期),就向它的客户端要一次(6033)。
     ///
     /// <para><b>不等回复</b>:玩家进服不能卡在客户端回包上。这一趟的 621 用的仍是现有缓存(没有就不带第五段),
     /// 客户端补报上来的值从<b>下一次</b>进服开始生效 —— 不回头改这次的 621。</para>
-    /// <para>账号的 ZXMC 不在线就静默跳过:它下次登录成功时会主动上报(632)。</para>
+    /// <para>账号的 ZXMC 不在线就静默跳过:它下次登录成功时会主动上报(6032)。</para>
     /// </summary>
     private static void AskReportedIpIfStale(int accountId, string accountName, string player)
     {
@@ -543,7 +543,7 @@ internal static partial class Program
         _ = AskReportedIpAsync(accountId, accountName, player);
     }
 
-    /// <summary>真正去发 633(异常只记日志,不能让它冒到进服流程里)。</summary>
+    /// <summary>真正去发 6033(异常只记日志,不能让它冒到进服流程里)。</summary>
     private static async Task AskReportedIpAsync(int accountId, string accountName, string player)
     {
         try
@@ -899,7 +899,7 @@ internal static partial class Program
     /// <summary>
     /// configuration 阶段快判:能直接放行就什么都不做;不能就下发踢人,理由显示在客户端的连接界面。
     ///
-    /// <para>已绑定的玩家不再原地等 621:发完登录请求就把人踢走,账号主人点「同意」后重进,
+    /// <para>已绑定的玩家不再原地等 6021:发完登录请求就把人踢走,账号主人点「同意」后重进,
     /// 命中登录数组直接放行 —— 也就是「在 ZXMC 点完确认再进服务器」。</para>
     /// </summary>
     private static async Task HandlePlayerJoiningAsync(string player, string ip)
@@ -1071,7 +1071,7 @@ internal static partial class Program
             return;
         }
 
-        // ④ 登录确认模块关着:没人会弹窗,直接放行并补记一条免确认(后面的查重 / 等 622 都不做)
+        // ④ 登录确认模块关着:没人会弹窗,直接放行并补记一条免确认(后面的查重 / 等 6022 都不做)
         if (!ModuleRegistry.IsOn(ModuleIds.LoginConfirm))
         {
             AddToLoginArray(player);
@@ -1080,7 +1080,7 @@ internal static partial class Program
             return;
         }
 
-        // ④ 有绑定 → 弹窗问账号主人,等 622
+        // ④ 有绑定 → 弹窗问账号主人,等 6022
         // 同一个玩家短时间内重复上报(客户端重连 / 事件补报):只留一条待确认,别让账号主人连点两次
         foreach (var pair in PendingLogins)
         {
@@ -1343,7 +1343,7 @@ internal static partial class Program
                 break;
             }
 
-            // ---- 局域网地址上报(632):ZXMC 报上它自己网卡的 IPv4,只用于展示与日志 ----
+            // ---- 局域网地址上报(6032):ZXMC 报上它自己网卡的 IPv4,只用于展示与日志 ----
             case Protocol.ClientIpReport:
             {
                 var reportText = Encoding.UTF8.GetString(packet.Data).Trim();   //包内容
@@ -1803,7 +1803,7 @@ internal static partial class Program
                 await conn.WriteAsync(new Packet(0, Protocol.ServerConfig,
                     Encoding.UTF8.GetBytes(BuildServerConfigPayload())));
                 Logger.Log(LogLevel.Info,
-                    $"[ZXMS] 已发送身份包(200):ZXMS,名称(201):{liveName},消息保留(202):{_msgDays} 天");
+                    $"[ZXMS] 已发送身份包(2000):ZXMS,名称(2001):{liveName},消息保留(2002):{_msgDays} 天");
             }
             catch (Exception ex)
             {
@@ -2042,7 +2042,7 @@ internal static partial class Program
     /// <summary>该账号的等级(config.ini 的 oslevel;ZXMOS 上子服务端账号是 Admin / System)。</summary>
     private const string KeyOsLevel = "oslevel";
 
-    /// <summary>本端自己发给 ZXMOS 的账号请求:包 Id → 等回执的等待者(601 登录 / 603 注册 / 612 改名)。 按包 Id 存字典,登录与改名各等各的,不会互相把等待者顶掉。</summary>
+    /// <summary>本端自己发给 ZXMOS 的账号请求:包 Id → 等回执的等待者(6001 登录 / 6003 注册 / 6012 改名)。 按包 Id 存字典,登录与改名各等各的,不会互相把等待者顶掉。</summary>
     private static readonly ConcurrentDictionary<ulong, TaskCompletionSource<string>> OsAcks = new();
 
     /// <summary>本端自己发的包 Id 计数(从 10 万起,和"替客户端中转"的 relay Id 段分开)。</summary>
@@ -2258,7 +2258,7 @@ internal static partial class Program
         return finished == waiter.Task ? waiter.Task.Result : "err|ZXMOS 没有回执(超时)";
     }
 
-    /// <summary>改本端在官方服务端的账号名(顺带改密码):发 611 → 等 612 → 成功才写本地 config。 顺序不能反:先写本地的话,服务器一旦拒绝,config 里就留了一个对不上的账号,下次接入就认证不过去。</summary>
+    /// <summary>改本端在官方服务端的账号名(顺带改密码):发 6011 → 等 6012 → 成功才写本地 config。 顺序不能反:先写本地的话,服务器一旦拒绝,config 里就留了一个对不上的账号,下次接入就认证不过去。</summary>
     private static async Task<string> RenameOsAccountAsync(ZFile config, string newName, string newPassword)
     {
         var os = _os;
@@ -2397,10 +2397,10 @@ internal static partial class Program
     /// <summary>转给 ZXMOS 的补发请求:包 Id → (哪条 ZXMC 连接要的, 它原来的包 Id, 本服先给了几条)。 ZXMOS 的 504 一条条按这个 Id 找到人转过去;506 到了把"官方条数 + 本服条数"合成一条收尾回给客户端。</summary>
     private static readonly ConcurrentDictionary<ulong, (Guid Connection, ulong PacketId, int LocalSent)> HistoryRelay = new();
 
-    /// <summary>官方验证第二层:等官方服务端回证明(521)的等待者 + 这次发出去的 nonce。 本端同时只连一台官方服务端,所以两个字段够用。</summary>
+    /// <summary>官方验证第二层:等官方服务端回证明(5021)的等待者 + 这次发出去的 nonce。 本端同时只连一台官方服务端,所以两个字段够用。</summary>
     private static TaskCompletionSource<string>? _officialWait;
 
-    /// <summary>和 ZXMOS 协商密钥时等 381 用。</summary>
+    /// <summary>和 ZXMOS 协商密钥时等 3081 用。</summary>
     private static TaskCompletionSource<byte[]>? _osSessionWait;
 
     private static string _officialNonce = "";
@@ -2494,7 +2494,7 @@ internal static partial class Program
     }
 
     /// <summary>
-    /// 强制更新开启后,把在线且版本不够的 ZXMC 踢下线:先发 634 讲清原因,再断开。
+    /// 强制更新开启后,把在线且版本不够的 ZXMC 踢下线:先发 6034 讲清原因,再断开。
     /// <para>不 await 在调用方等它:发包带 10 秒写超时,处理命令的线程不该为别人的连接卡住。</para>
     /// </summary>
     /// <returns>踢掉几条连接(当场统计,真正的断开在后台完成)。</returns>
@@ -2615,7 +2615,7 @@ internal static partial class Program
     }
 
     /// <summary>
-    /// 把本服自己的存档逐条(504)回给这条连接,不在这里收尾;返回条数。
+    /// 把本服自己的存档逐条(5004)回给这条连接,不在这里收尾;返回条数。
     /// <paramref name="forClient"/> = 这次是替玩家要的:点名给本端自己的(<c>@server:</c>)消息就不给玩家;
     /// 点名给本端名下客户端的(<c>@clients:</c>)给;别的玩家的定向推送只给他本人。
     /// </summary>
@@ -3254,7 +3254,7 @@ internal static partial class Program
                     await HandleFriendRelayAsync(packet, config);
                     break;
 
-                // 中转没送到的明确回执(401/655/659/661):官方端找不到对方子服时才会发,按包 Id 找回发起人
+                // 中转没送到的明确回执(4001/6055/6059/6061):官方端找不到对方子服时才会发,按包 Id 找回发起人
                 case Protocol.FriendMsgAck:
                 case Protocol.FriendRequestAck:
                 case Protocol.FriendAnswerAck:
@@ -3278,7 +3278,7 @@ internal static partial class Program
                     await HandleAvatarRelayAckAsync(packet, config);
                     break;
 
-                // 官方服务端自报名称(201):记下来给 net status 显示,也写进 config
+                // 官方服务端自报名称(2001):记下来给 net status 显示,也写进 config
                 case Protocol.ServerName:
                 {
                     var osName = Encoding.UTF8.GetString(packet.Data).Trim();   //包内容
@@ -3287,14 +3287,14 @@ internal static partial class Program
                     break;
                 }
 
-                // 官方验证第二层:对方的证明(521)—— 交给正在等的那次校验
+                // 官方验证第二层:对方的证明(5021)—— 交给正在等的那次校验
                 case Protocol.OfficialProof:
                     Logger.Log(LogLevel.Info, "[官方验证] 收到对方的证明");
                     _officialWait?.TrySetResult(Encoding.UTF8.GetString(packet.Data));
                     break;
 
                 // ZXMOS 确认握手
-                // 会话加密:ZXMOS 回的公钥(381)
+                // 会话加密:ZXMOS 回的公钥(3081)
                 case Protocol.SessionHelloAck:
                     _osSessionWait?.TrySetResult(packet.Data);
                     break;
@@ -3322,7 +3322,7 @@ internal static partial class Program
                     break;
                 }
 
-                // ZXMOS 的账号回执(601 登录 / 603 注册 / 612 改名)
+                // ZXMOS 的账号回执(6001 登录 / 6003 注册 / 6012 改名)
                 case Protocol.AccountLoginAck:
                 case Protocol.AccountRegisterAck:
                 case Protocol.AccountRenameAck:
@@ -3363,7 +3363,7 @@ internal static partial class Program
                         break;
                     }
 
-                    // ② 是本端自己发的账号请求(601 登录 / 603 注册 / 612 改名)的回执
+                    // ② 是本端自己发的账号请求(6001 登录 / 6003 注册 / 6012 改名)的回执
                     if (OsAcks.TryRemove(packet.Id, out var own))
                     {
                         Logger.Log(LogLevel.Info, "[ZXMOS] 账号回执: " + text);
@@ -3422,7 +3422,7 @@ internal static partial class Program
                     break;
                 }
 
-                // 官方服务端下发的公告(500):原样转给本服所有 ZXMC 客户端
+                // 官方服务端下发的公告(5000):原样转给本服所有 ZXMC 客户端
                 case Protocol.Notice:
                 {
                     var card = Encoding.UTF8.GetString(packet.Data);   //包内容
@@ -3433,7 +3433,7 @@ internal static partial class Program
                     break;
                 }
 
-                // 官方服务端下发的定向推送(501):按目标分流 —— 点名叫本端的自己收、@clients: 转给名下全部客户端、
+                // 官方服务端下发的定向推送(5001):按目标分流 —— 点名叫本端的自己收、@clients: 转给名下全部客户端、
                 // 其它按玩家账号过滤(不在本服就丢弃)
                 case Protocol.Push:
                 {

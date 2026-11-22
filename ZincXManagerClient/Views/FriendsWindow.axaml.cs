@@ -23,7 +23,7 @@ namespace ZincXManagerClient.Views;
 /// <summary>
 /// 好友列表窗。
 ///
-/// <para>它只做三件事:把服务端给的好友列表画出来(650/651)、按关键词过滤、开别的窗。
+/// <para>它只做三件事:把服务端给的好友列表画出来(6050/6051)、按关键词过滤、开别的窗。
 /// 「谁是我的好友」「谁在线」全部以服务端下发的为准,这里不自己判定。</para>
 /// </summary>
 public partial class FriendsWindow : Window
@@ -36,7 +36,7 @@ public partial class FriendsWindow : Window
     private readonly Dictionary<string, DateTime> _unreadClearedAt = new(StringComparer.OrdinalIgnoreCase);   // 红点刚被清掉的时间,挡住并发刷新把 0 盖回去
     private string _keyword = "";                        // 搜索框里的字
     private DispatcherTimer? _preview;                   // 本服对话的「最后一句 + 未读」定时补
-    private DateTime _lastListAt;                        // 上次发 650 的时间戳,用来节流
+    private DateTime _lastListAt;                        // 上次发 6050 的时间戳,用来节流
     private bool _previewBusy;                           // 预览刷新正在跑,挡住重入(否则旧快照会盖掉新值)
     private readonly Dictionary<string, long> _recentAt = new(StringComparer.OrdinalIgnoreCase);   // 本机记下的最后消息时间(unix 秒),键=好友完整ID,和服务端给的时间取大的那个用来排序
 
@@ -103,11 +103,11 @@ public partial class FriendsWindow : Window
             return;
         }
 
-        Logger.Log(LogLevel.Info, "[好友] 列表刷新:重新向服务端要好友列表(650)");
+        Logger.Log(LogLevel.Info, "[好友] 列表刷新:重新向服务端要好友列表(6050)");
         _ = SendAsync(connect, Protocol.FriendListQuery);
     }
 
-    /// <summary>服务端回了好友列表(651)。</summary>
+    /// <summary>服务端回了好友列表(6051)。</summary>
     public void FillList(string payload)
     {
         var entries = FriendCodec.ParseFriendList(payload, out var badLines);
@@ -294,7 +294,7 @@ public partial class FriendsWindow : Window
         }
     }
 
-    /// <summary>服务端回了申请列表(657):列表窗不用它画,只用来决定通知红点亮不亮。</summary>
+    /// <summary>服务端回了申请列表(6057):列表窗不用它画,只用来决定通知红点亮不亮。</summary>
     public void FillRequests(string payload)
     {
         var entries = FriendCodec.ParseFriendRequests(payload, out _);
@@ -314,7 +314,7 @@ public partial class FriendsWindow : Window
         Paint();
     }
 
-    /// <summary>651 刚回来时把本地的临时状态盖回去:跨服好友只有 651 这一个来源,不盖就会被旧值顶掉。</summary>
+    /// <summary>6051 刚回来时把本地的临时状态盖回去:跨服好友只有 6051 这一个来源,不盖就会被旧值顶掉。</summary>
     private void ApplyLocalOverrides()
     {
         for (var index = 0; index < _friends.Count; index++)
@@ -587,7 +587,7 @@ public partial class FriendsWindow : Window
         }
     }
 
-    /// <summary>服务端送来了头像(608):存到本地缓存,然后重画。</summary>
+    /// <summary>服务端送来了头像(6008):存到本地缓存,然后重画。</summary>
     public void SaveAvatar(string accountName, byte[] image)
     {
         if (accountName.Length == 0 || image.Length == 0)

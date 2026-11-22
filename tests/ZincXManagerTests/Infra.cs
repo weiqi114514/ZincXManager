@@ -157,15 +157,15 @@ public sealed class Probe : IDisposable
     /// <summary>纯 C# 客户端探针:自己走握手、登录、收包,不依赖 ZXMC 界面。</summary>
     private Probe(string name) { Name = name; }
 
-    /// <summary>连上服务端并完成加密协商(380/381),之后所有包都加密。</summary>
+    /// <summary>连上服务端并完成加密协商(3080/3081),之后所有包都加密。</summary>
     public static async Task<Probe> ConnectAsync(string host, int port, string connMode, int timeoutMs = 8000)
     {
         var p = new Probe($"{host}:{port}");
         await p._tcp.ConnectAsync(host, port);
         p._ns = p._tcp.GetStream();
 
-        // 1) 会话加密(380/381):服务端连上后会先主动发身份包(200/201/202),
-        //    所以这里要一直读到 381 为止,别假设第一包就是它。
+        // 1) 会话加密(3080/3081):服务端连上后会先主动发身份包(2000/2001/2002),
+        //    所以这里要一直读到 3081 为止,别假设第一包就是它。
         var hs = new SessionHandshake();
         await p.SendAsync(0, Protocol.SessionHello, hs.PublicKey);
         var end = DateTime.UtcNow.AddMilliseconds(timeoutMs);
@@ -175,13 +175,13 @@ public sealed class Probe : IDisposable
             var left = (int)Math.Max(300, (end - DateTime.UtcNow).TotalMilliseconds);
             var one = await p.ReadOneAsync(left);
             if (one is null) { break; }
-            // 握手前服务端会先推身份包(200/201/202),先存起来,别丢
+            // 握手前服务端会先推身份包(2000/2001/2002),先存起来,别丢
             lock (p._lock) { p._got.Add((one.Value.Type, Encoding.UTF8.GetString(one.Value.Data))); }
             if (one.Value.Type == Protocol.SessionHelloAck) { ack = one; break; }
         }
         if (ack is null)
         {
-            throw new InvalidOperationException("没收到 381(加密协商失败)");
+            throw new InvalidOperationException("没收到 3081(加密协商失败)");
         }
         p._crypto = hs.Complete(ack.Value.Data, isServer: false);
 
@@ -252,7 +252,7 @@ public sealed class Probe : IDisposable
     /// <summary>收到指定类型的包就返回它;其它包跳过着继续等。</summary>
     public async Task<string?> WaitAsync(ushort type, int timeoutMs = 8000)
     {
-        // 先看已经收到的(握手阶段存下来的 200/201/202 就在这儿)
+        // 先看已经收到的(握手阶段存下来的 2000/2001/2002 就在这儿)
         lock (_lock)
         {
             var hit = _got.FirstOrDefault(g => g.Type == type);

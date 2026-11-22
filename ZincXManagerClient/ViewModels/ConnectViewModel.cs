@@ -26,14 +26,14 @@ namespace ZincXManagerClient.ViewModels;
 ///
 /// <para><b>协议(与 ZXMS / ZXMOS 约定):</b></para>
 /// <code>
-/// 200 = ServerIdent  服务端 → 对方:我是谁(负载就是 "ZXMS" 或 "ZXMOS")
-/// 300 = Conline      ZXMC  → 服务端:客户端上线
-/// 301 = CBack        服务端 → ZXMC:收到
+/// 2000 = ServerIdent  服务端 → 对方:我是谁(负载就是 "ZXMS" 或 "ZXMOS")
+/// 3000 = Conline      ZXMC  → 服务端:客户端上线
+/// 3001 = CBack        服务端 → ZXMC:收到
 /// </code>
 ///
-/// <para><b>校验方式(连上之后校验,不是连之前拦):</b>连上后服务端会主动发 200 报身份,
+/// <para><b>校验方式(连上之后校验,不是连之前拦):</b>连上后服务端会主动发 2000 报身份,
 /// 客户端拿它跟当前模式比 —— OS/SAOS 必须是 ZXMS,OOS 必须是 ZXMOS;
-/// 对不上就立刻断开并标红,对得上才继续(等 301 完成握手)。</para>
+/// 对不上就立刻断开并标红,对得上才继续(等 3001 完成握手)。</para>
 /// </summary>
 public partial class ConnectViewModel : ViewModelBase, IDisposable
 {
@@ -94,7 +94,7 @@ public partial class ConnectViewModel : ViewModelBase, IDisposable
     // 当前 TCP 连接;没连就是 null。
     private TcpClient? _client;
 
-    /// <summary>等 381(加密协商回包)用。</summary>
+    /// <summary>等 3081(加密协商回包)用。</summary>
     private TaskCompletionSource<byte[]>? _sessionWait;
 
     /// <summary>身份校验没通过(已断开),用来忽略后续到达的 301。</summary>
@@ -103,22 +103,22 @@ public partial class ConnectViewModel : ViewModelBase, IDisposable
     /// <summary>每收到一个包都触发一次(登录 / 头像这类业务自己挑类型处理)。</summary>
     public event Action<Packet>? PacketReceived;
 
-    /// <summary>收到账号类回复(601 / 603)时触发:参数是(消息类型, 负载文本)。</summary>
+    /// <summary>收到账号类回复(6001 / 6003)时触发:参数是(消息类型, 负载文本)。</summary>
     public event Action<ushort, string>? AccountReply;
 
-    /// <summary>收到服务端名称(201)时触发 —— 名称由服务端提供,客户端不用自己填。</summary>
+    /// <summary>收到服务端名称(2001)时触发 —— 名称由服务端提供,客户端不用自己填。</summary>
     public event Action<string>? ServerNameReceived;
 
     /// <summary>需要弹窗提示的错误(标题, 内容):连不上、模式不匹配。</summary>
     public event Action<string, string>? ErrorRaised;
 
-    /// <summary>服务端要求更新客户端时触发(634 或被 601/603 拒登录):参数是服务端给的原因。</summary>
+    /// <summary>服务端要求更新客户端时触发(6034 或被 6001/6003 拒登录):参数是服务端给的原因。</summary>
     public event Action<string>? UpdateRequiredRaised;   // 服务端要求更新
 
-    /// <summary>多服数据分离:收到服务器列表(671,负载每行 <c>ID|名称|端口</c>)。</summary>
+    /// <summary>多服数据分离:收到服务器列表(6071,负载每行 <c>ID|名称|端口</c>)。</summary>
     public event Action<string>? ServerListReceived;
 
-    /// <summary>多服数据分离:收到切服结果(673,<c>ok|ID</c> 或 <c>err|原因</c>)。</summary>
+    /// <summary>多服数据分离:收到切服结果(6073,<c>ok|ID</c> 或 <c>err|原因</c>)。</summary>
     public event Action<string>? ServerSwitchAck;
 
     /// <summary>
@@ -158,7 +158,7 @@ public partial class ConnectViewModel : ViewModelBase, IDisposable
     [ObservableProperty]
     public partial bool IsBusy { get; set; }
 
-    /// <summary>是否已连上(身份校验通过 + 收到 301)。</summary>
+    /// <summary>是否已连上(身份校验通过 + 收到 3001)。</summary>
     [ObservableProperty]
     public partial bool IsConnected { get; set; }
 
@@ -288,17 +288,17 @@ public partial class ConnectViewModel : ViewModelBase, IDisposable
 
                 switch (packet.Type)
                 {
-                    // 多服数据分离:服务器清单(671),每行 "ID|名称|端口"
+                    // 多服数据分离:服务器清单(6071),每行 "ID|名称|端口"
                     case Protocol.ServerList:
                         ServerListReceived?.Invoke(text);
                         break;
 
-                    // 多服数据分离:切服回执(673),"ok|ID" 或 "err|原因"
+                    // 多服数据分离:切服回执(6073),"ok|ID" 或 "err|原因"
                     case Protocol.ServerSwitchAck:
                         ServerSwitchAck?.Invoke(text.Trim());
                         break;
 
-                    // 会话加密协商:服务端公钥(381)
+                    // 会话加密协商:服务端公钥(3081)
                     case Protocol.SessionHelloAck:
                         _sessionWait?.TrySetResult(packet.Data);
                         break;
@@ -309,13 +309,13 @@ public partial class ConnectViewModel : ViewModelBase, IDisposable
                         CheckServerIdent(client, text.Trim(), host, port);
                         break;
 
-                    // 服务端配置(202):这里的 modules= 是功能开关名单,必须在连接页就解析 ——
+                    // 服务端配置(2002):这里的 modules= 是功能开关名单,必须在连接页就解析 ——
                     // 首次连接时主界面还没建好,主界面那边的处理收不到这一包。
                     case Protocol.ServerConfig:
                         ModuleState.Configure(text);
                         break;
 
-                    // 服务端名称(201):名称由服务端给 —— 存进 config,设置页显示的就是它
+                    // 服务端名称(2001):名称由服务端给 —— 存进 config,设置页显示的就是它
                     case Protocol.ServerName:
                         ServerName = text.Trim();
                         ClientConfig.Set(Mode == "OOS" ? "ozname" : "czname", ServerName);
@@ -335,7 +335,7 @@ public partial class ConnectViewModel : ViewModelBase, IDisposable
                             UpdateRequiredRaised?.Invoke(text.Trim());
                         }
 
-                        // 登录 / 注册成功就把本机局域网地址报上去(632):经 frp 隧道连进来时,
+                        // 登录 / 注册成功就把本机局域网地址报上去(6032):经 frp 隧道连进来时,
                         // 服务端看到的连接地址是隧道对端,拿它当玩家 IP 给玩家看不合适
                         if (text.StartsWith("ok|", StringComparison.Ordinal))
                         {
@@ -344,19 +344,19 @@ public partial class ConnectViewModel : ViewModelBase, IDisposable
 
                         break;
 
-                    // 服务端要本机局域网地址(633):玩家进服时服务端没有或已过期,这里补报一次
+                    // 服务端要本机局域网地址(6033):玩家进服时服务端没有或已过期,这里补报一次
                     case Protocol.ClientIpAsk:
                         _ = ReportLocalIpAsync("服务端索要");
                         break;
 
-                    // 服务端要求更新并已断开(634):先说明原因,再让上层别再重连
+                    // 服务端要求更新并已断开(6034):先说明原因,再让上层别再重连
                     case Protocol.ClientTooOld:
                         Logger.Log(LogLevel.Warning, $"[ZXMC] 服务端要求更新客户端:{text.Trim()}");
                         UpdateRequired = true;
                         UpdateRequiredRaised?.Invoke(text.Trim());
                         break;
 
-                    // 官方验证第二层:对方的证明(521)
+                    // 官方验证第二层:对方的证明(5021)
                     case Protocol.OfficialProof:
                         _officialWait?.TrySetResult(text);
                         break;
@@ -395,14 +395,14 @@ public partial class ConnectViewModel : ViewModelBase, IDisposable
             await client.ConnectAsync();
             _client = client;
 
-            // 连接建立后先协商会话密钥(后面所有报文都加密;拿不到 381 说明是旧版服务端)
+            // 连接建立后先协商会话密钥(后面所有报文都加密;拿不到 3081 说明是旧版服务端)
             try
             {
                 var handshake = new SessionHandshake();          // 本次握手的密钥对
                 _sessionWait = new TaskCompletionSource<byte[]>(TaskCreationOptions.RunContinuationsAsynchronously);
                 await client.SendAsync(Protocol.SessionHello, handshake.PublicKey);
 
-                var done = await Task.WhenAny(_sessionWait.Task, Task.Delay(5000));   // 等 381,最多 5 秒
+                var done = await Task.WhenAny(_sessionWait.Task, Task.Delay(5000));   // 等 3081,最多 5 秒
                 if (done == _sessionWait.Task)
                 {
                     client.Crypto = handshake.Complete(_sessionWait.Task.Result, isServer: false);
@@ -421,7 +421,7 @@ public partial class ConnectViewModel : ViewModelBase, IDisposable
             // 报上自己是谁 + 连接模式(服务端登记表要记模式),例如 "ZXMC:SAOS"
             await client.WriteAsync(new Packet(1, Conline, Encoding.UTF8.GetBytes($"ZXMC:{Mode}")));
             ClientLog.Online("ZXMC", Mode, $"{host}:{port}");
-            Logger.Log(LogLevel.Info, $"[ZXMC] TCP 已连接,已发送上线包(300,模式 {Mode}),等待服务端身份包(200)校验");
+            Logger.Log(LogLevel.Info, $"[ZXMC] TCP 已连接,已发送上线包(3000,模式 {Mode}),等待服务端身份包(2000)校验");
         }
         catch (Exception ex)
         {
@@ -535,7 +535,7 @@ public partial class ConnectViewModel : ViewModelBase, IDisposable
         return true;
     }
 
-    /// <summary>服务端这条回执是不是「版本太旧,先更新」(601 / 603 的 err 负载以固定开头词起头)。</summary>
+    /// <summary>服务端这条回执是不是「版本太旧,先更新」(6001 / 6003 的 err 负载以固定开头词起头)。</summary>
     private static bool IsUpdateRequired(string text)
         => text.TrimStart().StartsWith("err|" + Protocol.UpdateRequiredMarker, StringComparison.Ordinal);
 
@@ -559,7 +559,7 @@ public partial class ConnectViewModel : ViewModelBase, IDisposable
         var payload = $"{user}|{hash}|{ClientSession.LoginLevel}|{ClientSession.LoginSide}|" +
                       $"{ZincXManagerShared.Account.MachineCode.ValueForLogin}||{nonce}|{proof}|{version}";
 
-        var wait = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);   //等 601
+        var wait = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);   //等 6001
         void OnReply(ushort type, string text)
         {
             if (type == Protocol.AccountLoginAck)
@@ -583,7 +583,7 @@ public partial class ConnectViewModel : ViewModelBase, IDisposable
                 return false;
             }
 
-            var reply = wait.Task.Result;   //601 回执
+            var reply = wait.Task.Result;   //6001 回执
             if (!reply.StartsWith("ok|"))
             {
                 Logger.Log(LogLevel.Warning, "[ZXMC] 重连后自动重登被拒:" + reply);
@@ -600,7 +600,7 @@ public partial class ConnectViewModel : ViewModelBase, IDisposable
     }
 
     /// <summary>
-    /// 向服务端要一次历史消息补发(505):服务端会把保留期内还没收到的消息逐条(504)回过来,
+    /// 向服务端要一次历史消息补发(5005):服务端会把保留期内还没收到的消息逐条(5004)回过来,
     /// 最后回一条 506 收尾。登录成功后调用;补发的包和实时消息走同一个 <see cref="PacketReceived"/> 事件。
     /// 没连上就什么都不发。
     /// </summary>
@@ -612,7 +612,7 @@ public partial class ConnectViewModel : ViewModelBase, IDisposable
             return;
         }
 
-        Logger.Log(LogLevel.Info, "[ZXMC] 向服务端要一次历史消息(505)");
+        Logger.Log(LogLevel.Info, "[ZXMC] 向服务端要一次历史消息(5005)");
 
         try
         {
@@ -625,7 +625,7 @@ public partial class ConnectViewModel : ViewModelBase, IDisposable
     }
 
     /// <summary>
-    /// 向服务端报一次本机局域网地址(632)。登录成功时主动报,收到 633 索要时补报。
+    /// 向服务端报一次本机局域网地址(6032)。登录成功时主动报,收到 6033 索要时补报。
     ///
     /// <para>取不到地址就只记 Warn、不发空包 —— 服务端那边「没有值」本身就是一种有效状态,
     /// 发个空串只会让日志里多一条看不懂的记录。</para>
@@ -657,9 +657,9 @@ public partial class ConnectViewModel : ViewModelBase, IDisposable
         }
     }
 
-    // ---------- 官方验证第二层(520 / 521) ----------
+    // ---------- 官方验证第二层(5020 / 5021) ----------
 
-    /// <summary>对方自报的端类型(200 包里来的):只有官方服务端才需要出示官方证明。</summary>
+    /// <summary>对方自报的端类型(2000 包里来的):只有官方服务端才需要出示官方证明。</summary>
     private string _serverRole = "";
 
     /// <summary>对方自报的端类型:ZXMOS(官方)/ ZXMS(子服)。</summary>

@@ -12,7 +12,7 @@ namespace ZincXManagerServer.Login;
 /// <summary>
 /// 玩家 IP 归属地查询:服务端查好再随登录请求带给客户端。
 /// <para>内网地址直接返回"内网";查失败返回"未知"。结果缓存,同一个 IP 只查一次。</para>
-/// <para>查询有**硬上限 1.2 秒**:它在发 621 弹窗之前跑,查太久玩家就得干等。</para>
+/// <para>查询有**硬上限 1.2 秒**:它在发 6021 弹窗之前跑,查太久玩家就得干等。</para>
 /// </summary>
 public static class GeoLookup
 {

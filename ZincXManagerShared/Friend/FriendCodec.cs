@@ -30,7 +30,7 @@ public sealed record SearchHit(string Id, string Name, string Level, string Serv
 /// <param name="Level">等级。</param>
 public sealed record NetworkAccount(string ServerId, int Code, string Name, string Level);
 
-/// <summary>跨服中转包里剥出来的四段(615)。</summary>
+/// <summary>跨服中转包里剥出来的四段(6015)。</summary>
 /// <param name="FromId">来源完整ID。</param>
 /// <param name="ToId">目标完整ID。</param>
 /// <param name="Action">动作,见 <see cref="Network.Protocol.FriendRelayAction"/>。</param>
@@ -45,7 +45,7 @@ public sealed record FriendRelayPacket(string FromId, string ToId, string Action
 ///
 /// <para>约定:列表类负载「一行一条、<c>\n</c> 分隔」;行内字段优先用 <c>\t</c>,
 /// 因为玩家的名字和聊天正文里可能有竖线,用竖线当分隔符迟早错位。
-/// 例外是要跟旧版本对齐的几处(614 / 648 / 649),那几处固定用竖线。</para>
+/// 例外是要跟旧版本对齐的几处(6014 / 6048 / 6049),那几处固定用竖线。</para>
 /// </summary>
 public static class FriendCodec
 {
@@ -55,7 +55,7 @@ public static class FriendCodec
     /// <summary>字段分隔符(好友列表/申请列表/私聊正文)。</summary>
     public const char FieldSeparator = '\t';
 
-    /// <summary>旧格式用的竖线(614 / 648 / 649 / 664)。</summary>
+    /// <summary>旧格式用的竖线(6014 / 6048 / 6049 / 6064)。</summary>
     public const char PipeSeparator = '|';
 
     /// <summary>「不知道」占位符(等级、来源服名)。</summary>
@@ -85,7 +85,7 @@ public static class FriendCodec
     }
 
     /// <summary>
-    /// 解析 651 的负载;坏行计数通过 <paramref name="badLines"/> 交回,由调用方记日志。
+    /// 解析 6051 的负载;坏行计数通过 <paramref name="badLines"/> 交回,由调用方记日志。
     /// 兼容 7 段(没有时间)和更早的 5/4 段格式,缺的字段按 0 或空。
     /// </summary>
     public static List<FriendEntry> ParseFriendList(string? payload, out int badLines)
@@ -137,7 +137,7 @@ public static class FriendCodec
         return string.Join(LineSeparator, lines);
     }
 
-    /// <summary>解析 657 的负载。</summary>
+    /// <summary>解析 6057 的负载。</summary>
     public static List<FriendRequestEntry> ParseFriendRequests(string? payload, out int badLines)
     {
         var list = new List<FriendRequestEntry>();
@@ -171,7 +171,7 @@ public static class FriendCodec
         string.Join(LineSeparator, hits.Select(BuildSearchHit));
 
     /// <summary>
-    /// 解析 664 的负载(客户端用)。兼容两种:3 段 <c>完整ID|名称|等级</c>(老服务端,来源服给空串)、
+    /// 解析 6064 的负载(客户端用)。兼容两种:3 段 <c>完整ID|名称|等级</c>(老服务端,来源服给空串)、
     /// 4 段 <c>完整ID|名称|等级|来源服</c>。只切前 3 个竖线,第 4 段里再有竖线也不会丢。
     /// </summary>
     public static List<SearchHit> ParseSearchHits(string? payload, out int badLines)
@@ -204,7 +204,7 @@ public static class FriendCodec
         string.Join(LineSeparator, accounts.Select(one => string.Join(PipeSeparator, one.ServerId, one.Code.ToString(CultureInfo.InvariantCulture), Clean(one.Name), Clean(one.Level))));
 
     /// <summary>
-    /// 解析 614 的负载。兼容三种:
+    /// 解析 6014 的负载。兼容三种:
     /// 4 段 <c>归属服ID|编号|名称|等级</c>,
     /// 3 段 <c>完整ID|名称|等级</c>(官方端现在发的格式,首段是 <c>ZXMS-x-1-13</c> 或 <c>-13</c>),
     /// 3 段 <c>编号|名称|等级</c>(最老的格式,没有归属服)。
@@ -271,7 +271,7 @@ public static class FriendCodec
         return list;
     }
 
-    // ---------------- 613 上报 ----------------
+    // ---------------- 6013 上报 ----------------
 
     /// <summary>把本服账号表拼成 613 的负载(3 段,竖线)。</summary>
     public static string BuildUserListUp(IEnumerable<(int Id, string Name, string Level)> accounts) =>
@@ -284,7 +284,7 @@ public static class FriendCodec
         $"{toId}{FieldSeparator}{Clean(msgId)}{FieldSeparator}{text}";
 
     /// <summary>
-    /// 解析 400 的负载;返回 false = 缺目标 ID(正文空不空由调用方自己判)。
+    /// 解析 4000 的负载;返回 false = 缺目标 ID(正文空不空由调用方自己判)。
     /// 2 段的旧格式也认(那时没有消息编号,消息编号给空串,重发去重就失效,但消息照收)。
     /// </summary>
     public static bool TryParseFriendMessage(string? payload, out string toId, out string msgId, out string text)
@@ -333,7 +333,7 @@ public static class FriendCodec
 
     // ---------------- 401 私聊回执 ----------------
 
-    /// <summary>拼 401 的成功回执:<c>ok|消息编号|序号</c>,重发时多一段 <c>dup</c>。</summary>
+    /// <summary>拼 4001 的成功回执:<c>ok|消息编号|序号</c>,重发时多一段 <c>dup</c>。</summary>
     public static string BuildMessageAck(string msgId, int seq, bool duplicate) =>
         duplicate
             ? $"ok{PipeSeparator}{Clean(msgId)}{PipeSeparator}{seq}{PipeSeparator}dup"
@@ -357,12 +357,12 @@ public static class FriendCodec
         return msgId.Length > 0;
     }
 
-    /// <summary>拼 401 的失败回执:<c>err|消息编号|原因</c>;拿不到编号的场景(未登录等)由调用方自己拼两段 <c>err|原因</c>。</summary>
+    /// <summary>拼 4001 的失败回执:<c>err|消息编号|原因</c>;拿不到编号的场景(未登录等)由调用方自己拼两段 <c>err|原因</c>。</summary>
     public static string BuildMessageError(string msgId, string reason) =>
         $"err{PipeSeparator}{Clean(msgId)}{PipeSeparator}{(reason ?? "").Trim()}";
 
     /// <summary>
-    /// 解析 401 的三段失败回执;两段的旧格式 <c>err|原因</c> 不归这里管(编号给空串,返回 false)。
+    /// 解析 4001 的三段失败回执;两段的旧格式 <c>err|原因</c> 不归这里管(编号给空串,返回 false)。
     /// </summary>
     public static bool TryParseMessageError(string? payload, out string msgId, out string reason)
     {
@@ -379,13 +379,13 @@ public static class FriendCodec
         return msgId.Length > 0 && reason.Length > 0;
     }
 
-    // ---------------- 402 / 403 聊天记录 ----------------
+    // ---------------- 4002 / 4003 聊天记录 ----------------
 
-    /// <summary>拼 402 的负载:<c>对方完整ID\t起点序号</c>(0 = 从头要)。</summary>
+    /// <summary>拼 4002 的负载:<c>对方完整ID\t起点序号</c>(0 = 从头要)。</summary>
     public static string BuildHistoryQuery(string peerId, int afterSeq) =>
         $"{peerId}{FieldSeparator}{afterSeq.ToString(CultureInfo.InvariantCulture)}";
 
-    /// <summary>解析 402;起点序号缺省按 0。</summary>
+    /// <summary>解析 4002;起点序号缺省按 0。</summary>
     public static bool TryParseHistoryQuery(string? payload, out string peerId, out int afterSeq)
     {
         var parts = (payload ?? "").Split(FieldSeparator);
@@ -438,9 +438,9 @@ public static class FriendCodec
         return list;
     }
 
-    // ---------------- 404 / 405 回执与已读 ----------------
+    // ---------------- 4004 / 4005 回执与已读 ----------------
 
-    /// <summary>拼 404 的负载:<c>对端完整ID\t消息编号或序号\t状态</c>,状态 = <c>delivered</c> / <c>read</c>。</summary>
+    /// <summary>拼 4004 的负载:<c>对端完整ID\t消息编号或序号\t状态</c>,状态 = <c>delivered</c> / <c>read</c>。</summary>
     public static string BuildReceipt(string peerId, string key, string state) =>
         $"{peerId}{FieldSeparator}{Clean(key)}{FieldSeparator}{state}";
 
@@ -454,11 +454,11 @@ public static class FriendCodec
         return peerId.Length > 0 && state.Length > 0;
     }
 
-    /// <summary>拼 405 的负载:<c>对端完整ID\t已读到第几号</c>。</summary>
+    /// <summary>拼 4005 的负载:<c>对端完整ID\t已读到第几号</c>。</summary>
     public static string BuildReadMark(string peerId, int seq) =>
         $"{peerId}{FieldSeparator}{seq.ToString(CultureInfo.InvariantCulture)}";
 
-    /// <summary>解析 405。</summary>
+    /// <summary>解析 4005。</summary>
     public static bool TryParseReadMark(string? payload, out string peerId, out int seq)
     {
         var parts = (payload ?? "").Split(FieldSeparator);
@@ -472,17 +472,17 @@ public static class FriendCodec
         return peerId.Length > 0;
     }
 
-    // ---------------- 654 / 658 好友申请 ----------------
+    // ---------------- 6054 / 6058 好友申请 ----------------
 
     /// <summary>
-    /// 拼 654 的负载:<c>目标完整ID\t验证消息\t备注</c>(消息里可以随便带竖线)。
+    /// 拼 6054 的负载:<c>目标完整ID\t验证消息\t备注</c>(消息里可以随便带竖线)。
     /// 备注是申请人自己给对方起的名字,被申请人看不到;统一写三段,不填就是空串。
     /// </summary>
     public static string BuildFriendRequest(string targetId, string message, string remark = "") =>
         $"{targetId}{FieldSeparator}{Clean(message)}{FieldSeparator}{CleanRemark(remark)}";
 
     /// <summary>
-    /// 解析 654 的负载;返回 false = 缺目标 ID。
+    /// 解析 6054 的负载;返回 false = 缺目标 ID。
     /// 2 段的旧格式也认(那时没有备注,备注给空串)。
     /// </summary>
     public static bool TryParseFriendRequest(string? payload, out string targetId, out string message, out string remark)
@@ -502,10 +502,10 @@ public static class FriendCodec
         return true;
     }
 
-    /// <summary>拼 658 的负载:<c>申请者完整ID\tyes|no</c>。</summary>
+    /// <summary>拼 6058 的负载:<c>申请者完整ID\tyes|no</c>。</summary>
     public static string BuildFriendAnswer(string fromId, bool agree) => $"{fromId}{FieldSeparator}{(agree ? "yes" : "no")}";
 
-    /// <summary>解析 658 的负载;返回 false = 缺申请者 ID。</summary>
+    /// <summary>解析 6058 的负载;返回 false = 缺申请者 ID。</summary>
     public static bool TryParseFriendAnswer(string? payload, out string fromId, out bool agree)
     {
         fromId = "";
@@ -528,7 +528,7 @@ public static class FriendCodec
     public static string BuildRelay(FriendRelayPacket packet) =>
         string.Join(PipeSeparator, packet.FromId, packet.ToId, packet.Action, packet.Extra ?? "");
 
-    /// <summary>解析 615 的负载(只切前 3 个竖线)。</summary>
+    /// <summary>解析 6015 的负载(只切前 3 个竖线)。</summary>
     public static bool TryParseRelay(string? payload, out FriendRelayPacket packet)
     {
         packet = new FriendRelayPacket("", "", "", "");
@@ -546,12 +546,12 @@ public static class FriendCodec
     public static string BuildRelayedMessage(string msgId, string text) =>
         $"{Clean(msgId)}{PipeSeparator}{text}";
 
-    // ---------------- 648 / 649 跨服头像 ----------------
-    /// <summary>拼 648 的负载:<c>目标服务端ID|账户名|请求者完整ID</c>。</summary>
+    // ---------------- 6048 / 6049 跨服头像 ----------------
+    /// <summary>拼 6048 的负载:<c>目标服务端ID|账户名|请求者完整ID</c>。</summary>
     public static string BuildAvatarRelay(string targetServerId, string accountName, string requesterId) =>
         string.Join(PipeSeparator, targetServerId, Clean(accountName), requesterId);
 
-    /// <summary>解析 648 的负载。</summary>
+    /// <summary>解析 6048 的负载。</summary>
     public static bool TryParseAvatarRelay(string? payload, out string targetServerId, out string accountName, out string requesterId)
     {
         targetServerId = "";
@@ -569,11 +569,11 @@ public static class FriendCodec
         return accountName.Length > 0;
     }
 
-    /// <summary>拼 649 的负载:<c>账户名|base64|请求者完整ID</c>(base64 为空 = 那边也没有)。</summary>
+    /// <summary>拼 6049 的负载:<c>账户名|base64|请求者完整ID</c>(base64 为空 = 那边也没有)。</summary>
     public static string BuildAvatarRelayAck(string accountName, byte[]? image, string requesterId) =>
         string.Join(PipeSeparator, Clean(accountName), Convert.ToBase64String(image ?? []), requesterId);
 
-    /// <summary>解析 649 的负载(客户端/发起服两边都用这个,别各写一份)。</summary>
+    /// <summary>解析 6049 的负载(客户端/发起服两边都用这个,别各写一份)。</summary>
     public static bool TryParseAvatarRelayAck(string? payload, out string accountName, out byte[] image, out string requesterId)
     {
         accountName = "";
@@ -605,11 +605,11 @@ public static class FriendCodec
 
     // ---------------- 608 头像回执 ----------------
 
-    /// <summary>拼 608 的负载:<c>账户名|base64</c>。</summary>
+    /// <summary>拼 6008 的负载:<c>账户名|base64</c>。</summary>
     public static string BuildAvatarAck(string accountName, byte[]? image) =>
         string.Join(PipeSeparator, Clean(accountName), Convert.ToBase64String(image ?? []));
 
-    /// <summary>解析 608 的负载。</summary>
+    /// <summary>解析 6008 的负载。</summary>
     public static bool TryParseAvatarAck(string? payload, out string accountName, out byte[] image)
     {
         accountName = "";

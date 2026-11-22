@@ -27,11 +27,11 @@ internal static class ChatBridge
     /// <summary>地址与令牌都齐了才算能用。</summary>
     internal static bool Ready => Token.Length > 0 && BaseUrl.Length > 0 && SelfCode > 0;
 
-    /// <summary>拿到 510 时触发;已经拿到过就不再触发。</summary>
+    /// <summary>拿到 5010 时触发;已经拿到过就不再触发。</summary>
     internal static event Action? Configured;
 
     /// <summary>
-    /// 处理 510:负载 <c>端口\ttoken\t本服完整ID\t自己的账号编号</c>(第四段是 b0.3.2a 新加的,老服务端没有)。
+    /// 处理 5010:负载 <c>端口\ttoken\t本服完整ID\t自己的账号编号</c>(第四段是 b0.3.2a 新加的,老服务端没有)。
     /// </summary>
     /// <param name="payload">服务端发来的原文。</param>
     internal static void Configure(string payload)
@@ -57,7 +57,7 @@ internal static class ChatBridge
 
         var baseUrl = $"http://{host}:{port}/chat";
 
-        // 登录路径与主窗分派都会收到 510,同一份就不要再触发一次
+        // 登录路径与主窗分派都会收到 5010,同一份就不要再触发一次
         if (token == Token && baseUrl == BaseUrl && selfCode == SelfCode)
         {
             return;

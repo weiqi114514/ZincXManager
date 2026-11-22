@@ -111,7 +111,7 @@ internal static partial class Program
         NetworkAccounts.Clear();
         if (count > 0)
         {
-            Logger.Log(LogLevel.Info, $"[用户列表] {reason},已清空全网账号表 {count} 条(重连后 614 会整份重发)");
+            Logger.Log(LogLevel.Info, $"[用户列表] {reason},已清空全网账号表 {count} 条(重连后 6014 会整份重发)");
         }
     }
 
@@ -163,7 +163,7 @@ internal static partial class Program
     }
 
     /// <summary>
-    /// 某个玩家在不在线。<b>本服的看连接</b>,<b>别服的看 616 广播留下的在线表</b> ——
+    /// 某个玩家在不在线。<b>本服的看连接</b>,<b>别服的看 6016 广播留下的在线表</b> ——
     /// 光看连接永远查不到别服的人,好友列表的在线位就会一直是「离线」。
     /// </summary>
     private static bool IsOnline(PlayerId target, ZFile config)
@@ -242,7 +242,7 @@ internal static partial class Program
     }
 
     /// <summary>
-    /// 某个服ID 的显示名。本服直接给配置里的名字;别服查 617/618 下来的表;
+    /// 某个服ID 的显示名。本服直接给配置里的名字;别服查 6017/6018 下来的表;
     /// 查不到返回空串,由界面显示「未知服务端」—— 不拿服ID 冒充名字。
     /// </summary>
     private static string ServerNameOf(string serverId, ZFile config)
@@ -261,7 +261,7 @@ internal static partial class Program
         return ServerNames.TryGetValue(serverId, out var name) && name.Length > 0 ? name : "";
     }
 
-    /// <summary>别服显示名表(618 下发,键 = 服ID);本服名不存这里,直接读配置。</summary>
+    /// <summary>别服显示名表(6018 下发,键 = 服ID);本服名不存这里,直接读配置。</summary>
     private static readonly ConcurrentDictionary<string, string> ServerNames = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>

@@ -7,7 +7,7 @@ namespace ZincXManagerShared.Network;
 /// <code>
 /// server.AddHandler(async packet =>
 /// {
-///     if (packet.Type == 100)
+///     if (packet.Type == 1000)
 ///         await packet.WriteAsync(new Packet(packet.Id, 101, Encoding.UTF8.GetBytes("ok")));
 /// });
 /// </code>

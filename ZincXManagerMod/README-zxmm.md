@@ -48,7 +48,7 @@ check.remember=5
 | 文件 | 作用 |
 |---|---|
 | ZxmmMod.java | NeoForge 主类：事件订阅、踢人、确认名单 |
-| ZxmsLink.java | 连 ZXMS、发请求等回包（协议号 620 / 623） |
+| ZxmsLink.java | 连 ZXMS、发请求等回包（协议号 6020 / 6023） |
 | Packet.java | 16 字节大端头 + UTF-8 负载（和各端一致） |
 | ZxmmConfig.java | 读写 `config/zxmm.properties` |
 
@@ -96,8 +96,8 @@ org.gradle.java.home=G:/jdk21
 
 | 号 | 名称 | 方向 | 负载 |
 |---|---|---|---|
-| 620 | LoginRequest | ZXMM → ZXMS | 玩家名\|IP |
-| 623 | LoginResult | ZXMS → ZXMM | ok\|玩家\|账号名\|ID / nobind\|码\|玩家 / no\|… / timeout\|玩家 / err\|原因 |
-| 625 | BindNotice | ZXMM → ZXMS | 绑定码\|玩家名（可选） |
+| 6020 | LoginRequest | ZXMM → ZXMS | 玩家名\|IP |
+| 6023 | LoginResult | ZXMS → ZXMM | ok\|玩家\|账号名\|ID / nobind\|码\|玩家 / no\|… / timeout\|玩家 / err\|原因 |
+| 6025 | BindNotice | ZXMM → ZXMS | 绑定码\|玩家名（可选） |
 
 包头：`Id(u64) Type(u16) Flags(u16) Length(u32)`，全部大端，负载 UTF-8。

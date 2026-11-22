@@ -5,15 +5,15 @@ using System.Linq;  // 拆分与查询
 using System.Text;  // UTF-8 / GBK
 using System.Text.RegularExpressions;  // 绑定码
 using System.Threading.Tasks;  // Task
-using ZincXManagerShared.Network;  // Protocol:632 / 633 / 621
+using ZincXManagerShared.Network;  // Protocol:6032 / 6033 / 6021
 
 namespace ZincXManagerTests;
 
 /// <summary>
-/// 套件 21:客户端局域网地址上报(632 / 633)与 621 第五段。
+/// 套件 21:客户端局域网地址上报(6032 / 6033)与 6021 第五段。
 ///
 /// <para>要验的是三件事:上报值能进 621 给账号主人看、只有<b>登录后</b>的合法局域网地址才收、
-/// 621 的第五段<b>只在真有值时</b>才追加(老客户端只读四段,不能错位)。</para>
+/// 6021 的第五段<b>只在真有值时</b>才追加(老客户端只读四段,不能错位)。</para>
 ///
 /// <para>另外顺手钉死两条安全口径:上报值不参与持久登录表、未登录连接连上报都不许写进日志原文。</para>
 /// </summary>
@@ -22,7 +22,7 @@ public static class ClientIpSuite
     /// <summary>跑一遍,结果追加到 results。</summary>
     public static async Task RunAsync(List<SuiteResult> results, string ws, string debugMs)
     {
-        var r = new SuiteResult { Name = "21 局域网地址上报(632/633 + 621 第五段)" };
+        var r = new SuiteResult { Name = "21 局域网地址上报(6032/6033 + 6021 第五段)" };
 
         const int czport = 21490;   // ZXMS 客户端接入端口
         const int zxmmPort = 21491; // 假 ZXMM 端口
@@ -123,7 +123,7 @@ public static class ClientIpSuite
             // ---------- ⑤ 已绑定玩家进服:621 五段,第五段是上报地址;归属地仍按连接 IP 查 ----------
             fake.PushJoining(playerA, "/10.9.9.9:50002");
             var askA = await probe.TakeQueuedAsync(Protocol.LoginAsk, 12000);
-            r.Add("账号主人收到 621", askA is not null, askA ?? "没收到");
+            r.Add("账号主人收到 6021", askA is not null, askA ?? "没收到");
             var partsA = (askA ?? "").Split('|');   //请求ID|玩家|连接IP|归属地|上报IP
             r.Add("621 第一段是请求号", partsA.Length > 0 && int.TryParse(partsA[0], out _), askA ?? "");
             r.Add("621 第二段是玩家名", partsA.Length > 1 && partsA[1] == playerA, askA ?? "");
@@ -142,7 +142,7 @@ public static class ClientIpSuite
             var persistentText = ReadShared(persistentPath);   //持久登录表全文
             r.Add("持久登录表里没有上报的局域网地址", !persistentText.Contains(lanIp), persistentText.Trim());
 
-            // ---------- ⑥ 第二个账号没上报过:进服时向它的客户端要一次(633),这次 621 仍是四段 ----------
+            // ---------- ⑥ 第二个账号没上报过:进服时向它的客户端要一次(6033),这次 6021 仍是四段 ----------
             using var probe2 = await Probe.ConnectAsync("127.0.0.1", czport, "OS");
             r.Add("第二个账号注册", await probe2.RegisterAsync("iptester2", "pw123456", "MACH-IP2"), probe2.LastAck ?? "");
             r.Add("第二个账号登录", await probe2.LoginAsync("iptester2", "pw123456", "MACH-IP2", "Player", "zxms"), probe2.LastAck ?? "");
@@ -173,9 +173,9 @@ public static class ClientIpSuite
             var askB = await probe2.TakeQueuedAsync(Protocol.LoginAsk, 12000);
             var partsB = (askB ?? "").Split('|');   //请求ID|玩家|连接IP|归属地
             r.Add("没上报过的账号进服,621 只有四段", askB is not null && partsB.Length == 4, askB ?? "没收到");
-            r.Add("服务端向客户端索要地址(633)",
+            r.Add("服务端向客户端索要地址(6033)",
                 await WaitOutAsync(ms, "已向 iptester2 的客户端索要一次", 6000), LastLines(ms, 3));
-            r.Add("633 真的发到了这条连接", await probe2.TakeQueuedAsync(Protocol.ClientIpAsk, 6000) is not null, "没收到 633");
+            r.Add("6033 真的发到了这条连接", await probe2.TakeQueuedAsync(Protocol.ClientIpAsk, 6000) is not null, "没收到 6033");
 
             // 客户端补报 → 服务端收下
             const string lanIp2 = "192.168.5.6";   //第二个客户端自报的局域网地址

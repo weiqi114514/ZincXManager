@@ -12,7 +12,7 @@ namespace ZincXManagerTests;
 /// 套件 27:多服数据分离的端到端(起一个真 ZXMS,走真报文)。
 ///
 /// <para>套件 26 只测共享层(协议号、分区路径、AsyncLocal);这里把 ZXMS 起在临时目录,
-/// 用 <see cref="Probe"/> 走 380/381 加密握手,然后:</para>
+/// 用 <see cref="Probe"/> 走 3080/3081 加密握手,然后:</para>
 /// <list type="bullet">
 ///   <item>670 要登记表 → 671 里有没有两台服(编号|名称|端口);</item>
 ///   <item>672 切到存在的服 → 673 回 <c>ok|编号</c>;切不存在的 → <c>err|没有这个服务器</c>(不许假成功);</item>
@@ -81,15 +81,15 @@ public static class DataSeparationLiveSuite
         }
     }
 
-    /// <summary>670/671 列表 + 672/673 切服(含不存在的编号)。</summary>
+    /// <summary>6070/6071 列表 + 6072/6073 切服(含不存在的编号)。</summary>
     private static async Task PacketRoundTripAsync(SuiteResult r, string dir)
     {
         using var probe = await Probe.ConnectAsync("127.0.0.1", Port, "OS");
-        r.Add("380/381 加密协商", true);
+        r.Add("3080/3081 加密协商", true);
 
         await probe.SendAsync(1, Protocol.ServerListReq, Array.Empty<byte>());
         var list = await probe.TakeAsync(Protocol.ServerList, 6000);
-        r.Add("670 有回应(671)", list is not null, list ?? "6 秒没回");
+        r.Add("6070 有回应(6071)", list is not null, list ?? "6 秒没回");
         if (list is not null)
         {
             var lines = list.Split('\n', StringSplitOptions.RemoveEmptyEntries);

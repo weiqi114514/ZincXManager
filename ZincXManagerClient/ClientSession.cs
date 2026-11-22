@@ -16,7 +16,7 @@ internal static class ClientSession
 
     /// <summary>
     /// 当前账号的完整 ID(形如 <c>ZXMS-子服名-1-14</c>),别人拿这个搜得到我。
-    /// 由 601/603 的第五段下发;老服务端不给时是空串,界面退回只显示数字 ID。
+    /// 由 6001/6003 的第五段下发;老服务端不给时是空串,界面退回只显示数字 ID。
     /// </summary>
     public static string FullId { get; set; } = "";
 

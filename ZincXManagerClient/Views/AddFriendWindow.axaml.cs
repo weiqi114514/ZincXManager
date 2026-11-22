@@ -15,7 +15,7 @@ using ZincXManagerShared.Network;            // Protocol
 namespace ZincXManagerClient.Views;
 
 /// <summary>
-/// 添加好友窗:输入点什么就交给服务端去搜(663),把结果画出来,点「添加」再发申请。
+/// 添加好友窗:输入点什么就交给服务端去搜(6063),把结果画出来,点「添加」再发申请。
 ///
 /// <para>这里不判断「能不能加」——已经是好友、目标不存在都由服务端回话。
 /// 客户端只做两件事:别每敲一个字就发一次请求、把服务端的回话画成一行行结果。</para>
@@ -24,7 +24,7 @@ public partial class AddFriendWindow : Window
 {
     private static readonly TimeSpan Debounce = TimeSpan.FromMilliseconds(260);   // 停手 260ms 再发,免得一个字一个包
 
-    /// <summary>当前开着的添加好友窗(主窗收到 664 时找它填结果)。</summary>
+    /// <summary>当前开着的添加好友窗(主窗收到 6064 时找它填结果)。</summary>
     public static AddFriendWindow? Current { get; private set; }
 
     private int _searchTicket;   // 每次新搜索 +1,晚回来的旧结果直接丢掉
@@ -46,7 +46,7 @@ public partial class AddFriendWindow : Window
         Opened += (_, _) => SearchBox.Focus();
     }
 
-    /// <summary>服务端回了搜索结果(664)。</summary>
+    /// <summary>服务端回了搜索结果(6064)。</summary>
     public void FillResults(string payload)
     {
         var hits = FriendCodec.ParseSearchHits(payload, out var badLines);
@@ -133,7 +133,7 @@ public partial class AddFriendWindow : Window
         },
     };
 
-    /// <summary>点「添加」:先让玩家写一句申请信息,再发 654。</summary>
+    /// <summary>点「添加」:先让玩家写一句申请信息,再发 6054。</summary>
     private async Task AskAsync(SearchHit hit)
     {
         if (ClientSession.Connect is not { } connect)

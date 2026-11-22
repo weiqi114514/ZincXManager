@@ -2,10 +2,10 @@ using System;  // 基础类型
 
 namespace ZincXManagerClient.Models;
 
-/// <summary>控制台能连的一台 MC 服务器,对应 685 清单里的一行。</summary>
+/// <summary>控制台能连的一台 MC 服务器,对应 6085 清单里的一行。</summary>
 public sealed class ConsoleServer
 {
-    /// <summary>服务器编号(和选服那套 670/671 的编号一致)。</summary>
+    /// <summary>服务器编号(和选服那套 6070/6071 的编号一致)。</summary>
     public int Id { get; init; }
 
     /// <summary>服务器名称。</summary>

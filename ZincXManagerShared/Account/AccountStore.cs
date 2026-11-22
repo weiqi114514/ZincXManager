@@ -100,7 +100,7 @@ public sealed class AccountStore
     /// <summary>
     /// 账号名能不能用:长度 2-24,不许出现协议分隔符(| tab 换行)和文件名非法字符。
     ///
-    /// <para>名字会被拼进中继负载(648/649 用竖线分段、618 用 tab 分列)和官方端的
+    /// <para>名字会被拼进中继负载(6048/6049 用竖线分段、6018 用 tab 分列)和官方端的
     /// <c>Data/users/名称.dat</c>,放进来一个竖线就能把后面几段挤歪,所以从一开始就不许起这种名字。</para>
     /// </summary>
     public static bool IsNameTextOk(string name, out string error)

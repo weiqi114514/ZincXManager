@@ -640,7 +640,7 @@ public partial class SettingsViewModel : ViewModelBase
             ? $"{ozip}:{ozport}(自定义)"
             : $"{ozip}:{ozport}(官方默认)";
 
-        // 名称由服务端在连接时下发(201),存在 czname / ozname;没连过就先显示提示
+        // 名称由服务端在连接时下发(2001),存在 czname / ozname;没连过就先显示提示
         DataSourceName = "未连接(名称由服务端提供)";
         OfficialDataSourceName = "未连接(名称由服务端提供)";
 

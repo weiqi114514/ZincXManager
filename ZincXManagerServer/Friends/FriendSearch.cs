@@ -8,7 +8,7 @@ using ZincXManagerShared.Network;       // Protocol / ServerboundPacket
 namespace ZincXManagerServer;
 
 /// <summary>
-/// 搜好友(663 / 664)。
+/// 搜好友(6063 / 6064)。
 ///
 /// <para>规则(定死的,别改):关键词按最后一个横线切出编码段,能转成数字就按编号找,否则按名字找;
 /// 名字必须<b>完全一致</b>,不做前缀/模糊。只查账号表,不看在不在线。跨服的人靠全网账号表补。</para>
@@ -172,7 +172,7 @@ internal static partial class Program
     }
 
     /// <summary>
-    /// 结果行里的来源服显示名:本服读配置名,别服读 618 下发的名字表。
+    /// 结果行里的来源服显示名:本服读配置名,别服读 6018 下发的名字表。
     /// 查不到就如实写「未知」,不拿服ID 冒充名字。
     /// </summary>
     private static string SearchServerName(string serverId, ZFile config)

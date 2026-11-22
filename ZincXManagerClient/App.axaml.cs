@@ -312,7 +312,7 @@ public partial class App : Application
             _ = mainViewModel.RequestMessageHistoryAsync();
             mainViewModel.StatusText = $"已登录:{ClientSession.User}({ClientSession.Level})";
 
-            // 头像(605)是登录之后才回来的:一秒后再补刷一次
+            // 头像(6005)是登录之后才回来的:一秒后再补刷一次
             _ = Task.Delay(1200).ContinueWith(_ => Avalonia.Threading.Dispatcher.UIThread.Post(mainViewModel.RefreshAvatar));
         });
     }
